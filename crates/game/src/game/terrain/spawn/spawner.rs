@@ -1,4 +1,4 @@
-use bevy::{log::Level, prelude::*, utils::tracing::event};
+use bevy::{log::{Level, tracing::event}, prelude::*};
 
 use crate::terrain::{mc_chunk::{MCChunkDescription, MCChunksListMain}, TerrainSpawner};
 
@@ -15,7 +15,7 @@ impl MarchingCubesSpawner {
         chunk_spawner_query: Query<(&Transform, &TerrainSpawner), Changed<Transform>>
     ) {
         // Get the terrain spawner
-        let (cs_transform, cs) = match chunk_spawner_query.get_single() {
+        let (cs_transform, cs) = match chunk_spawner_query.single() {
             Ok((transform, chunk_spawner)) => (transform, chunk_spawner),
             Err(_) => {
                 if chunk_spawner_query.iter().count() > 1 {

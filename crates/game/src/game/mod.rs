@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use physics::PhysicsPlugin;
+// use physics::PhysicsPlugin;
 use scene::ScenePlugin;
 use terrain::TerrainPlugin;
 
@@ -16,7 +16,7 @@ impl Plugin for GamePlugin {
         // Add the terrain plugin
         app.add_plugins(TerrainPlugin);
 
-        // Add the physics plugin
-        app.add_plugins(PhysicsPlugin);
+        // // Add the physics plugin
+        // app.add_plugins(PhysicsPlugin);
     }
 }

@@ -86,7 +86,7 @@ fn extract(
 {
     if let (
         Ok((transform, view)), Ok(window)
-    ) = (cameras.get_single(), window.get_single()) {
+    ) = (cameras.single(), window.single()) {
         // Update the camera uniform
         let aspect_ratio = window.width() / window.height();
         *camera_uniform = CameraUniform::new(transform, view, aspect_ratio);

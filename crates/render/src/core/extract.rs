@@ -1,6 +1,6 @@
 //! Main systems for extracting data from the main world into the render world.
 
-use bevy::{log::Level, prelude::*, utils::tracing::span};
+use bevy::{log::Level, prelude::*, log::tracing::span};
 
 use crate::passes::render_graph::RenderGraph;
 

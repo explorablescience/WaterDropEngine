@@ -66,8 +66,8 @@ impl CustomRenderPass {
                     } else {
                         // Push the batch
                         pass.batches.push(CustomRenderBatch {
-                            mesh: last_mesh_ref.unwrap().clone_weak(),
-                            material: last_material_ref.unwrap().clone_weak(),
+                            mesh: last_mesh_ref.unwrap().clone(),
+                            material: last_material_ref.unwrap().clone(),
                             first,
                             count,
                             index_count: match meshes.get(last_mesh_ref.unwrap()) {
@@ -88,11 +88,11 @@ impl CustomRenderPass {
                 let mut updated_mesh = false;
                 let mut updated_material = false;
                 if meshes.get(&mesh.0).is_some() {
-                    last_mesh = Some(mesh.0.clone_weak());
+                    last_mesh = Some(mesh.0.clone());
                     updated_mesh = true;
                 }
                 if materials.get(&material.0).is_some() {
-                    last_material = Some(material.0.clone_weak());
+                    last_material = Some(material.0.clone());
                     updated_material = true;
                 }
                 if updated_mesh && updated_material {
@@ -107,8 +107,8 @@ impl CustomRenderPass {
             // Push the last batch
             if let (Some(last_mesh), Some(last_material)) = (last_mesh, last_material) {
                 pass.batches.push(CustomRenderBatch {
-                    mesh: last_mesh.clone_weak(),
-                    material: last_material.clone_weak(),
+                    mesh: last_mesh.clone(),
+                    material: last_material.clone(),
                     first,
                     count,
                     index_count: match meshes.get(&last_mesh) {

@@ -2,7 +2,7 @@
 
 use std::sync::{Arc, RwLock};
 
-use bevy::{ecs::system::SystemState, log::{debug, error, warn, Level}, prelude::*, utils::tracing::{event, span}, window::{PresentMode, PrimaryWindow, RawHandleWrapperHolder}};
+use bevy::{ecs::system::SystemState, log::{debug, error, warn, Level}, prelude::*, log::tracing::{event, span}, window::{PresentMode, PrimaryWindow, RawHandleWrapperHolder}};
 use wgpu::{Device, Limits, Surface, SurfaceConfiguration, SurfaceTexture};
 
 use crate::texture::WTextureView;
@@ -114,7 +114,7 @@ pub async fn create_instance(label: &str, app: &mut App) -> WRenderInstance<'sta
 
     // Retrieve window
     let mut system_state: SystemState<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>> = SystemState::new(app.world_mut());
-    let primary_window = system_state.get(app.world()).get_single().ok().cloned();
+    let primary_window = system_state.get(app.world()).single().ok().cloned();
 
     // Create wgpu instance
     debug!(label, "Creating wgpu instance.");

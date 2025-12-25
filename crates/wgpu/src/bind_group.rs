@@ -1,6 +1,6 @@
 //! Bind groups are used to bind resources to shaders.
 
-use bevy::{log::Level, utils::tracing::event};
+use bevy::{log::Level, log::tracing::event};
 
 use crate::{buffer::WBuffer, instance::WRenderInstanceData, render_pipeline::WShaderStages, texture::WTexture};
 

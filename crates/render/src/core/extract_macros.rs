@@ -68,11 +68,26 @@ where
     type State = ExtractState<P>;
     type Item<'w, 's> = ExtractWorld<'w, 's, P>;
 
-    fn init_state(world: &mut World, system_meta: &mut SystemMeta) -> Self::State {
+    fn init_access(
+            state: &Self::State,
+            system_meta: &mut SystemMeta,
+            component_access_set: &mut bevy::ecs::query::FilteredAccessSet,
+            world: &mut World,
+        ) {
+        // Register access for `Res<MainWorld>`.
+        Res::<MainWorld>::init_access(
+            &state.main_world_state,
+            system_meta,
+            component_access_set,
+            world,
+        );
+    }
+
+    fn init_state(world: &mut World) -> Self::State {
         let mut main_world = world.resource_mut::<MainWorld>();
         ExtractState {
             state: SystemState::new(&mut main_world),
-            main_world_state: Res::<MainWorld>::init_state(world, system_meta),
+            main_world_state: Res::<MainWorld>::init_state(world),
         }
     }
 

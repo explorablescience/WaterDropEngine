@@ -78,7 +78,7 @@ fn update(
 ) {
     let dt = time.delta_secs();
 
-    if let Ok((mut transform, mut controller)) = camera_query.get_single_mut() {
+    if let Ok((mut transform, mut controller)) = camera_query.single_mut() {
         if !controller.initialized {
             let (yaw, pitch, _roll) = transform.rotation.to_euler(EulerRot::YXZ);
             controller.yaw = yaw;
@@ -167,13 +167,13 @@ fn update(
                         continue;
                     }
 
-                    window.cursor_options.grab_mode = CursorGrabMode::Locked;
-                    window.cursor_options.visible = false;
+                    // window.cursor_options.grab_mode = CursorGrabMode::Locked;
+                    // window.cursor_options.visible = false;
                 }
             } else {
                 for mut window in &mut windows {
-                    window.cursor_options.grab_mode = CursorGrabMode::None;
-                    window.cursor_options.visible = true;
+                    // window.cursor_options.grab_mode = CursorGrabMode::None;
+                    // window.cursor_options.visible = true;
                 }
             }
         }

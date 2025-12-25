@@ -1,6 +1,6 @@
 //! Compute pass abstraction.
 
-use bevy::{log::Level, prelude::*, utils::tracing::event};
+use bevy::{log::Level, prelude::*, log::tracing::event};
 
 use crate::{compute_pipeline::WComputePipeline, instance::WRenderError};
 

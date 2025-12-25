@@ -4,7 +4,7 @@ use std::ops::Range;
 
 use bevy::log::error;
 use bevy::log::Level;
-use bevy::utils::tracing::event;
+use bevy::log::tracing::event;
 use wgpu::BufferAddress;
 use wgpu::ShaderStages;
 

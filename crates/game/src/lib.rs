@@ -3,8 +3,7 @@
 
 use std::net::{IpAddr, Ipv4Addr};
 
-use bevy::remote::{http::{Headers, RemoteHttpPlugin}, RemotePlugin};
-use bevy::{core::TaskPoolThreadAssignmentPolicy, input::InputPlugin, log::{Level, LogPlugin}, prelude::*};
+use bevy::{app::TaskPoolThreadAssignmentPolicy, input::InputPlugin, log::{Level, LogPlugin}, prelude::*};
 use examples::{ExamplesPugin, SELECTED_EXAMPLE};
 use game::*;
 use wde_render::RenderPlugin;
@@ -38,6 +37,8 @@ pub fn start_game() {
                     min_threads: 1,
                     max_threads: 1,
                     percent: 0.25,
+                    on_thread_spawn: None,
+                    on_thread_destroy: None,
                 },
 
                 // Use 1 core for async compute
@@ -45,6 +46,8 @@ pub fn start_game() {
                     min_threads: 1,
                     max_threads: 1,
                     percent: 0.25,
+                    on_thread_spawn: None,
+                    on_thread_destroy: None,
                 },
 
                 // Use all remaining cores for compute (at least 1)
@@ -52,6 +55,8 @@ pub fn start_game() {
                     min_threads: 1,
                     max_threads: usize::MAX,
                     percent: 1.0, // This 1.0 here means "whatever is left over"
+                    on_thread_spawn: None,
+                    on_thread_destroy: None,
                 },
             }
         }))
@@ -59,8 +64,9 @@ pub fn start_game() {
             level,
             filter: "wgpu_hal=warn,wgpu_core=warn,naga=warn".to_string(),
             custom_layer: |_| None,
+            fmt_layer: |_| None,
         })
-        .add_plugins(HierarchyPlugin)
+        // .add_plugins(HierarchyPlugin)
         .add_plugins(InputPlugin)
         .add_plugins(AssetPlugin {
             mode: AssetMode::Unprocessed,
@@ -86,17 +92,17 @@ pub fn start_game() {
     }
 
     // Add the remote plugin if feature is enabled
-    if cfg!(feature = "remote") {
-        let cors_headers = Headers::new()
-            .insert("Access-Control-Allow-Origin", "*")
-            .insert("Access-Control-Allow-Headers", "Content-Type");
-        app
-            .add_plugins(RemotePlugin::default())
-            .add_plugins(RemoteHttpPlugin::default()
-                .with_address(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)))
-                .with_port(8083)
-                .with_headers(cors_headers));
-    }
+    // if cfg!(feature = "remote") {
+    //     let cors_headers = Headers::new()
+    //         .insert("Access-Control-Allow-Origin", "*")
+    //         .insert("Access-Control-Allow-Headers", "Content-Type");
+    //     app
+    //         .add_plugins(RemotePlugin::default())
+    //         .add_plugins(RemoteHttpPlugin::default()
+    //             .with_address(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)))
+    //             .with_port(8083)
+    //             .with_headers(cors_headers));
+    // }
 
     // Run the app
     info!("Running game engine.");

@@ -38,7 +38,7 @@ fn delete_entity_after_time(
     if counter.0 == 3000 {
         // Despawn the entity
         // This should unload the texture as no other entity is using it
-        let entity = display_texture_components.single();
+        let entity = display_texture_components.single().unwrap();
         commands.entity(entity).despawn();
     }
     counter.0 += 1;

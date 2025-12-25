@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 use wde_render::assets::Buffer;
 use wde_wgpu::bind_group::WgpuBindGroup;
 

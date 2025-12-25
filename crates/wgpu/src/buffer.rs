@@ -1,7 +1,7 @@
 //! Contains the buffer struct and its implementations.
 
 use std::fmt::Formatter;
-use bevy::{log::Level, utils::tracing::event};
+use bevy::{log::Level, log::tracing::event};
 use wgpu::{util::DeviceExt, BufferView};
 
 use crate::{command_buffer::WCommandBuffer, instance::WRenderInstanceData};

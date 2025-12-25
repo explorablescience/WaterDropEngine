@@ -1,6 +1,6 @@
 use std::hash::Hash;
 
-use bevy::{ecs::world::CommandQueue, prelude::*, tasks::{block_on, futures_lite::future, AsyncComputeTaskPool, Task}, utils::HashMap};
+use bevy::{ecs::world::CommandQueue, platform::collections::HashMap, prelude::*, tasks::{AsyncComputeTaskPool, Task, block_on, futures_lite::future}};
 use wde_render::assets::Buffer;
 use wde_wgpu::{buffer::BufferUsage, vertex::WVertex};
 

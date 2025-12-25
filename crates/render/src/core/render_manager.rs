@@ -21,7 +21,7 @@ pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<W
     // Create the wgpu surface
     let surface = {
         // Retrieve window
-        let window_handle = primary_window.single().0.lock().expect(
+        let window_handle = primary_window.single().unwrap().0.lock().expect(
             "Couldn't get the window handle in time for surface initialization.",
         );
         if let Some(wrapper) = window_handle.as_ref() {
@@ -41,7 +41,7 @@ pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<W
     let surface_config = {
         let instance_ref = render_instance.as_ref().data.as_ref().read().unwrap();
         setup_surface("wde_renderer", (600, 500),
-            &instance_ref.device, &surface, &instance_ref.adapter, windows.single().present_mode)
+            &instance_ref.device, &surface, &instance_ref.adapter, windows.single().unwrap().present_mode)
     };
     let mut mut_render_instance = render_instance.as_mut().data.write().unwrap();
     mut_render_instance.surface = Some(surface);

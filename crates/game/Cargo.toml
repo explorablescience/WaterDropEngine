@@ -21,16 +21,17 @@ debug = false
 wde-render = { path = "../render" }
 wde-wgpu = { path = "../wgpu" }
 bytemuck = { version = "1.14", features = [ "derive" ] }
-physx = "0.19"
-physx-sys = "0.11"
+# physx = "0.19"
+# physx-sys = "0.11"
 
 [dependencies.bevy]
-version = "0.15"
+version = "0.17"
 default-features = false
 features = [
     "multi_threaded",
     "bevy_asset",
     "bevy_winit",
+    "x11"
 ]
 
 [features]

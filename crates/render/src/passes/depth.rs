@@ -57,7 +57,7 @@ pub struct DepthTexture {
 }
 impl DepthTexture {
     pub fn create_texture(mut commands: Commands, server: Res<AssetServer>, window: Query<&Window>) {
-        let resolution = &window.single().resolution;
+        let resolution = &window.single().unwrap().resolution;
         let texture = server.add(Texture {
             label: "depth".to_string(),
             size: (resolution.physical_width(), resolution.physical_height()),

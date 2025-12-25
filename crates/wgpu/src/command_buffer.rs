@@ -1,5 +1,5 @@
 //! Define a command buffer to record commands for the GPU.
-use bevy::{log::Level, utils::tracing::event};
+use bevy::{log::Level, log::tracing::event};
 use wgpu::Texture;
 
 use crate::{buffer::WBuffer, compute_pass::WComputePass, instance::WRenderInstanceData, texture::WTextureView};

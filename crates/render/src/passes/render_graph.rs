@@ -1,4 +1,4 @@
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{platform::collections::HashMap, prelude::*};
 
 /** Defines a render pass. */
 pub trait RenderPass: Send + Sync {

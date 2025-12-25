@@ -1,6 +1,6 @@
 //! Contains the texture struct and its implementations.
 
-use bevy::{log::Level, utils::tracing::event};
+use bevy::{log::Level, log::tracing::event};
 use wgpu::TextureFormat;
 
 use crate::instance::WRenderInstanceData;

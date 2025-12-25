@@ -1,6 +1,6 @@
 //! Extract the resources from the scene and load them to the GPU in the renderer.
 
-use bevy::{app::{App, Plugin}, ecs::{schedule::SystemConfigs, system::{StaticSystemParam, SystemParam, SystemParamItem, SystemState}, world}, prelude::*, utils::{HashMap, HashSet}};
+use bevy::{app::{App, Plugin}, ecs::{schedule::ScheduleConfigs, system::{ScheduleSystem, StaticSystemParam, SystemParam, SystemParamItem, SystemState}, world}, platform::collections::{HashMap, HashSet}, prelude::*};
 use thiserror::Error;
 
 use crate::core::{Extract, MainWorld, Render, RenderApp, RenderSet};
@@ -40,7 +40,7 @@ pub trait RenderAsset: Send + Sync + 'static + Sized {
 struct CachedExtractAssetsState<A: RenderAsset> {
     #[allow(clippy::type_complexity)]
     state: SystemState<(
-        EventReader<'static, 'static, AssetEvent<A::SourceAsset>>,
+        MessageReader<'static, 'static, AssetEvent<A::SourceAsset>>,
         ResMut<'static, Assets<A::SourceAsset>>
     )>
 }
@@ -53,15 +53,15 @@ impl<A: RenderAsset> FromWorld for CachedExtractAssetsState<A> {
 
 // Helper to allow specifying dependencies between render assets
 pub trait RenderAssetDependency {
-    fn register_system(render_app: &mut SubApp, system: SystemConfigs);
+    fn register_system(render_app: &mut SubApp, system: ScheduleConfigs<ScheduleSystem>);
 }
 impl RenderAssetDependency for () {
-    fn register_system(render_app: &mut SubApp, system: SystemConfigs) {
+    fn register_system(render_app: &mut SubApp, system: ScheduleConfigs<ScheduleSystem>) {
         render_app.add_systems(Render, system);
     }
 }
 impl<A: RenderAsset> RenderAssetDependency for A {
-    fn register_system(render_app: &mut SubApp, system: SystemConfigs) {
+    fn register_system(render_app: &mut SubApp, system: ScheduleConfigs<ScheduleSystem>) {
         render_app.add_systems(Render, system.after(prepare_assets::<A>));
     }
 }
@@ -182,7 +182,7 @@ fn extract_render_assets<A: RenderAsset>(mut commands: Commands, mut main_world:
     main_world.resource_scope(|main_world, mut cached_state: Mut<CachedExtractAssetsState<A>>| {
         let (mut events, mut assets) = cached_state.state.get_mut(main_world);
 
-        let mut changed_assets = HashSet::default();
+        let mut changed_assets: HashSet<AssetId<<A as RenderAsset>::SourceAsset>> = HashSet::default();
         let mut removed = HashSet::default();
 
         for event in events.read() {

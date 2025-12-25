@@ -38,7 +38,7 @@ impl RenderPass for PbrLightingRenderPass {
         let mut render_pass = render_world.get_resource_mut::<PbrLightingRenderPassMesh>().unwrap();
         render_pass.deferred_mesh = None;
         if let Some(ref mesh_cpu) = mesh_cpu.deferred_mesh {
-            render_pass.deferred_mesh = Some(mesh_cpu.clone_weak());
+            render_pass.deferred_mesh = Some(mesh_cpu.clone());
         }
     }
 

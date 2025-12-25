@@ -2,7 +2,7 @@
 //! From the bevy source code, this is a modified version of the `bevy::render::pipeline::PipelinedRenderingPlugin`.
 
 use async_channel::{Receiver, Sender};
-use bevy::{app::{AppLabel, SubApp}, ecs::schedule::MainThreadExecutor, prelude::*, tasks::ComputeTaskPool, utils::tracing};
+use bevy::{app::{AppLabel, SubApp}, ecs::schedule::MainThreadExecutor, prelude::*, tasks::ComputeTaskPool, log::tracing};
 
 use super::RenderApp;
 

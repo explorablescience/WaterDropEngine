@@ -71,7 +71,7 @@ pub struct PbrDeferredTextures {
 impl PbrDeferredTextures {
     /// Create the textures for the deferred renderer.
     pub fn create_textures(mut commands: Commands, assets_server: Res<AssetServer>, window: Query<&Window>) {
-        let resolution = &window.single().resolution;
+        let resolution = &window.single().unwrap().resolution;
 
         // Create the albedo texture
         let albedo = assets_server.add(Texture {

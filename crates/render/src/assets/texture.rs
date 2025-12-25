@@ -1,4 +1,4 @@
-use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimeless::SRes, prelude::*, utils::tracing::error};
+use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimeless::SRes, prelude::*, log::tracing::error};
 use image::GenericImageView;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
