@@ -1,8 +1,6 @@
 #![allow(clippy::just_underscores_and_digits)]
 #![allow(clippy::type_complexity)]
 
-use std::net::{IpAddr, Ipv4Addr};
-
 use bevy::{app::TaskPoolThreadAssignmentPolicy, input::InputPlugin, log::{Level, LogPlugin}, prelude::*};
 use examples::{ExamplesPugin, SELECTED_EXAMPLE};
 use game::*;

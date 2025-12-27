@@ -17,7 +17,7 @@ pub enum Examples {
     CustomForwardRender
 }
 
-pub static mut SELECTED_EXAMPLE: Examples = Examples::None;
+pub static mut SELECTED_EXAMPLE: Examples = Examples::DisplayTexture;
 
 pub struct ExamplesPugin;
 impl Plugin for ExamplesPugin {
@@ -27,8 +27,7 @@ impl Plugin for ExamplesPugin {
             match SELECTED_EXAMPLE {
                 Examples::None => {}
                 Examples::DisplayTexture => {
-                    app.add_plugins(display_texture::DisplayTextureComponentPlugin)
-                        .add_plugins(display_texture::DisplayTextureFeature);
+                    app.add_plugins(display_texture::DisplayTextureComponentPlugin);
                 },
                 Examples::PbrBatches => {
                     app.add_plugins(pbr_batches::PbrBatchesPlugin);

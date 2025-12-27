@@ -9,6 +9,7 @@ struct VertexOutput {
 
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let val = textureSample(texture, texture_sam, in.tex_coord).r;
-    return vec4<f32>(vec3<f32>(val), 1.0);
+    let coords = vec2<f32>(in.tex_coord.x, 1.0 - in.tex_coord.y);
+    let val = textureSample(texture, texture_sam, coords).rgb;
+    return vec4<f32>(val, 1.0);
 }
