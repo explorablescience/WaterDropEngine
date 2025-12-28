@@ -21,6 +21,8 @@ debug = false
 wde-render = { path = "../render" }
 wde-wgpu = { path = "../wgpu" }
 bytemuck = { version = "1.14", features = [ "derive" ] }
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 
 [dependencies.bevy]
 version = "0.17"
@@ -29,7 +31,8 @@ features = [
     "multi_threaded",
     "bevy_asset",
     "bevy_winit",
-    "x11"
+    "x11",
+    "reflect_auto_register"
 ]
 
 [features]

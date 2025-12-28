@@ -6,16 +6,25 @@
     "description": "Material for displaying a texture on a full-screen quad.",
     "data": {
         "version": 1,
+        "type": "custom",
+        "asset": [
+            {
+                "type": "texture_2d",
+                "label": "Texture"
+            }
+        ],
         "uniforms": [
             {
                 "type": "texture_2d",
                 "binding": 0,
-                "visibility": "vertex|fragment"
+                "visibility": "vertex|fragment",
+                "path": "@local/Texture"
             },
             {
                 "type": "texture_2d_sampler",
                 "binding": 1,
-                "visibility": "vertex|fragment"
+                "visibility": "vertex|fragment",
+                "path": "@local/Texture"
             }
         ]
     }

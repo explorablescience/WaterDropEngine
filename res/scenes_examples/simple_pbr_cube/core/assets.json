@@ -1,0 +1,19 @@
+{
+    "version": 1.0,
+    "type": "core/assets",
+    "path": "core/assets.json",
+    "label": "Resources",
+    "description": "Lists of the assets that can we used in the scene. Note that they are not loaded by default.",
+    "data": {
+        "assets": [
+            {
+                "type": "asset/mesh",
+                "path": "meshes/cube.obj"
+            },
+            {
+                "type": "asset/material",
+                "path": "materials/cube.material.json"
+            }
+        ]
+    }
+}

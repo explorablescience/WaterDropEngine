@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use serde::Serialize;
 use wde_wgpu::{bind_group::WBufferBindingType, render_pipeline::WShaderStages};
 
 use crate::assets::{Material, MaterialBuilder, Texture};
@@ -33,9 +34,17 @@ impl Default for PbrMaterialAsset {
     }
 }
 #[derive(Component, Reflect)]
-#[reflect(Component)]
+#[reflect(Component, Serialize)]
 /// Describes a physically based rendering material.
 pub struct PbrMaterial(pub Handle<PbrMaterialAsset>);
+impl Serialize for PbrMaterial {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.path().serialize(serializer)
+    }
+}
 
 
 #[repr(C)]

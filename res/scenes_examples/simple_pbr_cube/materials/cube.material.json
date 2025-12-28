@@ -1,0 +1,16 @@
+{
+    "version": 1.0,
+    "type": "asset/material",
+    "path": "materials/cube.material.json",
+    "label": "Cube Material",
+    "description": "Material of the PBR cube.",
+    "data": {
+        "version": 1,
+        "type": "@engine/assets/materials/pbr",
+        "data": {
+            "label": "blue",
+            "albedo": [0.0, 0.0, 1.0, 1.0],
+            "specular": 0.5
+        }
+    }
+}

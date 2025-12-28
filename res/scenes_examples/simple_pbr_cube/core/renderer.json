@@ -1,0 +1,21 @@
+{
+    "version": 1.0,
+    "type": "core/renderer",
+    "path": "core/renderer.json",
+    "label": "Renderer",
+    "description": "Ordered list of render passes for the renderer.",
+    "data": {
+        "passes": [
+            {
+                "type": "pass/render",
+                "id": 0,
+                "path": "@engine/rpasses/pbrgbuffer"
+            },
+            {
+                "type": "pass/render",
+                "id": 1,
+                "path": "@engine/rpasses/pbrlighting"
+            }
+        ]
+    }
+}

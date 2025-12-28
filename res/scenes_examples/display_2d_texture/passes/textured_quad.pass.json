@@ -21,7 +21,7 @@
         },
         "bindings": [
             {
-                "type": "@material",
+                "type": "@local/material",
                 "binding": 0
             }
         ]

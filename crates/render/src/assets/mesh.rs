@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufReader};
 
-use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimeless::SRes, prelude::*};
+use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::lifetimeless::SRes, log, prelude::*, reflect::serde::Serializable};
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 use tobj::LoadError;
@@ -26,8 +26,17 @@ impl Default for ModelBoundingBox {
 }
 
 #[derive(Component, Default, Reflect)]
-#[reflect(Component)]
+#[reflect(Component, Serialize)]
 pub struct Mesh(pub Handle<MeshAsset>);
+impl Serialize for Mesh {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.path().serialize(serializer)
+    }
+}
+
 #[derive(Asset, TypePath, Clone)]
 pub struct MeshAsset {
     /// The label of the texture.

@@ -1,0 +1,12 @@
+{
+    "version": 1.0,
+    "type": "app",
+    "path": "app.json",
+    "label": "Simple PBR Cube Example",
+    "description": "An example application showcasing a simple PBR cube rendering.",
+    "data": {
+        "assets": "core/assets.json",
+        "scenes": "core/scenes.json",
+        "renderer": "core/renderer.json"
+    }
+}

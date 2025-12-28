@@ -1,0 +1,143 @@
+{
+    "version": 1.0,
+    "type": "res/scene",
+    "path": "scenes/main_scene.json",
+    "label": "Main Scene",
+    "description": "The main scene of the game.",
+    "data": {
+        "version": 1,
+        "entities": [
+            {
+                "components": [
+                    {
+                        "bevy_transform::components::transform::Transform": {
+                            "translation": [
+                                5.0,
+                                5.0,
+                                3.0
+                            ],
+                            "rotation": [
+                                -0.30199495,
+                                0.4620776,
+                                0.17098664,
+                                0.816117
+                            ],
+                            "scale": [
+                                1.0,
+                                1.0,
+                                1.0
+                            ]
+                        }
+                    },
+                    {
+                        "wde_render::components::camera::Camera": {}
+                    },
+                    {
+                        "wde_render::components::camera::CameraView": {
+                            "fov": 60.0,
+                            "znear": 0.1,
+                            "zfar": 10000.0
+                        }
+                    },
+                    {
+                        "wde_render::components::camera_controller::CameraController": {
+                            "enabled": true,
+                            "initialized": false,
+                            "sensitivity": 0.8,
+                            "key_forward": "KeyW",
+                            "key_back": "KeyS",
+                            "key_left": "KeyA",
+                            "key_right": "KeyD",
+                            "key_up": "KeyE",
+                            "key_down": "KeyQ",
+                            "key_run": "ShiftLeft",
+                            "mouse_key_cursor_grab": "Left",
+                            "keyboard_key_toggle_cursor_grab": "KeyM",
+                            "walk_speed": 10.0,
+                            "run_speed": 30.0,
+                            "scroll_factor": 0.1,
+                            "friction": 0.5,
+                            "pitch": 0.0,
+                            "yaw": 0.0,
+                            "velocity": [
+                                0.0,
+                                0.0,
+                                0.0
+                            ]
+                        }
+                    },
+                    {
+                        "wde_render::components::camera::ActiveCamera": {}
+                    }
+                ]
+            },
+            {
+                "components": [
+                    {
+                        "bevy_transform::components::transform::Transform": {
+                            "translation": [
+                                0.0,
+                                0.0,
+                                0.0
+                            ],
+                            "rotation": [
+                                0.0,
+                                0.0,
+                                0.0,
+                                1.0
+                            ],
+                            "scale": [
+                                1.0,
+                                1.0,
+                                1.0
+                            ]
+                        }
+                    },
+                    {
+                        "wde_render::assets::mesh::Mesh": "models/container.obj"
+                    },
+                    {
+                        "wde_render::assets::materials::pbr_material::PbrMaterial": null
+                    }
+                ]
+            },
+            {
+                "components": [
+                    {
+                        "wde_render::components::lights::DirectionalLight": {
+                            "direction": [
+                                -0.1,
+                                -0.8,
+                                -0.2
+                            ],
+                            "ambient": {
+                                "Srgba": [
+                                    0.05,
+                                    0.05,
+                                    0.05,
+                                    1.0
+                                ]
+                            },
+                            "diffuse": {
+                                "Srgba": [
+                                    0.8,
+                                    0.8,
+                                    0.8,
+                                    1.0
+                                ]
+                            },
+                            "specular": {
+                                "Srgba": [
+                                    1.0,
+                                    1.0,
+                                    1.0,
+                                    1.0
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}

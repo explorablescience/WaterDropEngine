@@ -1,0 +1,7 @@
+{
+    "version": 1.0,
+    "type": "asset/mesh",
+    "path": "meshes/cube.obj",
+    "label": "Cube Model",
+    "description": "A simple cube model used for rendering."
+}
