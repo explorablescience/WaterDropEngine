@@ -1,8 +1,8 @@
 [package]
-name = "wde-game"
+name = "wde-scene"
 version = "0.1.0"
 edition = "2021"
-description = "Core game logic for WaterDropEngine."
+description = "High-level scene management for WaterDropEngine."
 
 [profile.dev]
 opt-level = 0
@@ -20,10 +20,7 @@ debug = false
 [dependencies]
 wde-render = { path = "../render" }
 wde-wgpu = { path = "../wgpu" }
-wde-scene = { path = "../scene" }
 bytemuck = { version = "1.14", features = [ "derive" ] }
-# physx = "0.19"
-# physx-sys = "0.11"
 
 [dependencies.bevy]
 version = "0.17"

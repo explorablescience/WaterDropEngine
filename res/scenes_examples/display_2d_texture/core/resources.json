@@ -1,0 +1,31 @@
+{
+    "version": 1.0,
+    "type": "core/resources",
+    "path": "core/resources.json",
+    "label": "Resources",
+    "description": "Lists of the resources used in the game.",
+    "data": {
+        "resources": [
+            {
+                "type": "res/shader",
+                "path": "shaders/shaders.wgsl"
+            },
+            {
+                "type": "res/texture",
+                "path": "textures/image.jpg"
+            },
+            {
+                "type": "res/mesh",
+                "path": "meshes/postprocess_plane.model"
+            },
+            {
+                "type": "res/material",
+                "path": "materials/display_texture.material"
+            },
+            {
+                "type": "res/rpipeline",
+                "path": "pipelines/textured_quad.pipeline.json"
+            }
+        ]
+    }
+}

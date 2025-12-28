@@ -1,0 +1,19 @@
+{
+    "version": 1.0,
+    "type": "res/texture",
+    "path": "textures/image.jpg",
+    "label": "Image Texture",
+    "description": "A JPEG image texture used in the game.",
+    "data": {
+        "version": 1,
+        "dimensions": {
+            "type": "2d",
+            "width": 2048,
+            "height": 946,
+            "channels": 3
+        },
+        "ext": "jpg",
+        "srgb": true,
+        "format": "rgba8unorm-srgb"
+    }
+}

@@ -1,0 +1,22 @@
+{
+    "version": 1.0,
+    "type": "res/shader",
+    "path": "shaders/shaders.wgsl",
+    "label": "Display Texture Shader",
+    "description": "Shows an image on the screen.",
+    "data": {
+        "version": 1,
+        "bindings": [
+            {
+                "group": 0,
+                "binding": 0,
+                "resource_type": "texture_2d"
+            },
+            {
+                "group": 0,
+                "binding": 1,
+                "resource_type": "sampler"
+            }
+        ]
+    }
+}

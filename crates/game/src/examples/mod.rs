@@ -19,6 +19,10 @@ pub enum Examples {
 
 pub static mut SELECTED_EXAMPLE: Examples = Examples::DisplayTexture;
 
+pub struct Test {
+    pub value: f32,
+}
+
 pub struct ExamplesPugin;
 impl Plugin for ExamplesPugin {
     fn build(&self, app: &mut App) {

@@ -1,0 +1,12 @@
+{
+    "version": 1.0,
+    "type": "app",
+    "path": "app.json",
+    "label": "App",
+    "description": "App configuration for the game engine.",
+    "data": {
+        "resources": "core/resources.json",
+        "scenes": "core/scenes.json",
+        "renderer": "core/renderer.json"
+    }
+}

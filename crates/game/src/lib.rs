@@ -5,6 +5,7 @@ use bevy::{app::TaskPoolThreadAssignmentPolicy, input::InputPlugin, log::{Level,
 use examples::{ExamplesPugin, SELECTED_EXAMPLE};
 use game::*;
 use wde_render::RenderPlugin;
+use wde_scene::ScenePlugin;
 
 mod game;
 mod examples;
@@ -76,18 +77,19 @@ pub fn start_game() {
     // Add the plugins
     app
         .add_plugins(RenderPlugin)
-        .add_plugins(ExamplesPugin);
+        .add_plugins(ScenePlugin);
+        // .add_plugins(ExamplesPugin);
 
     // Add the game plugin
-    let mut should_add_game_plugin = true;
-    unsafe {
-        if SELECTED_EXAMPLE != examples::Examples::None {
-            should_add_game_plugin = false;
-        }
-    }
-    if should_add_game_plugin {
-        app.add_plugins(GamePlugin);
-    }
+    // let mut should_add_game_plugin = true;
+    // unsafe {
+    //     if SELECTED_EXAMPLE != examples::Examples::None {
+    //         should_add_game_plugin = false;
+    //     }
+    // }
+    // if should_add_game_plugin {
+    //  app.add_plugins(GamePlugin);
+    // }
 
     // Add the remote plugin if feature is enabled
     // if cfg!(feature = "remote") {

@@ -1,0 +1,24 @@
+{
+    "version": 1.0,
+    "type": "res/mesh",
+    "path": "meshes/postprocess_plane.model",
+    "label": "Postprocess Plane Model",
+    "description": "A simple plane model used for post-processing effects.",
+    "data": {
+        "version": 1,
+        "type": "mesh/explicit",
+        "mesh": {
+            "vertices": [
+                { "pos": [-1.0, 1.0, 0.0], "uv": [0.0, 1.0], "normal": [0.0, 0.0, 1.0] },
+                { "pos": [-1.0, -1.0, 0.0], "uv": [0.0, 0.0], "normal": [0.0, 0.0, 1.0] },
+                { "pos": [1.0, -1.0, 0.0], "uv": [1.0, 0.0], "normal": [0.0, 0.0, 1.0] },
+                { "pos": [1.0, 1.0, 0.0], "uv": [1.0, 1.0], "normal": [0.0, 0.0, 1.0] }
+            ],
+            "indices": [0, 1, 2, 2, 3, 0],
+            "bounding_box": {
+                "min": [-1.0, -1.0, 0.0],
+                "max": [1.0, 1.0, 0.0]
+            }
+        }
+    }
+}

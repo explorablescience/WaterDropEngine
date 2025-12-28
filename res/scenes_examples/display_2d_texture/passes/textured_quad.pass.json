@@ -1,0 +1,29 @@
+{
+    "version": 1.0,
+    "type": "pass/render",
+    "path": "passes/textured_quad.pass.json",
+    "label": "Textured Quad Pass",
+    "description": "This pass renders a textured quad to the screen using a specified shader and texture.",
+    "data": {
+        "rtype": "batch/indexed",
+        "query": {
+            "mesh": "meshes/generic_mesh.mesh",
+            "material": "materials/display_texture.material"
+        },
+        "color_attachments": [
+            {
+                "type": "res/swapchain",
+                "binding": 0
+            }
+        ],
+        "pipeline": {
+            "shader": "shaders/shaders.wgsl"
+        },
+        "bindings": [
+            {
+                "type": "@material",
+                "binding": 0
+            }
+        ]
+    }
+}

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{log, prelude::*};
 use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup, WgpuBindGroupLayout}, buffer::{BufferBindingType, BufferUsage}, instance::WRenderInstance, render_pipeline::WShaderStages};
 
 use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{ActiveCamera, CameraUniform, CameraView}, core::{extract_macros::ExtractWorld, Extract, Render, RenderApp, RenderSet}};

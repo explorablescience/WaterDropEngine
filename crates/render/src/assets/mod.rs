@@ -19,8 +19,8 @@ pub use render_assets::*;
 
 use crate::core::RenderApp;
 
-pub struct SceneResourcesPlugin;
-impl Plugin for SceneResourcesPlugin {
+pub struct AssetsPlugin;
+impl Plugin for AssetsPlugin {
     fn build(&self, app: &mut App) {
         // Setup the assets
         app

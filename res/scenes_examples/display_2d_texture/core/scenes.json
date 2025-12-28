@@ -1,0 +1,13 @@
+{
+    "version": 1.0,
+    "type": "core/scenes",
+    "path": "core/scenes.json",
+    "label": "Scenes",
+    "description": "Lists of the scenes used in the game.",
+    "data": {
+        "default": "scenes/main_scene.json",
+        "scenes": [
+            "scenes/main_scene.json"
+        ]
+    }
+}

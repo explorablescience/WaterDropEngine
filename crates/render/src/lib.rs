@@ -11,7 +11,7 @@ pub mod utils;
 
 use core::RenderCorePlugin;
 
-use assets::SceneResourcesPlugin;
+use assets::AssetsPlugin;
 use bevy::{app::{App, Plugin}, log::info};
 
 pub struct RenderPlugin;
@@ -21,7 +21,7 @@ impl Plugin for RenderPlugin {
         app.add_plugins(RenderCorePlugin);
 
         // Register the scene plugin
-        app.add_plugins(SceneResourcesPlugin);
+        app.add_plugins(AssetsPlugin);
     }
 
     fn finish(&self, _app: &mut App) {

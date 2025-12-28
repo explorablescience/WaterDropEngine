@@ -1,0 +1,16 @@
+{
+    "version": 1.0,
+    "type": "core/renderer",
+    "path": "core/renderer.json",
+    "label": "Renderer",
+    "description": "Renderer configuration for the game engine.",
+    "data": {
+        "passes": [
+            {
+                "type": "pass/render",
+                "id": 0,
+                "path": "passes/textured_quad.pass"
+            }
+        ]
+    }
+}
