@@ -1,6 +1,6 @@
 use std::{fs::File, io::BufReader};
 
-use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::lifetimeless::SRes, log, prelude::*, reflect::serde::Serializable};
+use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::lifetimeless::SRes, prelude::*};
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 use tobj::LoadError;
@@ -25,15 +25,14 @@ impl Default for ModelBoundingBox {
     }
 }
 
-#[derive(Component, Default, Reflect)]
-#[reflect(Component, Serialize)]
+#[derive(Component, Reflect, Default)]
 pub struct Mesh(pub Handle<MeshAsset>);
 impl Serialize for Mesh {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        self.0.path().serialize(serializer)
+        serializer.serialize_str(&format!("Mesh({})", self.0.id().untyped()))
     }
 }
 
