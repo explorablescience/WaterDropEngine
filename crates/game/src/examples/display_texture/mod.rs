@@ -5,7 +5,7 @@ mod pass;
 mod material;
 
 use wde_render::{assets::{MaterialsPluginRegister, Mesh, MeshAsset, ModelBoundingBox, RenderAssetsPlugin, Texture, TextureLoaderSettings}, core::RenderApp, passes::render_graph::RenderGraph};
-use wde_wgpu::{texture::WTextureFormat, vertex::WVertex};
+use wde_wgpu::{texture::TextureFormat, vertex::Vertex};
 
 use crate::examples::display_texture::{material::{DisplayTextureMaterial, DisplayTextureMaterialAsset}, pass::{DisplayTexturePass, RenderPassEntity}, pipeline::{DisplayTexturePipeline, DisplayTexturePipelineAsset, GpuDisplayTexturePipeline}};
 
@@ -43,7 +43,7 @@ pub fn load_entity(mut commands: Commands, server: Res<AssetServer>) {
     // Load the texture to display
     let texture: Handle<Texture> = server.load_with_settings("examples/display_texture/image.jpg", |settings: &mut TextureLoaderSettings| {
         settings.label = "display-texture".to_string();
-        settings.format = WTextureFormat::Rgba8UnormSrgb;
+        settings.format = TextureFormat::Rgba8UnormSrgb;
     });
 
     // Create the material
@@ -55,10 +55,10 @@ pub fn load_entity(mut commands: Commands, server: Res<AssetServer>) {
     let mesh: Handle<MeshAsset> = server.add(MeshAsset {
         label: "texture-display-pass".to_string(),
         vertices: vec![
-            WVertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] },
-            WVertex { position: [-1.0, -1.0, 0.0], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] },
-            WVertex { position: [1.0, -1.0, 0.0], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] },
-            WVertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] },
+            Vertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] },
+            Vertex { position: [-1.0, -1.0, 0.0], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] },
+            Vertex { position: [1.0, -1.0, 0.0], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] },
+            Vertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] },
         ],
         indices: vec![0, 1, 2, 0, 2, 3],
         bounding_box: ModelBoundingBox {

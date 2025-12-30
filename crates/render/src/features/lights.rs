@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, instance::WRenderInstance, render_pipeline::WShaderStages};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, instance::RenderInstance, render_pipeline::ShaderStages};
 
 use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{DirectionalLight, LightsStorageElement, PointLight, SpotLight}, core::{extract_macros::ExtractWorld, Extract, Render, RenderApp, RenderSet}};
 
@@ -17,7 +17,7 @@ pub struct LightsFeatureBuffer {
 impl LightsFeatureBuffer {
     pub fn build_bind_group(
         buffers: Res<RenderAssets<GpuBuffer>>, mut lights_buffer: ResMut<LightsFeatureBuffer>,
-        render_instance: Res<WRenderInstance<'static>>
+        render_instance: Res<RenderInstance<'static>>
     ) {
         // Check if the bind group is already created
         if lights_buffer.bind_group.is_some() {
@@ -33,7 +33,7 @@ impl LightsFeatureBuffer {
         // Create the bind group layout
         let layout = BindGroupLayout::new("lights", |builder| {
             builder.add_buffer(0,
-                WShaderStages::FRAGMENT,
+                ShaderStages::FRAGMENT,
                 BufferBindingType::Storage { read_only: true });
         });
         let layout_built = layout.build(&render_instance.data.read().unwrap());
@@ -88,7 +88,7 @@ fn extract(
     (lights_buffer, buffers): (
         Res<LightsFeatureBuffer>, Res<RenderAssets<GpuBuffer>>
     ),
-    render_instance: Res<WRenderInstance<'static>>
+    render_instance: Res<RenderInstance<'static>>
 ) {
     // Get the lights buffer
     let lights_buffer_cpu = match buffers.get(&lights_buffer.buffer_cpu) {

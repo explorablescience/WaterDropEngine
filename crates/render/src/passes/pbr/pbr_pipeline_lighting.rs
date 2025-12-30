@@ -1,5 +1,5 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_wgpu::render_pipeline::WDepthStencilDescriptor;
+use wde_wgpu::render_pipeline::DepthStencilDescriptor;
 use crate::{assets::{PrepareAssetError, RenderAsset}, features::{CameraFeatureRender, LightsFeatureBuffer}, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}, passes::depth::DepthTextureLayout};
 
 use super::PbrDeferredTexturesLayout;
@@ -51,7 +51,7 @@ impl RenderAsset for GpuPbrLightingRenderPipeline {
             vert: Some(assets_server.load("pbr/lighting_vert.wgsl")),
             frag: Some(assets_server.load("pbr/lighting_frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone(), depth_layout.clone(), deferred_layout.clone(), lights_layout.clone()],
-            depth: WDepthStencilDescriptor {
+            depth: DepthStencilDescriptor {
                 enabled: false,
                 ..Default::default()
             },

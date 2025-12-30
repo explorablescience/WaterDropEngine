@@ -3,40 +3,34 @@
 use bevy::{log::{trace, Level}, prelude::*, log::tracing::event};
 use wgpu::{naga, BindGroupLayout, ShaderStages};
 
-use crate::instance::{WRenderError, WRenderInstanceData};
+use crate::instance::{RenderError, RenderInstanceData};
 
 // Compute pipeline configuration
-struct WComputePipelineConfig {
+struct ComputePipelineConfig {
     push_constants: Vec<wgpu::PushConstantRange>,
     bind_groups: Vec<wgpu::BindGroupLayout>,
     shader: String
 }
 
 
-/// Create a new compute pipeline.
+/// Create a compute pipeline from WGSL source and bind group layouts.
+///
+/// # Example
+/// ```rust,no_run
+/// use wde_wgpu::compute_pipeline::ComputePipeline;
 /// 
-/// First, we need to create a new bind group describing the resources that will be used in the compute pipeline.
-/// See the [BindGroup](struct@crate::bind_group::BindGroup) struct for more information.
-/// 
-/// ```rust
-/// // Create a new compute pipeline
-/// let mut pipeline = WComputePipeline::new("Compute Pipeline");
+/// let mut pipeline = ComputePipeline::new("particles");
 /// pipeline
-///    .set_shader(include_str!("[...].comp"))   // Set the compute shader
-///    .add_push_constant(4)                     // Say that we will provide push constant at offset 0 with size 4
-///    .add_bind_group(bind_group.layout)        // Say that we will use a bind group
-///    .init(&instance);                         // Initialize the pipeline
+///     .set_shader(include_str!("../../../res/marching-cubes/spawn_terrain.comp.wgsl"))
+///     .set_bind_groups(layouts)
+///     .add_push_constant(16) // bytes starting at offset 0
+///     .init(instance)
+///     .expect("shader validated");
+/// assert!(pipeline.is_initialized());
 /// 
-/// // Check if the pipeline is initialized
-/// if pipeline.is_initialized() {
-///    // Get the compute pipeline
-///    let compute_pipeline = pipeline.get_pipeline().unwrap();
-///    
-///    // Get the pipeline layout
-///    let layout = pipeline.get_layout().unwrap();
-/// }
+/// let _wgpu_pipeline = pipeline.get_pipeline().unwrap();
 /// ```
-pub struct WComputePipeline {
+pub struct ComputePipeline {
     /// Label for the compute pipeline
     pub label: String,
     /// The compute pipeline
@@ -46,10 +40,10 @@ pub struct WComputePipeline {
     /// Whether the compute pipeline has been initialized
     pub is_initialized: bool,
     /// Configuration of the compute pipeline
-    config: WComputePipelineConfig,
+    config: ComputePipelineConfig,
 }
 
-impl WComputePipeline {
+impl ComputePipeline {
     /// Create a new compute pipeline.
     /// 
     /// # Arguments
@@ -61,7 +55,7 @@ impl WComputePipeline {
             pipeline: None,
             layout: None,
             is_initialized: false,
-            config: WComputePipelineConfig {
+            config: ComputePipelineConfig {
                 push_constants: Vec::new(),
                 bind_groups: Vec::new(),
                 shader: String::new()
@@ -115,14 +109,14 @@ impl WComputePipeline {
     /// # Returns
     /// 
     /// * `Result<(), RenderError>` - The result of the initialization.
-    pub fn init(&mut self, instance: &WRenderInstanceData) -> Result<(), WRenderError> {
+    pub fn init(&mut self, instance: &RenderInstanceData) -> Result<(), RenderError> {
         event!(Level::DEBUG, "Creating compute pipeline {}.", self.label);
         let d = &self.config;
 
         // Security checks
         if d.shader.is_empty() {
             error!(self.label, "Pipeline does not have a compute shader.");
-            return Err(WRenderError::MissingShader);
+            return Err(RenderError::MissingShader);
         }
         
         // Load shader
@@ -141,7 +135,7 @@ impl WComputePipeline {
                     },
                     Err(e) => {
                         error!(self.label, "Compute shader validation failed: {:?}.", e);
-                        return Err(WRenderError::ShaderCompilationError);
+                        return Err(RenderError::ShaderCompilationError);
                     }
                 }
             },
@@ -152,7 +146,7 @@ impl WComputePipeline {
                     error.push_str(&format!(" - Error on line {} at position {}: \"{}\"\n", location.line_number, location.line_position, message));
                 }
                 error!(self.label, "{}", error);
-                return Err(WRenderError::ShaderCompilationError);
+                return Err(RenderError::ShaderCompilationError);
             }
         };
 
@@ -187,7 +181,7 @@ impl WComputePipeline {
     ///
     /// # Returns
     /// 
-    /// * `Option<&RenderPipelineRef>` - The compute pipeline.
+    /// * `Option<&ComputePipelineRef>` - The compute pipeline.
     pub fn get_pipeline(&self) -> Option<&wgpu::ComputePipeline> {
         self.pipeline.as_ref()
     }

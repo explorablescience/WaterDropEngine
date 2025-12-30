@@ -1,48 +1,74 @@
-//! Contains the texture struct and its implementations.
+//! Texture creation and copy helpers built on `wgpu::Texture`.
 
 use bevy::{log::Level, log::tracing::event};
-use wgpu::TextureFormat;
 
-use crate::instance::WRenderInstanceData;
+use crate::instance::RenderInstanceData;
 
 /// Surface texture.
-pub type WSurfaceTexture = wgpu::SurfaceTexture;
+pub type SurfaceTexture = wgpu::SurfaceTexture;
 
 /// Texture view
-pub type WTextureView = wgpu::TextureView;
+pub type TextureView = wgpu::TextureView;
 
 /// Texture usages.
-pub type WTextureUsages = wgpu::TextureUsages;
+pub type TextureUsages = wgpu::TextureUsages;
 
 /// Texture format.
-pub type WTextureFormat = wgpu::TextureFormat;
+pub type TextureFormat = wgpu::TextureFormat;
 
-/// Texture struct.
+/// Texture wrapper with a ready-to-use view and sampler.
+///
+/// # Examples
+/// Create a render target and clear it:
+/// ```rust,no_run
+/// use wde_wgpu::{texture::{Texture, TextureFormat, TextureUsages}, instance::RenderInstanceData};
 /// 
-/// # Example
-/// 
+/// let color = Texture::new(
+///     instance,
+///     "color-target",
+///     (1280, 720),
+///     TextureFormat::Rgba8Unorm,
+///     TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC,
+/// );
 /// ```
-/// // Create a new texture
-/// let texture = WTexture::new(&instance,
-///     "Texture Label", (1024, 1024), TextureFormat::Rgba8Unorm,
-///     TextureUsages::RENDER_ATTACHMENT | TextureUsages::COPY_SRC);
+///
+/// Upload raw pixel data (RGBA8):
+/// ```rust,no_run
+/// use wde_wgpu::{texture::{Texture, TextureFormat, TextureUsages}, instance::RenderInstanceData};
 /// 
-/// // Copy buffer to texture
-/// texture.copy_from_buffer(&instance, &buffer, false);
-/// 
-/// // Copy texture to texture
-/// texture.copy_from_texture(&instance, &texture, (1024, 1024));
+/// let texture = Texture::new(
+///     instance,
+///     "albedo",
+///     (512, 512),
+///     TextureFormat::Rgba8Unorm,
+///     TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
+/// );
+/// texture.copy_from_buffer(instance, TextureFormat::Rgba8Unorm, pixels);
 /// ```
-pub struct WTexture {
+///
+/// Copy one GPU texture into another:
+/// ```rust,no_run
+/// # use wde_wgpu::{texture::{Texture, TextureFormat, TextureUsages}, instance::RenderInstanceData};
+/// 
+/// let dst = Texture::new(
+///     instance,
+///     "blit-target",
+///     (1024, 1024),
+///     TextureFormat::Rgba8Unorm,
+///     TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
+/// );
+/// dst.copy_from_texture(instance, src, (1024, 1024));
+/// ```
+pub struct Texture {
     pub label: String,
     pub texture: wgpu::Texture,
-    pub format: WTextureFormat,
-    pub view: WTextureView,
+    pub format: TextureFormat,
+    pub view: TextureView,
     pub sampler: wgpu::Sampler,
     pub size: (u32, u32),
 }
 
-impl std::fmt::Debug for WTexture {
+impl std::fmt::Debug for Texture {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Texture")
             .field("label", &self.label)
@@ -52,22 +78,23 @@ impl std::fmt::Debug for WTexture {
     }
 }
 
-impl WTexture {
-    /// The swap chain texture format.
-    pub const SWAPCHAIN_FORMAT: WTextureFormat = WTextureFormat::Bgra8UnormSrgb;
+impl Texture {
+    /// The swapchain texture format.
+    pub const SWAPCHAIN_FORMAT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
     /// The depth texture format.
-    pub const DEPTH_FORMAT: WTextureFormat = WTextureFormat::Depth32Float;
+    pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
+
 
     /// Create a new texture.
     /// 
     /// # Arguments
     /// 
     /// * `instance` - Game instance.
-    /// * `label` - Label of the texture.
-    /// * `size` - Size of the texture.
-    /// * `format` - Format of the texture.
-    /// * `usage` - Usage of the texture.
-    pub fn new(instance: &WRenderInstanceData<'_>, label: &str, size: (u32, u32), format: WTextureFormat, usage: WTextureUsages) -> Self {
+    /// * `label` - Label of the texture. This is only for debugging purposes.
+    /// * `size` - Size of the texture (width, height).
+    /// * `format` - Format of the texture (e.g. Rgba8Unorm, Depth32Float, etc.).
+    /// * `usage` - Usage of the texture (e.g. RENDER_ATTACHMENT, COPY_SRC, COPY_DST, etc.).
+    pub fn new(instance: &RenderInstanceData<'_>, label: &str, size: (u32, u32), format: TextureFormat, usage: TextureUsages) -> Self {
         event!(Level::DEBUG, "Creating wgpu texture {}.", label);
         
         // Create texture
@@ -144,7 +171,7 @@ impl WTexture {
     /// * `instance` - Game instance.
     /// * `texture_format` - The wgpu texture format.
     /// * `buffer` - Image buffer.
-    pub fn copy_from_buffer(&self, instance: &WRenderInstanceData, texture_format: TextureFormat, buffer: &[u8]) {
+    pub fn copy_from_buffer(&self, instance: &RenderInstanceData, texture_format: TextureFormat, buffer: &[u8]) {
         event!(Level::TRACE, "Copying buffer to texture.");
 
         // Retrieve size corresponding to the texture format
@@ -175,6 +202,7 @@ impl WTexture {
         );
     } 
     
+
     /// Copy texture to texture.
     /// It is assumed that the texture is the same size as the source texture.
     /// Note that the input texture must have the COPY_SRC usage, and the output texture must have the COPY_DST usage.
@@ -184,11 +212,11 @@ impl WTexture {
     /// * `instance` - Game instance.
     /// * `texture` - Texture to copy from.
     /// * `size` - Size of the texture.
-    pub fn copy_from_texture(&self, instance: &WRenderInstanceData<'_>, texture: &wgpu::Texture, size: (u32, u32)) {
+    pub fn copy_from_texture(&self, instance: &RenderInstanceData<'_>, texture: &wgpu::Texture, size: (u32, u32)) {
         event!(Level::TRACE, "Copying texture to texture.");
 
         // Create command buffer
-        let mut command = crate::command_buffer::WCommandBuffer::new(instance, "Copy Texture");
+        let mut command = crate::command_buffer::CommandBuffer::new(instance, "Copy Texture");
 
         // Copy texture to texture
         command.encoder().copy_texture_to_texture(

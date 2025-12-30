@@ -10,7 +10,7 @@ pub use custom_pipeline::*;
 pub use custom_renderpass::*;
 pub use custom_ssbo::*;
 use wde_render::{assets::{MaterialsPluginRegister, Mesh, RenderAssetsPlugin, TextureLoaderSettings}, components::{Camera, CameraController}, core::{Extract, Render, RenderApp, RenderSet}};
-use wde_wgpu::texture::{WTextureFormat, WTextureUsages};
+use wde_wgpu::texture::{TextureFormat, TextureUsages};
 
 
 /// System to create the scene
@@ -28,8 +28,8 @@ fn create_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut mate
     let box_texture = asset_server.load_with_settings("examples/custom_forward_render/box.png", 
     |settings: &mut TextureLoaderSettings| {
         settings.label = "custom-box".to_string();
-        settings.format = WTextureFormat::Rgba8Unorm;
-        settings.usages = WTextureUsages::TEXTURE_BINDING;
+        settings.format = TextureFormat::Rgba8Unorm;
+        settings.usages = TextureUsages::TEXTURE_BINDING;
     });
     let red_box = materials.add(CustomMaterialAsset {
         label: "custom-material-red-box".to_string(),

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WBufferBindingType, WgpuBindGroup}, buffer::BufferUsage, instance::WRenderInstance, render_pipeline::WShaderStages, texture::{WTextureFormat, WTextureUsages}};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BufferBindingType, WgpuBindGroup}, buffer::BufferUsage, instance::RenderInstance, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
 
 use crate::core::RenderApp;
 
@@ -17,20 +17,20 @@ pub trait Material {
 
 struct MaterialBuilderBuffer {
     binding: u32,
-    visibility: WShaderStages,
-    binding_type: WBufferBindingType,
+    visibility: ShaderStages,
+    binding_type: BufferBindingType,
     size: usize,
     content: Option<Vec<u8>>,
     buffer: Option<Handle<Buffer>>
 }
 struct MaterialBuilderTextureView {
     binding: u32,
-    visibility: WShaderStages,
+    visibility: ShaderStages,
     texture: Option<Handle<Texture>>
 }
 struct MaterialBuilderTextureSampler {
     binding: u32,
-    visibility: WShaderStages,
+    visibility: ShaderStages,
     texture: Option<Handle<Texture>>
 }
 
@@ -51,19 +51,19 @@ pub struct MaterialBuilder {
 }
 impl MaterialBuilder {
     /// Add a buffer to the material. A buffer is a uniform or storage buffer that will be created by the material builder.
-    pub fn add_buffer(&mut self, binding: u32, visibility: WShaderStages, binding_type: WBufferBindingType, size: usize, content: Option<Vec<u8>>) {
+    pub fn add_buffer(&mut self, binding: u32, visibility: ShaderStages, binding_type: BufferBindingType, size: usize, content: Option<Vec<u8>>) {
         self.buffers.push(MaterialBuilderBuffer {
             binding, visibility, binding_type, size, content, buffer: None
         });
         self.elements.push((MaterialBuilderType::Buffer, self.buffers.len() as u32 - 1));
     }
-    pub fn add_texture_view(&mut self, binding: u32, visibility: WShaderStages, texture: Option<Handle<Texture>>) {
+    pub fn add_texture_view(&mut self, binding: u32, visibility: ShaderStages, texture: Option<Handle<Texture>>) {
         self.texture_views.push(MaterialBuilderTextureView {
             binding, visibility, texture
         });
         self.elements.push((MaterialBuilderType::TextureView, self.texture_views.len() as u32 - 1));
     }
-    pub fn add_texture_sampler(&mut self, binding: u32, visibility: WShaderStages, texture: Option<Handle<Texture>>) {
+    pub fn add_texture_sampler(&mut self, binding: u32, visibility: ShaderStages, texture: Option<Handle<Texture>>) {
         self.texture_samplers.push(MaterialBuilderTextureSampler {
             binding, visibility, texture
         });
@@ -97,7 +97,7 @@ pub struct GpuMaterial<M: Material + Sync + Send + Asset + Clone> {
 impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
     type SourceAsset = M;
     type Param = (
-        SRes<WRenderInstance<'static>>, SResMut<MaterialsBuilderCache>, SRes<AssetServer>,
+        SRes<RenderInstance<'static>>, SResMut<MaterialsBuilderCache>, SRes<AssetServer>,
         SRes<DummyTexture>, SRes<RenderAssets<GpuBuffer>>, SRes<RenderAssets<GpuTexture>>
     );
 
@@ -133,8 +133,8 @@ impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
                             label: label.to_string(),
                             size: buffer.size,
                             usage: match buffer.binding_type {
-                                WBufferBindingType::Uniform => BufferUsage::UNIFORM,
-                                WBufferBindingType::Storage { .. } => BufferUsage::STORAGE
+                                BufferBindingType::Uniform => BufferUsage::UNIFORM,
+                                BufferBindingType::Storage { .. } => BufferUsage::STORAGE
                             },
                             content: buffer.content.clone()
                         });
@@ -257,8 +257,8 @@ impl Plugin for MaterialsPluginRaw {
         let dummy_texture = assets_server.load_with_settings("pbr/dummy_texture.png",
         |settings: &mut TextureLoaderSettings| {
             settings.label = "dummy-texture".to_string();
-            settings.format = WTextureFormat::R8Unorm;
-            settings.usages = WTextureUsages::TEXTURE_BINDING | WTextureUsages::COPY_DST;
+            settings.format = TextureFormat::R8Unorm;
+            settings.usages = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
         });
         
         app.get_sub_app_mut(RenderApp).unwrap()

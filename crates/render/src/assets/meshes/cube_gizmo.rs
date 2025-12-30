@@ -1,5 +1,5 @@
 use bevy::math::Vec3;
-use wde_wgpu::vertex::WVertex;
+use wde_wgpu::vertex::Vertex;
 
 use crate::assets::{MeshAsset, ModelBoundingBox};
 
@@ -40,7 +40,7 @@ impl CubeGizmoMesh {
             let z = positions[3 * vtx + 2];
 
             // Vertex
-            vertices.push(WVertex {
+            vertices.push(Vertex {
                 position: [x, y, z],
                 normal: [0.0, 0.0, 0.0], // Normals are not used for gizmo
                 uv: [0.0, 0.0], // UVs are not used for gizmo

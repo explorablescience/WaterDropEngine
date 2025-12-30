@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{app::{App, Plugin}, asset::{AssetEvent, AssetId, Assets}, ecs::prelude::*, log::{debug, error}};
-use wde_wgpu::{compute_pipeline::WComputePipeline, instance::WRenderInstance, render_pipeline::{WRenderPipeline, WShaderStages}};
+use wde_wgpu::{compute_pipeline::ComputePipeline, instance::RenderInstance, render_pipeline::{RenderPipeline, ShaderStages}};
 
 use crate::{core::{extract_macros::ExtractWorld, Extract, Render, RenderSet}, assets::Shader};
 
@@ -13,8 +13,8 @@ pub type CachedPipelineIndex = usize;
 /// The status of a cached pipeline.
 pub enum CachedPipelineStatus<'a> {
     Loading,
-    OkRender(&'a WRenderPipeline),
-    OkCompute(&'a WComputePipeline),
+    OkRender(&'a RenderPipeline),
+    OkCompute(&'a ComputePipeline),
     Error
 }
 
@@ -36,11 +36,11 @@ pub struct PipelineManager {
     pub pipeline_iter: CachedPipelineIndex,
 
     pub processing_render_pipelines: HashMap<CachedPipelineIndex, RenderPipelineDescriptor>,
-    pub loaded_render_pipelines: HashMap<CachedPipelineIndex, WRenderPipeline>,
+    pub loaded_render_pipelines: HashMap<CachedPipelineIndex, RenderPipeline>,
     pub loaded_render_pipelines_desc: HashMap<CachedPipelineIndex, RenderPipelineDescriptor>,
 
     pub processing_compute_pipelines: HashMap<CachedPipelineIndex, ComputePipelineDescriptor>,
-    pub loaded_compute_pipelines: HashMap<CachedPipelineIndex, WComputePipeline>,
+    pub loaded_compute_pipelines: HashMap<CachedPipelineIndex, ComputePipeline>,
     pub loaded_compute_pipelines_desc: HashMap<CachedPipelineIndex, ComputePipelineDescriptor>,
 
     pub shader_cache: HashMap<AssetId<Shader>, Shader>,
@@ -141,9 +141,9 @@ fn extract_shaders(
 /// Load the pipelines that are queued in the pipeline manager.
 fn load_render_pipelines(
     mut pipeline_manager: ResMut<PipelineManager>,
-    render_instance: Res<WRenderInstance<'static>>
+    render_instance: Res<RenderInstance<'static>>
 ) {
-    let mut pipelines_loaded_indices: Vec<(usize, WRenderPipeline)> = Vec::new();
+    let mut pipelines_loaded_indices: Vec<(usize, RenderPipeline)> = Vec::new();
     let mut pipelines_loaded_desc: HashMap<CachedPipelineIndex, RenderPipelineDescriptor> = HashMap::new();
     let mut shaders_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>> = pipeline_manager.shader_to_pipelines.clone();
     for (id, descriptor) in pipeline_manager.processing_render_pipelines.iter() {
@@ -196,12 +196,12 @@ fn load_render_pipelines(
         }
 
         // Load the pipeline
-        let mut pipeline = WRenderPipeline::new(descriptor.label);
+        let mut pipeline = RenderPipeline::new(descriptor.label);
         if let Some(vert_shader) = vert_shader {
-            pipeline.set_shader(&vert_shader.content, WShaderStages::VERTEX);
+            pipeline.set_shader(&vert_shader.content, ShaderStages::VERTEX);
         }
         if let Some(frag_shader) = frag_shader {
-            pipeline.set_shader(&frag_shader.content, WShaderStages::FRAGMENT);
+            pipeline.set_shader(&frag_shader.content, ShaderStages::FRAGMENT);
         }
         pipeline.set_topology(descriptor.topology);
         pipeline.set_cull_mode(descriptor.cull_mode);
@@ -239,9 +239,9 @@ fn load_render_pipelines(
 /// Load the pipelines that are queued in the pipeline manager.
 fn load_compute_pipelines(
     mut pipeline_manager: ResMut<PipelineManager>,
-    render_instance: Res<WRenderInstance<'static>>
+    render_instance: Res<RenderInstance<'static>>
 ) {
-    let mut pipelines_loaded_indices: Vec<(usize, WComputePipeline)> = Vec::new();
+    let mut pipelines_loaded_indices: Vec<(usize, ComputePipeline)> = Vec::new();
     let mut pipelines_loaded_desc: HashMap<CachedPipelineIndex, ComputePipelineDescriptor> = HashMap::new();
     let mut shaders_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>> = pipeline_manager.shader_to_pipelines.clone();
     for (id, descriptor) in pipeline_manager.processing_compute_pipelines.iter() {
@@ -278,7 +278,7 @@ fn load_compute_pipelines(
         }
 
         // Load the pipeline
-        let mut pipeline = WComputePipeline::new(descriptor.label);
+        let mut pipeline = ComputePipeline::new(descriptor.label);
         if let Some(compute_shader) = compute_shader {
             pipeline.set_shader(&compute_shader.content);
         }

@@ -1,5 +1,5 @@
 use bevy::{log, prelude::*};
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup, WgpuBindGroupLayout}, buffer::{BufferBindingType, BufferUsage}, instance::WRenderInstance, render_pipeline::WShaderStages};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup, WgpuBindGroupLayout}, buffer::{BufferBindingType, BufferUsage}, instance::RenderInstance, render_pipeline::ShaderStages};
 
 use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{ActiveCamera, CameraUniform, CameraView}, core::{extract_macros::ExtractWorld, Extract, Render, RenderApp, RenderSet}};
 
@@ -12,12 +12,12 @@ pub struct CameraFeatureRender {
 }
 impl FromWorld for CameraFeatureRender {
     fn from_world(world: &mut World) -> Self {
-        let render_instance = world.get_resource::<WRenderInstance<'static>>().unwrap();
+        let render_instance = world.get_resource::<RenderInstance<'static>>().unwrap();
 
         // Create the camera layout
         let layout = BindGroupLayout::new("camera", |builder| {
             builder.add_buffer(
-                0, WShaderStages::VERTEX | WShaderStages::FRAGMENT,
+                0, ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                 BufferBindingType::Uniform);
         });
         let layout_built = layout.build(&render_instance.data.read().unwrap());
@@ -60,7 +60,7 @@ impl Plugin for CameraFeature {
 
 // Create the bind group for the camera
 fn build_bind_group(
-    render_instance: Res<WRenderInstance<'static>>, mut camera_feature_render: ResMut<CameraFeatureRender>,
+    render_instance: Res<RenderInstance<'static>>, mut camera_feature_render: ResMut<CameraFeatureRender>,
     camera_buffer: Res<CameraFeatureBuffer>, mut buffers: ResMut<RenderAssets<GpuBuffer>>)
 {
     // Check if the bind group is already created
@@ -96,7 +96,7 @@ fn extract(
 // Update the camera buffer
 fn update_buffer(
     (render_instance, camera_uniform, camera_buffer): (
-        Res<WRenderInstance<'static>>, Res<CameraUniform>, Res<CameraFeatureBuffer>
+        Res<RenderInstance<'static>>, Res<CameraUniform>, Res<CameraFeatureBuffer>
     ),
     mut buffers: ResMut<RenderAssets<GpuBuffer>>
 ) {

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use wde_render::{assets::{GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, core::{extract_macros::ExtractWorld, SwapchainFrame}, features::CameraFeatureRender, pipelines::{CachedPipelineStatus, PipelineManager}, passes::depth::DepthTexture};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, WCommandBuffer}, instance::WRenderInstance};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer}, instance::RenderInstance};
 
 use super::{CustomMaterial, CustomMaterialAsset, CustomSsbo, GpuCustomRenderPipeline};
 
@@ -19,7 +19,7 @@ pub struct CustomRenderPass {
 impl CustomRenderPass {
     /// Create the batches with the correct mesh and material.
     pub fn create_batches(
-        mut pass: ResMut<CustomRenderPass>, render_instance: Res<WRenderInstance<'static>>,
+        mut pass: ResMut<CustomRenderPass>, render_instance: Res<RenderInstance<'static>>,
         entities: ExtractWorld<Query<(&Transform, &Mesh, &CustomMaterial)>>,
         meshes: Res<RenderAssets<GpuMesh>>, materials: Res<RenderAssets<GpuMaterial<CustomMaterialAsset>>>,
         buffers: Res<RenderAssets<GpuBuffer>>, ssbo: Res<CustomSsbo>
@@ -131,7 +131,7 @@ impl CustomRenderPass {
     /// Render the different batches.
     pub fn render(
         (render_instance, swapchain_frame, pipeline_manager): (
-            Res<WRenderInstance<'static>>, Res<SwapchainFrame>,  Res<PipelineManager>
+            Res<RenderInstance<'static>>, Res<SwapchainFrame>,  Res<PipelineManager>
         ),
         (camera_layout, ssbo) : (Res<CameraFeatureRender>, Res<CustomSsbo>),
         (meshes, textures, materials): (
@@ -163,7 +163,7 @@ impl CustomRenderPass {
         };
 
         // Create the render pass
-        let mut command_buffer = WCommandBuffer::new(&render_instance, "custom");
+        let mut command_buffer = CommandBuffer::new(&render_instance, "custom");
         {
             let mut render_pass = command_buffer.create_render_pass("custom",
             |builder: &mut RenderPassBuilder| {

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::WBufferBindingType, render_pipeline::WShaderStages};
+use wde_wgpu::{bind_group::BufferBindingType, render_pipeline::ShaderStages};
 use wde_render::assets::{Material, MaterialBuilder, Texture};
 
 #[derive(Asset, Clone, TypePath)]
@@ -40,10 +40,10 @@ impl Material for CustomMaterialAsset {
 
         // Build the material
         builder.add_buffer(
-            0, WShaderStages::FRAGMENT, WBufferBindingType::Uniform,
+            0, ShaderStages::FRAGMENT, BufferBindingType::Uniform,
             size_of::<CustomMaterialUniform>(), Some(bytemuck::cast_slice(&[uniform]).to_vec()));
-        builder.add_texture_view(1, WShaderStages::FRAGMENT, self.texture.clone());
-        builder.add_texture_sampler( 2, WShaderStages::FRAGMENT, self.texture.clone());
+        builder.add_texture_view(1, ShaderStages::FRAGMENT, self.texture.clone());
+        builder.add_texture_sampler( 2, ShaderStages::FRAGMENT, self.texture.clone());
     }
     fn label(&self) -> String {
         self.label.clone()

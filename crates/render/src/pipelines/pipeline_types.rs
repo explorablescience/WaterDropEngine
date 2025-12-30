@@ -1,5 +1,5 @@
 use bevy::{asset::Handle, ecs::prelude::*};
-use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::{WDepthStencilDescriptor, WFace, WShaderStages, WTopology}, texture::WTextureFormat};
+use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::{DepthStencilDescriptor, Face, ShaderStages, RenderTopology}, texture::TextureFormat};
 
 use crate::assets::Shader;
 
@@ -8,7 +8,7 @@ use crate::assets::Shader;
 #[derive(Clone)]
 pub struct PushConstantDescriptor {
     /// The shader stages that the push constant will be available to.
-    pub stages: WShaderStages,
+    pub stages: ShaderStages,
     /// The offset in bytes that the push constant will start at.
     pub offset: u32,
     /// The size in bytes of the push constant (note: this must be a multiple of 4 and must not exceed 128 bytes).
@@ -25,17 +25,17 @@ pub struct RenderPipelineDescriptor {
     /// The fragment shader of the pipeline (default: None).
     pub frag: Option<Handle<Shader>>,
     /// Describes the depth and stencil state of the pipeline.
-    pub depth: WDepthStencilDescriptor,
+    pub depth: DepthStencilDescriptor,
     /// The render targets of the pipeline. By default, the pipeline will render to the swap chain.
-    pub render_targets: Option<Vec<WTextureFormat>>,
+    pub render_targets: Option<Vec<TextureFormat>>,
     /// The bind group layouts that the pipeline will use.
     pub bind_group_layouts: Vec<BindGroupLayout>,
     /// The push constants that the pipeline will use.
     pub push_constants: Vec<PushConstantDescriptor>,
     /// The primitive topology that the pipeline will use (default: TriangleList).
-    pub topology: WTopology,
+    pub topology: RenderTopology,
     /// The culling mode that the pipeline will use (default: Back). None will disable culling.
-    pub cull_mode: Option<WFace>,
+    pub cull_mode: Option<Face>,
 }
 impl Default for RenderPipelineDescriptor {
     fn default() -> Self {
@@ -43,12 +43,12 @@ impl Default for RenderPipelineDescriptor {
             label: "Render Pipeline",
             vert: None,
             frag: None,
-            depth: WDepthStencilDescriptor::default(),
+            depth: DepthStencilDescriptor::default(),
             render_targets: None,
             bind_group_layouts: vec![],
             push_constants: vec![],
-            topology: WTopology::TriangleList,
-            cull_mode: Some(WFace::Back),
+            topology: RenderTopology::TriangleList,
+            cull_mode: Some(Face::Back),
         }
     }
 }

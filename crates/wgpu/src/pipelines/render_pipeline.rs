@@ -3,40 +3,40 @@
 use bevy::{log::{error, trace, Level}, log::tracing::event};
 use wgpu::{naga, BindGroupLayout};
 
-use crate::{instance::{WRenderError, WRenderInstanceData}, texture::{WTexture, WTextureFormat}, vertex::WVertex};
+use crate::{instance::{RenderError, RenderInstanceData}, texture::{Texture, TextureFormat}, vertex::Vertex};
 
 /// List of available shaders.
-pub type WShaderStages = wgpu::ShaderStages;
+pub type ShaderStages = wgpu::ShaderStages;
 /// Type of the shader module.
-pub type WShaderModule = wgpu::ShaderModule;
+pub type ShaderModule = wgpu::ShaderModule;
 /// Export culling params.
-pub type WFace = wgpu::Face;
+pub type Face = wgpu::Face;
 /// Export compare function.
-pub type WCompareFunction = wgpu::CompareFunction;
+pub type CompareFunction = wgpu::CompareFunction;
 
-/// Describes the depth/stencil attachment of a render pipeline.
+/// Describes an optional depth/stencil attachment for a pipeline.
 #[derive(Clone)]
-pub struct WDepthStencilDescriptor {
+pub struct DepthStencilDescriptor {
     /// Whether the pipeline should have a depth/stencil attachment.
     pub enabled: bool,
     /// Whether the stencil attachment should be read-only.
     pub write: bool,
     /// The comparison function that the depth attachment will use.
-    pub compare: WCompareFunction
+    pub compare: CompareFunction
 }
-impl Default for WDepthStencilDescriptor {
+impl Default for DepthStencilDescriptor {
     fn default() -> Self {
         Self {
             enabled: false,
             write: true,
-            compare: WCompareFunction::Less
+            compare: CompareFunction::Less
         }
     }
 }
 
-/// List of available topologies.
+/// Convenience enum that maps to `wgpu::PrimitiveTopology`.
 #[derive(Clone, Copy)]
-pub enum WTopology {
+pub enum RenderTopology {
     PointList,
     LineList,
     LineStrip,
@@ -45,48 +45,47 @@ pub enum WTopology {
 }
 
 // Render pipeline configuration
-struct WRenderPipelineConfig {
-    depth: WDepthStencilDescriptor,
-    render_targets: Vec<WTextureFormat>,
+struct RenderPipelineConfig {
+    depth: DepthStencilDescriptor,
+    render_targets: Vec<TextureFormat>,
     primitive_topology: wgpu::PrimitiveTopology,
     push_constants: Vec<wgpu::PushConstantRange>,
     bind_groups: Vec<wgpu::BindGroupLayout>,
     vertex_shader: String,
     fragment_shader: String,
-    cull_mode: Option<WFace>,
+    cull_mode: Option<Face>,
 }
 
 
-/// Stores a render pipeline
-/// 
+/// Stores a render pipeline.
+///
 /// # Example
+/// ```rust,no_run
+/// use wde_wgpu::render_pipeline::{DepthStencilDescriptor, RenderPipeline, RenderTopology, ShaderStages};
 /// 
-/// ```
-/// let mut pipeline = WRenderPipeline::new("...");
+/// let mut pipeline = RenderPipeline::new("gbuffer");
 /// pipeline
-///     .set_shader(include_str!("[...].vert"), WShaderType::Vertex)   // Set the vertex shader
-///     .set_shader(include_str!("[...].frag"), WShaderType::Fragment) // Set the fragment shader
-///     .set_topology(WTopology::LineList)            // Change the primitive topology
-///     .set_depth_stencil()                         // Enable depth and stencil
-///     .add_push_constant(WShaderType::Vertex, 0, 4) // Say that we will provide push constant at offset 0 with size 4
-///     .add_bind_group(bind_group_layout)           // Say that we will use a bind group
-///     .init(&instance);                            // Initialize the pipeline
+///     .set_shader(include_str!("../../../res/pbr/gbuffer_vert.wgsl"), ShaderStages::VERTEX)
+///     .set_shader(include_str!("../../../res/pbr/gbuffer_frag.wgsl"), ShaderStages::FRAGMENT)
+///     .set_topology(RenderTopology::TriangleList)
+///     .set_depth(DepthStencilDescriptor { enabled: true, write: true, compare: wgpu::CompareFunction::Less })
+///     .set_bind_groups(layouts)
+///     .add_push_constant(ShaderStages::VERTEX, 0, 64)
+///     .init(instance)
+///     .expect("shaders validated");
+/// assert!(pipeline.is_initialized());
 /// 
-/// if pipeline.is_initialized() {
-///    // Use the pipeline
-///    let pipeline = pipeline.get_pipeline().unwrap();
-///    let layout = pipeline.get_layout().unwrap();
-/// }
+/// let _wgpu_pipeline = pipeline.get_pipeline().unwrap();
 /// ```
-pub struct WRenderPipeline {
+pub struct RenderPipeline {
     pub label: String,
     is_initialized: bool,
     pipeline: Option<wgpu::RenderPipeline>,
     layout: Option<wgpu::PipelineLayout>,
-    config: WRenderPipelineConfig,
+    config: RenderPipelineConfig,
 }
 
-impl std::fmt::Debug for WRenderPipeline {
+impl std::fmt::Debug for RenderPipeline {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RenderPipeline")
             .field("label", &self.label)
@@ -95,7 +94,7 @@ impl std::fmt::Debug for WRenderPipeline {
     }
 }
 
-impl WRenderPipeline {
+impl RenderPipeline {
     /// Create a new render pipeline.
     /// By default, the render pipeline does not have a depth or stencil.
     /// By default, the primitive topology is `Topology::TriangleList`.
@@ -110,15 +109,15 @@ impl WRenderPipeline {
             pipeline: None,
             layout: None,
             is_initialized: false,
-            config: WRenderPipelineConfig {
-                depth: WDepthStencilDescriptor::default(),
-                render_targets: Vec::from([WTexture::SWAPCHAIN_FORMAT]),
+            config: RenderPipelineConfig {
+                depth: DepthStencilDescriptor::default(),
+                render_targets: Vec::from([Texture::SWAPCHAIN_FORMAT]),
                 primitive_topology: wgpu::PrimitiveTopology::TriangleList,
                 push_constants: Vec::new(),
                 bind_groups: Vec::new(),
                 vertex_shader: String::new(),
                 fragment_shader: String::new(),
-                cull_mode: Some(WFace::Back),
+                cull_mode: Some(Face::Back),
             },
         }
     }
@@ -129,10 +128,10 @@ impl WRenderPipeline {
     /// 
     /// * `shader` - The shader source code.
     /// * `shader_type` - The shader type.
-    pub fn set_shader(&mut self, shader: &str, shader_type: WShaderStages) -> &mut Self {
+    pub fn set_shader(&mut self, shader: &str, shader_type: ShaderStages) -> &mut Self {
         match shader_type {
-            WShaderStages::VERTEX => self.config.vertex_shader = shader.to_string(),
-            WShaderStages::FRAGMENT => self.config.fragment_shader = shader.to_string(),
+            ShaderStages::VERTEX => self.config.vertex_shader = shader.to_string(),
+            ShaderStages::FRAGMENT => self.config.fragment_shader = shader.to_string(),
             _ => { error!(self.label, "Unsupported shader type."); }
         };
         self
@@ -143,25 +142,25 @@ impl WRenderPipeline {
     /// # Arguments
     /// 
     /// * `topology` - The primitive topology.
-    pub fn set_topology(&mut self, topology: WTopology) -> &mut Self {
+    pub fn set_topology(&mut self, topology: RenderTopology) -> &mut Self {
         self.config.primitive_topology = match topology {
-            WTopology::PointList => wgpu::PrimitiveTopology::PointList,
-            WTopology::LineList => wgpu::PrimitiveTopology::LineList,
-            WTopology::LineStrip => wgpu::PrimitiveTopology::LineStrip,
-            WTopology::TriangleList => wgpu::PrimitiveTopology::TriangleList,
-            WTopology::TriangleStrip => wgpu::PrimitiveTopology::TriangleStrip,
+            RenderTopology::PointList => wgpu::PrimitiveTopology::PointList,
+            RenderTopology::LineList => wgpu::PrimitiveTopology::LineList,
+            RenderTopology::LineStrip => wgpu::PrimitiveTopology::LineStrip,
+            RenderTopology::TriangleList => wgpu::PrimitiveTopology::TriangleList,
+            RenderTopology::TriangleStrip => wgpu::PrimitiveTopology::TriangleStrip,
         };
         self
     }
 
     /// Set the configuration of the depth/stencil attachment.
-    pub fn set_depth(&mut self, depth: WDepthStencilDescriptor) -> &mut Self {
+    pub fn set_depth(&mut self, depth: DepthStencilDescriptor) -> &mut Self {
         self.config.depth = depth;
         self
     }
 
     /// Set the cull mode. None means no culling.
-    pub fn set_cull_mode(&mut self, cull_mode: Option<WFace>) -> &mut Self {
+    pub fn set_cull_mode(&mut self, cull_mode: Option<Face>) -> &mut Self {
         self.config.cull_mode = cull_mode;
         self
     }
@@ -185,7 +184,7 @@ impl WRenderPipeline {
     /// # Arguments
     /// 
     /// * `targets` - The render targets.
-    pub fn set_render_targets(&mut self, targets: Vec<WTextureFormat>) -> &mut Self {
+    pub fn set_render_targets(&mut self, targets: Vec<TextureFormat>) -> &mut Self {
         self.config.render_targets = targets;
         self
     }
@@ -197,7 +196,7 @@ impl WRenderPipeline {
     /// * `stages` - The shader stages.
     /// * `offset` - The offset of the push constant.
     /// * `size` - The size of the push constant.
-    pub fn add_push_constant(&mut self, stages: WShaderStages, offset: u32, size: u32) {
+    pub fn add_push_constant(&mut self, stages: ShaderStages, offset: u32, size: u32) {
         self.config.push_constants.push(wgpu::PushConstantRange {
             stages,
             range: offset..offset + size,
@@ -213,14 +212,14 @@ impl WRenderPipeline {
     /// # Returns
     /// 
     /// * `Result<(), RenderError>` - The result of the initialization.
-    pub fn init(&mut self, instance: &WRenderInstanceData<'_>) -> Result<(), WRenderError> {
+    pub fn init(&mut self, instance: &RenderInstanceData<'_>) -> Result<(), RenderError> {
         event!(Level::DEBUG, "Creating render pipeline {}.", self.label);
         let d = &self.config;
 
         // Security checks
         if d.vertex_shader.is_empty() || d.fragment_shader.is_empty() {
             error!(self.label, "Pipeline does not have a vertex or fragment shader.");
-            return Err(WRenderError::MissingShader);
+            return Err(RenderError::MissingShader);
         }
         
         // Load vertex shader
@@ -239,7 +238,7 @@ impl WRenderPipeline {
                     },
                     Err(e) => {
                         error!(self.label, "Vertex shader validation failed: {:?}.", e);
-                        return Err(WRenderError::ShaderCompilationError);
+                        return Err(RenderError::ShaderCompilationError);
                     }
                 }
             },
@@ -250,7 +249,7 @@ impl WRenderPipeline {
                     error.push_str(&format!(" - Error on line {} at position {}: \"{}\"\n", location.line_number, location.line_position, message));
                 }
                 error!(self.label, "{}", error);
-                return Err(WRenderError::ShaderCompilationError);
+                return Err(RenderError::ShaderCompilationError);
             }
         };
 
@@ -269,7 +268,7 @@ impl WRenderPipeline {
                     },
                     Err(e) => {
                         error!(self.label, "Fragment shader validation failed: {:?}.", e);
-                        return Err(WRenderError::ShaderCompilationError);
+                        return Err(RenderError::ShaderCompilationError);
                     }
                 }
             },
@@ -280,7 +279,7 @@ impl WRenderPipeline {
                     error.push_str(&format!(" - Error on line {} at position {}: \"{}\"\n", location.line_number, location.line_position, message));
                 }
                 error!(self.label, "{}", error);
-                return Err(WRenderError::ShaderCompilationError);
+                return Err(RenderError::ShaderCompilationError);
             }
         };
 
@@ -293,7 +292,7 @@ impl WRenderPipeline {
         });
 
         // Create pipeline
-        let mut res: Result<(), WRenderError> = Ok(());
+        let mut res: Result<(), RenderError> = Ok(());
         let pipeline = instance.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some(format!("{}-render-pip", self.label).as_str()),
             layout: Some(&layout),
@@ -301,7 +300,7 @@ impl WRenderPipeline {
             vertex: wgpu::VertexState {
                 module: &shader_module_vert,
                 entry_point: "main",
-                buffers: &[WVertex::describe()],
+                buffers: &[Vertex::describe()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState { // Always write to swapchain format
@@ -324,11 +323,11 @@ impl WRenderPipeline {
                 unclipped_depth: false,
             },
             depth_stencil: if d.depth.enabled { Some(wgpu::DepthStencilState {
-                format: match WTexture::DEPTH_FORMAT {
-                    WTextureFormat::Depth32Float => wgpu::TextureFormat::Depth32Float,
+                format: match Texture::DEPTH_FORMAT {
+                    TextureFormat::Depth32Float => wgpu::TextureFormat::Depth32Float,
                     _ => {
                         error!("Depth format is not supported for render pipeline '{}'.", self.label);
-                        res = Err(WRenderError::UnsupportedDepthFormat);
+                        res = Err(RenderError::UnsupportedDepthFormat);
                         wgpu::TextureFormat::Depth32Float
                     }
                 },

@@ -1,5 +1,5 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_wgpu::render_pipeline::WDepthStencilDescriptor;
+use wde_wgpu::render_pipeline::DepthStencilDescriptor;
 use crate::{assets::{materials::GizmoMaterialAsset, GpuMaterial, PrepareAssetError, RenderAsset, RenderAssets}, features::CameraFeatureRender, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}};
 
 use super::GizmoSsbo;
@@ -45,11 +45,11 @@ impl RenderAsset for GpuGizmoRenderPipeline {
             vert: Some(assets_server.load("gizmo/vert.wgsl")),
             frag: Some(assets_server.load("gizmo/frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
-            depth: WDepthStencilDescriptor {
+            depth: DepthStencilDescriptor {
                 enabled: true,
                 ..Default::default()
             },
-            topology: wde_wgpu::render_pipeline::WTopology::LineList,
+            topology: wde_wgpu::render_pipeline::RenderTopology::LineList,
             cull_mode: None,
             ..Default::default()
         };

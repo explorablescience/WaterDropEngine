@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use bevy::{ecs::world::CommandQueue, platform::collections::HashMap, prelude::*, tasks::{AsyncComputeTaskPool, Task, block_on, futures_lite::future}};
 use wde_render::assets::Buffer;
-use wde_wgpu::{buffer::BufferUsage, vertex::WVertex};
+use wde_wgpu::{buffer::BufferUsage, vertex::Vertex};
 
 use crate::terrain::{mc_chunk::{MCActiveChunk, MCChunksListRender, MCPendingChunk}, MC_MAX_CHUNKS_PROCESS_PER_FRAME};
 
@@ -94,7 +94,7 @@ impl MCProcessTaskManager {
                         indices.push(match vertices_map.get(&vertex) {
                             Some(vertex_index) => *vertex_index,
                             None => {
-                                vertices.push(WVertex {
+                                vertices.push(Vertex {
                                     position: [vertex.x, vertex.y, vertex.z],
                                     normal: [triangle_normal.x, triangle_normal.y, triangle_normal.z],
                                     uv: [0.0, 0.0],
@@ -110,7 +110,7 @@ impl MCProcessTaskManager {
                 // Create the buffers
                 let mut vertices_buffer = Buffer {
                     label: "".to_string(),
-                    size: vertices.len() * std::mem::size_of::<WVertex>(),
+                    size: vertices.len() * std::mem::size_of::<Vertex>(),
                     usage: BufferUsage::VERTEX,
                     content: Some(bytemuck::cast_slice(&vertices).to_vec()),
                 };

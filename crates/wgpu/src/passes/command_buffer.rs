@@ -1,35 +1,35 @@
-//! Define a command buffer to record commands for the GPU.
+//! Command encoder utilities to record render and compute work.
 use bevy::{log::Level, log::tracing::event};
 use wgpu::Texture;
 
-use crate::{buffer::WBuffer, compute_pass::WComputePass, instance::WRenderInstanceData, texture::WTextureView};
+use crate::{buffer::Buffer, compute_pass::WComputePass, instance::RenderInstanceData, texture::TextureView};
 
-use super::render_pass::WRenderPass;
+use super::render_pass::RenderPass;
 
 /// Type of a color.
-pub type WColor = wgpu::Color;
+pub type Color = wgpu::Color;
 
 /// Type of a load operation.
-pub type WLoadOp<V> = wgpu::LoadOp<V>;
+pub type LoadOp<V> = wgpu::LoadOp<V>;
 
 /// Type of a store operation.
-pub type WStoreOp = wgpu::StoreOp;
+pub type StoreOp = wgpu::StoreOp;
 
-/// Load and store operations for the color texture.
+/// Load/store operations for attachments.
 #[derive(Clone, Copy, Debug)]
 pub struct Operations<V> {
-    pub load: WLoadOp<V>,
-    pub store: WStoreOp,
+    pub load: LoadOp<V>,
+    pub store: StoreOp,
 }
 
-/// Describe the depth texture of a render pass.
+/// Describe the optional depth attachment of a render pass.
 pub struct RenderPassDepth<'pass> {
     /// The depth texture. If `None`, the render pass will not have a depth texture.
-    pub texture: Option<&'pass WTextureView>,
+    pub texture: Option<&'pass TextureView>,
     /// The depth operation when loading the texture. By default, clear the texture to 1.0 (farthest).
-    pub load_operation: WLoadOp<f32>,
+    pub load_operation: LoadOp<f32>,
     /// The depth operation when storing the texture. By default, store the texture.
-    pub store_operation: WStoreOp,
+    pub store_operation: StoreOp,
 }
 impl Default for RenderPassDepth<'_> {
     fn default() -> Self {
@@ -41,27 +41,31 @@ impl Default for RenderPassDepth<'_> {
     }
 }
 
-/// Describe a color attachment of a render pass.
+/// Describe a single color attachment of a render pass.
 pub struct RenderPassColorAttachment<'pass> {
     /// The color texture.
-    pub texture: Option<&'pass WTextureView>,
+    pub texture: Option<&'pass TextureView>,
     /// The color load operation. By default, clear the texture to a dark gray. The color must be in sRGB.
-    pub load: WLoadOp<WColor>,
+    pub load: LoadOp<Color>,
     /// The color store operation. By default, store the texture.
-    pub store: WStoreOp,
+    pub store: StoreOp,
 }
 impl Default for RenderPassColorAttachment<'_> {
     fn default() -> Self {
         let color_srgb = 0.1_f64.powf(2.2);
         Self {
             texture: None,
-            load: wgpu::LoadOp::Clear(WColor { r: color_srgb, g: color_srgb, b: color_srgb, a: 1.0 }),
+            load: wgpu::LoadOp::Clear(Color { r: color_srgb, g: color_srgb, b: color_srgb, a: 1.0 }),
             store: wgpu::StoreOp::Store,
         }
     }
 }
 
 /// Builder for a render pass.
+///
+/// Prefer constructing passes through [`CommandBuffer::create_render_pass`]; supply a closure
+/// that mutates this builder to add one or more color attachments and an optional depth
+/// attachment.
 #[derive(Default)]
 pub struct RenderPassBuilder<'pass> {
     /// The depth texture of the render pass.
@@ -90,36 +94,48 @@ impl<'pass> RenderPassBuilder<'pass> {
 }
 
 
-/// Create a new command buffer to record commands for the GPU.
-/// The command buffer can be used to create render passes and compute passes.
-/// Then, the command buffer can be submitted to the GPU.
+/// Record commands for the GPU, spawn render/compute passes, and submit once finished.
+/// Guard rails ensure pipelines/buffers are set before draws/dispatches.
+///
+/// # Examples
+/// Clear a surface:
+/// ```rust,no_run
+/// use wde_wgpu::{
+///     command_buffer::{Color, CommandBuffer, LoadOp, RenderPassColorAttachment, StoreOp},
+///     instance::RenderInstanceData,
+///     texture::TextureView,
+/// };
 /// 
-/// # Example
-/// 
-/// ```
-/// let mut command_buffer = WCommandBuffer::new(&instance, "Command Buffer");
-/// 
+/// let mut cmd = CommandBuffer::new(instance, "frame");
 /// {
-///     // Create passes
-///     let mut render_pass = command_buffer.create_render_pass(
-///         "Render Pass", &color_texture,
-///         Some(Operations { load: LoadOp::Clear(Color::BLACK), store: StoreOp::Store }),
-///         Some(&depth_texture));
-///     let mut compute_pass = command_buffer.create_compute_pass("Compute Pass");
-/// 
-///     // Use the render pass
-///     // ...
+///     cmd.create_render_pass("clear", |pass| {
+///         pass.add_color_attachment(RenderPassColorAttachment {
+///             texture: Some(view),
+///             load: LoadOp::Clear(Color::BLACK),
+///             store: StoreOp::Store,
+///         });
+///     });
 /// }
-/// 
-/// // Submit the command buffer to the GPU
-/// command_buffer.submit(&instance);
+/// cmd.submit(instance);
 /// ```
-pub struct WCommandBuffer {
+///
+/// Dispatch compute work:
+/// ```rust,no_run
+/// use wde_wgpu::{command_buffer::CommandBuffer, compute_pass::WComputePass, compute_pipeline::ComputePipeline};
+/// 
+/// let mut cmd = CommandBuffer::new(instance, "compute");
+/// {
+///     let mut pass: WComputePass = cmd.create_compute_pass("cull");
+///     pass.set_pipeline(pipeline).unwrap().set_bind_group(0, bind).dispatch(4, 1, 1).unwrap();
+/// }
+/// cmd.submit(instance);
+/// ```
+pub struct CommandBuffer {
     pub label: String,
     encoder: wgpu::CommandEncoder,
 }
 
-impl std::fmt::Debug for WCommandBuffer {
+impl std::fmt::Debug for CommandBuffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CommandBuffer")
             .field("label", &self.label)
@@ -127,14 +143,14 @@ impl std::fmt::Debug for WCommandBuffer {
     }
 }
 
-impl WCommandBuffer {
+impl CommandBuffer {
     /// Create a new command buffer.
     /// 
     /// # Arguments
     /// 
     /// * `instance` - The render instance.
     /// * `label` - The label of the command buffer.
-    pub fn new(instance: &WRenderInstanceData<'_>, label: &str) -> Self {
+    pub fn new(instance: &RenderInstanceData<'_>, label: &str) -> Self {
         event!(Level::TRACE, "Creating a command buffer {}.", label);
 
         // Create command encoder
@@ -156,7 +172,7 @@ impl WCommandBuffer {
     /// * `builder_func` - The function to build the render pass.
     pub fn create_render_pass<'pass>(
         &'pass mut self, label: &str, builder_func: impl FnOnce(&mut RenderPassBuilder<'pass>)
-    ) -> WRenderPass<'pass> {
+    ) -> RenderPass<'pass> {
         event!(Level::TRACE, "Creating a render pass {}.", label);
 
         // Run the builder function
@@ -194,7 +210,7 @@ impl WCommandBuffer {
             occlusion_query_set: None,
         });
 
-        WRenderPass::new(label, render_pass)
+        RenderPass::new(label, render_pass)
     }
 
     /// Create a new compute pass.
@@ -217,7 +233,7 @@ impl WCommandBuffer {
     /// # Arguments
     /// 
     /// * `instance` - The render instance.
-    pub fn submit(self, instance: &WRenderInstanceData) {
+    pub fn submit(self, instance: &RenderInstanceData) {
         event!(Level::TRACE, "Submitted command buffer {}.", self.label);
         instance.queue.submit(std::iter::once(self.encoder.finish()));
     }
@@ -230,7 +246,7 @@ impl WCommandBuffer {
     /// 
     /// * `source` - The source buffer.
     /// * `destination` - The destination buffer.
-    pub fn copy_buffer_to_buffer(&mut self, source: &WBuffer, destination: &WBuffer) {
+    pub fn copy_buffer_to_buffer(&mut self, source: &Buffer, destination: &Buffer) {
         event!(Level::TRACE, "Copying buffer {} to buffer {}.", source.label, destination.label);
 
         self.encoder.copy_buffer_to_buffer(
@@ -247,7 +263,7 @@ impl WCommandBuffer {
     /// * `source` - The source texture.
     /// * `destination` - The destination buffer.
     /// * `size` - The size of the texture.
-    pub fn copy_texture_to_buffer(&mut self, source: &Texture, destination: &WBuffer, size: wgpu::Extent3d) {
+    pub fn copy_texture_to_buffer(&mut self, source: &Texture, destination: &Buffer, size: wgpu::Extent3d) {
         event!(Level::TRACE, "Copying texture to buffer {}.", destination.label);
 
         // Create texture copy

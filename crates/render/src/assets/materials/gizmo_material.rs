@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::WBufferBindingType, render_pipeline::WShaderStages};
+use wde_wgpu::{bind_group::BufferBindingType, render_pipeline::ShaderStages};
 use crate::assets::{Material, MaterialBuilder};
 
 #[derive(Asset, Clone, TypePath)]
@@ -40,7 +40,7 @@ impl Material for GizmoMaterialAsset {
 
         // Build the material
         builder.add_buffer(
-            0, WShaderStages::FRAGMENT, WBufferBindingType::Uniform,
+            0, ShaderStages::FRAGMENT, BufferBindingType::Uniform,
             size_of::<GizmoMaterialUniform>(), Some(bytemuck::cast_slice(&[uniform]).to_vec()));
     }
 

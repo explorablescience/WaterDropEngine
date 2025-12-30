@@ -7,11 +7,11 @@ pub mod render_manager;
 pub mod extract_macros;
 pub mod render_multithread;
 
-use bevy::{app::AppLabel, ecs::schedule::{ScheduleBuildSettings, ScheduleLabel}, prelude::*, tasks::futures_lite};
+use bevy::{app::AppLabel, ecs::{schedule::{ScheduleBuildSettings, ScheduleLabel}, system::SystemState}, prelude::*, tasks::futures_lite, window::{PrimaryWindow, RawHandleWrapperHolder}};
 use extract::{apply_extract_commands, main_extract};
 use render_manager::{init_main_world, init_surface, prepare, present};
 use render_multithread::PipelinedRenderingPlugin;
-use wde_wgpu::instance::{create_instance, WLimits, WRenderTexture};
+use wde_wgpu::instance::{create_instance, Limits, RenderTexture};
 use window::{extract_surface_size, send_surface_resized, SurfaceResized, WindowPlugins};
 use std::ops::{Deref, DerefMut};
 
@@ -92,12 +92,12 @@ impl Render {
 }
 
 #[derive(Resource, Default)]
-pub struct DeviceLimits(pub WLimits);
+pub struct DeviceLimits(pub Limits);
 
 
 #[derive(Resource, Default)]
 pub struct SwapchainFrame {
-    pub data: Option<WRenderTexture>,
+    pub data: Option<RenderTexture>,
 }
 
 
@@ -129,7 +129,9 @@ impl Plugin for RenderCorePlugin {
         {
             // Create the wgpu instance
             render_app.insert_resource(futures_lite::future::block_on(async {
-                let instance = create_instance("wde_renderer", app).await;
+                let mut system_state: SystemState<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>> = SystemState::new(app.world_mut());
+                let primary_window = system_state.get(app.world()).single().ok().cloned();
+                let instance = create_instance("wde_renderer", primary_window.as_ref()).await;
                 gpu_limits = Some(instance.data.read().unwrap().device.limits());
                 instance
             }));

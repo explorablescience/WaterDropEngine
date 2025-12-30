@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use wde_render::{assets::{GpuBuffer, RenderAssets}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{bind_group::BindGroup, command_buffer::WCommandBuffer, instance::WRenderInstance};
+use wde_wgpu::{bind_group::BindGroup, command_buffer::CommandBuffer, instance::RenderInstance};
 
 use crate::terrain::{mc_chunk::{MCChunksListRender, MCLoadingChunk, MCPendingChunk}, mc_compute_main::{GpuMCDescription, MCComputeHandlerGPU}, MC_MAX_CHUNKS_PROCESS_PER_FRAME, MC_MAX_TRIANGLES};
 
@@ -11,7 +11,7 @@ impl MCComputeCorePoints {
     /** Create the bind groups if they are not already created. */
     pub fn create_bind_groups(
         handler: Res<MCComputeHandlerGPU>, buffers: Res<RenderAssets<GpuBuffer>>,
-        render_instance: Res<WRenderInstance<'static>>, mut pipeline: ResMut<RenderAssets<GpuMCComputePipelineGenerate>>,
+        render_instance: Res<RenderInstance<'static>>, mut pipeline: ResMut<RenderAssets<GpuMCComputePipelineGenerate>>,
         mut loading_chunks: Query<&mut MCLoadingChunk>
     ) {
         // Get the compute pipeline
@@ -90,7 +90,7 @@ impl MCComputeCorePoints {
         (query, mut commands): (Query<(Entity, &MCLoadingChunk)>, Commands),
         (chunks_list, handler): (Res<MCChunksListRender>, Res<MCComputeHandlerGPU>),
         mut buffers: ResMut<RenderAssets<GpuBuffer>>,
-        render_instance: Res<WRenderInstance<'static>>,
+        render_instance: Res<RenderInstance<'static>>,
         (pipeline, pipeline_manager): (
             Res<RenderAssets<GpuMCComputePipelineGenerate>>, Res<PipelineManager>
         )
@@ -135,7 +135,7 @@ impl MCComputeCorePoints {
 
             // Create the compute pass
             let mut generated = false;
-            let mut command_buffer = WCommandBuffer::new(&render_instance, "marching-cubes-generate");
+            let mut command_buffer = CommandBuffer::new(&render_instance, "marching-cubes-generate");
             {
                 let mut compute_pass = command_buffer.create_compute_pass("marching-cubes-generate");
 

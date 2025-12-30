@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use wde_render::{assets::{Buffer, GpuBuffer, RenderAssets}, core::{extract_macros::ExtractWorld, DeviceLimits}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{bind_group::BindGroup, buffer::BufferUsage, command_buffer::WCommandBuffer, instance::WRenderInstance};
+use wde_wgpu::{bind_group::BindGroup, buffer::BufferUsage, command_buffer::CommandBuffer, instance::RenderInstance};
 
 use crate::terrain::{mc_chunk::{MCActiveChunk, MCChunksListMain, MCChunksListRender, MCLoadingChunk, MCPendingChunk, MCRegisteredChunk}, mc_compute_main::{GpuMCDescription, MCComputeHandlerGPU, MCTerrainNoiseParameters}, MC_MAX_CHUNKS_PROCESS_PER_FRAME, MC_MAX_POINTS};
 
@@ -77,7 +77,7 @@ impl MCComputePointsCore {
     /** Create the bind groups if they are not already created. */
     pub fn create_bind_groups(
         handler: Res<MCComputeHandlerGPU>, mut buffers: ResMut<RenderAssets<GpuBuffer>>,
-        render_instance: Res<WRenderInstance<'static>>, mut pipeline: ResMut<RenderAssets<GpuMCComputePipelineSpawn>>,
+        render_instance: Res<RenderInstance<'static>>, mut pipeline: ResMut<RenderAssets<GpuMCComputePipelineSpawn>>,
         mut registered_chunks: Query<&mut MCRegisteredChunk>,
         noise_parameters: Res<MCTerrainNoiseParameters>
     ) {
@@ -159,7 +159,7 @@ impl MCComputePointsCore {
         (query, mut commands): (Query<(Entity, &MCRegisteredChunk)>, Commands),
         (chunks_list, handler): (Res<MCChunksListRender>, Res<MCComputeHandlerGPU>),
         mut buffers: ResMut<RenderAssets<GpuBuffer>>,
-        render_instance: Res<WRenderInstance<'static>>,
+        render_instance: Res<RenderInstance<'static>>,
         (pipeline, pipeline_manager): (
             Res<RenderAssets<GpuMCComputePipelineSpawn>>, Res<PipelineManager>
         )
@@ -204,7 +204,7 @@ impl MCComputePointsCore {
 
             // Create the compute pass
             let mut generated = false;
-            let mut command_buffer = WCommandBuffer::new(&render_instance, "marching-cubes-spawn");
+            let mut command_buffer = CommandBuffer::new(&render_instance, "marching-cubes-spawn");
             {
                 let mut compute_pass = command_buffer.create_compute_pass("marching-cubes-spawn");
 

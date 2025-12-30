@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use crate::{assets::{GpuMesh, MeshAsset, ModelBoundingBox, RenderAssets}, core::SwapchainFrame, features::{CameraFeatureRender, LightsFeatureBuffer}, passes::{depth::DepthTextureLayout, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, WCommandBuffer}, instance::WRenderInstance, vertex::WVertex};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}, instance::RenderInstance, vertex::Vertex};
 
 use super::{GpuPbrLightingRenderPipeline, PbrDeferredTexturesLayout};
 
@@ -15,10 +15,10 @@ impl PbrLightingRenderPassMesh {
         let deferred_mesh: Handle<MeshAsset> = assets_server.add(MeshAsset {
             label: "deferred-lighting-pass".to_string(),
             vertices: vec![
-                WVertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] },
-                WVertex { position: [-1.0, -1.0, 0.0], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] },
-                WVertex { position: [1.0, -1.0, 0.0], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] },
-                WVertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] },
+                Vertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] },
+                Vertex { position: [-1.0, -1.0, 0.0], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] },
+                Vertex { position: [1.0, -1.0, 0.0], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] },
+                Vertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] },
             ],
             indices: vec![0, 1, 2, 0, 2, 3],
             bounding_box: ModelBoundingBox {
@@ -44,7 +44,7 @@ impl RenderPass for PbrLightingRenderPass {
 
     fn render(&self, world: &mut World) {
         // Get the render instance and swapchain frame
-        let render_instance = world.get_resource::<WRenderInstance>().unwrap();
+        let render_instance = world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.data.read().unwrap();
         let swapchain_frame = world.get_resource::<SwapchainFrame>().unwrap().data.as_ref().unwrap();
 
@@ -66,7 +66,7 @@ impl RenderPass for PbrLightingRenderPass {
         };
 
         // Create the render pass
-        let mut command_buffer = WCommandBuffer::new(&render_instance, "lighting-pbr");
+        let mut command_buffer = CommandBuffer::new(&render_instance, "lighting-pbr");
         {
             let mut render_pass = command_buffer.create_render_pass("lighting-pbr", |builder: &mut RenderPassBuilder| {
                 builder.add_color_attachment(RenderPassColorAttachment {

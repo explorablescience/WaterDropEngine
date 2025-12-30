@@ -1,6 +1,6 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use crate::{assets::{materials::{GizmoMaterial, GizmoMaterialAsset}, GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, core::SwapchainFrame, features::CameraFeatureRender, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, WCommandBuffer, WLoadOp}, instance::WRenderInstance};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, LoadOp}, instance::RenderInstance};
 
 use super::{GizmoSsbo, GpuGizmoRenderPipeline};
 
@@ -39,7 +39,7 @@ impl RenderPass for GizmoRenderPass {
             batches: Default::default()
         };
         {
-            let render_instance = render_world.get_resource::<WRenderInstance>().unwrap();
+            let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
             let render_instance = render_instance.data.read().unwrap();
             ssbo_bf.buffer.map_write(&render_instance, |mut view| {
                 let mut first = 0;
@@ -148,7 +148,7 @@ impl RenderPass for GizmoRenderPass {
 
     fn render(&self, render_world: &mut World) {
         // Get the render instance and swapchain frame
-        let render_instance = render_world.get_resource::<WRenderInstance>().unwrap();
+        let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.data.read().unwrap();
 
         // Check if depth texture is ready
@@ -170,19 +170,19 @@ impl RenderPass for GizmoRenderPass {
         };
 
         // Create the render pass
-        let mut command_buffer = WCommandBuffer::new(&render_instance, "gizmo");
+        let mut command_buffer = CommandBuffer::new(&render_instance, "gizmo");
         {
             let swapchain_frame = render_world.get_resource::<SwapchainFrame>().unwrap();
             let swapchain_frame = swapchain_frame.data.as_ref().unwrap();
             let mut render_pass = command_buffer.create_render_pass("gizmo", |builder: &mut RenderPassBuilder| {
                 builder.set_depth_texture(RenderPassDepth {
                     texture: Some(&depth_texture.texture.view),
-                    load_operation: WLoadOp::Load,
+                    load_operation: LoadOp::Load,
                     ..Default::default()
                 });
                 builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&swapchain_frame.view),
-                    load: WLoadOp::Load,
+                    load: LoadOp::Load,
                     ..Default::default()
                 });
             });

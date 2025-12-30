@@ -4,7 +4,7 @@ use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::lifetimel
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 use tobj::LoadError;
-use wde_wgpu::{buffer::{BufferUsage, WBuffer}, instance::WRenderInstance, vertex::WVertex};
+use wde_wgpu::{buffer::{BufferUsage, Buffer}, instance::RenderInstance, vertex::Vertex};
 
 use super::render_assets::{PrepareAssetError, RenderAsset};
 
@@ -41,7 +41,7 @@ pub struct MeshAsset {
     /// The label of the texture.
     pub label: String,
     /// The list of vertices
-    pub vertices: Vec<WVertex>,
+    pub vertices: Vec<Vertex>,
     /// The list of indices
     pub indices: Vec<u32>,
     /// The bounding box of the model
@@ -121,7 +121,7 @@ impl AssetLoader for MeshLoader {
         };
 
         // Load models
-        let mut vertices: Vec<WVertex> = Vec::new();
+        let mut vertices: Vec<Vertex> = Vec::new();
         let mut indices: Vec<u32> = Vec::new();
         for m in models.iter() {
             let mesh = &m.mesh;
@@ -157,7 +157,7 @@ impl AssetLoader for MeshLoader {
                 }
 
                 // Vertex
-                vertices.push(WVertex {
+                vertices.push(Vertex {
                     position: [x, y, z],
                     normal: [nx, ny, nz],
                     uv: [u, v],
@@ -194,9 +194,9 @@ pub struct GpuMesh {
     /// The label of the mesh
     pub label: String,
     /// The vertex buffer
-    pub vertex_buffer: WBuffer,
+    pub vertex_buffer: Buffer,
     /// The index buffer
-    pub index_buffer: WBuffer,
+    pub index_buffer: Buffer,
     /// The number of indices
     pub index_count: u32,
     /// The bounding box of the model
@@ -204,7 +204,7 @@ pub struct GpuMesh {
 }
 impl RenderAsset for GpuMesh {
     type SourceAsset = MeshAsset;
-    type Param = SRes<WRenderInstance<'static>>;
+    type Param = SRes<RenderInstance<'static>>;
 
     fn prepare_asset(
             asset: Self::SourceAsset,
@@ -214,15 +214,15 @@ impl RenderAsset for GpuMesh {
 
         // Create vertex buffer
         let render_instance = render_instance.data.read().unwrap();
-        let vertex_buffer = WBuffer::new(
+        let vertex_buffer = Buffer::new(
             &render_instance,
             format!("{}-vertex", asset.label).as_str(),
-            std::mem::size_of::<WVertex>() * asset.vertices.len(),
+            std::mem::size_of::<Vertex>() * asset.vertices.len(),
             BufferUsage::VERTEX,
             Some(bytemuck::cast_slice(&asset.vertices)));
 
         // Create index buffer
-        let index_buffer = WBuffer::new(
+        let index_buffer = Buffer::new(
             &render_instance,
             format!("{}-indices", asset.label).as_str(),
             std::mem::size_of::<u32>() * asset.indices.len(),

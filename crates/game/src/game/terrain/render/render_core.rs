@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use wde_render::{assets::{GpuBuffer, GpuTexture, RenderAssets}, core::SwapchainFrame, features::{CameraFeatureRender, LightsFeatureBuffer}, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, WCommandBuffer, WLoadOp}, instance::WRenderInstance};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, LoadOp}, instance::RenderInstance};
 
 use crate::terrain::mc_chunk::MCActiveChunk;
 
@@ -17,7 +17,7 @@ impl RenderPass for MCRenderPass {
         }
 
         // Get the render instance and swapchain frame
-        let render_instance = render_world.get_resource::<WRenderInstance<'static>>().unwrap();
+        let render_instance = render_world.get_resource::<RenderInstance<'static>>().unwrap();
         let render_instance = render_instance.data.read().unwrap();
 
         // Check if depth texture is ready
@@ -47,17 +47,17 @@ impl RenderPass for MCRenderPass {
         }
         
         // Create the render pass
-        let mut command_buffer = WCommandBuffer::new(&render_instance, "marching-cubes");
+        let mut command_buffer = CommandBuffer::new(&render_instance, "marching-cubes");
         {
             let mut render_pass = command_buffer.create_render_pass("marching-cubes", |builder: &mut RenderPassBuilder| {
                 builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&swapchain_frame.view),
-                    load: WLoadOp::Load,
+                    load: LoadOp::Load,
                     ..Default::default()
                 });
                 builder.set_depth_texture(RenderPassDepth {
                     texture: Some(&depth_texture.texture.view),
-                    load_operation: WLoadOp::Load,
+                    load_operation: LoadOp::Load,
                     ..Default::default()
                 });
             });

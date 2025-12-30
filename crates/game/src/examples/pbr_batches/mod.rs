@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use wde_render::{assets::{materials::{PbrMaterial, PbrMaterialAsset}, Mesh, TextureLoaderSettings}, components::{Camera, CameraController}};
-use wde_wgpu::texture::{WTextureFormat, WTextureUsages};
+use wde_wgpu::texture::{TextureFormat, TextureUsages};
 
 pub struct PbrBatchesPlugin;
 impl Plugin for PbrBatchesPlugin {
@@ -22,8 +22,8 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
     // Load the assets
     let box_texture = asset_server.load_with_settings("examples/pbr_batches/box.png", |settings: &mut TextureLoaderSettings| {
         settings.label = "pbr-box".to_string();
-        settings.format = WTextureFormat::Rgba8Unorm;
-        settings.usages = WTextureUsages::TEXTURE_BINDING;
+        settings.format = TextureFormat::Rgba8Unorm;
+        settings.usages = TextureUsages::TEXTURE_BINDING;
     });
     let red_box = materials.add(PbrMaterialAsset {
         label: "pbr-material-red-box".to_string(),

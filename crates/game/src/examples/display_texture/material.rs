@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use wde_render::assets::{Material, MaterialBuilder, Texture};
-use wde_wgpu::render_pipeline::WShaderStages;
+use wde_wgpu::render_pipeline::ShaderStages;
 
 #[derive(Asset, Clone, TypePath)]
 /// Describes a simple material with a texture.
@@ -14,8 +14,8 @@ pub struct DisplayTextureMaterialAsset {
 pub struct DisplayTextureMaterial(pub Handle<DisplayTextureMaterialAsset>);
 impl Material for DisplayTextureMaterialAsset {
     fn describe(&self, builder: &mut MaterialBuilder) {
-        builder.add_texture_view(    0, WShaderStages::FRAGMENT, self.texture.clone());
-        builder.add_texture_sampler( 1, WShaderStages::FRAGMENT, self.texture.clone());
+        builder.add_texture_view(    0, ShaderStages::FRAGMENT, self.texture.clone());
+        builder.add_texture_sampler( 1, ShaderStages::FRAGMENT, self.texture.clone());
     }
 
     fn label(&self) -> String {

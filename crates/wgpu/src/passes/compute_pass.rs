@@ -2,25 +2,30 @@
 
 use bevy::{log::Level, prelude::*, log::tracing::event};
 
-use crate::{compute_pipeline::WComputePipeline, instance::WRenderError};
+use crate::{compute_pipeline::ComputePipeline, instance::RenderError};
 
 
-/// Create a compute pass instance.
-/// 
+/// RAII wrapper around `wgpu::ComputePass` created by `CommandBuffer::create_compute_pass`.
+///
 /// # Example
+/// ```rust,no_run
+/// use wde_wgpu::{
+///     command_buffer::CommandBuffer,
+///     compute_pass::WComputePass,
+///     compute_pipeline::ComputePipeline,
+///     instance::{RenderError, RenderInstanceData},
+/// };
 /// 
-/// ```
-/// // Create a new compute pass
-/// let mut compute_pass = WComputePass::new("Compute pass");
-/// 
-/// // Set the pipeline dependencies
-/// compute_pass
-///     .set_pipeline(&compute_pipeline)  // Set the pipeline of the compute pass. The pipeline must be initialized.
-///     .set_push_constants(bytemuck::cast_slice(&[...]))  // Set push constants values
-///     .set_bind_group(0, &bind_group);  // Set bind group at binding 0
-/// 
-/// // Run compute pass on the GPU on a given number of workgroups (x, y, z)
-/// compute_pass.dispatch(x: ..., y: ..., z: ...);
+/// let mut cmd = CommandBuffer::new(instance, "compute-frame");
+/// {
+///     let mut pass: WComputePass = cmd.create_compute_pass("cull");
+///     pass
+///         .set_pipeline(pipeline)?
+///         .set_bind_group(0, bind_group)
+///         .set_push_constants(bytemuck::bytes_of(&[4u32, 8u32]));
+///     pass.dispatch(4, 1, 1)?;
+/// }
+/// cmd.submit(instance);
 /// ```
 pub struct WComputePass<'a> {
     pub label: String,
@@ -62,10 +67,10 @@ impl<'a> WComputePass<'a> {
     /// # Errors
     /// 
     /// * `RenderError::PipelineNotInitialized` - The pipeline is not initialized.
-    pub fn set_pipeline(&mut self, pipeline: &'a WComputePipeline) -> Result<&mut Self, WRenderError> {
+    pub fn set_pipeline(&mut self, pipeline: &'a ComputePipeline) -> Result<&mut Self, RenderError> {
         if pipeline.get_pipeline().is_none() {
             error!(pipeline.label, "Pipeline is not created yet.");
-            return Err(WRenderError::PipelineNotInitialized);
+            return Err(RenderError::PipelineNotInitialized);
         }
 
         // Set pipeline
@@ -109,10 +114,10 @@ impl<'a> WComputePass<'a> {
     /// # Errors
     /// 
     /// * `RenderError::PipelineNotSet` - The pipeline is not set.
-    pub fn dispatch(&mut self, x: u32, y: u32, z: u32) -> Result<(), WRenderError> {
+    pub fn dispatch(&mut self, x: u32, y: u32, z: u32) -> Result<(), RenderError> {
         if !self.pipeline_set {
             error!(self.label, "Pipeline is not set.");
-            return Err(WRenderError::PipelineNotSet);
+            return Err(RenderError::PipelineNotSet);
         }
 
         // Dispatch

@@ -1,8 +1,8 @@
 //! Rendering system for the WDE renderer. Handle the initialization and presentation of the wgpu renderer.
 
-use bevy::window::{PrimaryWindow, RawHandleWrapperHolder};
+use bevy::window::{PresentMode, PrimaryWindow, RawHandleWrapperHolder};
 use bevy::prelude::*;
-use wde_wgpu::instance::{self, setup_surface, WRenderEvent, WRenderInstance};
+use wde_wgpu::instance::{self, PresentMode as WPresentMode, RenderEvent, RenderInstance, setup_surface};
 
 use super::SwapchainFrame;
 
@@ -15,7 +15,7 @@ pub(crate) fn init_main_world(mut commands: Commands) {
 }
 
 /// Initialize the wgpu surface.
-pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<WRenderInstance<'static>>, primary_window: ExtractWorld<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>>, windows: ExtractWorld<Query<&Window>>) {
+pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<RenderInstance<'static>>, primary_window: ExtractWorld<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>>, windows: ExtractWorld<Query<&Window>>) {
     trace!("Initializing wgpu surface");
     
     // Create the wgpu surface
@@ -41,7 +41,15 @@ pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<W
     let surface_config = {
         let instance_ref = render_instance.as_ref().data.as_ref().read().unwrap();
         setup_surface("wde_renderer", (600, 500),
-            &instance_ref.device, &surface, &instance_ref.adapter, windows.single().unwrap().present_mode)
+            &instance_ref.device, &surface, &instance_ref.adapter, match windows.single().unwrap().present_mode {
+                PresentMode::Fifo => WPresentMode::Fifo,
+                PresentMode::FifoRelaxed => WPresentMode::FifoRelaxed,
+                PresentMode::Mailbox => WPresentMode::Mailbox,
+                PresentMode::Immediate => WPresentMode::Immediate,
+                PresentMode::AutoVsync => WPresentMode::AutoVsync,
+                PresentMode::AutoNoVsync => WPresentMode::AutoNoVsync
+            }
+        )
     };
     let mut mut_render_instance = render_instance.as_mut().data.write().unwrap();
     mut_render_instance.surface = Some(surface);
@@ -52,7 +60,7 @@ pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<W
 }
 
 /// Prepare the rendering frame.
-pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instance: Res<WRenderInstance<'static>>) {
+pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instance: Res<RenderInstance<'static>>) {
     // Wait for the surface to be initialized
     if render_instance.data.read().unwrap().surface.is_none() {
         debug!("Waiting for surface to be initialized.");
@@ -65,10 +73,10 @@ pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instan
         render_data.surface.as_ref().unwrap(), 
         render_data.surface_config.as_ref().unwrap()
     ) {
-        WRenderEvent::Redraw(render_texture) => {
+        RenderEvent::Redraw(render_texture) => {
             swapchain_frame.data = Some(render_texture);
         },
-        WRenderEvent::Resize => {
+        RenderEvent::Resize => {
             debug!("Received resize event from render instance.");
             instance::resize(&render_data.device, render_data.surface.as_ref().unwrap(),
                 render_data.surface_config.as_ref().unwrap());
@@ -76,7 +84,7 @@ pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instan
                 render_data.surface.as_ref().unwrap(),
                 render_data.surface_config.as_ref().unwrap()
             ) {
-                WRenderEvent::Redraw(render_texture) => {
+                RenderEvent::Redraw(render_texture) => {
                     swapchain_frame.data = Some(render_texture);
                 },
                 _ => {
@@ -84,7 +92,7 @@ pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instan
                 },
             }
         },
-        WRenderEvent::None => {},
+        RenderEvent::None => {},
     }
 }
 

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use crate::{assets::{materials::{PbrMaterial, PbrMaterialAsset}, GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, features::CameraFeatureRender, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, WCommandBuffer}, instance::WRenderInstance};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer}, instance::RenderInstance};
 
 use super::{GpuPbrGBufferRenderPipeline, PbrDeferredTextures, PbrSsbo};
 
@@ -46,7 +46,7 @@ impl RenderPass for PbrGBufferRenderPass {
             batches: Vec::new()
         };
         {
-            let render_instance = render_world.get_resource::<WRenderInstance>().unwrap();
+            let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
             let render_instance = render_instance.data.read().unwrap();
             ssbo_bf.buffer.map_write(&render_instance, |mut view| {
                 let mut first = 0;
@@ -143,7 +143,7 @@ impl RenderPass for PbrGBufferRenderPass {
 
         // Update the ssbo
         {
-            let render_instance = render_world.get_resource::<WRenderInstance>().unwrap();
+            let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
             let render_instance = render_instance.data.read().unwrap();
             let buffers = render_world.get_resource::<RenderAssets<GpuBuffer>>().unwrap();
 
@@ -157,7 +157,7 @@ impl RenderPass for PbrGBufferRenderPass {
     
     fn render(&self, render_world: &mut World) {
         // Get the render instance and swapchain frame
-        let render_instance = render_world.get_resource::<WRenderInstance>().unwrap();
+        let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.data.read().unwrap();
 
         // Check if depth texture is ready
@@ -196,7 +196,7 @@ impl RenderPass for PbrGBufferRenderPass {
         };
 
         // Create the render pass
-        let mut command_buffer = WCommandBuffer::new(&render_instance, "gbuffer-pbr");
+        let mut command_buffer = CommandBuffer::new(&render_instance, "gbuffer-pbr");
         {
             let mut render_pass = command_buffer.create_render_pass("gbuffer-pbr", |builder: &mut RenderPassBuilder| {
                 builder.set_depth_texture(RenderPassDepth {

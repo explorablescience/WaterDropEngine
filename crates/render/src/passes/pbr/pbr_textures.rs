@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use crate::{assets::{GpuTexture, RenderAssets, Texture}, core::{extract_macros::ExtractWorld, window::SurfaceResized}};
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, instance::WRenderInstance, render_pipeline::WShaderStages, texture::{WTextureFormat, WTextureUsages}};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, instance::RenderInstance, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
 
 #[derive(Resource, Default)]
 pub struct PbrDeferredTexturesLayoutRegenerate(pub bool);
@@ -13,7 +13,7 @@ pub struct PbrDeferredTexturesLayout {
 impl PbrDeferredTexturesLayout {
     /// Build the bind group for the deferred renderer.
     pub fn build_bind_group(
-        textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<WRenderInstance<'static>>,
+        textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance<'static>>,
         mut textures_layout: ResMut<PbrDeferredTexturesLayout>, deferred_textures: Res<PbrDeferredTextures>
     ) {
         // Check if the bind group is already created
@@ -33,12 +33,12 @@ impl PbrDeferredTexturesLayout {
 
         // Create the deferred layout
         let deferred_layout = BindGroupLayout::new("deferred-textures", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_view(   0, WShaderStages::FRAGMENT);
-            builder.add_texture_sampler(1, WShaderStages::FRAGMENT);
-            builder.add_texture_view(   2, WShaderStages::FRAGMENT);
-            builder.add_texture_sampler(3, WShaderStages::FRAGMENT);
-            builder.add_texture_view(   4, WShaderStages::FRAGMENT);
-            builder.add_texture_sampler(5, WShaderStages::FRAGMENT);
+            builder.add_texture_view(   0, ShaderStages::FRAGMENT);
+            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
+            builder.add_texture_view(   2, ShaderStages::FRAGMENT);
+            builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
+            builder.add_texture_view(   4, ShaderStages::FRAGMENT);
+            builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
         });
 
         // Build the layout
@@ -77,8 +77,8 @@ impl PbrDeferredTextures {
         let albedo = assets_server.add(Texture {
             label: "pbr-albedo".to_string(),
             size: (resolution.physical_width(), resolution.physical_height()),
-            format: WTextureFormat::Rgba8UnormSrgb,
-            usages: WTextureUsages::RENDER_ATTACHMENT | WTextureUsages::TEXTURE_BINDING,
+            format: TextureFormat::Rgba8UnormSrgb,
+            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             ..Default::default()
         });
 
@@ -86,8 +86,8 @@ impl PbrDeferredTextures {
         let normal = assets_server.add(Texture {
             label: "pbr-normal".to_string(),
             size: (resolution.physical_width(), resolution.physical_height()),
-            format: WTextureFormat::Rgba16Float,
-            usages: WTextureUsages::RENDER_ATTACHMENT | WTextureUsages::TEXTURE_BINDING,
+            format: TextureFormat::Rgba16Float,
+            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             ..Default::default()
         });
 
@@ -95,8 +95,8 @@ impl PbrDeferredTextures {
         let material = assets_server.add(Texture {
             label: "pbr-material".to_string(),
             size: (resolution.physical_width(), resolution.physical_height()),
-            format: WTextureFormat::Rgba8Unorm,
-            usages: WTextureUsages::RENDER_ATTACHMENT | WTextureUsages::TEXTURE_BINDING,
+            format: TextureFormat::Rgba8Unorm,
+            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             ..Default::default()
         });
 
@@ -117,8 +117,8 @@ impl PbrDeferredTextures {
             let albedo = server.add(Texture {
                 label: "pbr-albedo".to_string(),
                 size: (event.width, event.height),
-                format: WTextureFormat::Rgba8UnormSrgb,
-                usages: WTextureUsages::RENDER_ATTACHMENT | WTextureUsages::TEXTURE_BINDING,
+                format: TextureFormat::Rgba8UnormSrgb,
+                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 ..Default::default()
             });
 
@@ -126,8 +126,8 @@ impl PbrDeferredTextures {
             let normal = server.add(Texture {
                 label: "pbr-normal".to_string(),
                 size: (event.width, event.height),
-                format: WTextureFormat::Rgba16Float,
-                usages: WTextureUsages::RENDER_ATTACHMENT | WTextureUsages::TEXTURE_BINDING,
+                format: TextureFormat::Rgba16Float,
+                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 ..Default::default()
             });
 
@@ -135,8 +135,8 @@ impl PbrDeferredTextures {
             let material = server.add(Texture {
                 label: "pbr-material".to_string(),
                 size: (event.width, event.height),
-                format: WTextureFormat::Rgba8Unorm,
-                usages: WTextureUsages::RENDER_ATTACHMENT | WTextureUsages::TEXTURE_BINDING,
+                format: TextureFormat::Rgba8Unorm,
+                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 ..Default::default()
             });
 

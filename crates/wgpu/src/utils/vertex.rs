@@ -9,7 +9,7 @@
 /// * `normal`   - The normal of the vertex (location 2).
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, Debug, Default)]
-pub struct WVertex {
+pub struct Vertex {
     /// The position of the vertex.
     pub position: [f32; 3],
     /// The texture UV of the vertex (must be between 0.0 and 1.0).
@@ -18,15 +18,23 @@ pub struct WVertex {
     pub normal: [f32; 3],
 }
 
-impl WVertex {
+impl Vertex {
     /// Describe the layout of the vertex.
     /// 
     /// # Returns
     /// 
     /// * `wgpu::VertexBufferLayout` - The layout of the vertex.
+    ///
+    /// # Example
+    /// ```rust
+    /// use wde_wgpu::vertex::Vertex;
+    /// 
+    /// let layout = Vertex::describe();
+    /// assert_eq!(layout.array_stride, std::mem::size_of::<Vertex>() as u64);
+    /// ```
     pub fn describe<'a>() -> wgpu::VertexBufferLayout<'a> {
         wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<WVertex>() as wgpu::BufferAddress,
+            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
                 wgpu::VertexAttribute { // Position

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::WBufferBindingType, render_pipeline::WShaderStages};
+use wde_wgpu::{bind_group::BufferBindingType, render_pipeline::ShaderStages};
 
 use crate::assets::{Material, MaterialBuilder, Texture};
 
@@ -66,12 +66,12 @@ impl Material for PbrMaterialAsset {
 
         // Build the material
         builder.add_buffer(
-            0, WShaderStages::FRAGMENT, WBufferBindingType::Uniform,
+            0, ShaderStages::FRAGMENT, BufferBindingType::Uniform,
             size_of::<PbrMaterialUniform>(), Some(bytemuck::cast_slice(&[uniform]).to_vec()));
-        builder.add_texture_view(    1, WShaderStages::FRAGMENT, self.albedo_t.clone());
-        builder.add_texture_sampler( 2, WShaderStages::FRAGMENT, self.albedo_t.clone());
-        builder.add_texture_view(    3, WShaderStages::FRAGMENT, self.specular_t.clone());
-        builder.add_texture_sampler( 4, WShaderStages::FRAGMENT, self.specular_t.clone());
+        builder.add_texture_view(    1, ShaderStages::FRAGMENT, self.albedo_t.clone());
+        builder.add_texture_sampler( 2, ShaderStages::FRAGMENT, self.albedo_t.clone());
+        builder.add_texture_view(    3, ShaderStages::FRAGMENT, self.specular_t.clone());
+        builder.add_texture_sampler( 4, ShaderStages::FRAGMENT, self.specular_t.clone());
     }
 
     fn label(&self) -> String {

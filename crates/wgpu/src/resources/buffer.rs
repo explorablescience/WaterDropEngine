@@ -1,10 +1,10 @@
-//! Contains the buffer struct and its implementations.
+//! GPU buffer helper utilities built on top of `wgpu::Buffer`.
 
 use std::fmt::Formatter;
 use bevy::{log::Level, log::tracing::event};
 use wgpu::{util::DeviceExt, BufferView};
 
-use crate::{command_buffer::WCommandBuffer, instance::WRenderInstanceData};
+use crate::{command_buffer::CommandBuffer, instance::RenderInstanceData};
 
 /// Buffer usages.
 pub type BufferUsage = wgpu::BufferUsages;
@@ -15,41 +15,55 @@ pub type BufferBindingType = wgpu::BufferBindingType;
 /// Map the buffer.
 pub type BufferViewMut<'a> = wgpu::BufferViewMut<'a>;
 
-/// Create a buffer on the GPU.
+/// Create and manage GPU buffers.
+///
+/// # Examples
+/// Write once, render many:
+/// ```rust,no_run
+/// use wde_wgpu::{buffer::{Buffer, BufferUsage}, instance::RenderInstanceData};
 /// 
-/// # Example
-/// 
+/// let vertices: &[f32] = &[0.0, 0.5, 0.0, -0.5, -0.5, 0.0, 0.5, -0.5, 0.0];
+/// let mut vertex_buffer = Buffer::new(
+///     instance,
+///     "triangle-vertices",
+///     vertices.len() * std::mem::size_of::<f32>(),
+///     BufferUsage::VERTEX | BufferUsage::COPY_DST,
+///     None,
+/// );
+/// vertex_buffer.write(instance, bytemuck::cast_slice(vertices), 0);
 /// ```
-/// // Create a new buffer
-/// let mut buffer = WBuffer::new(&instance, "Buffer label", 1024, BufferUsage::Vertex, None);
+///
+/// Read back GPU results:
+/// ```rust,no_run
+/// use wde_wgpu::{buffer::{Buffer, BufferUsage}, instance::RenderInstanceData};
 /// 
-/// // Copy data to the buffer
-/// buffer.copy_from_buffer(&instance, &buffer);
-/// 
-/// // Copy data to the buffer from a texture
-/// buffer.copy_from_texture(&instance, &texture);
-/// 
-/// // Write data to the buffer starting at 16 bytes
-/// buffer.write(&instance, bytemuck::cast_slice(&[data]), 16);
-/// 
-/// // Map the buffer and read the data
-/// buffer.map_read(&instance, |data| {
-///   let data = bytemuck::cast_slice(data);
-///   // ...
-/// });
-/// 
-/// // Map the buffer and write the data
-/// buffer.map_write(&instance, |data| {
-///   let data = bytemuck::cast_slice_mut(data);
-///   // ...
+/// let readback = Buffer::new(
+///     instance,
+///     "readback",
+///     1024,
+///     BufferUsage::MAP_READ | BufferUsage::COPY_DST,
+///     None,
+/// );
+/// readback.map_read(instance, |view| {
+///     let floats: &[f32] = bytemuck::cast_slice(&view);
+///     println!("first value = {}", floats.get(0).unwrap_or(&0.0));
 /// });
 /// ```
-pub struct WBuffer {
+///
+/// Copy between GPU resources:
+/// ```rust,no_run
+/// use wde_wgpu::{buffer::{Buffer, BufferUsage}, instance::RenderInstanceData};
+/// 
+/// let src = Buffer::new(instance, "src", 256, BufferUsage::COPY_SRC, Some(&[1u8; 256]));
+/// let dst = Buffer::new(instance, "dst", 256, BufferUsage::COPY_DST, None);
+/// dst.copy_from_buffer(instance, &src);
+/// ```
+pub struct Buffer {
     pub label: String,
     pub buffer: wgpu::Buffer,
 }
 
-impl std::fmt::Debug for WBuffer {
+impl std::fmt::Debug for Buffer {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Buffer")
             .field("label", &self.label)
@@ -58,7 +72,7 @@ impl std::fmt::Debug for WBuffer {
     }
 }
 
-impl WBuffer {
+impl Buffer {
     /// Create a new buffer.
     /// 
     /// # Arguments
@@ -68,7 +82,7 @@ impl WBuffer {
     /// * `size` - The size of the buffer.
     /// * `usage` - The usage of the buffer (vertex, index, uniform, storage).
     /// * `content` - The content of the buffer.
-    pub fn new(instance: &WRenderInstanceData, label: &str, size: usize, usage: BufferUsage, content: Option<&[u8]>) -> Self {
+    pub fn new(instance: &RenderInstanceData, label: &str, size: usize, usage: BufferUsage, content: Option<&[u8]>) -> Self {
         event!(Level::TRACE, "Creating new buffer {}.", label);
 
         // In case the content is not provided, create an empty buffer.
@@ -83,7 +97,7 @@ impl WBuffer {
                     }
                 );
                 
-                WBuffer {
+                Buffer {
                     label: label.to_string(),
                     buffer,
                 }
@@ -99,7 +113,7 @@ impl WBuffer {
                     }
                 );
 
-                WBuffer {
+                Buffer {
                     label: label.to_string(),
                     buffer,
                 }
@@ -115,11 +129,11 @@ impl WBuffer {
     /// 
     /// * `instance` - The render instance.
     /// * `buffer` - The buffer to copy from.
-    pub fn copy_from_buffer(&self, instance: &WRenderInstanceData<'_>, buffer: &WBuffer) {
+    pub fn copy_from_buffer(&self, instance: &RenderInstanceData<'_>, buffer: &Buffer) {
         event!(Level::TRACE, "Copying data from buffer {} to buffer {}.", buffer.label, self.label);
 
         // Create command encoder
-        let mut command_buffer = WCommandBuffer::new(
+        let mut command_buffer = CommandBuffer::new(
             instance,
             &format!("copy-from-{}-to-{}", buffer.label, self.label));
 
@@ -137,11 +151,11 @@ impl WBuffer {
     /// 
     /// * `instance` - The render instance.
     /// * `texture` - The texture to copy from.
-    pub fn copy_from_texture(&mut self, instance: &WRenderInstanceData<'_>, texture: &wgpu::Texture) {
+    pub fn copy_from_texture(&mut self, instance: &RenderInstanceData<'_>, texture: &wgpu::Texture) {
         event!(Level::TRACE, "Copying data from texture to buffer {}.", self.label);
 
         // Create command encoder
-        let mut command_buffer = WCommandBuffer::new(
+        let mut command_buffer = CommandBuffer::new(
             instance,
             &format!("copy-to-{}", self.label));
 
@@ -160,7 +174,7 @@ impl WBuffer {
     /// * `instance` - The render instance.
     /// * `content` - The content to write to the buffer.
     /// * `offset` - The offset to write the content to.
-    pub fn write(&mut self, instance: &WRenderInstanceData, content: &[u8], offset: usize) {
+    pub fn write(&mut self, instance: &RenderInstanceData, content: &[u8], offset: usize) {
         event!(Level::TRACE, "Writing data to buffer {}.", self.label);
 
         instance.queue.write_buffer(
@@ -178,8 +192,8 @@ impl WBuffer {
     /// 
     /// * `instance` - The render instance.
     /// * `callback` - A closure that takes a reference to the buffer.
-    ///     The callback takes reference to the buffer.
-    pub fn map_read(&self, instance: &WRenderInstanceData, callback: impl FnOnce(BufferView)) {
+    ///   The callback takes reference to the buffer.
+    pub fn map_read(&self, instance: &RenderInstanceData, callback: impl FnOnce(BufferView)) {
         event!(Level::TRACE, "Mapping buffer {} for reading.", self.label);
 
         // Map buffer
@@ -208,8 +222,8 @@ impl WBuffer {
     /// 
     /// * `instance` - The render instance.
     /// * `callback` - A closure that takes a mutable reference to the buffer.
-    ///     The callback takes a mutable reference to the buffer.
-    pub fn map_write(&self, instance: &WRenderInstanceData, callback: impl FnOnce(BufferViewMut)) {
+    ///   The callback takes a mutable reference to the buffer.
+    pub fn map_write(&self, instance: &RenderInstanceData, callback: impl FnOnce(BufferViewMut)) {
         event!(Level::TRACE, "Mapping buffer {} for writing.", self.label);
 
         // Map buffer

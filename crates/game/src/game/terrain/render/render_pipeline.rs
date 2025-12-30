@@ -1,6 +1,6 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_render::{assets::{PrepareAssetError, RenderAsset}, features::{CameraFeatureRender, LightsFeatureBuffer}, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}};
-use wde_wgpu::render_pipeline::WDepthStencilDescriptor;
+use wde_wgpu::render_pipeline::DepthStencilDescriptor;
 
 
 #[derive(Default, Asset, Clone, TypePath)]
@@ -38,7 +38,7 @@ impl RenderAsset for GpuMCRenderPipeline {
             vert: Some(assets_server.load("marching-cubes/render.vert.wgsl")),
             frag: Some(assets_server.load("marching-cubes/render.frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone(), lights_layout.clone()],
-            depth: WDepthStencilDescriptor {
+            depth: DepthStencilDescriptor {
                 enabled: true,
                 ..Default::default()
             },

@@ -2,7 +2,7 @@ use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimel
 use image::GenericImageView;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
-use wde_wgpu::{instance::WRenderInstance, texture::{WTextureFormat, WTextureUsages}};
+use wde_wgpu::{instance::RenderInstance, texture::{TextureFormat, TextureUsages}};
 
 use super::render_assets::{PrepareAssetError, RenderAsset};
 
@@ -11,8 +11,8 @@ use super::render_assets::{PrepareAssetError, RenderAsset};
 pub struct Texture {
     pub label: String,
     pub size: (u32, u32),
-    pub format: WTextureFormat,
-    pub usages: WTextureUsages,
+    pub format: TextureFormat,
+    pub usages: TextureUsages,
     pub data: Vec<u8>
 }
 impl Default for Texture {
@@ -20,8 +20,8 @@ impl Default for Texture {
         Texture {
             label: "Texture".to_string(),
             size: (1, 1),
-            format: WTextureFormat::Rgba8Unorm,
-            usages: WTextureUsages::TEXTURE_BINDING,
+            format: TextureFormat::Rgba8Unorm,
+            usages: TextureUsages::TEXTURE_BINDING,
             data: Vec::new()
         }
     }
@@ -35,17 +35,17 @@ pub struct TextureLoaderSettings {
     /// The label of the texture.
     pub label: String,
     /// The format of the texture (by default RGBA8Unorm).
-    pub format: WTextureFormat,
+    pub format: TextureFormat,
     /// The usages of the texture (by default TEXTURE_BINDING).
-    pub usages: WTextureUsages
+    pub usages: TextureUsages
 }
 
 impl Default for TextureLoaderSettings {
     fn default() -> Self {
         Self {
             label: "texture".to_string(),
-            format: WTextureFormat::Rgba8Unorm,
-            usages: WTextureUsages::TEXTURE_BINDING
+            format: TextureFormat::Rgba8Unorm,
+            usages: TextureUsages::TEXTURE_BINDING
         }
     }
 }
@@ -110,11 +110,11 @@ impl AssetLoader for TextureLoader {
 
 pub struct GpuTexture {
     pub label: String,
-    pub texture: wde_wgpu::texture::WTexture,
+    pub texture: wde_wgpu::texture::Texture,
 }
 impl RenderAsset for GpuTexture {
     type SourceAsset = Texture;
-    type Param = SRes<WRenderInstance<'static>>;
+    type Param = SRes<RenderInstance<'static>>;
 
     fn prepare_asset(
             asset: Self::SourceAsset,
@@ -125,7 +125,7 @@ impl RenderAsset for GpuTexture {
         let render_instance = render_instance.data.as_ref().read().unwrap();
 
         // Create the texture
-        let texture = wde_wgpu::texture::WTexture::new(
+        let texture = wde_wgpu::texture::Texture::new(
             &render_instance, &asset.label, (asset.size.0, asset.size.1),
             asset.format, asset.usages);
 
@@ -151,33 +151,33 @@ impl RenderAsset for GpuTexture {
 /// - `Some` with the properties of the format:
 ///    - `bits`: Can be 8 bits, 16 bits or 32 bits.
 ///    - `channels`: The number of channels in the format (1 to 4).
-fn get_format_properties(texture_format: WTextureFormat) -> Option<(u32, u32)> {
+fn get_format_properties(texture_format: TextureFormat) -> Option<(u32, u32)> {
     match texture_format {
-        WTextureFormat::R8Unorm | WTextureFormat::R8Uint | WTextureFormat::R8Snorm | WTextureFormat::R8Sint => {
+        TextureFormat::R8Unorm | TextureFormat::R8Uint | TextureFormat::R8Snorm | TextureFormat::R8Sint => {
             Some((8, 1))
         },
-        WTextureFormat::R16Unorm | WTextureFormat::R16Uint | WTextureFormat::R16Snorm | WTextureFormat::R16Sint | WTextureFormat::R16Float => {
+        TextureFormat::R16Unorm | TextureFormat::R16Uint | TextureFormat::R16Snorm | TextureFormat::R16Sint | TextureFormat::R16Float => {
             Some((16, 1))
         },
-        WTextureFormat::R32Uint | WTextureFormat::R32Sint | WTextureFormat::R32Float => {
+        TextureFormat::R32Uint | TextureFormat::R32Sint | TextureFormat::R32Float => {
             Some((32, 1))
         },
-        WTextureFormat::Rg8Unorm | WTextureFormat::Rg8Uint | WTextureFormat::Rg8Snorm | WTextureFormat::Rg8Sint => {
+        TextureFormat::Rg8Unorm | TextureFormat::Rg8Uint | TextureFormat::Rg8Snorm | TextureFormat::Rg8Sint => {
             Some((8, 2))
         },
-        WTextureFormat::Rg16Unorm | WTextureFormat::Rg16Uint | WTextureFormat::Rg16Snorm | WTextureFormat::Rg16Sint | WTextureFormat::Rg16Float => {
+        TextureFormat::Rg16Unorm | TextureFormat::Rg16Uint | TextureFormat::Rg16Snorm | TextureFormat::Rg16Sint | TextureFormat::Rg16Float => {
             Some((16, 2))
         },
-        WTextureFormat::Rg32Uint | WTextureFormat::Rg32Sint | WTextureFormat::Rg32Float => {
+        TextureFormat::Rg32Uint | TextureFormat::Rg32Sint | TextureFormat::Rg32Float => {
             Some((32, 2))
         },
-        WTextureFormat::Rgba8Unorm | WTextureFormat::Rgba8UnormSrgb | WTextureFormat::Rgba8Uint | WTextureFormat::Rgba8Snorm | WTextureFormat::Rgba8Sint => {
+        TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb | TextureFormat::Rgba8Uint | TextureFormat::Rgba8Snorm | TextureFormat::Rgba8Sint => {
             Some((8, 4))
         },
-        WTextureFormat::Rgba16Unorm | WTextureFormat::Rgba16Uint | WTextureFormat::Rgba16Snorm | WTextureFormat::Rgba16Sint | WTextureFormat::Rgba16Float => {
+        TextureFormat::Rgba16Unorm | TextureFormat::Rgba16Uint | TextureFormat::Rgba16Snorm | TextureFormat::Rgba16Sint | TextureFormat::Rgba16Float => {
             Some((16, 4))
         },
-        WTextureFormat::Rgba32Uint | WTextureFormat::Rgba32Sint | WTextureFormat::Rgba32Float => {
+        TextureFormat::Rgba32Uint | TextureFormat::Rgba32Sint | TextureFormat::Rgba32Float => {
             Some((32, 4))
         },
         _ => None

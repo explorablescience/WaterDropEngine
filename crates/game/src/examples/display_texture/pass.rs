@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use wde_render::{assets::{GpuMaterial, GpuMesh, Mesh, MeshAsset, RenderAssets}, core::SwapchainFrame, passes::render_graph::RenderPass, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, WCommandBuffer}, instance::WRenderInstance};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}, instance::RenderInstance};
 
 use crate::examples::display_texture::{material::{DisplayTextureMaterial, DisplayTextureMaterialAsset}, pipeline::GpuDisplayTexturePipeline};
 
@@ -26,7 +26,7 @@ impl RenderPass for DisplayTexturePass {
 
     fn render(&self, world: &mut World) {
         // Get the render instance and swapchain frame
-        let render_instance = world.get_resource::<WRenderInstance>().unwrap();
+        let render_instance = world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.data.read().unwrap();
         let swapchain_frame = world.get_resource::<SwapchainFrame>().unwrap().data.as_ref().unwrap();
 
@@ -41,7 +41,7 @@ impl RenderPass for DisplayTexturePass {
         let entity = world.get_resource::<RenderPassEntity>().unwrap();
         
         // Render the texture
-        let mut command_buffer = WCommandBuffer::new(&render_instance, "display-texture");
+        let mut command_buffer = CommandBuffer::new(&render_instance, "display-texture");
         {
             let mut render_pass = command_buffer.create_render_pass("display-texture", |builder: &mut RenderPassBuilder| {
                 builder.add_color_attachment(RenderPassColorAttachment {

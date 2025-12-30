@@ -4,7 +4,7 @@
 //! It is responsible for creating and managing the window.
 
 use bevy::{a11y::AccessibilityPlugin, app::{PluginGroup, PluginGroupBuilder}, ecs::message::Message, prelude::{Event, EventReader, EventWriter, Query, ResMut}, utils::default, window::{PresentMode, Window, WindowPlugin, WindowResized, WindowTheme}, winit::WinitPlugin};
-use wde_wgpu::instance::WRenderInstance;
+use wde_wgpu::instance::RenderInstance;
 
 use super::extract_macros::ExtractWorld;
 
@@ -74,7 +74,7 @@ pub(crate) fn send_surface_resized(
 
 
 /// Extract the window size from the primary window and update the surface configuration.
-pub(crate) fn extract_surface_size(render_instance: ResMut<WRenderInstance<'static>>, windows: ExtractWorld<Query<&Window>>) {
+pub(crate) fn extract_surface_size(render_instance: ResMut<RenderInstance<'static>>, windows: ExtractWorld<Query<&Window>>) {
     // Check if there is a window
     if windows.iter().count() == 0 {
         return

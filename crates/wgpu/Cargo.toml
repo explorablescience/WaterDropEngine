@@ -3,7 +3,7 @@ name = "wde-wgpu"
 version = "0.1.0"
 authors = ["MecanicaScience"]
 edition = "2021"
-description = "Provides an interface with the rendering wgpu backend"
+description = "WaterDropEngine's wgpu wrapper crate"
 
 [profile.dev]
 opt-level = 0
@@ -20,7 +20,7 @@ debug = false
 
 [dependencies]
 wgpu = { version = "22.1", features = [ "serde" ] }
-bytemuck = { version = "1.12", features = [ "derive" ] }
+bytemuck = { version = "1.12" }
 
 [dependencies.bevy]
 version = "0.17"

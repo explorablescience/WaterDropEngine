@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, instance::WRenderInstance, render_pipeline::WShaderStages, texture::{WTexture, WTextureUsages}};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, instance::RenderInstance, render_pipeline::ShaderStages, texture::{Texture as WTexture, TextureUsages}};
 
 use crate::{assets::{GpuTexture, RenderAssets, Texture}, core::{extract_macros::ExtractWorld, window::SurfaceResized}};
 
@@ -13,7 +13,7 @@ pub struct DepthTextureLayout {
 }
 impl DepthTextureLayout {
     pub fn build_bind_group(
-        render_instance: Res<WRenderInstance<'static>>, mut textures_layout: ResMut<DepthTextureLayout>,
+        render_instance: Res<RenderInstance<'static>>, mut textures_layout: ResMut<DepthTextureLayout>,
         depth_texture: Res<DepthTexture>, textures: Res<RenderAssets<GpuTexture>>
     ) {
         // Check if the bind group is already created
@@ -29,8 +29,8 @@ impl DepthTextureLayout {
 
         // Create the deferred layout
         let layout = BindGroupLayout::new("depth-texture", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_depth_texture_view(   0, WShaderStages::FRAGMENT);
-            builder.add_depth_texture_sampler(1, WShaderStages::FRAGMENT);
+            builder.add_depth_texture_view(   0, ShaderStages::FRAGMENT);
+            builder.add_depth_texture_sampler(1, ShaderStages::FRAGMENT);
         });
 
         // Build the layout
@@ -62,7 +62,7 @@ impl DepthTexture {
             label: "depth".to_string(),
             size: (resolution.physical_width(), resolution.physical_height()),
             format: WTexture::DEPTH_FORMAT,
-            usages: WTextureUsages::RENDER_ATTACHMENT | WTextureUsages::TEXTURE_BINDING,
+            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             ..Default::default()
         });
         commands.insert_resource(DepthTexture { texture, resized: false });
@@ -79,7 +79,7 @@ impl DepthTexture {
                 label: "depth".to_string(),
                 size: (event.width, event.height),
                 format: WTexture::DEPTH_FORMAT,
-                usages: WTextureUsages::RENDER_ATTACHMENT | WTextureUsages::TEXTURE_BINDING,
+                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 ..Default::default()
             });
 

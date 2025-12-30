@@ -1,5 +1,5 @@
 use bevy::math::Vec3;
-use wde_wgpu::vertex::WVertex;
+use wde_wgpu::vertex::Vertex;
 
 use crate::assets::{MeshAsset, ModelBoundingBox};
 
@@ -43,7 +43,7 @@ impl PlaneMesh {
             let v = texcoords[2 * vtx + 1];
 
             // Vertex
-            vertices.push(WVertex {
+            vertices.push(Vertex {
                 position: [x, y, z],
                 normal: [nx, ny, nz],
                 uv: [u, v],

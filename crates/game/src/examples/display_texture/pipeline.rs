@@ -1,6 +1,6 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_render::{assets::{PrepareAssetError, RenderAsset}, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}};
-use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::WShaderStages};
+use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::ShaderStages};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
@@ -24,8 +24,8 @@ impl RenderAsset for GpuDisplayTexturePipeline {
         // Create the layout
         let layout = BindGroupLayout::new("display-texture", |builder| {
             // Set the texture view and sampler
-            builder.add_texture_view(0, WShaderStages::FRAGMENT);
-            builder.add_texture_sampler(1, WShaderStages::FRAGMENT);
+            builder.add_texture_view(0, ShaderStages::FRAGMENT);
+            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
         });
 
         // Create the pipeline

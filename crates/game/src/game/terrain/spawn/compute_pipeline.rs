@@ -1,6 +1,6 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_render::{assets::{PrepareAssetError, RenderAsset}, pipelines::{CachedPipelineIndex, ComputePipelineDescriptor, PipelineManager}};
-use wde_wgpu::{bind_group::{BindGroupLayout, WgpuBindGroup}, buffer::BufferBindingType, render_pipeline::WShaderStages};
+use wde_wgpu::{bind_group::{BindGroupLayout, WgpuBindGroup}, buffer::BufferBindingType, render_pipeline::ShaderStages};
 
 #[derive(Default, Asset, Clone, TypePath)]
 pub struct MCComputePipelineSpawnAsset;
@@ -34,17 +34,17 @@ impl RenderAsset for GpuMCComputePipelineSpawn {
         // Create the layouts
         let desc_gpu_layout = BindGroupLayout::new("marching-cubes-spawn-desc", |builder| {
             builder.add_buffer(0,
-                WShaderStages::COMPUTE,
+                ShaderStages::COMPUTE,
                 BufferBindingType::Storage { read_only: true });
         });
         let points_gpu_layout = BindGroupLayout::new("marching-cubes-spawn-points", |builder| {
             builder.add_buffer(0,
-                WShaderStages::COMPUTE,
+                ShaderStages::COMPUTE,
                 BufferBindingType::Storage { read_only: false });
         });
         let noise_gpu_layout = BindGroupLayout::new("marching-cubes-spawn-noise", |builder| {
             builder.add_buffer(0,
-                WShaderStages::COMPUTE,
+                ShaderStages::COMPUTE,
                 BufferBindingType::Uniform);
         });
 

@@ -1,17 +1,31 @@
-//! Instance of the GPU device required for the renderer.
+//! Device/queue/surface bootstrap utilities used across the renderer.
 
 use std::sync::{Arc, RwLock};
 
-use bevy::{ecs::system::SystemState, log::{debug, error, warn, Level}, prelude::*, log::tracing::{event, span}, window::{PresentMode, PrimaryWindow, RawHandleWrapperHolder}};
-use wgpu::{Device, Limits, Surface, SurfaceConfiguration, SurfaceTexture};
+use bevy::{ecs::resource::Resource, log::{Level, debug, error, info, tracing::{event, span}, warn}, window::RawHandleWrapperHolder};
+use wgpu::{Device, Limits as WLimits, PresentMode as WPresentMode, Surface, SurfaceConfiguration, SurfaceTexture};
 
-use crate::texture::WTextureView;
+use crate::texture::TextureView;
 
-pub type WLimits = Limits;
+pub type Limits = WLimits;
+pub type PresentMode = WPresentMode;
 
-/// Error type of the renderer.
+/// Errors emitted by the renderer wrappers.
+///
+/// Match on this when guarding pipeline creation or pass submission:
+/// ```rust,no_run
+/// use wde_wgpu::instance::RenderError;
+/// 
+/// fn handle(error: RenderError) {
+///     match error {
+///         RenderError::MissingShader => eprintln!("shader missing"),
+///         RenderError::PipelineNotInitialized => eprintln!("call init() before drawing"),
+///         _ => eprintln!("other GPU error: {:?}", error),
+///     }
+/// }
+/// ```
 #[derive(Debug)]
-pub enum WRenderError {
+pub enum RenderError {
     /// Cannot present render texture.
     CannotPresent,
     /// Cannot resize render instance.
@@ -34,53 +48,74 @@ pub enum WRenderError {
     ShaderCompilationError,
 }
 
-/// Type of the render texture.
+/// Swapchain image plus an already-created view.
 #[derive(Debug)]
-pub struct WRenderTexture {
+pub struct RenderTexture {
     /// Texture of the render texture.
     pub texture: wgpu::SurfaceTexture,
     /// View of the render texture.
-    pub view: WTextureView,
+    pub view: TextureView,
 }
 
-/// Type of the render event.
+/// Results of attempting to acquire the next surface texture.
+///
+/// The [`RenderEvent::Resize`] variant signals that the swapchain must be reconfigured
+/// with [`resize`].
 #[derive(Debug)]
-pub enum WRenderEvent {
+pub enum RenderEvent {
     /// Redraw the window.
-    Redraw(WRenderTexture),
+    Redraw(RenderTexture),
     /// Resize the window.
     Resize,
     /// No event.
     None,
 }
 
-/// Instance of the GPU device required for the renderer.
-/// 
+/// Handle to the render backend state shared across threads.
+///
+/// The [`RenderInstanceData`] is stored behind an `Arc<RwLock<_>>` so Bevy and gameplay
+/// systems can share the same device/queue without cloning GPU handles.
+///
 /// # Example
-/// ```
-/// let mut (...) = WRenderInstance::new("WaterDropEngine", &window).await;
-/// WRenderInstance::setup_surface(...);
+/// ```rust,no_run
+/// use bevy::window::RawHandleWrapperHolder;
+/// use wde_wgpu::instance::{create_instance, setup_surface, PresentMode};
 /// 
-/// // Get current texture
-/// let render_texture = WRenderInstance::get_current_texture(&instance);
-/// 
-/// // Render
-/// // ...
-/// 
-/// // Present texture
-/// WRenderInstance::present(render_texture);
-/// 
-/// // Resize the surface
-/// // This must be called when the window is resized
-/// WRenderInstance::resize(&instance.device, &instance.surface, &instance.surface_config);
+/// let render = create_instance("bootstrap", Some(&window)).await;
+/// {
+///     let mut data = render.data.write().unwrap();
+///     let surface = data.surface.as_ref().unwrap();
+///     data.surface_config = Some(setup_surface(
+///         "main-surface",
+///         size,
+///         &data.device,
+///         surface,
+///         &data.adapter,
+///         PresentMode::AutoNoVsync,
+///     ));
+/// }
 /// ```
 #[derive(Resource)]
-pub struct WRenderInstance<'a> {
-    pub data: Arc<RwLock<WRenderInstanceData<'a>>>,
+pub struct RenderInstance<'a> {
+    pub data: Arc<RwLock<RenderInstanceData<'a>>>,
 }
 
-/// Data of the render instance.
-pub struct WRenderInstanceData<'a> {
+/// Device, queue, surface, and adapter bundle used to create GPU resources.
+///
+/// This is the handle you pass into buffers, textures, command buffers, and pipelines.
+/// The type is intentionally lightweight to clone/read behind the `Arc<RwLock<_>>` in
+/// [`RenderInstance`].
+///
+/// ```rust,no_run
+/// use wde_wgpu::{buffer::{Buffer, BufferUsage}, instance::{create_instance, RenderInstanceData}};
+/// 
+/// let instance = create_instance("docs", Some(&window)).await;
+/// let data: std::sync::RwLockReadGuard<'_, RenderInstanceData> = instance.data.read().unwrap();
+/// 
+/// let mut buf = Buffer::new(&data, "hello", 16, BufferUsage::UNIFORM | BufferUsage::COPY_DST, None);
+/// buf.write(&data, &[1, 2, 3, 4], 0);
+/// ```
+pub struct RenderInstanceData<'a> {
     /// Device of the instance.
     pub device: Device,
     /// Queue of the instance.
@@ -95,13 +130,20 @@ pub struct WRenderInstanceData<'a> {
     pub surface_config: Option<SurfaceConfiguration>,
 }
 
-/// Create a new instance of the GPU device.
+/// Create a new GPU instance (device + queue) and optionally bind to a window surface.
+///
+/// `primary_window` must expose a native handle; on Bevy it is provided via
+/// `RawHandleWrapperHolder`.
+///
+/// # Example
+/// ```rust,no_run
+/// use bevy::window::RawHandleWrapperHolder;
+/// use wde_wgpu::instance::create_instance;
 /// 
-/// # Arguments
-/// 
-/// * `label` - Label of the instance.
-/// * `app` - Application to create the instance.
-pub async fn create_instance(label: &str, app: &mut App) -> WRenderInstance<'static> {
+/// let render = create_instance("demo", Some(&window)).await;
+/// assert!(render.data.read().unwrap().surface.is_some());
+/// ```
+pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapperHolder>) -> RenderInstance<'static> {
     info!(label, "Creating render instance.");
     let _trace = span!(Level::INFO, "new").entered();
 
@@ -111,10 +153,6 @@ pub async fn create_instance(label: &str, app: &mut App) -> WRenderInstance<'sta
     } else {
         wgpu::InstanceFlags::DISCARD_HAL_LABELS
     };
-
-    // Retrieve window
-    let mut system_state: SystemState<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>> = SystemState::new(app.world_mut());
-    let primary_window = system_state.get(app.world()).single().ok().cloned();
 
     // Create wgpu instance
     debug!(label, "Creating wgpu instance.");
@@ -193,8 +231,8 @@ pub async fn create_instance(label: &str, app: &mut App) -> WRenderInstance<'sta
     debug!("Configured wgpu adapter Features: {:#?}", device.features());
 
     // Return instance
-    WRenderInstance {
-        data: Arc::new(RwLock::new(WRenderInstanceData {
+    RenderInstance {
+        data: Arc::new(RwLock::new(RenderInstanceData {
             device,
             queue,
             surface,
@@ -205,20 +243,17 @@ pub async fn create_instance(label: &str, app: &mut App) -> WRenderInstance<'sta
     }
 }
 
-/// Setup the surface of the instance.
+/// Configure a surface for presentation once the window size is known.
+///
+/// Call this once at startup and again whenever you handle a resize event.
+///
+/// # Example
+/// ```rust,no_run
+/// use wde_wgpu::instance::{setup_surface, PresentMode};
 /// 
-/// # Arguments
-/// 
-/// * `label` - Label of the instance.
-/// * `size` - Size of the surface.
-/// * `device` - Device of the instance.
-/// * `surface` - Surface of the instance.
-/// * `adapter` - Adapter of the instance.
-/// * `present_mode` - Present mode of the instance.
-/// 
-/// # Returns
-/// 
-/// * `SurfaceConfiguration` - Surface configuration of the instance.
+/// let config = setup_surface(label, size, device, surface, adapter, PresentMode::Fifo);
+/// println!("configured swapchain {}x{}", config.width, config.height);
+/// ```
 pub fn setup_surface(label: &str, size: (u32, u32), device: &Device, surface: &Surface, adapter: &wgpu::Adapter, present_mode: PresentMode) -> SurfaceConfiguration {
     debug!(label, "Configuring surface.");
 
@@ -235,14 +270,7 @@ pub fn setup_surface(label: &str, size: (u32, u32), device: &Device, surface: &S
         format: surface_format,
         width: size.0,
         height: size.1,
-        present_mode: match present_mode {
-            PresentMode::Fifo => wgpu::PresentMode::Fifo,
-            PresentMode::FifoRelaxed => wgpu::PresentMode::FifoRelaxed,
-            PresentMode::Mailbox => wgpu::PresentMode::Mailbox,
-            PresentMode::Immediate => wgpu::PresentMode::Immediate,
-            PresentMode::AutoVsync => wgpu::PresentMode::AutoVsync,
-            PresentMode::AutoNoVsync => wgpu::PresentMode::AutoNoVsync,
-        },
+        present_mode,
         alpha_mode: surface_caps.alpha_modes[0],
         view_formats: vec![],
         desired_maximum_frame_latency: 2
@@ -252,17 +280,27 @@ pub fn setup_surface(label: &str, size: (u32, u32), device: &Device, surface: &S
     surface_config
 }
 
-/// Get the render texture.
+/// Acquire the next surface texture or signal that the surface needs reconfiguration.
+///
+/// Returns a [`RenderEvent::Redraw`] with a ready-to-use texture view when successful, or
+/// [`RenderEvent::Resize`] when the surface was lost/outdated. Forward errors like
+/// `OutOfMemory` as `RenderEvent::None` while logging.
+///
+/// # Example
+/// ```rust,no_run
+/// use wde_wgpu::instance::{get_current_texture, RenderEvent};
 /// 
-/// # Arguments
-/// 
-/// * `surface` - Surface of the instance.
-/// * `surface_config` - Surface configuration of the instance.
-/// 
-/// # Returns
-/// 
-/// * `RenderEvent` - Render event.
-pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfiguration) -> WRenderEvent {
+/// match get_current_texture(surface, config) {
+///     RenderEvent::Redraw(frame) => {
+///         // frame.texture -> call present after encoding work
+///         // frame.view -> attach to render passes
+///         drop(frame);
+///     }
+///     RenderEvent::Resize => println!("surface needs resize"),
+///     RenderEvent::None => println!("skipping frame"),
+/// }
+/// ```
+pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfiguration) -> RenderEvent {
     event!(Level::TRACE, "Getting current texture.");
 
     // Get current texture
@@ -289,57 +327,41 @@ pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfigurat
                 base_array_layer: 0,
                 array_layer_count: None,
             });
-            let cur_render = WRenderTexture {
+            let cur_render = RenderTexture {
                 texture: surface_texture,
                 view: render_view
             };
-            WRenderEvent::Redraw(cur_render)
+            RenderEvent::Redraw(cur_render)
         }
         // Surface lost or outdated (minimized or moved to another screen)
         Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-            WRenderEvent::Resize
+            RenderEvent::Resize
         },
         // System out of memory
         Err(wgpu::SurfaceError::OutOfMemory) => {
             error!("System out of memory.");
-            WRenderEvent::None
+            RenderEvent::None
         }
         // Timeout of the surface
         Err(wgpu::SurfaceError::Timeout) => {
             error!("Timeout of the surface.");
-            WRenderEvent::None
+            RenderEvent::None
         }
     }
 }
 
-/// Present the render texture.
-/// This must be called after the render function.
-/// 
-/// # Arguments
-/// 
-/// * `surface_texture` - Surface texture of the instance.
-/// 
-/// # Errors
-/// 
-/// * `RenderError::CannotPresent` - Cannot present render texture.
-pub fn present(surface_texture: SurfaceTexture) -> Result<(), WRenderError> {
+/// Present the rendered frame to the swapchain.
+///
+/// Call this after encoding commands that render into the acquired surface texture.
+pub fn present(surface_texture: SurfaceTexture) -> Result<(), RenderError> {
     event!(Level::TRACE, "Presenting render texture.");
     surface_texture.present();
     Ok(())
 }
 
-/// Resize the surface of the instance.
-/// This must be called when the window is resized.
-/// 
-/// # Arguments
-/// 
-/// * `device` - Device of the instance.
-/// * `surface` - Surface of the instance.
-/// * `surface_config` - Surface configuration of the instance.
-/// 
-/// # Errors
-/// 
-/// * `RenderError::CannotResize` - Cannot resize render instance surface.
+/// Reconfigure a surface after a window resize or when the swapchain is lost.
+///
+/// The caller must also update `surface_config.width/height` before invoking.
 pub fn resize(device: &Device, surface: &Surface, surface_config: &SurfaceConfiguration) {
     event!(Level::DEBUG, "Resizing surface.");
     surface.configure(device, surface_config);

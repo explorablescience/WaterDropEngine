@@ -1,5 +1,5 @@
 use bevy::{ecs::system::lifetimeless::SRes, prelude::*};
-use wde_wgpu::{buffer::{BufferUsage, WBuffer}, instance::WRenderInstance};
+use wde_wgpu::{buffer::{BufferUsage, Buffer as WBuffer}, instance::RenderInstance};
 
 use super::render_assets::RenderAsset;
 
@@ -19,7 +19,7 @@ pub struct GpuBuffer {
 }
 impl RenderAsset for GpuBuffer {
     type SourceAsset = Buffer;
-    type Param = SRes<WRenderInstance<'static>>;
+    type Param = SRes<RenderInstance<'static>>;
 
     fn prepare_asset(
             asset: Self::SourceAsset,

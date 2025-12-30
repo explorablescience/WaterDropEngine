@@ -1,6 +1,6 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_render::{assets::{PrepareAssetError, RenderAsset}, pipelines::{CachedPipelineIndex, ComputePipelineDescriptor, PipelineManager}};
-use wde_wgpu::{bind_group::{BindGroupLayout, WgpuBindGroup}, buffer::BufferBindingType, render_pipeline::WShaderStages};
+use wde_wgpu::{bind_group::{BindGroupLayout, WgpuBindGroup}, buffer::BufferBindingType, render_pipeline::ShaderStages};
 
 #[derive(Default, Asset, Clone, TypePath)]
 pub struct MCComputePipelineGenerateAsset;
@@ -34,17 +34,17 @@ impl RenderAsset for GpuMCComputePipelineGenerate {
         // Create the layouts
         let desc_gpu_layout = BindGroupLayout::new("marching-cubes-generate-desc", |builder| {
             builder.add_buffer(0,
-                WShaderStages::COMPUTE,
+                ShaderStages::COMPUTE,
                 BufferBindingType::Storage { read_only: false });
         });
         let points_gpu_layout = BindGroupLayout::new("marching-cubes-generate-points", |builder| {
             builder.add_buffer(0,
-                WShaderStages::COMPUTE,
+                ShaderStages::COMPUTE,
                 BufferBindingType::Storage { read_only: true });
         });
         let vertices_gpu_layout = BindGroupLayout::new("marching-cubes-generate-triangles", |builder| {
             builder.add_buffer(0,
-                WShaderStages::COMPUTE,
+                ShaderStages::COMPUTE,
                 BufferBindingType::Storage { read_only: false });
         });
 
