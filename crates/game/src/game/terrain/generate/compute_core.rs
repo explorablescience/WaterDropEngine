@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_render::{assets::{GpuBuffer, RenderAssets}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{bind_group::BindGroup, command_buffer::CommandBuffer, instance::RenderInstance};
+use wde_render::{assets::{GpuBuffer, RenderAssets}, core::RenderInstance, pipelines::{CachedPipelineStatus, PipelineManager}};
+use wde_wgpu::{bind_group::BindGroup, command_buffer::CommandBuffer};
 
 use crate::terrain::{mc_chunk::{MCChunksListRender, MCLoadingChunk, MCPendingChunk}, mc_compute_main::{GpuMCDescription, MCComputeHandlerGPU}, MC_MAX_CHUNKS_PROCESS_PER_FRAME, MC_MAX_TRIANGLES};
 
@@ -45,7 +45,7 @@ impl MCComputeCorePoints {
             };
 
             // Create the bind groups
-            let render_instance = render_instance.data.read().unwrap();
+            let render_instance = render_instance.0.read().unwrap();
             let desc_gpu_bind_group = BindGroup::build(
                 "marching-cubes-generate-desc-gpu", &render_instance, &desc_gpu_layout.build(&render_instance),
                 &vec![BindGroup::buffer(0, &desc_gpu.buffer)]);
@@ -59,7 +59,7 @@ impl MCComputeCorePoints {
         }
 
         // Create the bind groups for the chunks if they are not already created
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         for mut chunk in loading_chunks.iter_mut() {
             if chunk.points_gpu_group.is_none() {
                 // Get the layout
@@ -130,7 +130,7 @@ impl MCComputeCorePoints {
                 iso_level: desc.iso_level,
                 padding: [0, 0]
             };
-            let render_instance = render_instance.data.read().unwrap();
+            let render_instance = render_instance.0.read().unwrap();
             buffers.get_mut(desc_buffer_gpu).unwrap().buffer.write(&render_instance, bytemuck::cast_slice(&[desc_buff]), 0);
 
             // Create the compute pass

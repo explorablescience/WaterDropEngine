@@ -1,5 +1,7 @@
 use bevy::{ecs::system::lifetimeless::SRes, prelude::*};
-use wde_wgpu::{buffer::{BufferUsage, Buffer as WBuffer}, instance::RenderInstance};
+use wde_wgpu::{buffer::{BufferUsage, Buffer as WBuffer}};
+
+use crate::core::RenderInstance;
 
 use super::render_assets::RenderAsset;
 
@@ -25,7 +27,7 @@ impl RenderAsset for GpuBuffer {
             asset: Self::SourceAsset,
             render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Param>,
         ) -> Result<Self, super::render_assets::PrepareAssetError<Self::SourceAsset>> {
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let buffer = WBuffer::new(
             &render_instance,
             asset.label.as_str(),

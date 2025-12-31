@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-use bevy::{app::{App, Plugin}, asset::{AssetEvent, AssetId, Assets}, ecs::prelude::*, log::{debug, error}};
-use wde_wgpu::{compute_pipeline::ComputePipeline, instance::RenderInstance, render_pipeline::{RenderPipeline, ShaderStages}};
+use bevy::{app::{App, Plugin}, asset::{AssetEvent, AssetId, Assets}, ecs::prelude::*, log::{debug, error}, prelude::MessageReader};
+use wde_wgpu::{compute_pipeline::ComputePipeline, render_pipeline::{RenderPipeline, ShaderStages}};
+
+use crate::core::RenderInstance;
 
 use crate::{core::{extract_macros::ExtractWorld, Extract, Render, RenderSet}, assets::Shader};
 
@@ -91,7 +93,7 @@ impl PipelineManager {
 /// Extract the shaders from the asset server and store them in the pipeline manager.
 fn extract_shaders(
     mut pipeline_manager: ResMut<PipelineManager>, shaders: ExtractWorld<Res<Assets<Shader>>>,
-    mut shader_events: ExtractWorld<EventReader<AssetEvent<Shader>>>
+    mut shader_events: ExtractWorld<MessageReader<AssetEvent<Shader>>>
 ) {
     let cache = &mut pipeline_manager.shader_cache;
     let mut updated_ids = Vec::new();
@@ -192,7 +194,7 @@ fn load_render_pipelines(
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
-            bind_group_layouts.push(layout.build(&render_instance.data.read().unwrap()));
+            bind_group_layouts.push(layout.build(&render_instance.0.read().unwrap()));
         }
 
         // Load the pipeline
@@ -213,7 +215,7 @@ fn load_render_pipelines(
             pipeline.add_push_constant(push_constant.stages, push_constant.offset, push_constant.size);
         }
         pipeline.set_bind_groups(bind_group_layouts);
-        match pipeline.init(&render_instance.data.read().unwrap()) {
+        match pipeline.init(&render_instance.0.read().unwrap()) {
             Ok(_) => (),
             Err(e) => {
                 error!("Failed to load pipeline: {:?}", e);
@@ -274,7 +276,7 @@ fn load_compute_pipelines(
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
-            bind_group_layouts.push(layout.build(&render_instance.data.read().unwrap()));
+            bind_group_layouts.push(layout.build(&render_instance.0.read().unwrap()));
         }
 
         // Load the pipeline
@@ -283,7 +285,7 @@ fn load_compute_pipelines(
             pipeline.set_shader(&compute_shader.content);
         }
         pipeline.set_bind_groups(bind_group_layouts);
-        match pipeline.init(&render_instance.data.read().unwrap()) {
+        match pipeline.init(&render_instance.0.read().unwrap()) {
             Ok(_) => (),
             Err(e) => {
                 error!("Failed to load pipeline: {:?}", e);

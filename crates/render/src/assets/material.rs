@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BufferBindingType, WgpuBindGroup}, buffer::BufferUsage, instance::RenderInstance, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BufferBindingType, WgpuBindGroup}, buffer::BufferUsage, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
 
-use crate::core::RenderApp;
+use crate::core::{RenderApp, RenderInstance};
 
 use super::{Buffer, GpuBuffer, GpuTexture, PrepareAssetError, RenderAsset, RenderAssets, RenderAssetsPlugin, Texture, TextureLoaderSettings};
 
@@ -106,7 +106,7 @@ impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
             (render_instance, materials_cache, assets_server, dummy_texture, buffers, textures):
                 &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let label = asset.label();
         let material_name = format!("{}-{}", std::any::type_name::<M>(), label);
 

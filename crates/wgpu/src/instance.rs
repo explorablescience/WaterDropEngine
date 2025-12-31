@@ -1,8 +1,6 @@
 //! Device/queue/surface bootstrap utilities used across the renderer.
 
-use std::sync::{Arc, RwLock};
-
-use bevy::{ecs::resource::Resource, log::{Level, debug, error, info, tracing::{event, span}, warn}, window::RawHandleWrapperHolder};
+use bevy::{log::{Level, debug, error, info, tracing::{event, span}, warn}, window::RawHandleWrapperHolder};
 use wgpu::{Device, Limits as WLimits, PresentMode as WPresentMode, Surface, SurfaceConfiguration, SurfaceTexture};
 
 use crate::texture::TextureView;
@@ -71,35 +69,6 @@ pub enum RenderEvent {
     None,
 }
 
-/// Handle to the render backend state shared across threads.
-///
-/// The [`RenderInstanceData`] is stored behind an `Arc<RwLock<_>>` so Bevy and gameplay
-/// systems can share the same device/queue without cloning GPU handles.
-///
-/// # Example
-/// ```rust,no_run
-/// use bevy::window::RawHandleWrapperHolder;
-/// use wde_wgpu::instance::{create_instance, setup_surface, PresentMode};
-/// 
-/// let render = create_instance("bootstrap", Some(&window)).await;
-/// {
-///     let mut data = render.data.write().unwrap();
-///     let surface = data.surface.as_ref().unwrap();
-///     data.surface_config = Some(setup_surface(
-///         "main-surface",
-///         size,
-///         &data.device,
-///         surface,
-///         &data.adapter,
-///         PresentMode::AutoNoVsync,
-///     ));
-/// }
-/// ```
-#[derive(Resource)]
-pub struct RenderInstance<'a> {
-    pub data: Arc<RwLock<RenderInstanceData<'a>>>,
-}
-
 /// Device, queue, surface, and adapter bundle used to create GPU resources.
 ///
 /// This is the handle you pass into buffers, textures, command buffers, and pipelines.
@@ -143,7 +112,7 @@ pub struct RenderInstanceData<'a> {
 /// let render = create_instance("demo", Some(&window)).await;
 /// assert!(render.data.read().unwrap().surface.is_some());
 /// ```
-pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapperHolder>) -> RenderInstance<'static> {
+pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapperHolder>) -> RenderInstanceData<'static> {
     info!(label, "Creating render instance.");
     let _trace = span!(Level::INFO, "new").entered();
 
@@ -231,15 +200,13 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
     debug!("Configured wgpu adapter Features: {:#?}", device.features());
 
     // Return instance
-    RenderInstance {
-        data: Arc::new(RwLock::new(RenderInstanceData {
-            device,
-            queue,
-            surface,
-            adapter,
-            instance,
-            surface_config: None
-        }))
+    RenderInstanceData {
+        device,
+        queue,
+        surface,
+        adapter,
+        instance,
+        surface_config: None
     }
 }
 

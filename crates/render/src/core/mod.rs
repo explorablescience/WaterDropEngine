@@ -13,7 +13,7 @@ use render_manager::{init_main_world, init_surface, prepare, present};
 use render_multithread::PipelinedRenderingPlugin;
 use wde_wgpu::instance::{create_instance, Limits, RenderTexture};
 use window::{extract_surface_size, send_surface_resized, SurfaceResized, WindowPlugins};
-use std::ops::{Deref, DerefMut};
+use std::{ops::{Deref, DerefMut}, sync::{Arc, RwLock}};
 
 use crate::{components:: RenderComponentsPlugin, features::RenderFeaturesPlugin, passes::{render_graph::RenderGraph, RendererPlugin}, pipelines::PipelineManagerPlugin};
 
@@ -99,13 +99,13 @@ pub struct DeviceLimits(pub Limits);
 pub struct SwapchainFrame {
     pub data: Option<RenderTexture>,
 }
-
-
-
 /// The main app for the renderer.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, AppLabel)]
 pub struct RenderApp;
 
+/// The wgpu render instance resource.
+#[derive(Resource)]
+pub struct RenderInstance<'a>(pub Arc<RwLock<wde_wgpu::RenderInstanceData<'a>>>);
 
 /// The plugin that is responsible for the renderer.
 pub struct RenderCorePlugin;
@@ -115,7 +115,7 @@ impl Plugin for RenderCorePlugin {
         // Add window
         app
             .add_plugins(WindowPlugins)
-            .add_event::<SurfaceResized>()
+            .add_message::<SurfaceResized>()
             .add_systems(Update, send_surface_resized);
 
         // Add empty world component
@@ -131,8 +131,15 @@ impl Plugin for RenderCorePlugin {
             render_app.insert_resource(futures_lite::future::block_on(async {
                 let mut system_state: SystemState<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>> = SystemState::new(app.world_mut());
                 let primary_window = system_state.get(app.world()).single().ok().cloned();
+
+                // Create the instance
                 let instance = create_instance("wde_renderer", primary_window.as_ref()).await;
-                gpu_limits = Some(instance.data.read().unwrap().device.limits());
+
+                // Get the GPU limits
+                gpu_limits = Some(instance.device.limits());
+
+                // Wrap the instance in an Arc<RwLock<>>
+                let instance = RenderInstance(Arc::new(RwLock::new(instance)));
                 instance
             }));
 

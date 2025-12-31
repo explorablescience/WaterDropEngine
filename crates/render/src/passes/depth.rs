@@ -1,5 +1,7 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, instance::RenderInstance, render_pipeline::ShaderStages, texture::{Texture as WTexture, TextureUsages}};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{Texture as WTexture, TextureUsages}};
+
+use crate::core::RenderInstance;
 
 use crate::{assets::{GpuTexture, RenderAssets, Texture}, core::{extract_macros::ExtractWorld, window::SurfaceResized}};
 
@@ -34,7 +36,7 @@ impl DepthTextureLayout {
         });
 
         // Build the layout
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let layout_built = BindGroupLayout::build(&layout, &render_instance);
 
         // Create the bind group
@@ -69,7 +71,7 @@ impl DepthTexture {
     }
 
     pub fn resize_texture(
-        mut window_resized_events: EventReader<SurfaceResized>,
+        mut window_resized_events: MessageReader<SurfaceResized>,
         server: Res<AssetServer>, mut textures: ResMut<DepthTexture>
     ) {
         textures.resized = false;

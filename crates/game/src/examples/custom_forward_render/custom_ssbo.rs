@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, instance::RenderInstance, render_pipeline::ShaderStages};
-use wde_render::{assets::{Buffer, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderSet}};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
+use wde_render::{assets::{Buffer, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderInstance, RenderSet}};
 
 /// The maximum number of entities in the ssbo.
 pub const MAX_ENTITY_COUNT: usize = 100_000;
@@ -31,10 +31,10 @@ impl CustomSsbo {
                 ShaderStages::VERTEX,
                 BufferBindingType::Storage { read_only: true });
         });
-        let ssbo_layout_built = ssbo_layout.build(&render_instance.data.read().unwrap());
+        let ssbo_layout_built = ssbo_layout.build(&render_instance.0.read().unwrap());
 
         // Create the bind group
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroup::build("custom-ssbo", &render_instance, &ssbo_layout_built, &vec![
             BindGroup::buffer(0, &buffer.buffer)
         ]);

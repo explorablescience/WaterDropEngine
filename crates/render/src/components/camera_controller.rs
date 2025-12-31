@@ -1,7 +1,7 @@
 //! Camera controller based on bevy's first person camera controller.
 //! @see https://github.com/bevyengine/bevy/blob/8de15ae71a23ce2eb272a7036b4ae82649f09634/examples/helpers/camera_controller.rs
 
-use bevy::{input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel}, log, prelude::*, window::CursorGrabMode};
+use bevy::{input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel}, prelude::*};
 use std::f32::consts::*;
 
 use super::CameraView;
@@ -73,7 +73,7 @@ fn update(
     mut camera_query: Query<(&mut Transform, &mut CameraController), With<CameraView>>,
     time: Res<Time>, mut windows: Query<&mut Window>,
     (keyboard_input, mouse_button_input): (Res<ButtonInput<KeyCode>>, Res<ButtonInput<MouseButton>>),
-    (mut mouse_events, mut mouse_scroll_events): (EventReader<MouseMotion>, EventReader<MouseWheel>),
+    (mut mouse_events, mut mouse_scroll_events): (MessageReader<MouseMotion>, MessageReader<MouseWheel>),
     (mut toggle_cursor_grab, mut mouse_cursor_grab): (Local<bool>, Local<bool>),
 ) {
     let dt = time.delta_secs();
@@ -162,18 +162,14 @@ fn update(
         // Handle cursor grab
         if cursor_grab_change {
             if cursor_grab {
-                for mut window in &mut windows {
+                for window in windows.iter_mut() {
                     if !window.focused {
                         continue;
                     }
-
-                    // window.cursor_options.grab_mode = CursorGrabMode::Locked;
-                    // window.cursor_options.visible = false;
                 }
             } else {
-                for mut window in &mut windows {
-                    // window.cursor_options.grab_mode = CursorGrabMode::None;
-                    // window.cursor_options.visible = true;
+                for window in windows.iter_mut() {
+                    let _ = window;
                 }
             }
         }

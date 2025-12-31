@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use crate::{assets::{GpuMesh, MeshAsset, ModelBoundingBox, RenderAssets}, core::SwapchainFrame, features::{CameraFeatureRender, LightsFeatureBuffer}, passes::{depth::DepthTextureLayout, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}, instance::RenderInstance, vertex::Vertex};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}, vertex::Vertex};
+
+use crate::core::RenderInstance;
 
 use super::{GpuPbrLightingRenderPipeline, PbrDeferredTexturesLayout};
 
@@ -45,7 +47,7 @@ impl RenderPass for PbrLightingRenderPass {
     fn render(&self, world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = world.get_resource::<RenderInstance>().unwrap();
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let swapchain_frame = world.get_resource::<SwapchainFrame>().unwrap().data.as_ref().unwrap();
 
         // Check if mesh is ready

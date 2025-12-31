@@ -4,7 +4,9 @@ use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::lifetimel
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 use tobj::LoadError;
-use wde_wgpu::{buffer::{BufferUsage, Buffer}, instance::RenderInstance, vertex::Vertex};
+use wde_wgpu::{buffer::{BufferUsage, Buffer}, vertex::Vertex};
+
+use crate::core::RenderInstance;
 
 use super::render_assets::{PrepareAssetError, RenderAsset};
 
@@ -213,7 +215,7 @@ impl RenderAsset for GpuMesh {
         debug!(asset.label, "Loading mesh on the GPU.");
 
         // Create vertex buffer
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let vertex_buffer = Buffer::new(
             &render_instance,
             format!("{}-vertex", asset.label).as_str(),

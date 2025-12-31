@@ -1,7 +1,7 @@
-use bevy::{log, prelude::*};
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup, WgpuBindGroupLayout}, buffer::{BufferBindingType, BufferUsage}, instance::RenderInstance, render_pipeline::ShaderStages};
+use bevy::prelude::*;
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup, WgpuBindGroupLayout}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
 
-use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{ActiveCamera, CameraUniform, CameraView}, core::{extract_macros::ExtractWorld, Extract, Render, RenderApp, RenderSet}};
+use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{ActiveCamera, CameraUniform, CameraView}, core::{Extract, Render, RenderApp, RenderInstance, RenderSet, extract_macros::ExtractWorld}};
 
 /// Struct to hold the camera uniform layout description.
 #[derive(Resource)]
@@ -20,7 +20,7 @@ impl FromWorld for CameraFeatureRender {
                 0, ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                 BufferBindingType::Uniform);
         });
-        let layout_built = layout.build(&render_instance.data.read().unwrap());
+        let layout_built = layout.build(&render_instance.0.read().unwrap());
         
         CameraFeatureRender { layout, layout_built, bind_group: None }
     }
@@ -70,7 +70,7 @@ fn build_bind_group(
 
     // Create the bind group
     if let Some(camera_buffer) = buffers.get_mut(&camera_buffer.buffer) {
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroup::build("camera", &render_instance, &camera_feature_render.layout_built, &vec![
             BindGroup::buffer(0, &camera_buffer.buffer)
         ]);
@@ -102,7 +102,7 @@ fn update_buffer(
 ) {
     // Update the camera buffer
     if let Some(camera_buffer) = buffers.get_mut(&camera_buffer.buffer) {
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         camera_buffer.buffer.write(&render_instance, bytemuck::cast_slice(&[camera_uniform.to_owned()]), 0);
     }
 }

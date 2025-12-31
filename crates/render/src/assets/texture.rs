@@ -2,7 +2,9 @@ use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimel
 use image::GenericImageView;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
-use wde_wgpu::{instance::RenderInstance, texture::{TextureFormat, TextureUsages}};
+use wde_wgpu:: texture::{TextureFormat, TextureUsages};
+
+use crate::core::RenderInstance;
 
 use super::render_assets::{PrepareAssetError, RenderAsset};
 
@@ -122,7 +124,7 @@ impl RenderAsset for GpuTexture {
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         debug!(asset.label, "Loading texture on the GPU.");
 
-        let render_instance = render_instance.data.as_ref().read().unwrap();
+        let render_instance = render_instance.0.as_ref().read().unwrap();
 
         // Create the texture
         let texture = wde_wgpu::texture::Texture::new(

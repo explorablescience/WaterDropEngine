@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_render::{assets::{GpuBuffer, GpuTexture, RenderAssets}, core::SwapchainFrame, features::{CameraFeatureRender, LightsFeatureBuffer}, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, LoadOp}, instance::RenderInstance};
+use wde_render::{assets::{GpuBuffer, GpuTexture, RenderAssets}, core::{RenderInstance, SwapchainFrame}, features::{CameraFeatureRender, LightsFeatureBuffer}, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, LoadOp}};
 
 use crate::terrain::mc_chunk::MCActiveChunk;
 
@@ -18,7 +18,7 @@ impl RenderPass for MCRenderPass {
 
         // Get the render instance and swapchain frame
         let render_instance = render_world.get_resource::<RenderInstance<'static>>().unwrap();
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
 
         // Check if depth texture is ready
         let textures = render_world.get_resource::<RenderAssets<GpuTexture>>().unwrap();

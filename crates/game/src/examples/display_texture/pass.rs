@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_render::{assets::{GpuMaterial, GpuMesh, Mesh, MeshAsset, RenderAssets}, core::SwapchainFrame, passes::render_graph::RenderPass, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}, instance::RenderInstance};
+use wde_render::{assets::{GpuMaterial, GpuMesh, Mesh, MeshAsset, RenderAssets}, core::{RenderInstance, SwapchainFrame}, passes::render_graph::RenderPass, pipelines::{CachedPipelineStatus, PipelineManager}};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}};
 
 use crate::examples::display_texture::{material::{DisplayTextureMaterial, DisplayTextureMaterialAsset}, pipeline::GpuDisplayTexturePipeline};
 
@@ -27,7 +27,7 @@ impl RenderPass for DisplayTexturePass {
     fn render(&self, world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = world.get_resource::<RenderInstance>().unwrap();
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let swapchain_frame = world.get_resource::<SwapchainFrame>().unwrap().data.as_ref().unwrap();
 
         // Check if pipeline is ready

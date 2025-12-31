@@ -1,5 +1,7 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, instance::RenderInstance, render_pipeline::ShaderStages};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
+
+use crate::core::RenderInstance;
 
 use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderSet}};
 
@@ -32,10 +34,10 @@ impl GizmoSsbo {
                 ShaderStages::VERTEX,
                 BufferBindingType::Storage { read_only: true });
         });
-        let ssbo_layout_built = ssbo_layout.build(&render_instance.data.read().unwrap());
+        let ssbo_layout_built = ssbo_layout.build(&render_instance.0.read().unwrap());
 
         // Create the bind group
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroup::build("gizmo-ssbo", &render_instance, &ssbo_layout_built, &vec![
             BindGroup::buffer(0, &buffer.buffer)
         ]);

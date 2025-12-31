@@ -1,5 +1,7 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, instance::RenderInstance, render_pipeline::ShaderStages};
+use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
+
+use crate::core::RenderInstance;
 
 use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{DirectionalLight, LightsStorageElement, PointLight, SpotLight}, core::{extract_macros::ExtractWorld, Extract, Render, RenderApp, RenderSet}};
 
@@ -36,10 +38,10 @@ impl LightsFeatureBuffer {
                 ShaderStages::FRAGMENT,
                 BufferBindingType::Storage { read_only: true });
         });
-        let layout_built = layout.build(&render_instance.data.read().unwrap());
+        let layout_built = layout.build(&render_instance.0.read().unwrap());
 
         // Create the bind group
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroup::build("lights", &render_instance, &layout_built, &vec![
             BindGroup::buffer(0, &buffer.buffer)
         ]);
@@ -96,7 +98,7 @@ fn extract(
         None => return
     };
     
-    let render_instance = render_instance.data.read().unwrap();
+    let render_instance = render_instance.0.read().unwrap();
     lights_buffer_cpu.buffer.map_write(&render_instance, |mut view| {
         let data = view.as_mut_ptr() as *mut LightsStorageElement;
         let mut offset = 0;

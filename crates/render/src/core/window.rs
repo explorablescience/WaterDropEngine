@@ -3,8 +3,9 @@
 //! This module contains the window plugin and related components.
 //! It is responsible for creating and managing the window.
 
-use bevy::{a11y::AccessibilityPlugin, app::{PluginGroup, PluginGroupBuilder}, ecs::message::Message, prelude::{Event, EventReader, EventWriter, Query, ResMut}, utils::default, window::{PresentMode, Window, WindowPlugin, WindowResized, WindowTheme}, winit::WinitPlugin};
-use wde_wgpu::instance::RenderInstance;
+use bevy::{a11y::AccessibilityPlugin, app::{PluginGroup, PluginGroupBuilder}, ecs::message::Message, prelude::{Event, MessageReader, MessageWriter, Query, ResMut}, utils::default, window::{PresentMode, Window, WindowPlugin, WindowResized, WindowTheme}, winit::WinitPlugin};
+
+use crate::core::RenderInstance;
 
 use super::extract_macros::ExtractWorld;
 
@@ -51,8 +52,8 @@ impl PluginGroup for WindowPlugins {
 
 /// Send surface resized events with the physical window size.
 pub(crate) fn send_surface_resized(
-    mut events_writer: EventWriter<SurfaceResized>, 
-    mut events_reader: EventReader<WindowResized>, window: Query<&Window>
+    mut events_writer: MessageWriter<SurfaceResized>, 
+    mut events_reader: MessageReader<WindowResized>, window: Query<&Window>
 ) {
     for _ in events_reader.read() {
         if let Ok(window) = window.single() {
@@ -88,7 +89,7 @@ pub(crate) fn extract_surface_size(render_instance: ResMut<RenderInstance<'stati
     );
     
     // Update the surface configuration
-    let mut render_instance = render_instance.data.write().unwrap();
+    let mut render_instance = render_instance.0.write().unwrap();
     let surface_config = render_instance.surface_config.as_mut().unwrap();
     surface_config.width = width;
     surface_config.height = height;

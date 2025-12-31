@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_render::{assets::{GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, core::{extract_macros::ExtractWorld, SwapchainFrame}, features::CameraFeatureRender, pipelines::{CachedPipelineStatus, PipelineManager}, passes::depth::DepthTexture};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer}, instance::RenderInstance};
+use wde_render::{assets::{GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, core::{RenderInstance, SwapchainFrame, extract_macros::ExtractWorld}, features::CameraFeatureRender, passes::depth::DepthTexture, pipelines::{CachedPipelineStatus, PipelineManager}};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer}};
 
 use super::{CustomMaterial, CustomMaterialAsset, CustomSsbo, GpuCustomRenderPipeline};
 
@@ -39,7 +39,7 @@ impl CustomRenderPass {
         }
 
         // Create the batches
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         ssbo_bf.buffer.map_write(&render_instance, |mut view| {
             let mut first = 0;
             let mut count = 1;
@@ -142,7 +142,7 @@ impl CustomRenderPass {
         )
     ) {
         // Get the render instance and swapchain frame
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
         let swapchain_frame = swapchain_frame.data.as_ref().unwrap();
 
         // Check if depth texture is ready

@@ -8,25 +8,25 @@ use std::ops::{Deref, DerefMut};
 
 use super::MainWorld;
 
-/// Code by `Bevy`: https://github.com/bevyengine/bevy/blob/main/crates/bevy_render/src/extract_param.rs.
+/// Code by `Bevy`: <https://github.com/bevyengine/bevy/blob/main/crates/bevy_render/src/extract_param.rs>.
 /// 
-/// A helper for accessing [`MainWorld`] content using a system parameter.
+/// A helper for accessing MainWorld content using a system parameter.
 ///
 /// A [`SystemParam`] adapter which applies the contained `SystemParam` to the [`World`]
-/// contained in [`MainWorld`]. This parameter only works for systems run
-/// during the [`ExtractSchedule`](crate::ExtractSchedule).
+/// contained in the main world resource. This parameter only works for systems run
+/// during the extract schedule ([`crate::core::Extract`]).
 ///
 /// This requires that the contained [`SystemParam`] does not mutate the world, as it
-/// uses a read-only reference to [`MainWorld`] internally.
+/// uses a read-only reference to the main world internally.
 ///
 /// ## Context
 ///
-/// [`ExtractSchedule`] is used to ExtractWorld (move) data from the simulation world ([`MainWorld`]) to the
+/// [`crate::core::Extract`] is used to ExtractWorld (move) data from the simulation world (MainWorld) to the
 /// render world. The render world drives rendering each frame (generally to a `Window`).
 /// This design is used to allow performing calculations related to rendering a prior frame at the same
 /// time as the next frame is simulated, which increases throughput (FPS).
 ///
-/// [`ExtractWorld`] is used to get data from the main world during [`ExtractSchedule`].
+/// [`ExtractWorld`] is used to get data from the main world during [`crate::core::Extract`].
 ///
 /// ## Examples
 ///
@@ -42,8 +42,7 @@ use super::MainWorld;
 /// }
 /// ```
 ///
-/// [`ExtractSchedule`]: crate::ExtractSchedule
-/// [Window]: bevy_window::Window
+/// [Window]: bevy::window::Window
 pub struct ExtractWorld<'w, 's, P>
 where
     P: ReadOnlySystemParam + 'static,

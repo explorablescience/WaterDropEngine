@@ -2,7 +2,7 @@
 
 use bevy::{log::Level, log::tracing::event};
 
-use crate::instance::RenderInstanceData;
+use crate::RenderInstanceData;
 
 /// Surface texture.
 pub type SurfaceTexture = wgpu::SurfaceTexture;

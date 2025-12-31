@@ -1,6 +1,8 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use crate::{assets::{materials::{GizmoMaterial, GizmoMaterialAsset}, GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, core::SwapchainFrame, features::CameraFeatureRender, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, LoadOp}, instance::RenderInstance};
+use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, LoadOp}};
+
+use crate::core::RenderInstance;
 
 use super::{GizmoSsbo, GpuGizmoRenderPipeline};
 
@@ -40,7 +42,7 @@ impl RenderPass for GizmoRenderPass {
         };
         {
             let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
-            let render_instance = render_instance.data.read().unwrap();
+            let render_instance = render_instance.0.read().unwrap();
             ssbo_bf.buffer.map_write(&render_instance, |mut view| {
                 let mut first = 0;
                 let mut count = 1;
@@ -149,7 +151,7 @@ impl RenderPass for GizmoRenderPass {
     fn render(&self, render_world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
-        let render_instance = render_instance.data.read().unwrap();
+        let render_instance = render_instance.0.read().unwrap();
 
         // Check if depth texture is ready
         let textures = render_world.get_resource::<RenderAssets<GpuTexture>>().unwrap();
