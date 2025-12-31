@@ -4,10 +4,12 @@ mod pipeline;
 mod pass;
 mod material;
 
-use wde_render::{assets::{MaterialsPluginRegister, Mesh, MeshAsset, ModelBoundingBox, RenderAssetsPlugin, Texture, TextureLoaderSettings}, core::RenderApp, passes::render_graph::RenderGraph};
-use wde_wgpu::{texture::TextureFormat, vertex::Vertex};
+use wde::{assets::{MaterialsPluginRegister, Mesh, MeshAsset, ModelBoundingBox, RenderAssetsPlugin, Texture, TextureLoaderSettings}, core::RenderApp, passes::render_graph::RenderGraph};
+use wde::wgpu::{texture::TextureFormat, vertex::Vertex};
 
-use crate::examples::display_texture::{material::{DisplayTextureMaterial, DisplayTextureMaterialAsset}, pass::{DisplayTexturePass, RenderPassEntity}, pipeline::{DisplayTexturePipeline, DisplayTexturePipelineAsset, GpuDisplayTexturePipeline}};
+use crate::display_texture::material::*;
+use crate::display_texture::pipeline::*;
+use crate::display_texture::pass::*;
 
 pub struct DisplayTextureComponentPlugin;
 impl Plugin for DisplayTextureComponentPlugin {

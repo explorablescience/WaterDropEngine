@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
-use wde_render::{assets::{Buffer, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderInstance, RenderSet}};
+use wde::wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
+use wde::{assets::{Buffer, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderInstance, RenderSet}};
 
 /// The maximum number of entities in the ssbo.
 pub const MAX_ENTITY_COUNT: usize = 100_000;

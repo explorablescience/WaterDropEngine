@@ -9,8 +9,8 @@ pub use custom_material::*;
 pub use custom_pipeline::*;
 pub use custom_renderpass::*;
 pub use custom_ssbo::*;
-use wde_render::{assets::{MaterialsPluginRegister, Mesh, RenderAssetsPlugin, TextureLoaderSettings}, components::{Camera, CameraController}, core::{Extract, Render, RenderApp, RenderSet}};
-use wde_wgpu::texture::{TextureFormat, TextureUsages};
+use wde::{assets::{MaterialsPluginRegister, Mesh, RenderAssetsPlugin, TextureLoaderSettings}, components::{Camera, CameraController}, core::{Extract, Render, RenderApp, RenderSet}};
+use wde::wgpu::texture::{TextureFormat, TextureUsages};
 
 
 /// System to create the scene
@@ -107,4 +107,3 @@ impl Plugin for CustomFeaturesPlugin {
         app.get_sub_app_mut(RenderApp).unwrap().world_mut().spawn(CustomRenderPipeline(pipeline));
     }
 }
-

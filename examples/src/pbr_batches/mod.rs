@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_render::{assets::{materials::{PbrMaterial, PbrMaterialAsset}, Mesh, TextureLoaderSettings}, components::{Camera, CameraController}};
-use wde_wgpu::texture::{TextureFormat, TextureUsages};
+use wde::{assets::{materials::{PbrMaterial, PbrMaterialAsset}, Mesh, TextureLoaderSettings}, components::{Camera, CameraController}};
+use wde::wgpu::texture::{TextureFormat, TextureUsages};
 
 pub struct PbrBatchesPlugin;
 impl Plugin for PbrBatchesPlugin {

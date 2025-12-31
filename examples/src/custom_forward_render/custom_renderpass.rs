@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_render::{assets::{GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, core::{RenderInstance, SwapchainFrame, extract_macros::ExtractWorld}, features::CameraFeatureRender, passes::depth::DepthTexture, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer}};
+use wde::{assets::{GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, core::{RenderInstance, SwapchainFrame, extract_macros::ExtractWorld}, features::CameraFeatureRender, passes::depth::DepthTexture, pipelines::{CachedPipelineStatus, PipelineManager}};
+use wde::wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer}};
 
 use super::{CustomMaterial, CustomMaterialAsset, CustomSsbo, GpuCustomRenderPipeline};
 

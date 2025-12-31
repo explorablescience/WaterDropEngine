@@ -4,17 +4,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Trace",
+            "name": "Trace Game",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=wde-engine",
-                    "--package=wde-engine",
+                    "--bin=wde-game",
+                    "--package=wde-game",
                     "--target-dir=target",
                     "--features=trace,watch,remote"
                 ],
                 "filter": {
-                    "name": "wde-engine",
+                    "name": "wde-game",
                     "kind": "bin"
                 }
             },
@@ -27,17 +27,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug",
+            "name": "Debug Game",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=wde-engine",
-                    "--package=wde-engine",
+                    "--bin=wde-game",
+                    "--package=wde-game",
                     "--target-dir=target",
                     "--features=watch,remote"
                 ],
                 "filter": {
-                    "name": "wde-engine",
+                    "name": "wde-game",
                     "kind": "bin"
                 }
             },
@@ -50,17 +50,17 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Release",
+            "name": "Release Game",
             "cargo": {
                 "args": [
                     "build",
                     "--release",
-                    "--bin=wde-engine",
-                    "--package=wde-engine",
+                    "--bin=wde-game",
+                    "--package=wde-game",
                     "--target-dir=target"
                 ],
                 "filter": {
-                    "name": "wde-engine",
+                    "name": "wde-game",
                     "kind": "bin"
                 }
             },
@@ -73,7 +73,30 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Generate docs",
+            "name": "Debug Examples",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=wde-examples",
+                    "--package=wde-examples",
+                    "--target-dir=target",
+                    "--features=watch,remote"
+                ],
+                "filter": {
+                    "name": "wde-examples",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Generate Engine Docs",
             "cargo": {
                 "args": [
                     "doc",

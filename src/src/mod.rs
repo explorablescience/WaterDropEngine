@@ -1,10 +1,10 @@
-use bevy::prelude::*;
+use wde::{bevy::prelude::*};
 // use physics::PhysicsPlugin;
 use scene::ScenePlugin;
-use terrain::TerrainPlugin;
+// use terrain::TerrainPlugin;
 
 pub mod scene;
-pub mod terrain;
+// pub mod terrain;
 pub mod physics;
 
 pub struct GamePlugin;
@@ -14,7 +14,7 @@ impl Plugin for GamePlugin {
         app.add_plugins(ScenePlugin);
 
         // Add the terrain plugin
-        app.add_plugins(TerrainPlugin);
+        // app.add_plugins(TerrainPlugin);
 
         // // Add the physics plugin
         // app.add_plugins(PhysicsPlugin);

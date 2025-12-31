@@ -1,6 +1,10 @@
 [workspace]
 members = [
     "src",
-    "crates/*"
+    "examples",
+    "crates/core/wde-wgpu",
+    "crates/render/wde-renderer",
+    "crates/scene/wde-scene",
+    "crates/wde",
 ]
 resolver = "2"

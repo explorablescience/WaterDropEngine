@@ -1,6 +1,6 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
-use wde_render::{assets::{PrepareAssetError, RenderAsset}, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}};
-use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::ShaderStages};
+use wde::{assets::{PrepareAssetError, RenderAsset}, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}};
+use wde::wgpu::{bind_group::BindGroupLayout, render_pipeline::ShaderStages};
 
 
 #[derive(Default, Asset, Clone, TypePath)]

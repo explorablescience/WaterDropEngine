@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_render::{assets::{Mesh, materials::{PbrMaterial, PbrMaterialAsset}}, components::{ActiveCamera, Camera, CameraController, CameraView, DirectionalLight}};
+use wde_renderer::{assets::{Mesh, materials::{PbrMaterial, PbrMaterialAsset}}, components::{ActiveCamera, Camera, CameraController, CameraView, DirectionalLight}};
 
 use crate::serialize::serialize_world;
 

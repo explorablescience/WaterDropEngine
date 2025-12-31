@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_render::assets::{Material, MaterialBuilder, Texture};
-use wde_wgpu::render_pipeline::ShaderStages;
+use wde::assets::{Material, MaterialBuilder, Texture};
+use wde::wgpu::render_pipeline::ShaderStages;
 
 #[derive(Asset, Clone, TypePath)]
 /// Describes a simple material with a texture.

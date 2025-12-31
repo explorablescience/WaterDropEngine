@@ -1,8 +1,8 @@
 [package]
-name = "wde-scene"
+name = "wde-renderer"
 version = "0.1.0"
 edition = "2021"
-description = "High-level scene management for WaterDropEngine."
+description = "High-level rendering logic for WaterDropEngine."
 
 [profile.dev]
 opt-level = 0
@@ -18,11 +18,17 @@ incremental = false
 debug = false
 
 [dependencies]
-wde-render = { path = "../render" }
-wde-wgpu = { path = "../wgpu" }
-bytemuck = { version = "1.14", features = [ "derive" ] }
-serde_json = "1.0"
+thiserror = "1.0"
+wde-wgpu = { path = "../../core/wde-wgpu" }
 serde = { version = "1.0", features = ["derive"] }
+bytemuck = { version = "1.14", features = [ "derive" ] }
+tobj = "4.0"
+async-channel = "2.3"
+
+[dependencies.image]
+version = "0.25"
+default-features = false
+features = ["png", "jpeg"]
 
 [dependencies.bevy]
 version = "0.17"
@@ -31,12 +37,10 @@ features = [
     "multi_threaded",
     "bevy_asset",
     "bevy_winit",
-    "x11",
-    "reflect_auto_register"
+    "bevy_window"
 ]
 
 [features]
 default = []
-remote = ["bevy/bevy_remote"]
-watch = ["bevy/file_watcher", "wde-render/watch"]
-trace = ["bevy/trace_tracy_memory", "wde-render/trace"]
+watch = ["bevy/file_watcher"]
+trace = ["bevy/trace_tracy_memory"]

@@ -1,8 +1,9 @@
 use bevy::prelude::*;
-use wde_render::{assets::{GpuMaterial, GpuMesh, Mesh, MeshAsset, RenderAssets}, core::{RenderInstance, SwapchainFrame}, passes::render_graph::RenderPass, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}};
+use wde::{assets::{GpuMaterial, GpuMesh, Mesh, MeshAsset, RenderAssets}, core::{RenderInstance, SwapchainFrame}, passes::render_graph::RenderPass, pipelines::{CachedPipelineStatus, PipelineManager}};
+use wde::wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}};
 
-use crate::examples::display_texture::{material::{DisplayTextureMaterial, DisplayTextureMaterialAsset}, pipeline::GpuDisplayTexturePipeline};
+use crate::display_texture::material::*;
+use crate::display_texture::pipeline::*;
 
 #[derive(Resource, Default)]
 pub struct RenderPassEntity {
