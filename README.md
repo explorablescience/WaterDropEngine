@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="imgs/logo.png" height="400" alt="logo"/>
+    <img src="waterdropengine.png" height="400" alt="logo"/>
 </p>
 
 # WaterDropEngine
