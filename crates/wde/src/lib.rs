@@ -10,6 +10,3 @@ pub mod gizmos {
     pub use wde_gizmos::*;
 }
 
-pub mod bevy {
-    pub use bevy::*;
-}

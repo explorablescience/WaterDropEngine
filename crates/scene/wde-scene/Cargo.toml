@@ -20,20 +20,10 @@ debug = false
 [dependencies]
 wde-renderer = { path = "../../render/wde-renderer" }
 wde-wgpu = { path = "../../core/wde-wgpu" }
-bytemuck = { version = "1.14", features = [ "derive" ] }
+bevy = { workspace = true }
+serde = { workspace = true }
+bytemuck = { workspace = true }
 serde_json = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-
-[dependencies.bevy]
-version = "0.17"
-default-features = false
-features = [
-    "multi_threaded",
-    "bevy_asset",
-    "bevy_winit",
-    "x11",
-    "reflect_auto_register"
-]
 
 [features]
 default = []

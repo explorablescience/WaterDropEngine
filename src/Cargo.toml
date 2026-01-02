@@ -5,23 +5,14 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
-bytemuck = { version = "1.14", features = [ "derive" ] }
+bevy = { workspace = true }
+bytemuck = { workspace = true }
 
 [dependencies.wde]
 version = "0.1.0"
 path = "../crates/wde"
 features = [
     "gizmos"
-]
-
-[dependencies.bevy]
-version = "0.17"
-default-features = false
-features = [
-    "multi_threaded",
-    "bevy_asset",
-    "bevy_winit",
-    "x11"
 ]
 
 [build-dependencies]

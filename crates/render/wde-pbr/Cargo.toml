@@ -1,8 +1,8 @@
 [package]
-name = "wde-gizmos"
+name = "wde-pbr"
 version = "0.1.0"
 edition = "2024"
-description = "Gizmo rendering utilities for WaterDropEngine."
+description = "Physically based rendering for WaterDropEngine."
 
 [profile.dev]
 opt-level = 0
@@ -20,7 +20,6 @@ debug = false
 [dependencies]
 wde-renderer = { path = "../wde-renderer" }
 bevy = { workspace = true }
-bytemuck = { workspace = true }
 
 [features]
 default = []

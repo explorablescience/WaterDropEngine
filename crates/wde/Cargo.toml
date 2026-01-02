@@ -22,16 +22,7 @@ wde-renderer = { path = "../render/wde-renderer" }
 wde-wgpu = { path = "../core/wde-wgpu" }
 wde-scene = { path = "../scene/wde-scene" }
 wde-gizmos = { path = "../render/wde-gizmos", optional = true }
-
-[dependencies.bevy]
-version = "0.17"
-default-features = false
-features = [
-    "multi_threaded",
-    "bevy_asset",
-    "bevy_winit",
-    "x11"
-]
+bevy = { workspace = true }
 
 [features]
 default = []

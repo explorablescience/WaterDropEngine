@@ -18,10 +18,11 @@ incremental = false
 debug = false
 
 [dependencies]
-thiserror = "1.0"
 wde-wgpu = { path = "../../core/wde-wgpu" }
-serde = { version = "1.0", features = ["derive"] }
-bytemuck = { version = "1.14", features = [ "derive" ] }
+bevy = { workspace = true }
+serde = { workspace = true }
+bytemuck = { workspace = true }
+thiserror = "1.0"
 tobj = "4.0"
 async-channel = "2.3"
 
@@ -29,16 +30,6 @@ async-channel = "2.3"
 version = "0.25"
 default-features = false
 features = ["png", "jpeg"]
-
-[dependencies.bevy]
-version = "0.17"
-default-features = false
-features = [
-    "multi_threaded",
-    "bevy_asset",
-    "bevy_winit",
-    "bevy_window"
-]
 
 [features]
 default = []

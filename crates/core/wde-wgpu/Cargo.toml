@@ -20,13 +20,6 @@ debug = false
 
 [dependencies]
 wgpu = { version = "22.1", features = [ "serde" ] }
-bytemuck = { version = "1.12" }
-
-[dependencies.bevy]
-version = "0.17"
-default-features = false
-features = [
-    "multi_threaded",
-    "bevy_window",
-    "bevy_log"
-]
+bevy = { workspace = true }
+serde = { workspace = true }
+bytemuck = { workspace = true}

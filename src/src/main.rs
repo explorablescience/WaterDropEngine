@@ -3,10 +3,10 @@
 
 use wde::gizmos::GizmosPlugin;
 use wde::{RenderPlugin, ScenePlugin};
-use wde::bevy::input::InputPlugin;
-use wde::{bevy::app::TaskPoolThreadAssignmentPolicy};
-use wde::bevy::prelude::*;
-use wde::bevy::log::{Level, LogPlugin};
+use bevy::input::InputPlugin;
+use bevy::app::TaskPoolThreadAssignmentPolicy;
+use bevy::prelude::*;
+use bevy::log::{Level, LogPlugin};
 
 pub fn main() {
     // Log level
