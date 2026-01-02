@@ -6,7 +6,7 @@
 //! - **Components**: [`components::CameraView`] stores fov/near/far; [`components::Camera`]
 //!   tags an entity as a camera; [`components::ActiveCamera`] marks the one to render; and
 //!   [`components::CameraController`] implements a FPS-style mover.
-//! - **Controller system**: [`components::CameraControllerPlugin`] polls keyboard/mouse,
+//! - **Controller system**: The controller system polls keyboard/mouse,
 //!   updates yaw/pitch, velocity, and writes back the entity `Transform`.
 //! - **Render feature**: [`features::CameraFeatureRender`] allocates a uniform buffer +
 //!   bind group (layout at binding 0) with world→NDC, NDC→world, and camera position.
@@ -40,7 +40,7 @@
 //! ```
 //!
 //! # Core usage patterns
-//! - Keep exactly one [`ActiveCamera`] in the main world; the render feature reads it each frame.
+//! - Keep exactly one `ActiveCamera` in the main world; the render feature reads it each frame.
 //! - Tune `CameraController` keys/speeds/sensitivity per scene; yaw/pitch are persisted.
 //! - When resizing the window, the feature recomputes aspect ratio automatically from `Window`.
 //! - The camera bind group sits at index 0 in render pipelines; reuse it across passes.

@@ -1,5 +1,5 @@
 //! Camera controller based on bevy's first person camera controller.
-//! @see https://github.com/bevyengine/bevy/blob/8de15ae71a23ce2eb272a7036b4ae82649f09634/examples/helpers/camera_controller.rs
+//! @see <https://github.com/bevyengine/bevy/blob/8de15ae71a23ce2eb272a7036b4ae82649f09634/examples/helpers/camera_controller.rs>
 
 use bevy::{input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel}, prelude::*};
 use std::f32::consts::*;

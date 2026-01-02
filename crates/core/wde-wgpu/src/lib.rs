@@ -5,7 +5,7 @@
 //! to keep imports short and examples consistent.
 //!
 //! # Architecture
-//! - **Instance and surface**: [`instance::create_instance`] produces a [`instance::RenderInstance`]
+//! - **Instance and surface**: [`instance::create_instance`] produces a `instance::RenderInstance`
 //!   holding the `wgpu::Device`, `Queue`, and optional `Surface`. [`instance::setup_surface`] stores
 //!   a [`wgpu::SurfaceConfiguration`] once the window size is known and [`instance::resize`]
 //!   reapplies it on swapchain loss or window resize.

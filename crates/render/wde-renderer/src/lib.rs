@@ -37,17 +37,17 @@
 //!   window/swapchain syncing, and schedule definitions (`Extract`, `Render`, `RenderSet`).
 //!
 //! - **Assets** ([`assets`]): CPU/GPU asset pairs and preparation pipeline:
-//!   - [`Texture`] → [`GpuTexture`] (image loading + GPU upload)
-//!   - [`MeshAsset`] → [`GpuMesh`] (vertex/index buffers)
-//!   - [`Buffer`] → [`GpuBuffer`] (uniforms, storage, indirect)
-//!   - [`Shader`] (WGSL source)
-//!   - [`Material`] → [`GpuMaterial`] (custom bind groups + layouts)
+//!   - `Texture` → `GpuTexture` (image loading + GPU upload)
+//!   - [`assets::MeshAsset`] → [`assets::GpuMesh`] (vertex/index buffers)
+//!   - [`assets::Buffer`] → [`assets::GpuBuffer`] (uniforms, storage, indirect)
+//!   - [`assets::Shader`] (WGSL source)
+//!   - [`assets::Material`] → `GpuMaterial` (custom bind groups + layouts)
 //!   - Prep pipeline handles dependency ordering (materials wait for textures/buffers).
 //!
 //! - **Pipelines** ([`pipelines`]): Descriptors and caching:
-//!   - [`RenderPipelineDescriptor`]: layout, shaders, depth, topology, culling.
-//!   - [`ComputePipelineDescriptor`]: shader + bind groups for compute.
-//!   - [`PipelineManager`]: queues, builds, and caches pipelines; watches shader changes
+//!   - `RenderPipelineDescriptor`: layout, shaders, depth, topology, culling.
+//!   - [`pipelines::ComputePipelineDescriptor`]: shader + bind groups for compute.
+//!   - `PipelineManager`: queues, builds, and caches pipelines; watches shader changes
 //!     for hot-reload.
 //!   - Helpers: `BindGroupLayout`, `BindGroupBuilder`, `ShaderStages`, etc.
 //!
@@ -107,7 +107,7 @@
 //!     fn build(&self, app: &mut App) {
 //!         let render_app = app.sub_app_mut(RenderApp);
 //!         render_app.add_systems(
-//!             Render,
+//!             crate::core::Render,
 //!             |mut graph: ResMut<RenderGraph>| {
 //!                 graph.add_pass::<MyPass>(10); // runs at order 10
 //!             }
@@ -142,7 +142,7 @@
 //! // app.add_plugins(MaterialsPluginRegister::<UnlitColor>::default());
 //! ```
 //!
-//! See [`assets::material`] docs and the `wde-pbr` crate for complete examples.
+//! See `assets::material` docs and the `wde-pbr` crate for complete examples.
 //!
 //! ## 3. Setting Up a Render Pipeline
 //!
@@ -204,21 +204,21 @@
 //!
 //! The render sub-app uses these schedules/sets:
 //!
-//! - **[`Extract`]**: Runs in the main world; copies data to render world. Executes
+//! - **[`core::Extract`]**: Runs in the main world; copies data to render world. Executes
 //!   asynchronously *between* main app frames if pipelined rendering is enabled.
-//! - **[`Render`]** schedule with [`RenderSet`]:
+//! - **[`core::Render`]** schedule with [`core::RenderSet`]:
 //!   - `PrepareAssets`: Upload CPU assets to GPU.
 //!   - `BindGroups`: Build bind groups from resources.
 //!   - `Render`: Issue render passes and draw calls.
 //!   - `Submit`: Present the frame.
 //!
-//! Custom passes use `RenderGraph::add_pass` to hook into the extract/render flow,
+//! Custom passes use [`passes::render_graph::RenderGraph::add_pass`] to hook into the extract/render flow,
 //! running after all earlier passes.
 //!
 //! # Module Navigation
 //!
 //! - **Want to add a render pass?** → See [`passes::render_graph`] and [`passes`] module docs.
-//! - **Want to define a custom material?** → See [`assets::material`] module docs.
+//! - **Want to define a custom material?** → See the [`assets`] module docs.
 //! - **Want to set up a pipeline?** → See [`pipelines`] module docs.
 //! - **Want to load assets?** → See [`assets`] module docs.
 //! - **Want render app / extraction details?** → See [`core`] module docs.

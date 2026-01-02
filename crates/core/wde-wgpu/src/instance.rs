@@ -73,7 +73,7 @@ pub enum RenderEvent {
 ///
 /// This is the handle you pass into buffers, textures, command buffers, and pipelines.
 /// The type is intentionally lightweight to clone/read behind the `Arc<RwLock<_>>` in
-/// [`RenderInstance`].
+/// `RenderInstance`.
 ///
 /// ```rust,no_run
 /// use wde_wgpu::{buffer::{Buffer, BufferUsage}, instance::{create_instance, RenderInstanceData}};
