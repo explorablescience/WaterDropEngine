@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_renderer::{assets::{BufferBindingType, Material, MaterialBuilder}, pipelines::ShaderStages};
+use wde_renderer::prelude::*;
 
 /// Describes a simple gizmo material with a color.
 #[derive(Component, Reflect)]

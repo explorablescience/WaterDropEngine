@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use crate::{assets::{materials::{PbrMaterial, PbrMaterialAsset}, GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, features::CameraFeatureRender, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer}};
+use wde_renderer::prelude::*;
 
-use crate::core::RenderInstance;
+use crate::{assets::{PbrMaterial, PbrMaterialAsset}, passes::pbr_ssbo::PbrSsbo};
 
-use super::{GpuPbrGBufferRenderPipeline, PbrDeferredTextures, PbrSsbo};
+use super::{GpuPbrGBufferRenderPipeline, PbrDeferredTextures};
 
-pub struct PbrGBufferRenderBatch {
+pub(crate) struct PbrGBufferRenderBatch {
     mesh: Handle<MeshAsset>,
     material: Handle<PbrMaterialAsset>,
     first: usize,
@@ -18,9 +17,9 @@ pub struct PbrGBufferRenderBatch {
 #[derive(Resource, Default)]
 pub struct PbrGBufferRenderPass {
     /// The order of the batches: (mesh, material) -> [batch index].
-    pub batches_order: HashMap<(AssetId<MeshAsset>, AssetId<PbrMaterialAsset>), Vec<usize>>,
+    batches_order: HashMap<(AssetId<MeshAsset>, AssetId<PbrMaterialAsset>), Vec<usize>>,
     /// The render batches.
-    pub batches: Vec<PbrGBufferRenderBatch>,
+    batches: Vec<PbrGBufferRenderBatch>,
 }
 impl RenderPass for PbrGBufferRenderPass {
     fn extract(&self, main_world: &mut World, render_world: &mut World) {
@@ -63,8 +62,8 @@ impl RenderPass for PbrGBufferRenderPass {
                     // Check if new element in same batch
                     let last_mesh_ref = last_mesh.as_ref();
                     let last_material_ref = last_material.as_ref();
-                    if last_mesh_ref.is_some() && last_material_ref.is_some() {
-                        if mesh.0.id() == last_mesh_ref.unwrap().id() && material.0.id() == last_material_ref.unwrap().id() {
+                    if let (Some(last_mesh_ref), Some(last_material_ref)) = (last_mesh_ref, last_material_ref) {
+                        if mesh.0.id() == last_mesh_ref.id() && material.0.id() == last_material_ref.id() {
                             // Update the ssbo
                             let transform = TransformUniform::new(transform);
                             unsafe {
@@ -78,21 +77,21 @@ impl RenderPass for PbrGBufferRenderPass {
                         } else {
                             // Push the batch
                             passes.batches.push(PbrGBufferRenderBatch {
-                                mesh: last_mesh_ref.unwrap().clone(),
-                                material: last_material_ref.unwrap().clone(),
+                                mesh: last_mesh_ref.clone(),
+                                material: last_material_ref.clone(),
                                 first,
                                 count,
-                                index_count: match meshes.get(last_mesh_ref.unwrap()) {
+                                index_count: match meshes.get(last_mesh_ref) {
                                     Some(mesh) => mesh.index_count as usize,
                                     None => 0
                                 }
                             });
 
                             let batch_index = passes.batches.len() - 1;
-                            passes.batches_order.entry(
-                                (last_mesh_ref.unwrap().id(), last_material_ref.unwrap().id())
-                            ).or_default().push(batch_index);
-
+                            passes.batches_order
+                                .entry((last_mesh_ref.id(), last_material_ref.id()))
+                                .or_default()
+                                .push(batch_index);
 
                             // Reset the batch
                             first += count;

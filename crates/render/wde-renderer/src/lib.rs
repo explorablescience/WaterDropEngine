@@ -1,6 +1,17 @@
 #![allow(clippy::just_underscores_and_digits)]
 #![allow(clippy::type_complexity)]
 
+pub mod prelude {
+    pub use crate::assets::{LoadOp, StoreOp, Buffer, BufferBindingType, BufferUsage, GpuBuffer, RenderAssets, RenderAssetsPlugin, GpuMaterial, GpuTexture, PrepareAssetError, RenderAsset, MeshAsset, Mesh, GpuMesh, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, ModelBoundingBox, TextureFormat, TextureUsages};
+    pub use crate::core::{Extract, Render, RenderApp, RenderInstance, RenderSet, extract_macros::ExtractWorld, SwapchainFrame, window::SurfaceResized};
+    pub use crate::components::TransformUniform;
+    pub use crate::features::CameraFeatureRender;
+    pub use crate::pipelines::{BindGroup, BindGroupBuilder, BindGroupLayout, ShaderStages, CachedPipelineIndex, DepthStencilDescriptor, PipelineManager, RenderPipelineDescriptor, CachedPipelineStatus, Vertex, CompareFunction, Face, RenderTopology, BindGroupLayoutBuilder};
+    pub use crate::assets::{Material, MaterialBuilder, MaterialsPluginRegister, Texture};
+    pub use crate::passes::{render_graph::{RenderGraph, RenderPass}, depth::{DepthTexture, DepthTextureLayout}};
+    pub use crate::utils::Color;
+}
+
 pub mod assets;
 pub mod pipelines;
 pub mod components;

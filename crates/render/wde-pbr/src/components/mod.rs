@@ -1,0 +1,15 @@
+use bevy::prelude::{App, Plugin};
+
+use crate::components::lights::*;
+
+pub mod lights;
+
+pub(crate) struct PbrComponentsPlugin;
+impl Plugin for PbrComponentsPlugin {
+    fn build(&self, app: &mut App) {
+        app
+            .register_type::<DirectionalLight>()
+            .register_type::<PointLight>()
+            .register_type::<SpotLight>();
+    }
+}

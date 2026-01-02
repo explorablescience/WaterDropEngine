@@ -1,11 +1,11 @@
 use bevy::{platform::collections::HashMap, prelude::*};
-use wde_renderer::{assets::{CommandBuffer, GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, LoadOp, Mesh, MeshAsset, RenderAssets, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth}, components::TransformUniform, core::{RenderInstance, SwapchainFrame}, features::CameraFeatureRender, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
+use wde_renderer::prelude::*;
 
 use crate::assets::gizmo_material::{GizmoMaterial, GizmoMaterialAsset};
 
 use super::{GizmoSsbo, GpuGizmoRenderPipeline};
 
-pub struct GizmoRenderBatch {
+pub(crate) struct GizmoRenderBatch {
     mesh: Handle<MeshAsset>,
     material: Handle<GizmoMaterialAsset>,
     first: usize,
@@ -13,7 +13,7 @@ pub struct GizmoRenderBatch {
     index_count: usize,
 }
 #[derive(Resource, Default)]
-pub struct GizmoRenderPass {
+pub(crate) struct GizmoRenderPass {
     /// The order of the batches: (mesh, material) -> [batch index].
     pub batches_order: HashMap<(AssetId<MeshAsset>, AssetId<GizmoMaterialAsset>), Vec<usize>>,
     /// The render batches.

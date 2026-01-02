@@ -1,6 +1,6 @@
-use bevy::prelude::*;
-
-use crate::utils::Color;
+#[allow(unused)]
+use bevy::prelude::{*, Color as BevyColor};
+use wde_renderer::prelude::Color;
 
 /// Default color values for the lights.
 const AMBIENT_DEFAULT:  f32 = 0.05;
@@ -269,7 +269,7 @@ impl Default for SpotLight {
 /// Lights storage buffer
 #[repr(C)]
 #[derive(Resource, Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct LightsStorageElement {
+pub(crate) struct LightsStorageElement {
     /// World space position of the directional light for xyz. If it is the first element, the w component is the number of lights.
     pub position_number: [f32; 4],
     /// World space direction of the light. The w component is the type of the light: 0 for directional, 1 for point, 2 for spot.

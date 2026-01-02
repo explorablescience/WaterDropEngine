@@ -1,10 +1,8 @@
 use bevy::prelude::*;
 use depth::{DepthTexture, DepthTextureLayout};
-use pbr::PbrFeaturesPlugin;
 
 use crate::core::{Extract, Render, RenderApp, RenderSet};
 
-pub mod pbr;
 pub mod depth;
 pub mod render_graph;
 
@@ -19,8 +17,5 @@ impl Plugin for RendererPlugin {
             .init_resource::<DepthTextureLayout>()
             .add_systems(Extract, DepthTexture::extract_texture)
             .add_systems(Render, DepthTextureLayout::build_bind_group.in_set(RenderSet::BindGroups));
-
-        // Add the different render passes to the app
-        app.add_plugins(PbrFeaturesPlugin);
     }
 }

@@ -1,20 +1,18 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
+use wde_renderer::prelude::*;
 
-use crate::core::RenderInstance;
-
-use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{DirectionalLight, LightsStorageElement, PointLight, SpotLight}, core::{extract_macros::ExtractWorld, Extract, Render, RenderApp, RenderSet}};
+use crate::components::lights::*;
 
 /// Maximum number of lights.
-pub const MAX_LIGHTS: usize = 64;
+pub(crate) const MAX_LIGHTS: usize = 64;
 
 /// Struct to hold the light uniform layout description.
 #[derive(Resource)]
-pub struct LightsFeatureBuffer {
+pub(crate) struct LightsFeatureBuffer {
     pub buffer_cpu: Handle<Buffer>,
     pub buffer_gpu: Handle<Buffer>,
     pub bind_group_layout: Option<BindGroupLayout>,
-    pub bind_group: Option<WgpuBindGroup>
+    pub bind_group: Option<BindGroup>
 }
 impl LightsFeatureBuffer {
     pub fn build_bind_group(
@@ -50,7 +48,7 @@ impl LightsFeatureBuffer {
     }
 }
 
-pub struct LightsFeature;
+pub(crate) struct LightsFeature;
 impl Plugin for LightsFeature {
     fn build(&self, app: &mut App) {
         app.get_sub_app_mut(RenderApp).unwrap()

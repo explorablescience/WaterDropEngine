@@ -10,3 +10,8 @@ pub mod gizmos {
     pub use wde_gizmos::*;
 }
 
+#[cfg(feature = "pbr")]
+pub mod pbr {
+    pub use wde_pbr::*;
+}
+

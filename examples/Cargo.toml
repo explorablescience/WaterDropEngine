@@ -7,7 +7,12 @@ build = "build.rs"
 [dependencies]
 bevy = { workspace = true }
 bytemuck = { workspace = true }
-wde = { path = "../crates/wde" }
+
+[dependencies.wde]
+path = "../crates/wde"
+features = [
+    "pbr"
+]
 
 [build-dependencies]
 anyhow = "1.0"

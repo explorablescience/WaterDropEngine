@@ -1,5 +1,5 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_renderer::{assets::{GpuMaterial, PrepareAssetError, RenderAsset, RenderAssets}, features::CameraFeatureRender, pipelines::{CachedPipelineIndex, DepthStencilDescriptor, PipelineManager, RenderPipelineDescriptor, RenderTopology}};
+use wde_renderer::prelude::*;
 
 use crate::assets::gizmo_material::GizmoMaterialAsset;
 
@@ -7,12 +7,12 @@ use super::GizmoSsbo;
 
 
 #[derive(Default, Asset, Clone, TypePath)]
-pub struct GizmoRenderPipelineAsset;
+pub(crate) struct GizmoRenderPipelineAsset;
 
 #[allow(dead_code)]
 #[derive(Component)]
-pub struct GizmoRenderPipeline(pub Handle<GizmoRenderPipelineAsset>);
-pub struct GpuGizmoRenderPipeline {
+pub(crate) struct GizmoRenderPipeline(pub Handle<GizmoRenderPipelineAsset>);
+pub(crate) struct GpuGizmoRenderPipeline {
     pub cached_pipeline_index: CachedPipelineIndex
 }
 impl RenderAsset for GpuGizmoRenderPipeline {

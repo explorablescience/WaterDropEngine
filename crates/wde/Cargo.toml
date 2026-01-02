@@ -22,6 +22,7 @@ wde-renderer = { path = "../render/wde-renderer" }
 wde-wgpu = { path = "../core/wde-wgpu" }
 wde-scene = { path = "../scene/wde-scene" }
 wde-gizmos = { path = "../render/wde-gizmos", optional = true }
+wde-pbr = { path = "../render/wde-pbr", optional = true }
 bevy = { workspace = true }
 
 [features]
@@ -30,3 +31,4 @@ remote = ["bevy/bevy_remote"]
 watch = ["bevy/file_watcher", "wde-renderer/watch"]
 trace = ["bevy/trace_tracy_memory", "wde-renderer/trace"]
 gizmos = ["wde-gizmos"]
+pbr = ["wde-pbr"]

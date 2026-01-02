@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use wde_renderer::prelude::*;
 
 use bevy::prelude::*;
 
@@ -9,16 +9,10 @@ mod pbr_renderpass_lighting;
 mod pbr_ssbo;
 mod pbr_textures;
 
-pub use pbr_pipeline_gbuffer::*;
 pub use pbr_renderpass_gbuffer::*;
-pub use pbr_pipeline_lighting::*;
 pub use pbr_renderpass_lighting::*;
-pub use pbr_ssbo::*;
-pub use pbr_textures::*;
 
-use crate::{assets::RenderAssetsPlugin, core::{Extract, Render, RenderApp, RenderSet}};
-
-use super::render_graph::RenderGraph;
+use crate::passes::{pbr_pipeline_gbuffer::{GpuPbrGBufferRenderPipeline, PbrGBufferRenderPipeline, PbrGBufferRenderPipelineAsset}, pbr_pipeline_lighting::{GpuPbrLightingRenderPipeline, PbrLightingRenderPipeline, PbrLightingRenderPipelineAsset}, pbr_ssbo::PbrSsboPlugin, pbr_textures::{PbrDeferredTextures, PbrDeferredTexturesLayout}};
 
 pub(crate) struct PbrFeaturesPlugin;
 impl Plugin for PbrFeaturesPlugin {
@@ -49,21 +43,12 @@ impl Plugin for PbrFeaturesPlugin {
             .add_systems(Startup, PbrLightingRenderPassMesh::init);
         app.get_sub_app_mut(RenderApp).unwrap()
             .init_resource::<PbrLightingRenderPassMesh>();
-
-        // Add the pbr render passes
-        let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
-            .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass::<PbrGBufferRenderPass>(0);
-        render_graph.add_pass::<PbrLightingRenderPass>(1);
     }
 
     fn finish(&self, app: &mut App) {
         // Create the render pass
         app.get_sub_app_mut(RenderApp).unwrap()
-            .insert_resource(PbrGBufferRenderPass {
-                batches_order: HashMap::new(),
-                batches: Vec::new()
-            });
+            .init_resource::<PbrGBufferRenderPass>();
 
         // Create the gbuffer pipeline
         let pipeline = app.world_mut()

@@ -1,5 +1,5 @@
 use bevy::math::Vec3;
-use wde_renderer::{assets::{MeshAsset, ModelBoundingBox}, pipelines::Vertex};
+use wde_renderer::prelude::*;
 
 pub struct CubeGizmoMesh;
 impl CubeGizmoMesh {

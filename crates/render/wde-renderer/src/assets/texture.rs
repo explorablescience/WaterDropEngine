@@ -2,12 +2,13 @@ use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimel
 use image::GenericImageView;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
-use wde_wgpu:: texture::{TextureFormat, TextureUsages};
 
 use crate::core::RenderInstance;
 
 use super::render_assets::{PrepareAssetError, RenderAsset};
 
+// Reexport structs
+pub use wde_wgpu::texture::{TextureFormat, TextureUsages};
 
 #[derive(Asset, TypePath, Clone)]
 pub struct Texture {

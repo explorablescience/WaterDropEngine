@@ -20,6 +20,7 @@ debug = false
 [dependencies]
 wde-renderer = { path = "../wde-renderer" }
 bevy = { workspace = true }
+bytemuck = { workspace = true }
 
 [features]
 default = []

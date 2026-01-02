@@ -7,7 +7,7 @@ mod gizmo_ssbo;
 use gizmo_pipeline::*;
 use gizmo_renderpass::*;
 use gizmo_ssbo::*;
-use wde_renderer::{assets::RenderAssetsPlugin, core::RenderApp, passes::render_graph::RenderGraph};
+use wde_renderer::prelude::*;
 
 pub(crate) struct GizmoFeaturesPlugin;
 impl Plugin for GizmoFeaturesPlugin {

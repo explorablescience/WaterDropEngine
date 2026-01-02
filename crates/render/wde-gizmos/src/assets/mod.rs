@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_renderer::assets::MaterialsPluginRegister;
+use wde_renderer::prelude::*;
 
 use crate::assets::gizmo_material::{GizmoMaterial, GizmoMaterialAsset};
 

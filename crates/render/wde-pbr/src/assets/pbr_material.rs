@@ -1,7 +1,9 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::BufferBindingType, render_pipeline::ShaderStages};
+use wde_renderer::prelude::*;
 
-use crate::assets::{Material, MaterialBuilder, Texture};
+#[derive(Component, Reflect)]
+/// Describes a physically based rendering material.
+pub struct PbrMaterial(pub Handle<PbrMaterialAsset>);
 
 #[derive(Asset, Clone, TypePath)]
 /// Describes a physically based rendering material.
@@ -32,9 +34,6 @@ impl Default for PbrMaterialAsset {
         }
     }
 }
-#[derive(Component, Reflect)]
-/// Describes a physically based rendering material.
-pub struct PbrMaterial(pub Handle<PbrMaterialAsset>);
 
 
 #[repr(C)]

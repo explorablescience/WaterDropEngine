@@ -1,11 +1,11 @@
 use bevy::prelude::*;
-use wde_renderer::{assets::{Buffer, BufferBindingType, BufferUsage, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderInstance, RenderSet}, pipelines::{BindGroup, BindGroupBuilder, BindGroupLayout, ShaderStages}};
+use wde_renderer::prelude::*;
 
 /// The maximum number of entities in the ssbo.
 const MAX_ENTITY_COUNT: usize = 100_000;
 
 #[derive(Resource)]
-pub struct GizmoSsbo {
+pub(crate) struct GizmoSsbo {
     pub buffer: Handle<Buffer>,
     pub buffer_gpu: Handle<Buffer>,
     pub bind_group_layout: Option<BindGroupLayout>,
@@ -42,7 +42,7 @@ impl GizmoSsbo {
     }
 }
 
-pub struct GizmoSsboPlugin;
+pub(crate) struct GizmoSsboPlugin;
 impl Plugin for GizmoSsboPlugin {
     fn build(&self, app: &mut App) {
         app.get_sub_app_mut(RenderApp).unwrap()

@@ -5,11 +5,9 @@ mod shader;
 mod material;
 mod render_assets;
 pub mod meshes;
-pub mod materials;
 
 use bevy::prelude::*;
 
-use materials::MaterialsPlugin;
 pub use mesh::*;
 pub use texture::*;
 pub use buffer::*;
@@ -25,7 +23,6 @@ impl Plugin for AssetsPlugin {
         // Setup the assets
         app
             .add_plugins(MaterialsPluginRaw)
-            .add_plugins(MaterialsPlugin)
             .init_asset_loader::<TextureLoader>()
             .init_asset::<Texture>()
             .init_asset_loader::<MeshLoader>()

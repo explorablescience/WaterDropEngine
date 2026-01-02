@@ -1,15 +1,18 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_wgpu::render_pipeline::DepthStencilDescriptor;
-use crate::{assets::{materials::PbrMaterialAsset, GpuMaterial, GpuTexture, PrepareAssetError, RenderAsset, RenderAssets}, features::CameraFeatureRender, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}};
+use wde_renderer::prelude::*;
 
-use super::{PbrDeferredTextures, PbrSsbo};
+use crate::{assets::PbrMaterialAsset, passes::pbr_ssbo::PbrSsbo};
+
+use super::{PbrDeferredTextures};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
-pub struct PbrGBufferRenderPipelineAsset;
+pub(crate) struct PbrGBufferRenderPipelineAsset;
+
+#[allow(unused)]
 #[derive(Component)]
-pub struct PbrGBufferRenderPipeline(pub Handle<PbrGBufferRenderPipelineAsset>);
-pub struct GpuPbrGBufferRenderPipeline {
+pub(crate) struct PbrGBufferRenderPipeline(pub Handle<PbrGBufferRenderPipelineAsset>);
+pub(crate) struct GpuPbrGBufferRenderPipeline {
     pub cached_pipeline_index: CachedPipelineIndex
 }
 impl RenderAsset for GpuPbrGBufferRenderPipeline {

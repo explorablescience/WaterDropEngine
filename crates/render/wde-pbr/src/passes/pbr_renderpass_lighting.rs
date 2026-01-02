@@ -1,13 +1,12 @@
 use bevy::prelude::*;
-use crate::{assets::{GpuMesh, MeshAsset, ModelBoundingBox, RenderAssets}, core::SwapchainFrame, features::{CameraFeatureRender, LightsFeatureBuffer}, passes::{depth::DepthTextureLayout, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, CommandBuffer}, vertex::Vertex};
+use wde_renderer::prelude::*;
 
-use crate::core::RenderInstance;
+use crate::features::lights::LightsFeatureBuffer;
 
 use super::{GpuPbrLightingRenderPipeline, PbrDeferredTexturesLayout};
 
 #[derive(Resource, Default)]
-pub struct PbrLightingRenderPassMesh {
+pub(crate) struct PbrLightingRenderPassMesh {
     pub deferred_mesh: Option<Handle<MeshAsset>>
 }
 impl PbrLightingRenderPassMesh {

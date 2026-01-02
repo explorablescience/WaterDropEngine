@@ -1,19 +1,15 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
-
-use crate::core::RenderInstance;
-
-use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderSet}};
+use wde_renderer::prelude::*;
 
 /// The maximum number of entities in the ssbo.
-pub const MAX_ENTITY_COUNT: usize = 100_000;
+pub(crate) const MAX_ENTITY_COUNT: usize = 100_000;
 
 #[derive(Resource)]
-pub struct PbrSsbo {
+pub(crate) struct PbrSsbo {
     pub buffer: Handle<Buffer>,
     pub buffer_gpu: Handle<Buffer>,
     pub bind_group_layout: Option<BindGroupLayout>,
-    pub bind_group: Option<WgpuBindGroup>
+    pub bind_group: Option<BindGroup>
 }
 impl PbrSsbo {
     pub fn build_bind_group(buffers: Res<RenderAssets<GpuBuffer>>, mut ssbo: ResMut<PbrSsbo>, render_instance: Res<RenderInstance<'static>>) {
@@ -46,7 +42,7 @@ impl PbrSsbo {
     }
 }
 
-pub struct PbrSsboPlugin;
+pub(crate) struct PbrSsboPlugin;
 impl Plugin for PbrSsboPlugin {
     fn build(&self, app: &mut App) {
         app.get_sub_app_mut(RenderApp).unwrap()

@@ -1,14 +1,10 @@
 use bevy::prelude::*;
-use crate::{assets::{GpuTexture, RenderAssets, Texture}, core::{extract_macros::ExtractWorld, window::SurfaceResized, RenderInstance}};
-use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
+use wde_renderer::prelude::*;
 
 #[derive(Resource, Default)]
-pub struct PbrDeferredTexturesLayoutRegenerate(pub bool);
-
-#[derive(Resource, Default)]
-pub struct PbrDeferredTexturesLayout {
+pub(crate) struct PbrDeferredTexturesLayout {
     pub deferred_layout: Option<BindGroupLayout>,
-    pub deferred_bind_group: Option<WgpuBindGroup>
+    pub deferred_bind_group: Option<BindGroup>
 }
 impl PbrDeferredTexturesLayout {
     /// Build the bind group for the deferred renderer.
@@ -62,7 +58,7 @@ impl PbrDeferredTexturesLayout {
 }
 
 #[derive(Resource)]
-pub struct PbrDeferredTextures {
+pub(crate) struct PbrDeferredTextures {
     pub albedo: Handle<Texture>,
     pub normal: Handle<Texture>,
     pub material: Handle<Texture>,
