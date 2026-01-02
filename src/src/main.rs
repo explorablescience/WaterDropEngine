@@ -75,9 +75,10 @@ pub fn main() {
     // Add the plugins
     app
         .add_plugins(RenderPlugin)
-        .add_plugins(ScenePlugin)
         .add_plugins(GizmosPlugin)
-        .add_plugins(PbrPlugin);
+        .add_plugins(PbrPlugin)
+        .add_plugins(CameraPlugin)
+        .add_plugins(ScenePlugin);
         // .add_plugins(GamePlugin);
 
     // Run the app
