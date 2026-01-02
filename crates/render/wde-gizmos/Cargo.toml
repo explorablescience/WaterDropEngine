@@ -1,0 +1,37 @@
+[package]
+name = "wde-gizmos"
+version = "0.1.0"
+edition = "2024"
+description = "Gizmo rendering utilities for WaterDropEngine."
+
+[profile.dev]
+opt-level = 0
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+incremental = false
+debug = false
+
+[dependencies]
+wde-renderer = { path = "../wde-renderer" }
+bytemuck = { version = "1.14", features = [ "derive" ] }
+
+[dependencies.bevy]
+version = "0.17"
+default-features = false
+features = [
+    "multi_threaded",
+    "bevy_asset",
+    "bevy_winit",
+    "bevy_window"
+]
+
+[features]
+default = []
+watch = ["bevy/file_watcher"]
+trace = ["bevy/trace_tracy_memory"]

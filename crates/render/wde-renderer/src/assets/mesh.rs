@@ -112,7 +112,7 @@ impl AssetLoader for MeshLoader {
             }
         ) {
             Ok(res) => res,
-            Err(e) => return Err(MeshLoaderError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))),
+            Err(e) => return Err(MeshLoaderError::Io(std::io::Error::other(e.to_string()))),
         };
         let models = load_res.0;
 
@@ -128,7 +128,7 @@ impl AssetLoader for MeshLoader {
         for m in models.iter() {
             let mesh = &m.mesh;
             if mesh.positions.len() % 3 != 0 {
-                return Err(MeshLoaderError::Io(std::io::Error::new(std::io::ErrorKind::Other, "Mesh positions are not divisible by 3.")));
+                return Err(MeshLoaderError::Io(std::io::Error::other("Mesh positions are not divisible by 3.")));
             }
 
             // Allocate sizes

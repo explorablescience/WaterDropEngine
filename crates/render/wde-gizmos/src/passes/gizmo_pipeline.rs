@@ -1,12 +1,15 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_wgpu::render_pipeline::DepthStencilDescriptor;
-use crate::{assets::{materials::GizmoMaterialAsset, GpuMaterial, PrepareAssetError, RenderAsset, RenderAssets}, features::CameraFeatureRender, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}};
+use wde_renderer::{assets::{GpuMaterial, PrepareAssetError, RenderAsset, RenderAssets}, features::CameraFeatureRender, pipelines::{CachedPipelineIndex, DepthStencilDescriptor, PipelineManager, RenderPipelineDescriptor, RenderTopology}};
+
+use crate::assets::gizmo_material::GizmoMaterialAsset;
 
 use super::GizmoSsbo;
 
 
 #[derive(Default, Asset, Clone, TypePath)]
 pub struct GizmoRenderPipelineAsset;
+
+#[allow(dead_code)]
 #[derive(Component)]
 pub struct GizmoRenderPipeline(pub Handle<GizmoRenderPipelineAsset>);
 pub struct GpuGizmoRenderPipeline {
@@ -49,7 +52,7 @@ impl RenderAsset for GpuGizmoRenderPipeline {
                 enabled: true,
                 ..Default::default()
             },
-            topology: wde_wgpu::render_pipeline::RenderTopology::LineList,
+            topology: RenderTopology::LineList,
             cull_mode: None,
             ..Default::default()
         };

@@ -1,7 +1,5 @@
 use bevy::math::Vec3;
-use wde_wgpu::vertex::Vertex;
-
-use crate::assets::{MeshAsset, ModelBoundingBox};
+use wde_renderer::{assets::{MeshAsset, ModelBoundingBox}, pipelines::Vertex};
 
 pub struct CubeGizmoMesh;
 impl CubeGizmoMesh {

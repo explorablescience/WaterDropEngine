@@ -2,7 +2,6 @@ use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, prelude::*};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-
 #[derive(Asset, TypePath, Clone)]
 pub struct Shader {
     pub content: String

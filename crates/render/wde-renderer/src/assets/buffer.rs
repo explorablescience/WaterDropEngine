@@ -1,16 +1,20 @@
 use bevy::{ecs::system::lifetimeless::SRes, prelude::*};
-use wde_wgpu::{buffer::{BufferUsage, Buffer as WBuffer}};
+use wde_wgpu::{buffer::{BufferUsage as WBufferUsage, Buffer as WBuffer}};
 
 use crate::core::RenderInstance;
 
 use super::render_assets::RenderAsset;
+
+// Reexport the buffer types
+pub use wde_wgpu::buffer::{BufferUsage, BufferBindingType};
+pub use wde_wgpu::command_buffer::*;
 
 /// Stores a CPU buffer
 #[derive(Asset, TypePath, Clone)]
 pub struct Buffer {
     pub label: String,
     pub size: usize,
-    pub usage: BufferUsage,
+    pub usage: WBufferUsage,
     pub content: Option<Vec<u8>>
 }
 

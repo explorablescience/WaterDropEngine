@@ -1,13 +1,11 @@
 use bevy::prelude::*;
 use depth::{DepthTexture, DepthTextureLayout};
-use gizmo::GizmoFeaturesPlugin;
 use pbr::PbrFeaturesPlugin;
 
 use crate::core::{Extract, Render, RenderApp, RenderSet};
 
 pub mod pbr;
 pub mod depth;
-pub mod gizmo;
 pub mod render_graph;
 
 pub(crate) struct RendererPlugin;
@@ -23,8 +21,6 @@ impl Plugin for RendererPlugin {
             .add_systems(Render, DepthTextureLayout::build_bind_group.in_set(RenderSet::BindGroups));
 
         // Add the different render passes to the app
-        app
-            .add_plugins(PbrFeaturesPlugin)
-            .add_plugins(GizmoFeaturesPlugin);
+        app.add_plugins(PbrFeaturesPlugin);
     }
 }

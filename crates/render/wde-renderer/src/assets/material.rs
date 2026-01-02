@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BufferBindingType, WgpuBindGroup}, buffer::BufferUsage, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
+use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, BufferBindingType, WgpuBindGroup}, buffer::BufferUsage, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
 
 use crate::core::{RenderApp, RenderInstance};
 
@@ -146,7 +146,7 @@ impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
 
                     // Check if buffer loaded on gpu
                     if let Some(bf) = buffers.get(buffer.buffer.as_ref().unwrap()) {
-                        bg_entries.push(BindGroup::buffer(buffer.binding, &bf.buffer));
+                        bg_entries.push(BindGroupBuilder::buffer(buffer.binding, &bf.buffer));
                     } else {
                         materials_cache.insert(material_name.to_string(), material_builder);
                         return Err(PrepareAssetError::RetryNextUpdate(asset));
@@ -156,7 +156,7 @@ impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
                     let texture = &material_builder.texture_views[*material_index as usize];
                     if let Some(ref texture_handle) = texture.texture {
                         if let Some(tex) = textures.get(texture_handle) {
-                            bg_entries.push(BindGroup::texture_view(texture.binding, &tex.texture));
+                            bg_entries.push(BindGroupBuilder::texture_view(texture.binding, &tex.texture));
                         } else {
                             materials_cache.insert(material_name.to_string(), material_builder);
                             return Err(PrepareAssetError::RetryNextUpdate(asset));
@@ -173,7 +173,7 @@ impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
                     let texture = &material_builder.texture_samplers[*material_index as usize];
                     if let Some(ref texture_handle) = texture.texture {
                         if let Some(tex) = textures.get(texture_handle) {
-                            bg_entries.push(BindGroup::texture_sampler(texture.binding, &tex.texture));
+                            bg_entries.push(BindGroupBuilder::texture_sampler(texture.binding, &tex.texture));
                         } else {
                             materials_cache.insert(material_name.to_string(), material_builder);
                             return Err(PrepareAssetError::RetryNextUpdate(asset));
@@ -210,7 +210,7 @@ impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
         });
 
         // Create bind group
-        let bind_group = BindGroup::build(&label, &render_instance, &layout.build(&render_instance), &bg_entries);
+        let bind_group = BindGroupBuilder::build(&label, &render_instance, &layout.build(&render_instance), &bg_entries);
 
         Ok(GpuMaterial {
             phantom: std::marker::PhantomData,

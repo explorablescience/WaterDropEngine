@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup, WgpuBindGroupLayout}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
+use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, WgpuBindGroup, WgpuBindGroupLayout}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
 
 use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{ActiveCamera, CameraUniform, CameraView}, core::{Extract, Render, RenderApp, RenderInstance, RenderSet, extract_macros::ExtractWorld}};
 
@@ -71,8 +71,8 @@ fn build_bind_group(
     // Create the bind group
     if let Some(camera_buffer) = buffers.get_mut(&camera_buffer.buffer) {
         let render_instance = render_instance.0.read().unwrap();
-        let bind_group = BindGroup::build("camera", &render_instance, &camera_feature_render.layout_built, &vec![
-            BindGroup::buffer(0, &camera_buffer.buffer)
+        let bind_group = BindGroupBuilder::build("camera", &render_instance, &camera_feature_render.layout_built, &vec![
+            BindGroupBuilder::buffer(0, &camera_buffer.buffer)
         ]);
         camera_feature_render.bind_group = Some(bind_group);
     }

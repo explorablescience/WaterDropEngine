@@ -1,8 +1,7 @@
 use bevy::{platform::collections::HashMap, prelude::*};
-use crate::{assets::{materials::{GizmoMaterial, GizmoMaterialAsset}, GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, Mesh, MeshAsset, RenderAssets}, components::TransformUniform, core::SwapchainFrame, features::CameraFeatureRender, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
-use wde_wgpu::{command_buffer::{RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, LoadOp}};
+use wde_renderer::{assets::{CommandBuffer, GpuBuffer, GpuMaterial, GpuMesh, GpuTexture, LoadOp, Mesh, MeshAsset, RenderAssets, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth}, components::TransformUniform, core::{RenderInstance, SwapchainFrame}, features::CameraFeatureRender, passes::{depth::DepthTexture, render_graph::RenderPass}, pipelines::{CachedPipelineStatus, PipelineManager}};
 
-use crate::core::RenderInstance;
+use crate::assets::gizmo_material::{GizmoMaterial, GizmoMaterialAsset};
 
 use super::{GizmoSsbo, GpuGizmoRenderPipeline};
 
@@ -56,8 +55,8 @@ impl RenderPass for GizmoRenderPass {
                     // Check if new element in same batch
                     let last_mesh_ref = last_mesh.as_ref();
                     let last_material_ref = last_material.as_ref();
-                    if last_mesh_ref.is_some() && last_material_ref.is_some() {
-                        if mesh.0.id() == last_mesh_ref.unwrap().id() && material.0.id() == last_material_ref.unwrap().id() {
+                    if let (Some(last_mesh_ref), Some(last_material_ref)) = (last_mesh_ref, last_material_ref) {
+                        if mesh.0.id() == last_mesh_ref.id() && material.0.id() == last_material_ref.id() {
                             // Update the ssbo
                             let transform = TransformUniform::new(transform);
                             unsafe {
@@ -71,21 +70,20 @@ impl RenderPass for GizmoRenderPass {
                         } else {
                             // Push the batch
                             passes.batches.push(GizmoRenderBatch {
-                                mesh: last_mesh_ref.unwrap().clone(),
-                                material: last_material_ref.unwrap().clone(),
+                                mesh: last_mesh_ref.clone(),
+                                material: last_material_ref.clone(),
                                 first,
                                 count,
-                                index_count: match meshes.get(last_mesh_ref.unwrap()) {
+                                index_count: match meshes.get(last_mesh_ref) {
                                     Some(mesh) => mesh.index_count as usize,
                                     None => 0
                                 }
                             });
-
                             let batch_index = passes.batches.len() - 1;
-                            passes.batches_order.entry(
-                                (last_mesh_ref.unwrap().id(), last_material_ref.unwrap().id())
-                            ).or_default().push(batch_index);
-
+                            passes.batches_order
+                                .entry((last_mesh_ref.id(), last_material_ref.id()))
+                                .or_default()
+                                .push(batch_index);
 
                             // Reset the batch
                             first += count;

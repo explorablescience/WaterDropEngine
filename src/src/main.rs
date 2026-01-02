@@ -1,6 +1,7 @@
 #![allow(clippy::just_underscores_and_digits)]
 #![allow(clippy::type_complexity)]
 
+use wde::gizmos::GizmosPlugin;
 use wde::{RenderPlugin, ScenePlugin};
 use wde::bevy::input::InputPlugin;
 use wde::{bevy::app::TaskPoolThreadAssignmentPolicy};
@@ -74,7 +75,8 @@ pub fn main() {
     // Add the plugins
     app
         .add_plugins(RenderPlugin)
-        .add_plugins(ScenePlugin);
+        .add_plugins(ScenePlugin)
+        .add_plugins(GizmosPlugin);
         // .add_plugins(GamePlugin);
 
     // Run the app

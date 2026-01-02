@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use crate::{assets::{GpuTexture, RenderAssets, Texture}, core::{extract_macros::ExtractWorld, window::SurfaceResized, RenderInstance}};
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
+use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{TextureFormat, TextureUsages}};
 
 #[derive(Resource, Default)]
 pub struct PbrDeferredTexturesLayoutRegenerate(pub bool);
@@ -46,13 +46,13 @@ impl PbrDeferredTexturesLayout {
         let deferred_layout_built = BindGroupLayout::build(&deferred_layout, &render_instance);
 
         // Create the bind group
-        let deferred_bind_group = BindGroup::build("deferred-textures", &render_instance, &deferred_layout_built, &vec![
-            BindGroup::texture_view(   0, &albedo.texture),
-            BindGroup::texture_sampler(1, &albedo.texture),
-            BindGroup::texture_view(   2, &normal.texture),
-            BindGroup::texture_sampler(3, &normal.texture),
-            BindGroup::texture_view(   4, &material.texture),
-            BindGroup::texture_sampler(5, &material.texture)
+        let deferred_bind_group = BindGroupBuilder::build("deferred-textures", &render_instance, &deferred_layout_built, &vec![
+            BindGroupBuilder::texture_view(   0, &albedo.texture),
+            BindGroupBuilder::texture_sampler(1, &albedo.texture),
+            BindGroupBuilder::texture_view(   2, &normal.texture),
+            BindGroupBuilder::texture_sampler(3, &normal.texture),
+            BindGroupBuilder::texture_view(   4, &material.texture),
+            BindGroupBuilder::texture_sampler(5, &material.texture)
         ]);
 
         // Insert the resources

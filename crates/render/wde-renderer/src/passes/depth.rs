@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{Texture as WTexture, TextureUsages}};
+use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{Texture as WTexture, TextureUsages}};
 
 use crate::core::RenderInstance;
 
@@ -40,9 +40,9 @@ impl DepthTextureLayout {
         let layout_built = BindGroupLayout::build(&layout, &render_instance);
 
         // Create the bind group
-        let bind_group = BindGroup::build("depth-texture", &render_instance, &layout_built, &vec![
-            BindGroup::texture_view(   0, &depth_texture.texture),
-            BindGroup::texture_sampler(1, &depth_texture.texture)
+        let bind_group = BindGroupBuilder::build("depth-texture", &render_instance, &layout_built, &vec![
+            BindGroupBuilder::texture_view(   0, &depth_texture.texture),
+            BindGroupBuilder::texture_sampler(1, &depth_texture.texture)
         ]);
 
         // Insert the resources

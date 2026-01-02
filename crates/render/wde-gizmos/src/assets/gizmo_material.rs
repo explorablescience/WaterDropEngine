@@ -1,6 +1,10 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::BufferBindingType, render_pipeline::ShaderStages};
-use crate::assets::{Material, MaterialBuilder};
+use wde_renderer::{assets::{BufferBindingType, Material, MaterialBuilder}, pipelines::ShaderStages};
+
+/// Describes a simple gizmo material with a color.
+#[derive(Component, Reflect)]
+#[reflect(Component)]
+pub struct GizmoMaterial(pub Handle<GizmoMaterialAsset>);
 
 #[derive(Asset, Clone, TypePath)]
 /// Describes a simple gizmo material with a color.
@@ -10,11 +14,6 @@ pub struct GizmoMaterialAsset {
     /// The color of the material instance.
     pub color: [f32; 4],
 }
-/// Describes a simple gizmo material with a color.
-#[derive(Component, Reflect)]
-#[reflect(Component)]
-pub struct GizmoMaterial(pub Handle<GizmoMaterialAsset>);
-
 impl Default for GizmoMaterialAsset {
     fn default() -> Self {
         GizmoMaterialAsset {
@@ -30,7 +29,6 @@ pub(crate) struct GizmoMaterialUniform {
     /// Color of the material.
     pub color: [f32; 4],
 }
-
 impl Material for GizmoMaterialAsset {
     fn describe(&self, builder: &mut MaterialBuilder) {
         // Create the uniform buffer

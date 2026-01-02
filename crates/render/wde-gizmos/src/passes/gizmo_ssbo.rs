@@ -1,9 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
-
-use crate::core::RenderInstance;
-
-use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderSet}};
+use wde_renderer::{assets::{Buffer, BufferBindingType, BufferUsage, GpuBuffer, RenderAssets}, components::TransformUniform, core::{Render, RenderApp, RenderInstance, RenderSet}, pipelines::{BindGroup, BindGroupBuilder, BindGroupLayout, ShaderStages}};
 
 /// The maximum number of entities in the ssbo.
 const MAX_ENTITY_COUNT: usize = 100_000;
@@ -13,7 +9,7 @@ pub struct GizmoSsbo {
     pub buffer: Handle<Buffer>,
     pub buffer_gpu: Handle<Buffer>,
     pub bind_group_layout: Option<BindGroupLayout>,
-    pub bind_group: Option<WgpuBindGroup>
+    pub bind_group: Option<BindGroup>
 }
 impl GizmoSsbo {
     pub fn build_bind_group(buffers: Res<RenderAssets<GpuBuffer>>, mut ssbo: ResMut<GizmoSsbo>, render_instance: Res<RenderInstance<'static>>) {
@@ -38,8 +34,8 @@ impl GizmoSsbo {
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
-        let bind_group = BindGroup::build("gizmo-ssbo", &render_instance, &ssbo_layout_built, &vec![
-            BindGroup::buffer(0, &buffer.buffer)
+        let bind_group = BindGroupBuilder::build("gizmo-ssbo", &render_instance, &ssbo_layout_built, &vec![
+            BindGroupBuilder::buffer(0, &buffer.buffer)
         ]);
         ssbo.bind_group_layout = Some(ssbo_layout);
         ssbo.bind_group = Some(bind_group);

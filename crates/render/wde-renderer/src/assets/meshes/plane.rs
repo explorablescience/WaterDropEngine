@@ -10,7 +10,7 @@ impl PlaneMesh {
     /// # Arguments
     /// 
     /// * `size` - The size in the x and y direction.
-    ///     The plane will be centered at the origin.
+    ///   The plane will be centered at the origin.
     /// 
     /// # Returns
     /// 

@@ -5,8 +5,14 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-wde = { path = "../crates/wde" }
 bytemuck = { version = "1.14", features = [ "derive" ] }
+
+[dependencies.wde]
+version = "0.1.0"
+path = "../crates/wde"
+features = [
+    "gizmos"
+]
 
 [dependencies.bevy]
 version = "0.17"

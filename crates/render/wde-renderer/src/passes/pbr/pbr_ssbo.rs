@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroup, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
+use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, WgpuBindGroup}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
 
 use crate::core::RenderInstance;
 
@@ -38,8 +38,8 @@ impl PbrSsbo {
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
-        let bind_group = BindGroup::build("pbr-ssbo", &render_instance, &ssbo_layout_built, &vec![
-            BindGroup::buffer(0, &buffer.buffer)
+        let bind_group = BindGroupBuilder::build("pbr-ssbo", &render_instance, &ssbo_layout_built, &vec![
+            BindGroupBuilder::buffer(0, &buffer.buffer)
         ]);
         ssbo.bind_group_layout = Some(ssbo_layout);
         ssbo.bind_group = Some(bind_group);

@@ -4,13 +4,10 @@ mod gizmo_pipeline;
 mod gizmo_renderpass;
 mod gizmo_ssbo;
 
-pub use gizmo_pipeline::*;
-pub use gizmo_renderpass::*;
-pub use gizmo_ssbo::*;
-
-use crate::{assets::RenderAssetsPlugin, core::RenderApp};
-
-use super::render_graph::RenderGraph;
+use gizmo_pipeline::*;
+use gizmo_renderpass::*;
+use gizmo_ssbo::*;
+use wde_renderer::{assets::RenderAssetsPlugin, core::RenderApp, passes::render_graph::RenderGraph};
 
 pub(crate) struct GizmoFeaturesPlugin;
 impl Plugin for GizmoFeaturesPlugin {
@@ -24,7 +21,7 @@ impl Plugin for GizmoFeaturesPlugin {
             .init_asset::<GizmoRenderPipelineAsset>()
             .add_plugins(RenderAssetsPlugin::<GpuGizmoRenderPipeline>::default());
 
-        // Add the gizmo render pass
+        // Always add the gizmo render pass (at the end)
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
         render_graph.add_pass::<GizmoRenderPass>(1000);

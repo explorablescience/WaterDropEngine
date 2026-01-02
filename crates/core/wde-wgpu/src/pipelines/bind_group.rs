@@ -227,8 +227,8 @@ impl BindGroupLayout {
 }
 
 /// Structure for a bind group.
-pub struct BindGroup;
-impl BindGroup {
+pub struct BindGroupBuilder;
+impl BindGroupBuilder {
     /// Build a bind group.
     /// 
     /// # Arguments
