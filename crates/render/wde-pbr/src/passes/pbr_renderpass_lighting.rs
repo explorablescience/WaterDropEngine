@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
 use crate::features::lights::LightsFeatureBuffer;

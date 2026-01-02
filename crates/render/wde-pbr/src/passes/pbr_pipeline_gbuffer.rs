@@ -1,4 +1,5 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
+use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
 use crate::{assets::PbrMaterialAsset, passes::pbr_ssbo::PbrSsbo};

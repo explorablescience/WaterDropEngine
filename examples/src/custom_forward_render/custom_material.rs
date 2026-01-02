@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde::{assets::{Material, MaterialBuilder, Texture}, wgpu::{buffer::BufferBindingType, pipelines::ShaderStages}};
+use wde::prelude::*;
 
 #[derive(Asset, Clone, TypePath)]
 /// Describes a physically based rendering material.

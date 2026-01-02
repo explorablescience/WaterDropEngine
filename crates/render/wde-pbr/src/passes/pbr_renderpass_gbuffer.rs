@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
 use crate::{assets::{PbrMaterial, PbrMaterialAsset}, passes::pbr_ssbo::PbrSsbo};

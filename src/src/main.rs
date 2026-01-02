@@ -1,13 +1,12 @@
 #![allow(clippy::just_underscores_and_digits)]
 #![allow(clippy::type_complexity)]
 
-use wde::gizmos::GizmosPlugin;
-use wde::pbr::prelude::*;
-use wde::{RenderPlugin, ScenePlugin};
+use wde::prelude::*;
 use bevy::input::InputPlugin;
 use bevy::app::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
 use bevy::log::{Level, LogPlugin};
+use wde::scene::ScenePlugin;
 
 pub fn main() {
     // Log level

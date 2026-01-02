@@ -1,5 +1,5 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde::{assets::{GpuMaterial, PrepareAssetError, RenderAsset, RenderAssets}, features::CameraFeatureRender, pipelines::{CachedPipelineIndex, PipelineManager, RenderPipelineDescriptor}, wgpu::pipelines::DepthStencilDescriptor};
+use wde::{prelude::*, render::camera::features::CameraFeatureRender};
 
 use super::{CustomMaterialAsset, CustomSsbo};
 

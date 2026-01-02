@@ -15,7 +15,7 @@ use wde_wgpu::instance::{create_instance, Limits, RenderTexture};
 use window::{extract_surface_size, send_surface_resized, SurfaceResized, WindowPlugins};
 use std::{ops::{Deref, DerefMut}, sync::{Arc, RwLock}};
 
-use crate::{components:: RenderComponentsPlugin, features::RenderFeaturesPlugin, passes::{render_graph::RenderGraph, RendererPlugin}, pipelines::PipelineManagerPlugin};
+use crate::{passes::{render_graph::RenderGraph, RendererPlugin}, pipelines::PipelineManagerPlugin};
 
 
 /// Stores the main world for rendering as a resource.
@@ -193,8 +193,6 @@ impl Plugin for RenderCorePlugin {
         // Add the render pipeline plugins
         app
             .add_plugins(RendererPlugin)
-            .add_plugins(PipelinedRenderingPlugin)
-            .add_plugins(RenderComponentsPlugin)
-            .add_plugins(RenderFeaturesPlugin);
+            .add_plugins(PipelinedRenderingPlugin);
     }
 }

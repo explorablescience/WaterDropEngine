@@ -1,4 +1,5 @@
 use bevy::{platform::collections::HashMap, prelude::*};
+use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
 use crate::assets::gizmo_material::{GizmoMaterial, GizmoMaterialAsset};

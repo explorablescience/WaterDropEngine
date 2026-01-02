@@ -1,6 +1,7 @@
 use bevy::prelude::*;
-use wde_pbr::{assets::{PbrMaterial, PbrMaterialAsset}, components::lights::DirectionalLight};
-use wde_renderer::{assets::{Mesh}, components::{ActiveCamera, Camera, CameraController, CameraView}};
+use wde_pbr::prelude::*;
+use wde_renderer::prelude::*;
+use wde_camera::prelude::*;
 
 use crate::serialize::serialize_world;
 

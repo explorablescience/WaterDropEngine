@@ -21,6 +21,7 @@ debug = false
 wde-renderer = { path = "../render/wde-renderer" }
 wde-wgpu = { path = "../core/wde-wgpu" }
 wde-scene = { path = "../scene/wde-scene" }
+wde-camera = { path = "../render/wde-camera" }
 wde-gizmos = { path = "../render/wde-gizmos", optional = true }
 wde-pbr = { path = "../render/wde-pbr", optional = true }
 bevy = { workspace = true }

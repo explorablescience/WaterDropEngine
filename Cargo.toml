@@ -3,8 +3,8 @@ members = [
     "src",
     "examples",
     "crates/core/wde-wgpu",
-    "crates/render/wde-renderer",
-    "crates/scene/wde-scene",
+    "crates/render/*",
+    "crates/scene/*",
     "crates/wde",
 ]
 resolver = "2"

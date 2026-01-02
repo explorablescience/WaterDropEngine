@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-
-use super::TransformUniform;
+use wde_renderer::prelude::TransformUniform;
 
 /// Tag that list the current active camera.
 #[derive(Component, Default, Clone, Debug, Reflect)]
@@ -34,7 +33,7 @@ pub struct Camera;
 /// Camera uniform buffer.
 #[repr(C)]
 #[derive(Resource, Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct CameraUniform {
+pub(crate) struct CameraUniform {
     // From world to NDC coordinates
     pub world_to_ndc: [[f32; 4]; 4],
     // From NDC to world coordinates
@@ -42,7 +41,6 @@ pub struct CameraUniform {
     // Camera position
     pub position: [f32; 4]
 }
-
 impl CameraUniform {
     /// Create a new camera uniform buffer.
     /// 

@@ -1,14 +1,14 @@
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, WgpuBindGroup, WgpuBindGroupLayout}, buffer::{BufferBindingType, BufferUsage}, render_pipeline::ShaderStages};
+use wde_renderer::prelude::*;
 
-use crate::{assets::{Buffer, GpuBuffer, RenderAssets}, components::{ActiveCamera, CameraUniform, CameraView}, core::{Extract, Render, RenderApp, RenderInstance, RenderSet, extract_macros::ExtractWorld}};
+use crate::components::{ActiveCamera, CameraUniform, CameraView};
 
 /// Struct to hold the camera uniform layout description.
 #[derive(Resource)]
 pub struct CameraFeatureRender {
     pub layout: BindGroupLayout,
     pub layout_built: WgpuBindGroupLayout,
-    pub bind_group: Option<WgpuBindGroup>,
+    pub bind_group: Option<BindGroup>,
 }
 impl FromWorld for CameraFeatureRender {
     fn from_world(world: &mut World) -> Self {
@@ -28,11 +28,11 @@ impl FromWorld for CameraFeatureRender {
 
 /// Struct to hold the camera uniform buffer.
 #[derive(Resource, Default)]
-pub struct CameraFeatureBuffer {
+pub(crate) struct CameraFeatureBuffer {
     pub buffer: Handle<Buffer>,
 }
 
-pub struct CameraFeature;
+pub(crate) struct CameraFeature;
 impl Plugin for CameraFeature {
     fn build(&self, app: &mut App) {
         app.get_sub_app_mut(RenderApp).unwrap()

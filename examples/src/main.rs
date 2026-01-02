@@ -1,7 +1,9 @@
+#![allow(clippy::type_complexity)]
 use bevy::input::InputPlugin;
 use bevy::prelude::*;
 use bevy::log::{Level, LogPlugin};
-use wde::{RenderPlugin, ScenePlugin};
+use wde::prelude::*;
+use wde::scene::ScenePlugin;
 
 use crate::custom_forward_render::CustomFeaturesPlugin;
 use crate::pbr_batches::PbrBatchesPlugin;

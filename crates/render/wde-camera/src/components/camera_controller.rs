@@ -9,9 +9,9 @@ use super::CameraView;
 /// Based on Valorant's default sensitivity, not entirely sure why it is exactly 1.0 / 180.0,
 /// but I'm guessing it is a misunderstanding between degrees/radians and then sticking with
 /// it because it felt nice.
-pub const RADIANS_PER_DOT: f32 = 1.0 / 180.0;
+pub(crate) const RADIANS_PER_DOT: f32 = 1.0 / 180.0;
 
-pub struct CameraControllerPlugin;
+pub(crate) struct CameraControllerPlugin;
 impl Plugin for CameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, update);

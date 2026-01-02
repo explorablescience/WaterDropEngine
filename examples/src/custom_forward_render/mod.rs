@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use wde::prelude::*;
 
 mod custom_material;
 mod custom_pipeline;
@@ -9,8 +10,6 @@ pub use custom_material::*;
 pub use custom_pipeline::*;
 pub use custom_renderpass::*;
 pub use custom_ssbo::*;
-use wde::{assets::{MaterialsPluginRegister, Mesh, RenderAssetsPlugin, TextureLoaderSettings}, components::{Camera, CameraController}, core::{Extract, Render, RenderApp, RenderSet}};
-use wde::wgpu::texture::{TextureFormat, TextureUsages};
 
 
 /// System to create the scene

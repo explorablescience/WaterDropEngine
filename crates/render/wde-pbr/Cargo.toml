@@ -19,6 +19,7 @@ debug = false
 
 [dependencies]
 wde-renderer = { path = "../wde-renderer" }
+wde-camera = { path = "../wde-camera" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 

@@ -1,8 +1,8 @@
 [package]
-name = "wde-gizmos"
+name = "wde-camera"
 version = "0.1.0"
 edition = "2024"
-description = "Gizmo rendering utilities for WaterDropEngine."
+description = "Camera module for WaterDropEngine"
 
 [profile.dev]
 opt-level = 0
@@ -19,11 +19,5 @@ debug = false
 
 [dependencies]
 wde-renderer = { path = "../wde-renderer" }
-wde-camera = { path = "../wde-camera" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
-
-[features]
-default = []
-watch = ["bevy/file_watcher"]
-trace = ["bevy/trace_tracy_memory"]

@@ -60,6 +60,9 @@ use crate::{buffer::Buffer, instance::RenderInstanceData, render_pipeline::Shade
 /// The wgpu bind group layout builder.
 pub type WgpuBindGroup = wgpu::BindGroup;
 
+// The wgpu bind group type.
+pub type BindGroup = wgpu::BindGroup;
+
 /// The buffer binding type.
 pub type BufferBindingType = wgpu::BufferBindingType;
 
@@ -213,7 +216,7 @@ impl BindGroupLayout {
     /// # Arguments
     /// 
     /// * `instance` - The render instance data.
-    pub fn build(&self, instance: &RenderInstanceData) -> wgpu::BindGroupLayout {
+    pub fn build(&self, instance: &RenderInstanceData) -> WgpuBindGroupLayout {
         event!(Level::TRACE, "Creating bind group layout: {}.", self.label);
 
         // Create bind group layout
