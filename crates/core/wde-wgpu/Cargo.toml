@@ -2,7 +2,7 @@
 name = "wde-wgpu"
 version = "0.1.0"
 authors = ["MecanicaScience"]
-edition = "2021"
+edition = "2024"
 description = "WaterDropEngine's wgpu wrapper crate"
 
 [profile.dev]
