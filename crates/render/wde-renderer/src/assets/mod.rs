@@ -17,7 +17,7 @@ pub use render_assets::*;
 
 use crate::core::RenderApp;
 
-pub struct AssetsPlugin;
+pub(crate) struct AssetsPlugin;
 impl Plugin for AssetsPlugin {
     fn build(&self, app: &mut App) {
         // Setup the assets

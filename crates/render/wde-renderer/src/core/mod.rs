@@ -139,8 +139,7 @@ impl Plugin for RenderCorePlugin {
                 gpu_limits = Some(instance.device.limits());
 
                 // Wrap the instance in an Arc<RwLock<>>
-                let instance = RenderInstance(Arc::new(RwLock::new(instance)));
-                instance
+                RenderInstance(Arc::new(RwLock::new(instance)))
             }));
 
             // Copy the asset server from the main app

@@ -12,6 +12,7 @@ mod custom_forward_render;
 mod display_texture;
 mod pbr_batches;
 
+#[allow(unused)]
 enum Example {
     CustomForwardRender,
     DisplayTexture,

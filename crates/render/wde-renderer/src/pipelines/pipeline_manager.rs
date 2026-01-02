@@ -76,7 +76,7 @@ impl PipelineManager {
 
     /// Get the status of a pipeline from its cached index.
     /// If the pipeline is loading, it will return `CachedPipelineStatus::Loading` with the pipeline being loaded.
-    pub fn get_pipeline(&self, id: CachedPipelineIndex) -> CachedPipelineStatus {
+    pub fn get_pipeline(&'_ self, id: CachedPipelineIndex) -> CachedPipelineStatus<'_> {
         if self.processing_render_pipelines.contains_key(&id) || self.processing_compute_pipelines.contains_key(&id) {
             CachedPipelineStatus::Loading
         } else if let Some(pipeline) = self.loaded_render_pipelines.get(&id) {

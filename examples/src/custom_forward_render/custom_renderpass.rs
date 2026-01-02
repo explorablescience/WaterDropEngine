@@ -50,8 +50,8 @@ impl CustomRenderPass {
                 // Check if new element in same batch
                 let last_mesh_ref = last_mesh.as_ref();
                 let last_material_ref = last_material.as_ref();
-                if last_mesh_ref.is_some() && last_material_ref.is_some() {
-                    if mesh.0.id() == last_mesh_ref.unwrap().id() && material.0.id() == last_material_ref.unwrap().id() {
+                if let (Some(last_mesh_ref), Some(last_material_ref)) = (last_mesh_ref, last_material_ref) {
+                    if mesh.0.id() == last_mesh_ref.id() && material.0.id() == last_material_ref.id() {
                         // Update the ssbo
                         let transform = TransformUniform::new(transform);
                         unsafe {
@@ -65,11 +65,11 @@ impl CustomRenderPass {
                     } else {
                         // Push the batch
                         pass.batches.push(CustomRenderBatch {
-                            mesh: last_mesh_ref.unwrap().clone(),
-                            material: last_material_ref.unwrap().clone(),
+                            mesh: last_mesh_ref.clone(),
+                            material: last_material_ref.clone(),
                             first,
                             count,
-                            index_count: match meshes.get(last_mesh_ref.unwrap()) {
+                            index_count: match meshes.get(last_mesh_ref) {
                                 Some(mesh) => mesh.index_count as usize,
                                 None => 0
                             }

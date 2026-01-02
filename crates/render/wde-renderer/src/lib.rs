@@ -3,7 +3,7 @@
 
 pub mod prelude {
     pub use crate::RenderPlugin;
-    pub use crate::assets::{LoadOp, StoreOp, Buffer, BufferBindingType, BufferUsage, GpuBuffer, RenderAssets, RenderAssetsPlugin, GpuMaterial, GpuTexture, PrepareAssetError, RenderAsset, MeshAsset, Mesh, GpuMesh, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, ModelBoundingBox, TextureFormat, TextureUsages};
+    pub use crate::assets::{LoadOp, StoreOp, Buffer, BufferBindingType, BufferUsage, GpuBuffer, RenderAssets, RenderAssetsPlugin, GpuMaterial, GpuTexture, PrepareAssetError, RenderAsset, MeshAsset, Mesh, GpuMesh, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth, CommandBuffer, ModelBoundingBox, TextureFormat, TextureUsages, meshes::{CubeMesh, PlaneMesh}};
     pub use crate::core::{Extract, Render, RenderApp, RenderInstance, RenderSet, extract_macros::ExtractWorld, SwapchainFrame, window::SurfaceResized};
     pub use crate::components::TransformUniform;
     pub use crate::pipelines::{WgpuBindGroupLayout, BindGroup, BindGroupBuilder, BindGroupLayout, ShaderStages, CachedPipelineIndex, DepthStencilDescriptor, PipelineManager, RenderPipelineDescriptor, CachedPipelineStatus, Vertex, CompareFunction, Face, RenderTopology, BindGroupLayoutBuilder};
