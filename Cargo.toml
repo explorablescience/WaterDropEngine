@@ -2,10 +2,10 @@
 members = [
     "src",
     "examples",
-    "crates/core/wde-wgpu",
+    "crates/core/*",
     "crates/render/*",
     "crates/scene/*",
-    "crates/wde",
+    "crates/wde/"
 ]
 resolver = "2"
 
