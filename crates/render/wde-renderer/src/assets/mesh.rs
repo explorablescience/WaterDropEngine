@@ -1,3 +1,9 @@
+//! Mesh asset types and GPU preparation pipeline.
+//!
+//! CPU meshes are loaded from disk via `MeshLoader` (OBJ/FBX) or constructed
+//! procedurally in code, then uploaded as `GpuMesh` buffers through the render
+//! assets pipeline. Bounding boxes are tracked for culling and debug helpers.
+
 use std::{fs::File, io::BufReader};
 
 use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::lifetimeless::SRes, prelude::*};
@@ -28,6 +34,7 @@ impl Default for ModelBoundingBox {
 }
 
 #[derive(Component, Reflect, Default)]
+/// Scene component referencing a CPU mesh asset handle.
 pub struct Mesh(pub Handle<MeshAsset>);
 impl Serialize for Mesh {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -40,13 +47,13 @@ impl Serialize for Mesh {
 
 #[derive(Asset, TypePath, Clone)]
 pub struct MeshAsset {
-    /// The label of the texture.
+    /// Debug label for the mesh; propagated to GPU buffer labels.
     pub label: String,
-    /// The list of vertices
+    /// Vertex list in object space.
     pub vertices: Vec<Vertex>,
-    /// The list of indices
+    /// Triangle indices referencing `vertices`.
     pub indices: Vec<u32>,
-    /// The bounding box of the model
+    /// Axis-aligned bounding box in object space.
     pub bounding_box: ModelBoundingBox,
 }
 
@@ -54,8 +61,9 @@ pub struct MeshAsset {
 pub struct MeshLoader;
 
 #[derive(Serialize, Deserialize)]
+/// Load-time configuration for [`MeshLoader`].
 pub struct MeshLoaderSettings {
-    /// The label of the mesh.
+    /// Label to apply to the loaded mesh; defaults to the asset path when empty.
     pub label: String,
 }
 
@@ -193,15 +201,15 @@ impl AssetLoader for MeshLoader {
 
 
 pub struct GpuMesh {
-    /// The label of the mesh
+    /// Copy of the CPU label applied to GPU buffers for debugging.
     pub label: String,
-    /// The vertex buffer
+    /// GPU vertex buffer containing tightly packed [`Vertex`] data.
     pub vertex_buffer: Buffer,
-    /// The index buffer
+    /// GPU index buffer containing `u32` indices.
     pub index_buffer: Buffer,
-    /// The number of indices
+    /// Total index count for draw calls.
     pub index_count: u32,
-    /// The bounding box of the model
+    /// Axis-aligned bounding box in object space, mirrored from CPU asset.
     pub bounding_box: ModelBoundingBox,
 }
 impl RenderAsset for GpuMesh {

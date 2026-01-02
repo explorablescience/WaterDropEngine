@@ -1,3 +1,9 @@
+//! Asset definitions and render-side preparation for the renderer.
+//!
+//! This module wires Bevy asset loaders for meshes, textures, shaders, buffers,
+//! and materials, then forwards them to GPU counterparts through the render
+//! assets pipeline inside the render sub-app.
+
 mod mesh;
 mod texture;
 mod buffer;

@@ -1,3 +1,31 @@
+//! Descriptors for render and compute pipelines consumed by the pipeline manager.
+//!
+//! These are lightweight, CPU-side structs that mirror `wde-wgpu` pipeline
+//! construction parameters, keeping the renderer crate decoupled from the exact
+//! pipeline creation calls.
+//!
+//! ## Example: forward render pipeline descriptor
+//! ```rust
+//! use bevy::prelude::*;
+//! use wde_renderer::pipelines::{RenderPipelineDescriptor, PushConstantDescriptor, RenderTopology, Face};
+//! use wde_renderer::pipelines::{BindGroupLayout};
+//! use wde_renderer::assets::Shader;
+//!
+//! fn build_descriptor(vert: Handle<Shader>, frag: Handle<Shader>, layouts: Vec<BindGroupLayout>) -> RenderPipelineDescriptor {
+//!     RenderPipelineDescriptor {
+//!         label: "forward-pipeline",
+//!         vert: Some(vert),
+//!         frag: Some(frag),
+//!         render_targets: None, // default swapchain
+//!         bind_group_layouts: layouts,
+//!         push_constants: vec![PushConstantDescriptor { stages: ShaderStages::VERTEX, offset: 0, size: 16 }],
+//!         topology: RenderTopology::TriangleList,
+//!         cull_mode: Some(Face::Back),
+//!         ..Default::default()
+//!     }
+//! }
+//! ```
+
 use bevy::{asset::Handle, ecs::prelude::*};
 use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::{DepthStencilDescriptor, Face, ShaderStages, RenderTopology}, texture::TextureFormat};
 
@@ -7,34 +35,34 @@ use crate::assets::Shader;
 /// Note: the size of the push constant must be a multiple of 4 and must not exceed 128 bytes.
 #[derive(Clone)]
 pub struct PushConstantDescriptor {
-    /// The shader stages that the push constant will be available to.
+    /// Shader stages that can read the push constant.
     pub stages: ShaderStages,
-    /// The offset in bytes that the push constant will start at.
+    /// Byte offset from the start of the push constant buffer.
     pub offset: u32,
-    /// The size in bytes of the push constant (note: this must be a multiple of 4 and must not exceed 128 bytes).
+    /// Size in bytes (multiple of 4, up to 128).
     pub size: u32,
 }
 
 #[derive(Resource, Clone)]
 /// Describes a render pipeline.
 pub struct RenderPipelineDescriptor {
-    /// The label of the pipeline for debugging (default: "Render Pipeline").
+    /// Debug label forwarded to the GPU pipeline (default: "Render Pipeline").
     pub label: &'static str,
-    /// The vertex shader of the pipeline (default: None).
+    /// Vertex shader handle (WGSL) to compile.
     pub vert: Option<Handle<Shader>>,
-    /// The fragment shader of the pipeline (default: None).
+    /// Fragment shader handle (WGSL) to compile.
     pub frag: Option<Handle<Shader>>,
-    /// Describes the depth and stencil state of the pipeline.
+    /// Depth/stencil state for the pipeline.
     pub depth: DepthStencilDescriptor,
-    /// The render targets of the pipeline. By default, the pipeline will render to the swap chain.
+    /// Render targets; `None` renders to the swapchain surface by default.
     pub render_targets: Option<Vec<TextureFormat>>,
-    /// The bind group layouts that the pipeline will use.
+    /// Bind group layouts describing all resource bindings.
     pub bind_group_layouts: Vec<BindGroupLayout>,
-    /// The push constants that the pipeline will use.
+    /// Push constant ranges exposed to shaders.
     pub push_constants: Vec<PushConstantDescriptor>,
-    /// The primitive topology that the pipeline will use (default: TriangleList).
+    /// Primitive topology (default: TriangleList).
     pub topology: RenderTopology,
-    /// The culling mode that the pipeline will use (default: Back). None will disable culling.
+    /// Face culling mode (default: Back). `None` disables culling.
     pub cull_mode: Option<Face>,
 }
 impl Default for RenderPipelineDescriptor {
@@ -57,13 +85,13 @@ impl Default for RenderPipelineDescriptor {
 #[derive(Resource, Clone)]
 /// Describes a compute pipeline.
 pub struct ComputePipelineDescriptor {
-    /// The label of the pipeline for debugging (default: "Compute Pipeline").
+    /// Debug label forwarded to the GPU pipeline (default: "Compute Pipeline").
     pub label: &'static str,
-    /// The compute shader of the pipeline (default: None).
+    /// Compute shader handle (WGSL) to compile.
     pub comp: Option<Handle<Shader>>,
-    /// The bind group layouts that the pipeline will use.
+    /// Bind group layouts describing all resource bindings.
     pub bind_group_layouts: Vec<BindGroupLayout>,
-    /// The push constants that the pipeline will use.
+    /// Push constant ranges exposed to the compute shader.
     pub push_constants: Vec<PushConstantDescriptor>,
 }
 impl Default for ComputePipelineDescriptor {

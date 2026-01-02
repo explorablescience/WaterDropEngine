@@ -19,6 +19,9 @@ pub enum PrepareAssetError<E: Send + Sync + 'static> {
 }
 
 /// Trait for assets that can be loaded to the GPU for rendering.
+///
+/// Implementors describe how to upload a CPU asset (`SourceAsset`) into a GPU
+/// representation using additional render-world system params.
 pub trait RenderAsset: Send + Sync + 'static + Sized {
     type SourceAsset: Asset + Clone;
     type Param: SystemParam;
@@ -36,7 +39,7 @@ pub trait RenderAsset: Send + Sync + 'static + Sized {
 
 
 #[derive(Resource)]
-/// Stores the state of the cached extract assets system.
+/// Cached Bevy system state used to read asset events during extract.
 struct CachedExtractAssetsState<A: RenderAsset> {
     #[allow(clippy::type_complexity)]
     state: SystemState<(
@@ -91,7 +94,7 @@ impl<A: RenderAsset> Default for ExtractedAssets<A> {
 
 
 #[derive(Resource)]
-/// List of assets to prepare in the next frame that failed to prepare in the current frame.
+/// Assets that failed GPU upload this frame and should retry next frame.
 struct PrepareNextFrameAssets<A: RenderAsset> {
     assets: Vec<(AssetId<A::SourceAsset>, A::SourceAsset)>
 }
@@ -143,7 +146,10 @@ impl<A: RenderAsset> RenderAssets<A> {
 
 
 
-/// Plugin that adds the render assets system to the renderer app.
+/// Plugin that wires extract/prepare stages for a GPU render asset type.
+///
+/// The optional `AFTER` parameter lets you sequence preparation when one GPU
+/// asset depends on another (for example, materials after textures/buffers).
 pub struct RenderAssetsPlugin<A: RenderAsset, AFTER: RenderAssetDependency + 'static = ()> {
     phantom: std::marker::PhantomData<fn() -> (A, AFTER)>
 }

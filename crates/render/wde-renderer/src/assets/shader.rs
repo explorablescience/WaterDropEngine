@@ -1,9 +1,29 @@
+//! CPU-side shader asset and Bevy loader used by the renderer.
+//!
+//! Shaders are stored as plain WGSL text. They are fed to the render assets
+//! pipeline, which lets pipeline builders pull the source directly. The loader
+//! mirrors `wde-wgpu` expectations: UTF-8 text, `.wgsl` extension, and a clear
+//! debug label.
+//!
+//! ## Example: load a WGSL shader
+//! ```rust
+//! use bevy::prelude::*;
+//! use wde_renderer::assets::Shader;
+//!
+//! fn load_shaders(assets: Res<AssetServer>) {
+//!     // Load and hot-reload from assets/shaders/my_shader.wgsl
+//!     let shader: Handle<Shader> = assets.load("shaders/my_shader.wgsl");
+//!     // Pass handle into a pipeline descriptor or material.
+//! }
+//! ```
+
 use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, prelude::*};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Asset, TypePath, Clone)]
 pub struct Shader {
+    /// WGSL source contents as UTF-8 text.
     pub content: String
 }
 

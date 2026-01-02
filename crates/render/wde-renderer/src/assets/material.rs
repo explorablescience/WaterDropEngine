@@ -1,3 +1,10 @@
+//! Material description utilities and GPU bind group creation.
+//!
+//! A `Material` describes its own buffers/textures through [`MaterialBuilder`].
+//! The render assets pipeline converts those descriptions to GPU bind groups and
+//! layouts (`GpuMaterial`), resolving dependencies on buffers/textures loaded via
+//! other asset pipelines.
+
 use std::collections::HashMap;
 
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
@@ -8,13 +15,34 @@ use crate::core::{RenderApp, RenderInstance};
 use super::{Buffer, GpuBuffer, GpuTexture, PrepareAssetError, RenderAsset, RenderAssets, RenderAssetsPlugin, Texture, TextureLoaderSettings};
 
 pub trait Material {
-    /// Describe the material by adding buffers, textures, etc. to the material builder.
+    /// Describe buffers, textures and samplers that make up this material.
+    /// Use the provided [`MaterialBuilder`] to add entries at specific bindings
+    /// that match your WGSL shader interface.
     fn describe(&self, builder: &mut MaterialBuilder);
-    /// Get the label of the material
+    /// Human readable label; propagated to GPU bind groups for debugging.
     fn label(&self) -> String;
 }
 
-
+/// Example: simple unlit color material
+/// ```rust
+/// use bevy::prelude::*;
+/// use wde_renderer::assets::{Material, MaterialBuilder, Buffer, BufferUsage, MaterialsPluginRegister};
+///
+/// #[derive(Asset, TypePath, Clone)]
+/// struct UnlitColor { color: [f32; 4] }
+///
+/// impl Material for UnlitColor {
+///     fn describe(&self, builder: &mut MaterialBuilder) {
+///         // Binding 0: uniform buffer with color
+///         let bytes = bytemuck::cast_slice(&self.color).to_vec();
+///         builder.add_buffer(0, ShaderStages::FRAGMENT, BufferBindingType::Uniform, bytes.len(), Some(bytes));
+///     }
+///     fn label(&self) -> String { "unlit-color".into() }
+/// }
+///
+/// // In your App setup
+/// // app.add_plugins(MaterialsPluginRegister::<UnlitColor>::default());
+/// ```
 struct MaterialBuilderBuffer {
     binding: u32,
     visibility: ShaderStages,
@@ -41,6 +69,7 @@ enum MaterialBuilderType {
 }
 
 #[derive(Default)]
+/// Utility to collect buffers/textures and binding metadata for a material.
 pub struct MaterialBuilder {
     label: String,
     elements: Vec<(MaterialBuilderType, u32)>,
@@ -50,7 +79,9 @@ pub struct MaterialBuilder {
     texture_samplers: Vec<MaterialBuilderTextureSampler>
 }
 impl MaterialBuilder {
-    /// Add a buffer to the material. A buffer is a uniform or storage buffer that will be created by the material builder.
+    /// Add a uniform or storage buffer to the material. The buffer is allocated
+    /// and optionally prefilled on the CPU, then uploaded when the material is
+    /// prepared on the GPU.
     pub fn add_buffer(&mut self, binding: u32, visibility: ShaderStages, binding_type: BufferBindingType, size: usize, content: Option<Vec<u8>>) {
         self.buffers.push(MaterialBuilderBuffer {
             binding, visibility, binding_type, size, content, buffer: None
@@ -73,6 +104,7 @@ impl MaterialBuilder {
 
 
 #[derive(Default, Resource)]
+/// Cache of partially built material descriptions waiting for GPU resources.
 pub struct MaterialsBuilderCache {
     materials: HashMap<String, MaterialBuilder>
 }
@@ -86,12 +118,15 @@ impl MaterialsBuilderCache {
 }
 
 #[derive(Resource)]
+/// Placeholder texture used while real texture handles finish loading.
 pub struct DummyTexture(Handle<Texture>);
 
 pub struct GpuMaterial<M: Material + Sync + Send + Asset + Clone> {
     phantom: std::marker::PhantomData<M>,
     builder: MaterialBuilder,
+    /// Bind group layout matching the material's declared bindings.
     pub bind_group_layout: BindGroupLayout,
+    /// GPU bind group populated with buffers/textures referenced by the material.
     pub bind_group: WgpuBindGroup
 }
 impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
@@ -228,6 +263,7 @@ impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
 
 
 
+/// Plugin to register a custom `Material` type and its GPU preparation logic.
 pub struct MaterialsPluginRegister<M: Material + Sync + Send + Asset + Clone> {
     phantom: std::marker::PhantomData<M>
 }
@@ -247,6 +283,7 @@ impl<M: Material + Sync + Send + Asset + Clone> Plugin for MaterialsPluginRegist
 }
 
 
+/// Internal plugin that wires dummy textures and caches; used by `AssetsPlugin`.
 pub(crate) struct MaterialsPluginRaw;
 impl Plugin for MaterialsPluginRaw {
     fn build(&self, _app: &mut App) {}

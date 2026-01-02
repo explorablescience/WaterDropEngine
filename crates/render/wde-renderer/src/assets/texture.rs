@@ -1,3 +1,10 @@
+//! CPU and GPU texture assets plus the Bevy loader wiring used by the renderer.
+//!
+//! The CPU-side [`Texture`] mirrors `wde-wgpu` conventions: explicit labels for
+//! debugging, explicit format/usage flags, and an optional pixel payload. The
+//! loader reads image files into that buffer, while [`GpuTexture`] turns the
+//! asset into a GPU texture inside the render sub-app.
+
 use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimeless::SRes, prelude::*, log::tracing::error};
 use image::GenericImageView;
 use thiserror::Error;
@@ -12,10 +19,15 @@ pub use wde_wgpu::texture::{TextureFormat, TextureUsages};
 
 #[derive(Asset, TypePath, Clone)]
 pub struct Texture {
+    /// Human readable identifier applied to the GPU resource label.
     pub label: String,
+    /// Width and height in pixels of the CPU buffer.
     pub size: (u32, u32),
+    /// GPU texture format requested when allocating the resource.
     pub format: TextureFormat,
+    /// GPU usage flags (sampling, storage, copy, etc.).
     pub usages: TextureUsages,
+    /// Raw pixel payload matching `format`; empty means allocate-only.
     pub data: Vec<u8>
 }
 impl Default for Texture {
@@ -31,15 +43,16 @@ impl Default for Texture {
 }
 
 #[derive(Default)]
+/// Bevy asset loader that decodes images and fills a CPU-side [`Texture`].
 pub struct TextureLoader;
 
 #[derive(Serialize, Deserialize)]
 pub struct TextureLoaderSettings {
-    /// The label of the texture.
+    /// Label propagated to the CPU and GPU resource.
     pub label: String,
-    /// The format of the texture (by default RGBA8Unorm).
+    /// Requested GPU format (defaults to `Rgba8Unorm`).
     pub format: TextureFormat,
-    /// The usages of the texture (by default TEXTURE_BINDING).
+    /// Usage flags applied when creating the GPU texture (defaults to `TEXTURE_BINDING`).
     pub usages: TextureUsages
 }
 
@@ -112,7 +125,9 @@ impl AssetLoader for TextureLoader {
 
 
 pub struct GpuTexture {
+    /// Copy of the CPU label applied to the GPU handle.
     pub label: String,
+    /// GPU texture handle allocated through `wde-wgpu`.
     pub texture: wde_wgpu::texture::Texture,
 }
 impl RenderAsset for GpuTexture {

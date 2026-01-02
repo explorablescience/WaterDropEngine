@@ -1,3 +1,10 @@
+//! Pipeline cache and loader bridging renderer descriptors to `wde-wgpu` pipelines.
+//!
+//! The manager tracks pipeline descriptors queued by gameplay/render code,
+//! watches shader asset events, and builds render/compute pipelines inside the
+//! render sub-app. Cached indices let systems request pipeline handles without
+//! rebuilding them each frame.
+
 use std::collections::HashMap;
 
 use bevy::{app::{App, Plugin}, asset::{AssetEvent, AssetId, Assets}, ecs::prelude::*, log::{debug, error}, prelude::MessageReader};
@@ -31,21 +38,42 @@ impl Plugin for PipelineManagerPlugin {
     }
 }
 
+/// Example: queue a custom pipeline from gameplay code
+/// ```rust
+/// use bevy::prelude::*;
+/// use wde_renderer::pipelines::{PipelineManager, RenderPipelineDescriptor};
+///
+/// fn queue_pipeline(mut pm: ResMut<PipelineManager>, my_desc: RenderPipelineDescriptor) {
+///     let id = pm.create_render_pipeline(my_desc);
+///     // Store id on a component/resource to bind later
+///     info!("Queued pipeline id {}", id);
+/// }
+/// ```
+
 
 #[derive(Resource, Default)]
-/// Stores the different pipelines in queue and loaded.
+/// Stores queued and realized pipelines plus shader cache.
 pub struct PipelineManager {
+    /// Monotonic index generator for cached pipelines.
     pub pipeline_iter: CachedPipelineIndex,
 
+    /// Render pipelines waiting to be built.
     pub processing_render_pipelines: HashMap<CachedPipelineIndex, RenderPipelineDescriptor>,
+    /// Built render pipelines ready for use.
     pub loaded_render_pipelines: HashMap<CachedPipelineIndex, RenderPipeline>,
+    /// Original descriptors corresponding to built render pipelines.
     pub loaded_render_pipelines_desc: HashMap<CachedPipelineIndex, RenderPipelineDescriptor>,
 
+    /// Compute pipelines waiting to be built.
     pub processing_compute_pipelines: HashMap<CachedPipelineIndex, ComputePipelineDescriptor>,
+    /// Built compute pipelines ready for use.
     pub loaded_compute_pipelines: HashMap<CachedPipelineIndex, ComputePipeline>,
+    /// Original descriptors corresponding to built compute pipelines.
     pub loaded_compute_pipelines_desc: HashMap<CachedPipelineIndex, ComputePipelineDescriptor>,
 
+    /// CPU-side cache of shader assets keyed by asset id.
     pub shader_cache: HashMap<AssetId<Shader>, Shader>,
+    /// Mapping from shader asset ids to pipelines that reference them (for hot-reload).
     pub shader_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>>,
 }
 
@@ -75,7 +103,7 @@ impl PipelineManager {
     }
 
     /// Get the status of a pipeline from its cached index.
-    /// If the pipeline is loading, it will return `CachedPipelineStatus::Loading` with the pipeline being loaded.
+    /// Returns loading/ready/error state for both render and compute pipelines.
     pub fn get_pipeline(&'_ self, id: CachedPipelineIndex) -> CachedPipelineStatus<'_> {
         if self.processing_render_pipelines.contains_key(&id) || self.processing_compute_pipelines.contains_key(&id) {
             CachedPipelineStatus::Loading
