@@ -96,14 +96,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Generate Engine Docs",
+            "name": "Generate Engine Doc",
             "cargo": {
                 "args": [
                     "doc",
                     "--open",
                     "--all-features",
                     "--no-deps",
-                    "--document-private-items"
+                    "--document-private-items",
+                    "--target-dir=target-doc"
                 ]
             },
             "args": [],
