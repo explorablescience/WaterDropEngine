@@ -32,6 +32,11 @@ impl RenderPass for GizmoRenderPass {
         // If no entities, return
         let mut entities = main_world.query::<(&Transform, &Mesh, &GizmoMaterial)>();
         if entities.iter(main_world).count() == 0 {
+            // Clear the batches
+            render_world.insert_resource(GizmoRenderPass {
+                batches_order: Default::default(),
+                batches: Default::default()
+            });
             return
         }
 
@@ -143,11 +148,15 @@ impl RenderPass for GizmoRenderPass {
         }
 
         // Update the passes
-        let mut render_pass = render_world.get_resource_mut::<GizmoRenderPass>().unwrap();
-        *render_pass = passes;
+        render_world.insert_resource(passes);
     }
 
     fn render(&self, render_world: &mut World) {
+        // Return early if no batches
+        if render_world.get_resource::<GizmoRenderPass>().unwrap().batches.is_empty() {
+            return;
+        }
+
         // Get the render instance and swapchain frame
         let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.0.read().unwrap();

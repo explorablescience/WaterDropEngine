@@ -97,7 +97,7 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{assets::PbrAssetsPlugin, components::PbrComponentsPlugin, features::PbrFeaturesPlugin, passes::{PbrFeaturesPlugin as PbrPassesPlugin, PbrGBufferRenderPass, PbrLightingRenderPass}};
+use crate::{assets::{PbrAssetsPlugin, PbrMaterial, PbrMaterialAsset}, components::PbrComponentsPlugin, features::PbrFeaturesPlugin, passes::{PbrFeaturesPlugin as PbrPassesPlugin, PbrGBufferRenderPass, PbrLightingRenderPass}};
 
 pub mod prelude {
     pub use crate::PbrPlugin;
@@ -120,10 +120,26 @@ impl Plugin for PbrPlugin {
             .add_plugins(PbrPassesPlugin)
             .add_plugins(PbrFeaturesPlugin);
 
+        // Always create a dummy resource such that the render pass extraction can run
+        app.add_systems(Startup, init_dummy_element);
+
         // Add the pbr render passes
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
         render_graph.add_pass::<PbrGBufferRenderPass>(0);
         render_graph.add_pass::<PbrLightingRenderPass>(1);
     }
+}
+
+fn init_dummy_element(mut commands: Commands, mut meshes: ResMut<Assets<MeshAsset>>, mut pbr_materials: ResMut<Assets<PbrMaterialAsset>>) {
+    commands.spawn((
+        Transform::from_xyz(1000.0, 1000.0, 1000.0).with_scale(Vec3::ZERO),
+        Mesh(meshes.add(CubeMesh::from("dummy", 1.0))),
+        PbrMaterial(pbr_materials.add(PbrMaterialAsset {
+            label: "dummy".to_string(),
+            albedo: (0.0, 0.0, 0.0, 0.0),
+            specular: 0.0,
+            ..Default::default()
+        }))
+    ));
 }

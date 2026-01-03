@@ -18,9 +18,9 @@ pub(crate) struct PbrGBufferRenderBatch {
 #[derive(Resource, Default)]
 pub struct PbrGBufferRenderPass {
     /// The order of the batches: (mesh, material) -> [batch index].
-    batches_order: HashMap<(AssetId<MeshAsset>, AssetId<PbrMaterialAsset>), Vec<usize>>,
+    pub(crate) batches_order: HashMap<(AssetId<MeshAsset>, AssetId<PbrMaterialAsset>), Vec<usize>>,
     /// The render batches.
-    batches: Vec<PbrGBufferRenderBatch>,
+    pub(crate) batches: Vec<PbrGBufferRenderBatch>,
 }
 impl RenderPass for PbrGBufferRenderPass {
     fn extract(&self, main_world: &mut World, render_world: &mut World) {
@@ -39,6 +39,11 @@ impl RenderPass for PbrGBufferRenderPass {
         // If no entities, return
         let mut entities = main_world.query::<(&Transform, &Mesh, &PbrMaterial)>();
         if entities.iter(main_world).count() == 0 {
+            // Clear the batches
+            render_world.insert_resource(PbrGBufferRenderPass {
+                batches_order: HashMap::new(),
+                batches: Vec::new()
+            });
             return
         }
 
@@ -158,6 +163,11 @@ impl RenderPass for PbrGBufferRenderPass {
     }
     
     fn render(&self, render_world: &mut World) {
+        // Return early if no batches
+        if render_world.get_resource::<PbrGBufferRenderPass>().unwrap().batches.is_empty() {
+            return;
+        }
+
         // Get the render instance and swapchain frame
         let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.0.read().unwrap();
