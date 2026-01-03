@@ -23,6 +23,43 @@ impl Default for CameraView {
         }
     }
 }
+impl CameraView {
+    /// Get the aspect ratio from the window size.
+    pub fn aspect_ratio(&self, window_size: Vec2) -> f32 {
+        window_size.x / window_size.y
+    }
+
+    /// Convert a 2D ndc position to a 3D world direction.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `ndc_pos` - The 2D ndc position.
+    /// * `transform` - The camera transform.
+    /// * `aspect_ratio` - The aspect ratio of the viewport.
+    /// 
+    /// # Returns
+    /// 
+    /// The 3D world direction.
+    pub fn ndc_to_world(&self, ndc_pos: Vec2, transform: &Transform, aspect_ratio: f32) -> Vec3 {
+        let proj = Mat4::perspective_rh(
+            self.fov.to_radians(), aspect_ratio,
+            self.znear, self.zfar
+        );
+        let view = TransformUniform::transform_world_to_obj(transform);
+        let inv_vp = (proj * view).inverse();
+
+        let ndc_near = Vec4::new(ndc_pos.x, ndc_pos.y, -1.0, 1.0);
+        let ndc_far = Vec4::new(ndc_pos.x, ndc_pos.y, 1.0, 1.0);
+
+        let world_near = inv_vp * ndc_near;
+        let world_far = inv_vp * ndc_far;
+
+        let world_near = world_near.xyz() / world_near.w;
+        let world_far = world_far.xyz() / world_far.w;
+
+        (world_far - world_near).normalize()
+    }
+}
 
 /// Camera is defined by a position and a view.
 #[derive(Component, Default, Clone, Debug, Reflect)]
