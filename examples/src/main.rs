@@ -11,12 +11,14 @@ use crate::pbr_batches::PbrBatchesPlugin;
 mod custom_forward_render;
 mod display_texture;
 mod pbr_batches;
+mod ray_casting;
 
 #[allow(unused)]
 enum Example {
     CustomForwardRender,
     DisplayTexture,
-    PbrBatches
+    PbrBatches,
+    RayCasting,
 }
 const SELECTED_EXAMPLE: Example = Example::PbrBatches;
 
@@ -54,6 +56,10 @@ pub fn main() {
     // Add the plugins
     app
         .add_plugins(RenderPlugin)
+        .add_plugins(PbrPlugin)
+        .add_plugins(GizmosPlugin)
+        .add_plugins(CameraPlugin)
+        .add_plugins(PhysicsPlugin)
         .add_plugins(ScenePlugin);
 
     // Start the selected example
@@ -69,6 +75,10 @@ pub fn main() {
         Example::PbrBatches => {
             info!("Starting PBR Batches example.");
             app.add_plugins(PbrBatchesPlugin);
+        }
+        Example::RayCasting => {
+            info!("Starting Ray Casting example.");
+            app.add_plugins(ray_casting::RayCastingPlugin);
         }
     }
 

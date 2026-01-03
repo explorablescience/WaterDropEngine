@@ -1,8 +1,8 @@
 [package]
-name = "wde-scene"
+name = "wde-physics"
 version = "0.1.0"
 edition = "2024"
-description = "High-level scene management for WaterDropEngine."
+description = "The physics module for WaterDrop Engine, providing physics simulation and collision detection."
 
 [profile.dev]
 opt-level = 0
@@ -18,17 +18,9 @@ incremental = false
 debug = false
 
 [dependencies]
-wde-renderer = { path = "../../render/wde-renderer" }
-wde-wgpu = { path = "../../core/wde-wgpu" }
-wde-pbr = { path = "../../render/wde-pbr" }
 wde-camera = { path = "../../render/wde-camera" }
-wde-gizmos = { path = "../../render/wde-gizmos" }
-wde-physics = { path = "../wde-physics" }
 bevy = { workspace = true }
-serde = { workspace = true }
-bytemuck = { workspace = true }
 rapier3d = { version = "0.23", default-features = false, features = [ "dim3", "f32", "parallel", "simd-stable", "serde-serialize" ] }
-serde_json = "1.0"
 
 [features]
 default = []

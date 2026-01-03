@@ -2,6 +2,7 @@
 pub mod prelude {
     pub use wde_renderer::prelude::*;
     pub use wde_camera::prelude::*;
+    pub use wde_physics::prelude::*;
     // pub use wde_scene::prelude::*;
 
     #[cfg(feature = "gizmos")]
@@ -16,10 +17,6 @@ pub mod render {
     pub use wde_renderer::*;
     pub mod camera {
         pub use wde_camera::*;
-    }
-
-    pub mod wgpu {
-        pub use wde_wgpu::*;
     }
 }
 pub mod scene {

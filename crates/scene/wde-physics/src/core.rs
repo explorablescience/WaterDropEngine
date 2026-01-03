@@ -1,92 +1,102 @@
-use std::sync::{Arc, RwLock};
+//! Core physics world management.
+//!
+//! This module contains the main physics world resource and systems for managing
+//! colliders, rigid bodies, and spatial queries.
 
+use std::{collections::HashMap, sync::RwLock};
 use bevy::prelude::*;
-use rapier3d::{parry::utils::hashmap::HashMap, prelude::*};
-use std::marker::{Send, Sync};
+use rapier3d::prelude::*;
 
-pub struct PhysicsPlugin;
-impl Plugin for PhysicsPlugin {
-    fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PhysicsWorld>()
-            .add_systems(Update, handle_changes);
-    }
-}
+use crate::{colliders::Collider, raycasting::{Ray, RayCastConfig}};
 
-
-trait ColliderShape {
-    fn build(&self) -> rapier3d::prelude::Collider;
-}
-
-struct CuboidCollider {
-    hx: f32,
-    hy: f32,
-    hz: f32,
-}
-impl ColliderShape for CuboidCollider {
-    fn build(&self) -> rapier3d::prelude::Collider {
-        rapier3d::prelude::ColliderBuilder::cuboid(self.hx, self.hy, self.hz).build()
-    }
-}
-
-#[derive(Component)]
-#[require(Transform)]
-pub struct Collider {
-    data: Arc<RwLock<Box<dyn ColliderShape + Send + Sync>>>,
-}
-impl Collider {
-    /// Create a cuboid collider component.
-    /// This will also generate a fixed rigid body for the collider, positioned at the collider's transform.
-    /// 
-    /// # Arguments
-    /// * `hx` - Half extent along the x-axis.
-    /// * `hy` - Half extent along the y-axis.
-    /// * `hz` - Half extent along the z-axis.
-    /// 
-    /// # Returns
-    /// A new `Collider` component representing a cuboid collider.
-    pub fn cuboid(hx: f32, hy: f32, hz: f32) -> Self {
-        Collider {
-            data: Arc::new(RwLock::new(Box::new(CuboidCollider { hx, hy, hz }))),
-        }
-    }
-}
-
+/// Internal handler for Rapier physics components.
+///
+/// This struct manages all the core Rapier data structures including colliders,
+/// rigid bodies, joints, and the query pipeline for spatial queries.
 #[derive(Default)]
-pub struct RapierHandler {
-    /// The set of colliders in the physics world.
+struct RapierHandler {
+    /// The set of all colliders in the physics world
     collider_set: RwLock<ColliderSet>,
-    /// The set of rigid bodies in the physics world.
+    /// The set of all rigid bodies in the physics world
     rigid_body_set: RwLock<RigidBodySet>,
 
-    /// The query pipeline for spatial queries. Note that it will automatically filled by all the colliders and rigid bodies.
+    /// Spatial query acceleration structure for raycasting and intersection tests.
+    /// Automatically updated when colliders are added, modified, or removed.
     query_pipeline: RwLock<QueryPipeline>,
 
-    /// The island manager for the physics world.
+    /// Manages simulation islands for performance optimization
     island_manager: RwLock<IslandManager>,
-    /// The impulse joint set for the physics world.
+    /// Manages impulse-based joints between rigid bodies
     impulse_joint_set: RwLock<ImpulseJointSet>,
-    /// The multibody joint set for the physics world.
+    /// Manages multibody joints (reduced coordinates articulations)
     multibody_joint_set: RwLock<MultibodyJointSet>,
 }
 
+/// The main physics world resource.
+///
+/// This resource manages the entire physics simulation, including all colliders,
+/// rigid bodies, and spatial queries. It provides methods for raycasting and
+/// automatically syncs with Bevy entities that have `Collider` components.
+///
+/// # Example
+///
+/// ```no_run
+/// # use bevy::prelude::*;
+/// # use wde_physics::prelude::*;
+/// fn raycast_system(physics_world: Res<PhysicsWorld>) {
+///     let ray = Ray::new(Vec3::ZERO, Vec3::Y);
+///     if let Some((entity, toi)) = physics_world.cast_ray(&ray, &RayCastConfig::default()) {
+///         println!("Hit entity {:?} at distance {}", entity, toi);
+///     }
+/// }
+/// ```
 #[derive(Resource, Default)]
 pub struct PhysicsWorld {
-    /// The handler for Rapier physics.
-    pub rapier: RapierHandler,
+    /// Internal Rapier physics handler
+    rapier: RapierHandler,
 
-    // Mapping from Bevy entities to Rapier collider handles.
+    /// Mapping from Bevy entities to their Rapier collider handles
     entity_to_collider: HashMap<Entity, ColliderHandle>,
+    /// Reverse mapping from Rapier collider handles to Bevy entities
     collider_to_entity: HashMap<ColliderHandle, Entity>,
+    /// Mapping from Bevy entities to their Rapier rigid body handles
     entity_to_rigid_body: HashMap<Entity, RigidBodyHandle>,
+    /// Reverse mapping from Rapier rigid body handles to Bevy entities
     rigid_body_to_entity: HashMap<RigidBodyHandle, Entity>,
+}
+impl PhysicsWorld {
+    /// Cast a ray in the physics world.
+    /// 
+    /// # Arguments
+    /// * `ray` - The ray to cast.
+    /// * `params` - The ray cast configuration parameters.
+    /// 
+    /// # Returns
+    /// An optional tuple containing the hit entity and the time of impact (toi) if a hit occurred.
+    pub fn cast_ray(&self, ray: &Ray, params: &RayCastConfig) -> Option<(Entity, f32)> {
+        let collider_set = self.rapier.collider_set.read().unwrap();
+        let rigid_body_set = self.rapier.rigid_body_set.read().unwrap();
+        let query_pipeline = self.rapier.query_pipeline.read().unwrap();
+
+        if let Some((col_handle, toi)) = query_pipeline.cast_ray(
+            &rigid_body_set,
+            &collider_set,
+            &ray.0,
+            params.max_toi,
+            params.solid,
+            params.filter,
+        ) && let Some(&entity) = self.collider_to_entity.get(&col_handle) {
+            return Some((entity, toi));
+        }
+        None
+    }
 }
 
 /// System to handle changes in colliders, including additions, removals, and updates.
 /// 
 /// This system listens for added, removed, and changed colliders, as well as changed transforms,
 /// and updates the physics world accordingly.
-fn handle_changes(
+pub(crate) fn handle_changes(
     mut phworld: ResMut<PhysicsWorld>,
     colliders: Query<(Entity, &Transform, &Collider)>,
     new_collider: Query<Entity, Added<Collider>>,
@@ -253,102 +263,3 @@ fn handle_changes(
         });
     }
 }
-
-
-
-
-
-
-// fn init() {
-    // let ground_body = RigidBodyBuilder::fixed().translation(vector![0.0, -1.0, 0.0]).build();
-    // let ground_body_handle = rigid_body_set.insert(ground_body);
-    // let ground_collider = ColliderBuilder::cuboid(50.0, 0.1, 50.0).build();
-    // let h = collider_set.insert_with_parent(ground_collider, ground_body_handle, &mut rigid_body_set);
-    // entity_to_collider.push((entity, h));
-
-    // // Create the query pipeline
-    // let mut query_pipeline = QueryPipeline::new();
-    // query_pipeline.update(&collider_set);
-
-    // // Create the physics world resource
-    // commands.insert_resource(PhysicsWorld {
-    //     collider_set,
-    //     rigid_body_set,
-    //     query_pipeline
-    // });
-
-    // if let Some((handle, intersection)) = query_pipeline.cast_ray_and_get_normal(
-    //     &rigid_body_set, &collider_set, &ray, max_toi, solid, filter
-    // ) {
-    //     // This is similar to `QueryPipeline::cast_ray` illustrated above except
-    //     // that it also returns the normal of the collider shape at the hit point.
-    //     let hit_point = ray.point_at(intersection.time_of_impact);
-    //     let hit_normal = intersection.normal;
-    //     println!("Collider {:?} hit at point {} with normal {}", handle, hit_point, hit_normal);
-    // }
-
-    // query_pipeline.intersections_with_ray(&rigid_body_set, &collider_set, &ray, max_toi, solid, filter, |handle, intersection| {
-    //     // Callback called on each collider hit by the ray.
-    //     let hit_point = ray.point_at(intersection.time_of_impact);
-    //     let hit_normal = intersection.normal;
-    //     println!("Collider {:?} hit at point {} with normal {}", handle, hit_point, hit_normal);
-
-    //     // Recover the entity associated to this collider, if any.
-    //     let maybe_entity = entity_to_collider.iter().find_map(|(entity, h)| {
-    //         if *h == handle {
-    //             Some(*entity)
-    //         } else {
-    //             None
-    //         }
-    //     });
-    //     if let Some(entity) = maybe_entity {
-    //         println!("  -> associated entity: {:?}", entity);
-
-    //         // // Move the cube up to the position of the hit point.
-    //         // commands.entity(cube_entity).insert(Transform::from_translation(Vec3::new(
-    //         //     hit_point.x, hit_point.y,
-    //         //     hit_point.z,
-    //         // )));
-    //     }
-
-    //     true // return `true` to continue the query.
-    // });
-// }
-
-// fn cast_ray(mut commands: Commands, window: Single<&Window, With<PrimaryWindow>>, physics_world: Res<PhysicsWorld>, cube_entity_res: Res<CubeEntity>, camera_query: Query<(&Transform, &CameraView), With<Camera>>) {
-//     let (collider_set, rigid_body_set, query_pipeline) = (
-//         &physics_world.collider_set,
-//         &physics_world.rigid_body_set,
-//         &physics_world.query_pipeline,
-//     );
-
-//     // Get the cursor position
-//     let Some(cursor_position) = window.cursor_position() else {
-//         return;
-//     };
-
-//     // Get the camera transform
-//     let (camera_transform, camera_view) = camera_query.single().map_err(|_| "No camera found").unwrap();
-
-//     // Ray casting example. Convert the 2D cursor position to a 3D ray in world space using
-//     let window_size = Vec2::new(window.width(), window.height());
-//     let aspect_ratio = window_size.x / window_size.y;
-//     let ndc_pos = (cursor_position / window_size) * 2.0 - Vec2::ONE;
-//     let ndc_pos = Vec2::new(ndc_pos.x, -ndc_pos.y); // Invert Y for NDC
-//     let dir = camera_view.ndc_to_world(ndc_pos, camera_transform, aspect_ratio);
-//     let origin = camera_transform.translation;
-//     let ray = Ray::new(point![origin.x, origin.y, origin.z], vector![dir.x, dir.y, dir.z]);
-
-//     // Casting query examples:
-//     if let Some((_, toi)) = query_pipeline.cast_ray(
-//         rigid_body_set, collider_set, &ray, f32::MAX, true, QueryFilter::default()
-//     ) {
-//         let hit_point = ray.point_at(toi);
-
-//         // Move the cube up to the position of the hit point.
-//         commands.entity(cube_entity_res.0).insert(Transform::from_translation(Vec3::new(
-//             hit_point.x, hit_point.y,
-//             hit_point.z,
-//         )));
-//     }
-// }
