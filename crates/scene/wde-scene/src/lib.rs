@@ -3,10 +3,16 @@ use wde_camera::prelude::*;
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
+use crate::physics::PhysicsPlugin;
+
+mod physics;
+
 pub struct ScenePlugin;
 impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_scene);
+        app
+            .add_plugins(PhysicsPlugin)
+            .add_systems(Startup, init_scene);
     }
 }
 
