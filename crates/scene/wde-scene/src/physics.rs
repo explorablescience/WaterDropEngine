@@ -8,8 +8,8 @@ pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Startup, init)
-            .add_systems(Update, handle_collider_changes);
+            .init_resource::<PhysicsWorld>()
+            .add_systems(Update, handle_changes);
     }
 }
 
@@ -60,7 +60,7 @@ pub struct RapierHandler {
     rigid_body_set: RwLock<RigidBodySet>,
 
     /// The query pipeline for spatial queries. Note that it will automatically filled by all the colliders and rigid bodies.
-    query_pipeline: QueryPipeline,
+    query_pipeline: RwLock<QueryPipeline>,
 
     /// The island manager for the physics world.
     island_manager: RwLock<IslandManager>,
@@ -82,143 +82,177 @@ pub struct PhysicsWorld {
     rigid_body_to_entity: HashMap<RigidBodyHandle, Entity>,
 }
 
-
-
-fn init(mut commands: Commands) {
-    // Initialize the physics world resource. By default it is empty.
-    commands.init_resource::<PhysicsWorld>();
-}
-
-fn handle_collider_changes(
-    mut world: ResMut<PhysicsWorld>,
+/// System to handle changes in colliders, including additions, removals, and updates.
+/// 
+/// This system listens for added, removed, and changed colliders, as well as changed transforms,
+/// and updates the physics world accordingly.
+fn handle_changes(
+    mut phworld: ResMut<PhysicsWorld>,
     colliders: Query<(Entity, &Transform, &Collider)>,
     new_collider: Query<Entity, Added<Collider>>,
     updated_collider: Query<Entity, Changed<Collider>>,
-    updated_transform: Query<Entity, Changed<Transform>>,
+    updated_transform: Query<Entity, (Changed<Transform>, With<Collider>)>,
     mut removed_collider: RemovedComponents<Collider>,
 ) {
     // Add new colliders to the physics world
-    let _span = debug_span!("handle_new_colliders").entered();
-    for entity in new_collider.iter().chain(updated_collider.iter()) {
-        // Check if the collider already exists, and skip if it does
-        if world.entity_to_collider.contains_key(&entity) {
-            continue;
+    {
+        let _span = debug_span!("handle_new_colliders").entered();
+        for entity in new_collider.iter().chain(updated_collider.iter()) {
+            // Check if the collider already exists, and skip if it does
+            if phworld.entity_to_collider.contains_key(&entity) {
+                continue;
+            }
+
+            // Get the collider component and transform
+            let (entity, transform, collider) = match colliders.get(entity) {
+                Ok(data) => data,
+                Err(_) => continue,
+            };
+            // Build the Rapier collider and insert it into the collider set
+            let col = collider.data.read().unwrap().build();
+            let col_handle = phworld.rapier.collider_set.write().unwrap().insert(col);
+
+            // Create a rigid body for the collider and insert it into the rigid body set
+            let rb = RigidBodyBuilder::fixed()
+                .translation(vector![
+                    transform.translation.x,
+                    transform.translation.y,
+                    transform.translation.z
+                ])
+                .build();
+            let rb_handle = phworld.rapier.rigid_body_set.write().unwrap().insert(rb);
+
+            // Associate the collider with its rigid body and store the mapping
+            phworld
+                .rapier.collider_set.write().unwrap()
+                .set_parent(col_handle, Some(rb_handle), &mut phworld.rapier.rigid_body_set.write().unwrap());
+            phworld.entity_to_collider.insert(entity, col_handle);
+            phworld.collider_to_entity.insert(col_handle, entity);
+            phworld.entity_to_rigid_body.insert(entity, rb_handle);
+            phworld.rigid_body_to_entity.insert(rb_handle, entity);
+            debug!("Added collider and rigidbody for entity {:?} with collider {:?} and rigidbody {:?} handles", entity, col_handle, rb_handle);
         }
-
-        // Get the collider component and transform
-        let (entity, transform, collider) = match colliders.get(entity) {
-            Ok(data) => data,
-            Err(_) => continue,
-        };
-        // Build the Rapier collider and insert it into the collider set
-        let col = collider.data.read().unwrap().build();
-        let col_handle = world.rapier.collider_set.write().unwrap().insert(col);
-
-        // Create a rigid body for the collider and insert it into the rigid body set
-        let rb = RigidBodyBuilder::fixed()
-            .translation(vector![
-                transform.translation.x,
-                transform.translation.y,
-                transform.translation.z
-            ])
-            .build();
-        let rb_handle = world.rapier.rigid_body_set.write().unwrap().insert(rb);
-
-        // Associate the collider with its rigid body and store the mapping
-        world
-            .rapier.collider_set.write().unwrap()
-            .set_parent(col_handle, Some(rb_handle), &mut world.rapier.rigid_body_set.write().unwrap());
-        world.entity_to_collider.insert(entity, col_handle);
-        world.collider_to_entity.insert(col_handle, entity);
-        world.entity_to_rigid_body.insert(entity, rb_handle);
-        world.rigid_body_to_entity.insert(rb_handle, entity);
-        debug!("Added collider and rigidbody for entity {:?} with collider {:?} and rigidbody {:?} handles", entity, col_handle, rb_handle);
     }
-    drop(_span);
-
-    // Handle removed colliders
-    let _span = debug_span!("handle_removed_colliders").entered();
-    removed_collider.read().for_each(|entity| {
-        if let Some(&col_handle) = world.entity_to_collider.get(&entity) {
-            // Remove the collider from the collider set
-            world.rapier.rigid_body_set.write().unwrap().remove(
-                world.entity_to_rigid_body[&entity],
-                &mut world.rapier.island_manager.write().unwrap(),
-                &mut world.rapier.collider_set.write().unwrap(),
-                &mut world.rapier.impulse_joint_set.write().unwrap(),
-                &mut world.rapier.multibody_joint_set.write().unwrap(),
-                true,
-            );
-
-            // Remove the mappings
-            world.entity_to_collider.remove(&entity);
-            world.collider_to_entity.remove(&col_handle);
-            debug!("Removed collider and rigidbody for entity {:?} with handle {:?}", entity, col_handle);
-        }
-    });
-    drop(_span);
 
     // Handle updated colliders
-    let _span = debug_span!("handle_updated_colliders").entered();
-    for entity in updated_collider.iter() {
-        if let Some(&col_handle) = world.entity_to_collider.get(&entity) {
-            // Remove the old collider
-            world.rapier.collider_set.write().unwrap().remove(
-                col_handle,
-                &mut world.rapier.island_manager.write().unwrap(),
-                &mut world.rapier.rigid_body_set.write().unwrap(),
-                true,
-            );
-
-            // Get the updated collider component
-            let (entity, _, collider) = match colliders.get(entity) {
-                Ok(data) => data,
-                Err(_) => continue,
-            };
-            // Build the new Rapier collider and insert it into the collider set
-            let col = collider.data.read().unwrap().build();
-            let new_col_handle = world.rapier.collider_set.write().unwrap().insert(col);
-
-            // Re-associate the new collider with its rigid body
-            let rb_handle = world.entity_to_rigid_body[&entity];
-            world
-                .rapier.collider_set.write().unwrap()
-                .set_parent(new_col_handle, Some(rb_handle), &mut world.rapier.rigid_body_set.write().unwrap());
-
-            // Update the mappings
-            world.entity_to_collider.insert(entity, new_col_handle);
-            world.collider_to_entity.insert(new_col_handle, entity);
-            debug!("Updated collider for entity {:?} with new handle {:?}", entity, new_col_handle);
-        }
-    }
-    drop(_span);
-
-    // Handle updated transforms
-    let _span = trace_span!("handle_updated_transforms").entered();
-    for entity in updated_transform.iter() {
-        if let Some(&rb_handle) = world.entity_to_rigid_body.get(&entity) {
-            // Get the updated transform
-            let (_, transform, _) = match colliders.get(entity) {
-                Ok(data) => data,
-                Err(_) => continue,
-            };
-            // Update the rigid body's position
-            if let Some(rigid_body) = world.rapier.rigid_body_set.write().unwrap().get_mut(rb_handle) {
-                rigid_body.set_translation(
-                    vector![
-                        transform.translation.x,
-                        transform.translation.y,
-                        transform.translation.z
-                    ],
+    {
+        let _span = debug_span!("handle_updated_colliders").entered();
+        for entity in updated_collider.iter() {
+            if let Some(&col_handle) = phworld.entity_to_collider.get(&entity) {
+                // Remove the old collider
+                phworld.rapier.collider_set.write().unwrap().remove(
+                    col_handle,
+                    &mut phworld.rapier.island_manager.write().unwrap(),
+                    &mut phworld.rapier.rigid_body_set.write().unwrap(),
                     true,
                 );
-                trace!("Updated transform for entity {:?} with rigidbody handle {:?}", entity, rb_handle);
+
+                // Get the updated collider component
+                let (entity, _, collider) = match colliders.get(entity) {
+                    Ok(data) => data,
+                    Err(_) => continue,
+                };
+                // Build the new Rapier collider and insert it into the collider set
+                let col = collider.data.read().unwrap().build();
+                let new_col_handle = phworld.rapier.collider_set.write().unwrap().insert(col);
+
+                // Re-associate the new collider with its rigid body
+                let rb_handle = phworld.entity_to_rigid_body[&entity];
+                phworld
+                    .rapier.collider_set.write().unwrap()
+                    .set_parent(new_col_handle, Some(rb_handle), &mut phworld.rapier.rigid_body_set.write().unwrap());
+
+                // Update the mappings
+                phworld.entity_to_collider.insert(entity, new_col_handle);
+                phworld.collider_to_entity.insert(new_col_handle, entity);
+                debug!("Updated collider for entity {:?} with new handle {:?}", entity, new_col_handle);
             }
         }
     }
-    drop(_span);
-}
 
+    // Handle updated transforms
+    {
+        let _span = trace_span!("handle_updated_transforms").entered();
+        for entity in updated_transform.iter() {
+            if let Some(&rb_handle) = phworld.entity_to_rigid_body.get(&entity) {
+                // Get the updated transform
+                let (_, transform, _) = match colliders.get(entity) {
+                    Ok(data) => data,
+                    Err(_) => continue,
+                };
+                // Update the rigid body's position
+                if let Some(rigid_body) = phworld.rapier.rigid_body_set.write().unwrap().get_mut(rb_handle) {
+                    rigid_body.set_translation(
+                        vector![
+                            transform.translation.x,
+                            transform.translation.y,
+                            transform.translation.z
+                        ],
+                        true,
+                    );
+                    trace!("Updated transform for entity {:?} with rigidbody handle {:?}", entity, rb_handle);
+                }
+            }
+        }
+        drop(_span);
+    }
+
+    // Generate list of entities to remove colliders for
+    let mut removed_collider_entities = Vec::new();
+    removed_collider.read().for_each(|entity| {
+        removed_collider_entities.push(entity);
+    });
+
+    // Update the query pipeline if there were any changes
+    if !new_collider.is_empty()
+        || !updated_collider.is_empty()
+        || !updated_transform.is_empty()
+        || !removed_collider_entities.is_empty()
+    {
+        let _span = trace_span!("handle_changes_pipeline").entered();
+        let mut modified_colliders = Vec::new();
+        for entity in new_collider.iter().chain(updated_collider.iter()).chain(updated_transform.iter()) {
+            if let Some(&col_handle) = phworld.entity_to_collider.get(&entity) {
+                modified_colliders.push(col_handle);
+            }
+        }
+        let mut removed_colliders = Vec::new();
+        removed_collider_entities.iter().for_each(|&entity| {
+            if let Some(&col_handle) = phworld.entity_to_collider.get(&entity) {
+                removed_colliders.push(col_handle);
+            }
+        });
+
+        // Update the query pipeline incrementally
+        // This is more efficient than rebuilding it from scratch
+        let colliders = &phworld.rapier.collider_set.read().unwrap();
+        phworld.rapier.query_pipeline.write().unwrap().update_incremental(colliders, &modified_colliders, &removed_colliders, true);
+        trace!("Updated query pipeline with {} modified and {} removed colliders", modified_colliders.len(), removed_colliders.len());
+    }
+
+    // Handle removed colliders
+    {
+        let _span = debug_span!("handle_removed_colliders").entered();
+        removed_collider_entities.iter().for_each(|&entity| {
+            if let Some(&col_handle) = phworld.entity_to_collider.get(&entity) {
+                // Remove the collider from the collider set
+                phworld.rapier.rigid_body_set.write().unwrap().remove(
+                    phworld.entity_to_rigid_body[&entity],
+                    &mut phworld.rapier.island_manager.write().unwrap(),
+                    &mut phworld.rapier.collider_set.write().unwrap(),
+                    &mut phworld.rapier.impulse_joint_set.write().unwrap(),
+                    &mut phworld.rapier.multibody_joint_set.write().unwrap(),
+                    true,
+                );
+
+                // Remove the mappings
+                phworld.entity_to_collider.remove(&entity);
+                phworld.collider_to_entity.remove(&col_handle);
+                debug!("Removed collider and rigidbody for entity {:?} with handle {:?}", entity, col_handle);
+            }
+        });
+    }
+}
 
 
 
