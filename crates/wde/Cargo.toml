@@ -18,6 +18,7 @@ incremental = false
 debug = false
 
 [dependencies]
+wde-logger = { path = "../core/wde-logger" }
 wde-renderer = { path = "../render/wde-renderer" }
 wde-scene = { path = "../scene/wde-scene" }
 wde-camera = { path = "../render/wde-camera" }
@@ -27,9 +28,8 @@ wde-pbr = { path = "../render/wde-pbr", optional = true }
 bevy = { workspace = true }
 
 [features]
-default = []
-remote = ["bevy/bevy_remote"]
-watch = ["bevy/file_watcher", "wde-renderer/watch"]
-trace = ["bevy/trace_tracy_memory", "wde-renderer/trace"]
+default = ["pbr", "gizmos"]
 gizmos = ["wde-gizmos"]
 pbr = ["wde-pbr"]
+watch = ["bevy/file_watcher"]
+tracing = ["wde-logger/tracing", "bevy/trace_tracy_memory"]

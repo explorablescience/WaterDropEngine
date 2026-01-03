@@ -5,7 +5,8 @@
 //! loader reads image files into that buffer, while [`GpuTexture`] turns the
 //! asset into a GPU texture inside the render sub-app.
 
-use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimeless::SRes, prelude::*, log::tracing::error};
+use wde_logger::prelude::*;
+use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimeless::SRes, prelude::*};
 use image::GenericImageView;
 use thiserror::Error;
 use serde::{Deserialize, Serialize};

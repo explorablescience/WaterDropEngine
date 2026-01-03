@@ -1,5 +1,6 @@
 //! Extract the resources from the scene and load them to the GPU in the renderer.
 
+use wde_logger::prelude::*;
 use bevy::{app::{App, Plugin}, ecs::{schedule::ScheduleConfigs, system::{ScheduleSystem, StaticSystemParam, SystemParam, SystemParamItem, SystemState}, world}, platform::collections::{HashMap, HashSet}, prelude::*};
 use thiserror::Error;
 

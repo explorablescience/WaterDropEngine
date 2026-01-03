@@ -5,16 +5,9 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
+wde = { path = "../crates/wde" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
-
-[dependencies.wde]
-version = "0.1.0"
-path = "../crates/wde"
-features = [
-    "gizmos",
-    "pbr"
-]
 
 [build-dependencies]
 anyhow = "1.0"
@@ -22,6 +15,5 @@ fs_extra = "1.2"
 
 [features]
 default = []
-remote = ["wde/remote"]
 watch = ["wde/watch"]
-trace = ["wde/trace"]
+tracing = ["wde/tracing"]

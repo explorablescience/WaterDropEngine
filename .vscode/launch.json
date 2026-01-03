@@ -11,7 +11,7 @@
                     "--bin=wde-game",
                     "--package=wde-game",
                     "--target-dir=target",
-                    "--features=trace,watch,remote"
+                    "--features=watch,tracing"
                 ],
                 "filter": {
                     "name": "wde-game",
@@ -34,7 +34,7 @@
                     "--bin=wde-game",
                     "--package=wde-game",
                     "--target-dir=target",
-                    "--features=watch,remote"
+                    "--features=watch"
                 ],
                 "filter": {
                     "name": "wde-game",
@@ -80,7 +80,7 @@
                     "--bin=wde-examples",
                     "--package=wde-examples",
                     "--target-dir=target",
-                    "--features=watch,remote"
+                    "--features=watch"
                 ],
                 "filter": {
                     "name": "wde-examples",

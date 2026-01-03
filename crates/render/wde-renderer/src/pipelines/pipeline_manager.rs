@@ -7,7 +7,8 @@
 
 use std::collections::HashMap;
 
-use bevy::{app::{App, Plugin}, asset::{AssetEvent, AssetId, Assets}, ecs::prelude::*, log::{debug, error}, prelude::MessageReader};
+use wde_logger::prelude::*;
+use bevy::{app::{App, Plugin}, asset::{AssetEvent, AssetId, Assets}, ecs::prelude::*, prelude::MessageReader};
 use wde_wgpu::{compute_pipeline::ComputePipeline, render_pipeline::{RenderPipeline, ShaderStages}};
 
 use crate::core::RenderInstance;

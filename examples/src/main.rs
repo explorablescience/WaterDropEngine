@@ -25,7 +25,7 @@ const SELECTED_EXAMPLE: Example = Example::PbrBatches;
 pub fn main() {
     // Log level
     #[cfg(debug_assertions)]
-    let level = if cfg!(feature = "trace") {
+    let level = if cfg!(feature = "tracing") {
         Level::TRACE
     } else {
         Level::DEBUG

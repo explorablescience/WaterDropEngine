@@ -1,6 +1,6 @@
 //! Compute pipeline module.
-
-use bevy::{log::{trace, Level}, prelude::*, log::tracing::event};
+use bevy::prelude::*;
+use wde_logger::prelude::*;
 use wgpu::{naga, BindGroupLayout, ShaderStages};
 
 use crate::instance::{RenderError, RenderInstanceData};

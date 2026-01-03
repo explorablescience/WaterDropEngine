@@ -1,6 +1,6 @@
 //! Texture creation and copy helpers built on `wgpu::Texture`.
 
-use bevy::{log::Level, log::tracing::event};
+use wde_logger::prelude::*;
 
 use crate::RenderInstanceData;
 

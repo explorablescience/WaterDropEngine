@@ -1,6 +1,6 @@
 //! Main systems for extracting data from the main world into the render world.
 
-use bevy::{log::Level, prelude::*, log::tracing::span};
+use bevy::prelude::*;
 
 use crate::passes::render_graph::RenderGraph;
 
@@ -17,7 +17,7 @@ pub(crate) fn main_extract(main_world: &mut World, render_world: &mut World) {
     render_world.insert_resource(MainWorld(previous_main_world));
 
     {
-        let _extract_span = span!(Level::DEBUG, "extract").entered();
+        let _extract_span = debug_span!("extract").entered();
 
         // Run the render graph extract
         // We bypass the render graph system because we need to extract the render graph before running the extract schedule

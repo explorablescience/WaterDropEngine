@@ -1,6 +1,6 @@
 //! Render pipeline module.
 
-use bevy::{log::{error, trace, Level}, log::tracing::event};
+use wde_logger::prelude::*;
 use wgpu::{naga, BindGroupLayout};
 
 use crate::{instance::{RenderError, RenderInstanceData}, texture::{Texture, TextureFormat}, vertex::Vertex};

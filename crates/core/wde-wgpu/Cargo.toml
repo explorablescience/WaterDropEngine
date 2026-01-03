@@ -19,6 +19,7 @@ incremental = false
 debug = false
 
 [dependencies]
+wde-logger = { path = "../wde-logger" }
 wgpu = { version = "22.1", features = [ "serde" ] }
 bevy = { workspace = true }
 serde = { workspace = true }

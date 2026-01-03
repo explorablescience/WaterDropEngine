@@ -2,9 +2,7 @@
 
 use std::ops::Range;
 
-use bevy::log::error;
-use bevy::log::Level;
-use bevy::log::tracing::event;
+use wde_logger::prelude::*;
 use wgpu::BufferAddress;
 use wgpu::ShaderStages;
 

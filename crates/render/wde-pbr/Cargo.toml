@@ -18,12 +18,8 @@ incremental = false
 debug = false
 
 [dependencies]
+wde-logger = { path = "../../core/wde-logger" }
 wde-renderer = { path = "../wde-renderer" }
 wde-camera = { path = "../wde-camera" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
-
-[features]
-default = []
-watch = ["bevy/file_watcher"]
-trace = ["bevy/trace_tracy_memory"]

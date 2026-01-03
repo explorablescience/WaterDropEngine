@@ -262,7 +262,7 @@ pub mod utils;
 use core::RenderCorePlugin;
 
 use assets::AssetsPlugin;
-use bevy::{app::{App, Plugin}, log::info};
+use bevy::prelude::*;
 
 pub struct RenderPlugin;
 impl Plugin for RenderPlugin {

@@ -6,6 +6,7 @@
 
 use std::{fs::File, io::BufReader};
 
+use wde_logger::prelude::*;
 use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::lifetimeless::SRes, prelude::*};
 use thiserror::Error;
 use serde::{Deserialize, Serialize};

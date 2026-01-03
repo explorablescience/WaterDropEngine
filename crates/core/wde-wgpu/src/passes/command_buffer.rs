@@ -1,5 +1,5 @@
 //! Command encoder utilities to record render and compute work.
-use bevy::{log::Level, log::tracing::event};
+use wde_logger::prelude::*;
 use wgpu::Texture;
 
 use crate::{buffer::Buffer, compute_pass::WComputePass, instance::RenderInstanceData, texture::TextureView};

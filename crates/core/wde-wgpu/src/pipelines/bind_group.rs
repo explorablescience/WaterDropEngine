@@ -53,7 +53,7 @@
 //! - The order of `set_bind_groups` on pipelines must match the order of layouts you provide
 //!   here.
 
-use bevy::{log::Level, log::tracing::event};
+use wde_logger::prelude::*;
 
 use crate::{buffer::Buffer, instance::RenderInstanceData, render_pipeline::ShaderStages, texture::Texture};
 

@@ -2,7 +2,7 @@
 //! From the bevy source code, this is a modified version of the `bevy::render::pipeline::PipelinedRenderingPlugin`.
 
 use async_channel::{Receiver, Sender};
-use bevy::{app::{AppLabel, SubApp}, ecs::schedule::MainThreadExecutor, prelude::*, tasks::ComputeTaskPool, log::tracing};
+use bevy::{app::{AppLabel, SubApp}, ecs::schedule::MainThreadExecutor, prelude::*, tasks::ComputeTaskPool};
 
 use super::RenderApp;
 
@@ -141,9 +141,7 @@ impl Plugin for PipelinedRenderingPlugin {
         let render_thread = std::thread::Builder::new().name("Render thread".to_string());
         render_thread.spawn(move || {
             // Set thread name for debugging
-
-            #[cfg(feature = "trace")]
-            let _span = tracing::info_span!("render thread").entered();
+            let _span = info_span!("render thread").entered();
 
             let compute_task_pool = ComputeTaskPool::get();
             loop {
@@ -158,8 +156,7 @@ impl Plugin for PipelinedRenderingPlugin {
                 };
 
                 {
-                    #[cfg(feature = "trace")]
-                    let _sub_app_span = tracing::info_span!("sub app", name = ?RenderApp).entered();
+                    let _sub_app_span = info_span!("sub app", name = ?RenderApp).entered();
                     render_app.update();
                 }
 
@@ -168,7 +165,7 @@ impl Plugin for PipelinedRenderingPlugin {
                 }
             }
 
-            tracing::debug!("exiting pipelined rendering thread");
+            debug!("exiting pipelined rendering thread");
         }).expect("Failed to spawn render thread");
     }
 }

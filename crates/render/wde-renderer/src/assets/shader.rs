@@ -17,6 +17,7 @@
 //! }
 //! ```
 
+use wde_logger::prelude::*;
 use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, prelude::*};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

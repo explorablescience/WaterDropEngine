@@ -5,20 +5,9 @@ use wde::prelude::*;
 use bevy::input::InputPlugin;
 use bevy::app::TaskPoolThreadAssignmentPolicy;
 use bevy::prelude::*;
-use bevy::log::{Level, LogPlugin};
 use wde::scene::ScenePlugin;
 
 pub fn main() {
-    // Log level
-    #[cfg(debug_assertions)]
-    let level = if cfg!(feature = "trace") {
-        Level::TRACE
-    } else {
-        Level::DEBUG
-    };
-    #[cfg(not(debug_assertions))]
-    let level = Level::INFO;
-
     // Create the app
     let mut app = App::new();
 
@@ -57,13 +46,6 @@ pub fn main() {
                 },
             }
         }))
-        .add_plugins(LogPlugin {
-            level,
-            filter: "wgpu_hal=warn,wgpu_core=warn,naga=warn".to_string(),
-            custom_layer: |_| None,
-            fmt_layer: |_| None,
-        })
-        // .add_plugins(HierarchyPlugin)
         .add_plugins(InputPlugin)
         .add_plugins(AssetPlugin {
             mode: AssetMode::Unprocessed,
@@ -74,12 +56,12 @@ pub fn main() {
 
     // Add the plugins
     app
+        .add_plugins(LogPlugin::default().auto_level())
         .add_plugins(RenderPlugin)
         .add_plugins(GizmosPlugin)
         .add_plugins(PbrPlugin)
         .add_plugins(CameraPlugin)
         .add_plugins(ScenePlugin);
-        // .add_plugins(GamePlugin);
 
     // Run the app
     info!("Running game engine.");

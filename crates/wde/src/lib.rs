@@ -125,10 +125,10 @@
 /// - PBR materials (if `pbr` feature is enabled)
 pub mod prelude {
     // Core modules
+    pub use wde_logger::prelude::*;
     pub use wde_renderer::prelude::*;
     pub use wde_camera::prelude::*;
     pub use wde_physics::prelude::*;
-    // pub use wde_scene::prelude::*;
 
     // Optional feature modules
     #[cfg(feature = "gizmos")]

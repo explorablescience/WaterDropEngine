@@ -1,6 +1,7 @@
 //! Device/queue/surface bootstrap utilities used across the renderer.
 
-use bevy::{log::{Level, debug, error, info, tracing::{event, span}, warn}, window::RawHandleWrapperHolder};
+use bevy::window::RawHandleWrapperHolder;
+use wde_logger::prelude::*;
 use wgpu::{Device, Limits as WLimits, PresentMode as WPresentMode, Surface, SurfaceConfiguration, SurfaceTexture};
 
 use crate::texture::TextureView;
@@ -114,7 +115,7 @@ pub struct RenderInstanceData<'a> {
 /// ```
 pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapperHolder>) -> RenderInstanceData<'static> {
     info!(label, "Creating render instance.");
-    let _trace = span!(Level::INFO, "new").entered();
+    let _trace = info_span!("new").entered();
 
     // Set flags
     let flags = if cfg!(debug_assertions) {
@@ -271,7 +272,7 @@ pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfigurat
     event!(Level::TRACE, "Getting current texture.");
 
     // Get current texture
-    let _get_current_texture = span!(Level::INFO, "acquire_texture").entered();
+    let _get_current_texture = info_span!("acquire_texture").entered();
     let render_texture = surface.get_current_texture();
     drop(_get_current_texture);
 

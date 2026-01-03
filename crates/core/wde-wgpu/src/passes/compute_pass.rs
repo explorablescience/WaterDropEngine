@@ -1,7 +1,5 @@
 //! Compute pass abstraction.
-
-use bevy::{log::Level, prelude::*, log::tracing::event};
-
+use wde_logger::prelude::*;
 use crate::{compute_pipeline::ComputePipeline, instance::RenderError};
 
 

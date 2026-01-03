@@ -18,6 +18,7 @@ incremental = false
 debug = false
 
 [dependencies]
+wde-logger = { path = "../../core/wde-logger" }
 wde-renderer = { path = "../../render/wde-renderer" }
 wde-wgpu = { path = "../../core/wde-wgpu" }
 wde-pbr = { path = "../../render/wde-pbr" }
@@ -29,9 +30,3 @@ serde = { workspace = true }
 bytemuck = { workspace = true }
 rapier3d = { version = "0.23", default-features = false, features = [ "dim3", "f32", "parallel", "simd-stable", "serde-serialize" ] }
 serde_json = "1.0"
-
-[features]
-default = []
-remote = ["bevy/bevy_remote"]
-watch = ["bevy/file_watcher"]
-trace = ["bevy/trace_tracy_memory"]

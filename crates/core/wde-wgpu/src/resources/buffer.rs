@@ -1,7 +1,7 @@
 //! GPU buffer helper utilities built on top of `wgpu::Buffer`.
 
 use std::fmt::Formatter;
-use bevy::{log::Level, log::tracing::event};
+use wde_logger::prelude::*;
 use wgpu::{util::DeviceExt, BufferView};
 
 use crate::{command_buffer::CommandBuffer, instance::RenderInstanceData};
