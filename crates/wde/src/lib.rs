@@ -109,6 +109,104 @@
 //! }
 //! ```
 
+use bevy::{app::{ScheduleRunnerPlugin, TaskPoolThreadAssignmentPolicy, plugin_group}, diagnostic::FrameCountPlugin, input::InputPlugin, prelude::*, time::TimePlugin};
+
+/// Custom Bevy plugins for WaterDropEngine default plugins.
+#[derive(Default)]
+struct CustomBevyPlugins;
+impl Plugin for CustomBevyPlugins {
+    fn build(&self, app: &mut App) {
+        app
+            .add_plugins(TaskPoolPlugin {
+                task_pool_options: TaskPoolOptions {
+                    min_total_threads: 1,
+                    max_total_threads: usize::MAX,
+
+                    // Use 1 core for IO
+                    io: TaskPoolThreadAssignmentPolicy {
+                        min_threads: 1,
+                        max_threads: 2,
+                        percent: 0.25,
+                        on_thread_spawn: None,
+                        on_thread_destroy: None,
+                    },
+
+                    // Use 1 core for async compute
+                    async_compute: TaskPoolThreadAssignmentPolicy {
+                        min_threads: 1,
+                        max_threads: 2,
+                        percent: 0.25,
+                        on_thread_spawn: None,
+                        on_thread_destroy: None,
+                    },
+
+                    // Use all remaining cores for compute (at least 1)
+                    compute: TaskPoolThreadAssignmentPolicy {
+                        min_threads: 1,
+                        max_threads: usize::MAX,
+                        percent: 1.0, // This 1.0 here means "whatever is left over"
+                        on_thread_spawn: None,
+                        on_thread_destroy: None,
+                    },
+                }
+            })
+            .add_plugins(FrameCountPlugin)
+            .add_plugins(TimePlugin)
+            .add_plugins(ScheduleRunnerPlugin::default())
+            .add_plugins(bevy::prelude::AssetPlugin {
+                mode: AssetMode::Unprocessed,
+                file_path: "res".to_string(),
+                ..Default::default()
+            })
+            .add_plugins(InputPlugin);
+    }
+}
+
+/// Custom WaterDropEngine plugins.
+#[derive(Default)]
+struct CustomWdePlugins;
+impl Plugin for CustomWdePlugins {
+    fn build(&self, app: &mut App) {
+        app
+            .add_plugins(wde_logger::LogPlugin::default().auto_level())
+            .add_plugins(wde_renderer::RenderPlugin)
+            .add_plugins(wde_camera::CameraPlugin)
+            .add_plugins(wde_physics::PhysicsPlugin);
+
+        #[cfg(feature = "gizmos")]
+        app.add_plugins(wde_gizmos::GizmosPlugin);
+        #[cfg(feature = "pbr")]
+        app.add_plugins(wde_pbr::PbrPlugin);
+
+        app.add_plugins(wde_scene::ScenePlugin);
+    }
+}
+
+plugin_group! {
+    /// Default plugins for WaterDropEngine.
+    /// 
+    /// # Description
+    /// 
+    /// To use, add the following to your app;
+    /// ```rust
+    /// app.add_plugins(WdeDefaultPlugins);
+    /// ```
+    /// 
+    /// # Modifying Plugins
+    /// 
+    /// To modify and configure individual plugins, use:
+    /// ```rust
+    /// app.add_plugins(WdeDefaultPlugins.set(LogPlugin {
+    ///     level: Level::DEBUG,
+    ///     ..Default::default()
+    /// }));
+    /// ```
+    pub struct WdeDefaultPlugins {
+        :CustomBevyPlugins,
+        :CustomWdePlugins,
+    }
+}
+
 /// The prelude module.
 ///
 /// Import this module to get access to the most commonly used types and traits:
@@ -124,6 +222,9 @@
 /// - Gizmo types (if `gizmos` feature is enabled)
 /// - PBR materials (if `pbr` feature is enabled)
 pub mod prelude {
+    // Default plugins
+    pub use crate::WdeDefaultPlugins;
+
     // Core modules
     pub use wde_logger::prelude::*;
     pub use wde_renderer::prelude::*;

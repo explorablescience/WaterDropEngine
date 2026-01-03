@@ -1,5 +1,6 @@
 //! Main systems for extracting data from the main world into the render world.
 
+use wde_logger::prelude::*;
 use bevy::prelude::*;
 
 use crate::passes::render_graph::RenderGraph;

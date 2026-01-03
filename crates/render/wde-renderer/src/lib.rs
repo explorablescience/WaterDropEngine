@@ -262,6 +262,7 @@ pub mod utils;
 use core::RenderCorePlugin;
 
 use assets::AssetsPlugin;
+use wde_logger::prelude::*;
 use bevy::prelude::*;
 
 pub struct RenderPlugin;

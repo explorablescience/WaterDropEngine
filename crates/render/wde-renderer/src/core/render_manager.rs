@@ -1,6 +1,7 @@
 //! Rendering system for the WDE renderer. Handle the initialization and presentation of the wgpu renderer.
 
 use bevy::window::{PresentMode, PrimaryWindow, RawHandleWrapperHolder};
+use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_wgpu::instance::{self, PresentMode as WPresentMode, RenderEvent, setup_surface};
 

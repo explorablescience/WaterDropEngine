@@ -1,3 +1,4 @@
+use wde_logger::prelude::*;
 use std::collections::HashMap;
 
 use bevy::prelude::*;

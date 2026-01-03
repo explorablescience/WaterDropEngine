@@ -1,3 +1,4 @@
+use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;

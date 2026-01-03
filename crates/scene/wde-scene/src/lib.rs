@@ -1,3 +1,4 @@
+use wde_logger::prelude::*;
 use bevy::{prelude::*, window::PrimaryWindow};
 use wde_camera::prelude::*;
 use wde_pbr::prelude::*;
@@ -9,7 +10,6 @@ pub struct ScenePlugin;
 impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(PhysicsPlugin)
             .insert_resource(TimerResource(Timer::from_seconds(5.0, TimerMode::Once)))
             .add_systems(Startup, init_scene)
             .add_systems(Update, remove_after_time)

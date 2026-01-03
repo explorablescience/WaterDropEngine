@@ -1,3 +1,4 @@
+use wde_logger::prelude::*;
 use bevy::{platform::collections::HashMap, prelude::*};
 
 use crate::core::SwapchainFrame;
