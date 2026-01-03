@@ -32,7 +32,7 @@ pub fn main() {
                 // Use 1 core for IO
                 io: TaskPoolThreadAssignmentPolicy {
                     min_threads: 1,
-                    max_threads: 1,
+                    max_threads: 2,
                     percent: 0.25,
                     on_thread_spawn: None,
                     on_thread_destroy: None,
@@ -41,7 +41,7 @@ pub fn main() {
                 // Use 1 core for async compute
                 async_compute: TaskPoolThreadAssignmentPolicy {
                     min_threads: 1,
-                    max_threads: 1,
+                    max_threads: 2,
                     percent: 0.25,
                     on_thread_spawn: None,
                     on_thread_destroy: None,
