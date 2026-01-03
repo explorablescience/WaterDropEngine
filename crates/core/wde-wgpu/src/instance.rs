@@ -311,7 +311,7 @@ pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfigurat
         }
         // Timeout of the surface
         Err(wgpu::SurfaceError::Timeout) => {
-            error!("Timeout of the surface.");
+            warn!("Timeout of the surface.");
             RenderEvent::None
         }
     }
@@ -330,6 +330,6 @@ pub fn present(surface_texture: SurfaceTexture) -> Result<(), RenderError> {
 ///
 /// The caller must also update `surface_config.width/height` before invoking.
 pub fn resize(device: &Device, surface: &Surface, surface_config: &SurfaceConfiguration) {
-    event!(Level::DEBUG, "Resizing surface.");
+    event!(Level::TRACE, "Resizing surface to {}x{}.", surface_config.width, surface_config.height);
     surface.configure(device, surface_config);
 }

@@ -79,19 +79,32 @@ pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instan
             swapchain_frame.data = Some(render_texture);
         },
         RenderEvent::Resize => {
-            debug!("Received resize event from render instance.");
-            instance::resize(&render_data.device, render_data.surface.as_ref().unwrap(),
-                render_data.surface_config.as_ref().unwrap());
+            let config = render_data.surface_config.as_ref().unwrap();
+
+            // Check for zero size (minimized window)
+            if config.width == 0 || config.height == 0 {
+                debug!("Skipping resize: zero width/height.");
+                return;
+            }
+
+            // Reconfigure the surface with updated dimensions
+            info!("Swapchain resize requested. Reconfiguring surface to {}x{}.", config.width, config.height);
+            instance::resize(&render_data.device, render_data.surface.as_ref().unwrap(), config);
+            
+            // Retry immediately to get the next texture
             match instance::get_current_texture(
-                render_data.surface.as_ref().unwrap(),
+                render_data.surface.as_ref().unwrap(), 
                 render_data.surface_config.as_ref().unwrap()
             ) {
                 RenderEvent::Redraw(render_texture) => {
                     swapchain_frame.data = Some(render_texture);
                 },
-                _ => {
-                    error!("Failed to get current texture after resize event.");
+                RenderEvent::Resize => {
+                    // Return early - let the next frame acquire the texture after resize completes
+                    // This is especially important on X11 where resize may not be synchronous
+                    warn!("Surface resize still pending after reconfiguration.");
                 },
+                RenderEvent::None => {},
             }
         },
         RenderEvent::None => {},
@@ -103,7 +116,7 @@ pub(crate) fn present(mut swapchain_frame: ResMut<SwapchainFrame>) {
     let _ = instance::present(match swapchain_frame.data.take() {
         Some(render_texture) => render_texture.texture,
         None => {
-            error!("Failed to present frame: no render texture found.");
+            warn!("Skipping frame presentation: No swapchain render texture found.");
             return
         },
     });

@@ -1,5 +1,7 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 
+use crate::core::SwapchainFrame;
+
 /// Core trait for all render passes in the render graph.
 ///
 /// A `RenderPass` has two phases:
@@ -88,6 +90,17 @@ impl RenderGraph {
     /// (Internal; called automatically by the renderer.)
     pub(crate) fn render(render_world: &mut World) {
         trace!("Rendering the render passes.");
+
+        // Check if there is a swapchain frame
+        if !render_world.contains_resource::<SwapchainFrame>() {
+            warn!("No swapchain frame available, skipping render passes.");
+            return;
+        }
+        let swapchain_frame = render_world.resource::<SwapchainFrame>();
+        if swapchain_frame.data.is_none() {
+            warn!("No swapchain texture view available, skipping render passes.");
+            return;
+        }
 
         // Run the update methods for each pass
         render_world.resource_scope(|render_world, graph: Mut<RenderGraph>| {
