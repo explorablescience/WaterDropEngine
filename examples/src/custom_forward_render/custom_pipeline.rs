@@ -1,5 +1,5 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde::{prelude::*, render::camera::features::CameraFeatureRender};
+use wde::prelude::*;
 
 use super::{CustomMaterialAsset, CustomSsbo};
 

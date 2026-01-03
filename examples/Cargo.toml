@@ -11,7 +11,8 @@ bytemuck = { workspace = true }
 [dependencies.wde]
 path = "../crates/wde"
 features = [
-    "pbr"
+    "pbr",
+    "gizmos",
 ]
 
 [build-dependencies]
