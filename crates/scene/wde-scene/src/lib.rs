@@ -1,3 +1,4 @@
+use wde_gltf::load_gltf;
 use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_camera::prelude::*;
@@ -11,7 +12,7 @@ impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
         app
             // .insert_resource(TimerResource(Timer::from_seconds(5.0, TimerMode::Once)))
-            .add_systems(Startup, init_scene);
+            .add_systems(Startup, (init_scene, load).chain());
     }
 }
 
@@ -21,56 +22,64 @@ impl Plugin for ScenePlugin {
 fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmaterials: ResMut<Assets<PbrMaterialAsset>>, mut gizmomaterials: ResMut<Assets<GizmoMaterialAsset>>, mut meshes: ResMut<Assets<MeshAsset>>) {
     // Main camera
     commands.spawn((
-        Transform::from_xyz(5.0, 5.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y),
         Camera,
         CameraView::default(),
         CameraController::default(),
         ActiveCamera
     ));
 
-    // Spawn a house centered at the origin
+    // // Spawn a house centered at the origin
+    // commands.spawn((
+    //     Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.05),
+    //     Mesh(asset_server.load("houses/house_demo1.obj")),
+    //     PbrMaterial(pbrmaterials.add(PbrMaterialAsset {
+    //         label: "house".to_string(),
+    //         albedo: (0.8, 0.8, 0.8, 1.0),
+    //         specular: 0.5,
+    //         ..Default::default()
+    //     }))
+    // ));
+
+    // Spawn a cube slightly shifted
     commands.spawn((
-        Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.05),
-        Mesh(asset_server.load("houses/house_demo1.obj")),
+        Transform::from_xyz(3.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.1),
+        Mesh(asset_server.load("models/container.obj")),
         PbrMaterial(pbrmaterials.add(PbrMaterialAsset {
-            label: "house".to_string(),
-            albedo: (0.8, 0.8, 0.8, 1.0),
+            label: "red".to_string(),
+            albedo: (1.0, 0.0, 0.0, 1.0),
             specular: 0.5,
             ..Default::default()
         }))
     ));
 
-    // // Spawn a cube centered at the origin
-    // let cube_entity = commands.spawn((
-    //     Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.1),
-    //     Mesh(asset_server.load("models/container.obj")),
-    //     PbrMaterial(pbrmaterials.add(PbrMaterialAsset {
-    //         label: "red".to_string(),
-    //         albedo: (1.0, 0.0, 0.0, 1.0),
-    //         specular: 0.5,
-    //         ..Default::default()
-    //     }))
+    // // Create the ground
+    // let scaling: u32 = 25; // Must be odd
+    // let _ground = commands.spawn((
+    //     Transform::from_xyz(0.0, -0.0001, 0.0).with_scale(Vec3::ONE * scaling as f32),
+    //     Mesh(meshes.add(PlaneMesh::from("ground", scaling, Vec3::Y))),
+    //     GizmoMaterial(gizmomaterials.add(GizmoMaterialAsset {
+    //         label: "grid".to_string(),
+    //         color: [0.8, 0.8, 0.8, 1.0],
+    //     })),
+    //     Collider::cuboid(50.0, 0.1, 50.0),
     // )).id();
-    // commands.insert_resource(CubeEntity(cube_entity));
-
-    // Create the ground
-    let scaling: u32 = 25; // Must be odd
-    let _ground = commands.spawn((
-        Transform::from_xyz(0.0, -0.0001, 0.0).with_scale(Vec3::ONE * scaling as f32),
-        Mesh(meshes.add(PlaneMesh::from("ground", scaling, Vec3::Y))),
-        GizmoMaterial(gizmomaterials.add(GizmoMaterialAsset {
-            label: "grid".to_string(),
-            color: [0.8, 0.8, 0.8, 1.0],
-        })),
-        Collider::cuboid(50.0, 0.1, 50.0),
-    )).id();
-    // commands.insert_resource(GroundEntity(ground));
+    // // commands.insert_resource(GroundEntity(ground));
 
     // Spawn the lights
     commands.spawn(DirectionalLight {
         direction: Vec3::new(-0.1, -1.2, -0.2),
         ..Default::default()
     });
+    commands.spawn(DirectionalLight {
+        direction: Vec3::new(0.1, 1.2, 0.2),
+        ..Default::default()
+    });
+}
+
+fn load(world: &mut World) {
+    // Load gltf scene
+    load_gltf(world, "models/simple_mesh.gltf");
 }
 
 // fn cast_ray(
