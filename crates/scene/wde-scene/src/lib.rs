@@ -1,9 +1,7 @@
 use wde_gltf::load_gltf;
-use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_camera::prelude::*;
 use wde_pbr::prelude::*;
-use wde_physics::prelude::*;
 use wde_renderer::prelude::*;
 use wde_gizmos::prelude::*;
 
@@ -41,18 +39,6 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmat
     //     }))
     // ));
 
-    // Spawn a cube slightly shifted
-    commands.spawn((
-        Transform::from_xyz(3.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.1),
-        Mesh(asset_server.load("models/container.obj")),
-        PbrMaterial(pbrmaterials.add(PbrMaterialAsset {
-            label: "red".to_string(),
-            albedo: (1.0, 0.0, 0.0, 1.0),
-            specular: 0.5,
-            ..Default::default()
-        }))
-    ));
-
     // // Create the ground
     // let scaling: u32 = 25; // Must be odd
     // let _ground = commands.spawn((
@@ -79,7 +65,8 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmat
 
 fn load(world: &mut World) {
     // Load gltf scene
-    load_gltf(world, "models/simple_mesh.gltf");
+    // load_gltf(world, "models/simple_mesh.gltf");
+    load_gltf(world, "models/FlightHelmet/FlightHelmet.gltf");
 }
 
 // fn cast_ray(

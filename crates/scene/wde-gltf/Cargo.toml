@@ -22,5 +22,6 @@ wde-renderer = { path = "../../render/wde-renderer" }
 wde-pbr = { path = "../../render/wde-pbr" }
 wde-logger = { path = "../../core/wde-logger" }
 bevy = { workspace = true }
+bytemuck = { workspace = true }
 serde_json = "1.0"
 base64 = "0.22"

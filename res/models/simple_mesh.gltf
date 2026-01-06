@@ -19,7 +19,8 @@
                     "attributes": {
                         "POSITION": 1
                     },
-                    "indices": 0
+                    "indices": 0,
+                    "material": 0
                 }
             ]
         }
@@ -74,6 +75,20 @@
                 0.0,
                 0.0
             ]
+        }
+    ],
+    "materials": [
+        {
+            "pbrMetallicRoughness": {
+                "baseColorFactor": [
+                    1.000,
+                    0.766,
+                    0.336,
+                    1.0
+                ],
+                "metallicFactor": 0.5,
+                "roughnessFactor": 0.1
+            }
         }
     ],
     "asset": {
