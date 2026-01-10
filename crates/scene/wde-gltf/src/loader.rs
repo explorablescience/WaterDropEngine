@@ -1,8 +1,10 @@
+use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::accessor::{parse_attribute_as_f32, parse_indices};
+use crate::error::GltfError;
 use crate::model::GltfModel;
 
 // A dataset representing mesh's data (positions, normals, uvs)
@@ -11,14 +13,18 @@ type MeshDataSet = (Vec<u32>, Vec<Vertex>);
 // A dataset representing material's properties (base color, metallic, roughness)
 type MaterialDataSet = ([f32; 4], Option<String>, f32, f32, Option<String>);
 
+// Result type for form_models function
+type FormedModelsResult = Result<(Vec<MaterialDataSet>, Vec<MeshDataSet>, Vec<(Vec3, Vec3)>), GltfError>;
+
 /// Register meshes and spawn entities from the provided datasets.
 pub fn load_models(
     world: &mut World,
     folder_path: &str,
     raw_materials: &[MaterialDataSet],
     raw_meshes: &[MeshDataSet],
+    bounding_boxes: &[(Vec3, Vec3)],
 ) {
-    println!("Loading models into Bevy world...");
+    trace!("Loading {} models into Bevy world", raw_meshes.len());
 
     // Construct materials
     let materials_handles: Vec<Handle<PbrMaterialAsset>> = raw_materials
@@ -54,15 +60,19 @@ pub fn load_models(
     let mut handles = Vec::new();
     for (i, (indices_data, vertices)) in raw_meshes.iter().enumerate() {
         let label = format!("gltf_mesh_{}", i);
+        let (bb_min, bb_max) = bounding_boxes[i];
         let mesh_asset = MeshAsset {
             label: label.clone(),
             vertices: vertices.clone(),
             indices: indices_data.clone(),
-            bounding_box: ModelBoundingBox::default(), // Placeholder
+            bounding_box: ModelBoundingBox {
+                min: bb_min,
+                max: bb_max,
+            },
         };
         let handle = meshes.add(mesh_asset);
         handles.push(handle);
-        println!("Added mesh asset: {}", label);
+        trace!("Added mesh: {} (bbox min={:?}, max={:?})", label, bb_min, bb_max);
     }
 
     // Spawn entities with the meshes and material
@@ -72,19 +82,17 @@ pub fn load_models(
             Mesh(handles[i].clone()),
             PbrMaterial(materials_handles[i].clone()),
         ));
-        println!("Spawned entity for mesh {}", i);
     }
+    debug!("Spawned {} entities with glTF meshes and materials corresponding to model in folder '{}'.", raw_meshes.len(), folder_path);
 }
 
 /// Transform a parsed `GltfModel` into engine `Vertex` arrays and indices.
-pub fn form_models(model: &GltfModel) -> (Vec<MaterialDataSet>, Vec<MeshDataSet>) {
-    println!("Forming models from glTF data...");
+pub fn form_models(model: &GltfModel) -> FormedModelsResult {
+    trace!("Forming models from glTF data");
 
     // Extract materials data
-    println!("Forming materials from glTF data...");
     let mut material_datas: Vec<MaterialDataSet> = Vec::new();
     for material in &model.materials {
-        println!("Processing material: {:?}", material);
         material_datas.push((
             material.base_color_factor,
             material.base_color_texture_url.clone(),
@@ -95,8 +103,8 @@ pub fn form_models(model: &GltfModel) -> (Vec<MaterialDataSet>, Vec<MeshDataSet>
     }
 
     // Iterate over meshes in the model
-    println!("Forming meshes from glTF model...");
     let mut meshes_data: Vec<MeshDataSet> = Vec::new();
+    let mut bounding_boxes: Vec<(Vec3, Vec3)> = Vec::new();
     let mut meshes_materials_ptr: Vec<usize> = Vec::new();
     let mut meshes_null_materials_ptr: Vec<usize> = Vec::new();
     for mesh in &model.meshes {
@@ -104,9 +112,7 @@ pub fn form_models(model: &GltfModel) -> (Vec<MaterialDataSet>, Vec<MeshDataSet>
         for primitive in &mesh.primitives {
             // Get indices if they exist
             let indices = if let Some(accessor_data) = &primitive.vertex_indexed {
-                println!("Processing indices with accessor data: {:?}", accessor_data);
-                let indices = parse_indices(accessor_data, &model.buffers[0]);
-                println!("Loaded {} indices", indices.len());
+                let indices = parse_indices(accessor_data, &model.buffers[0])?;
                 Some(indices)
             } else {
                 None
@@ -116,18 +122,16 @@ pub fn form_models(model: &GltfModel) -> (Vec<MaterialDataSet>, Vec<MeshDataSet>
             let mut vertices: Vec<Vertex> = Vec::new();
             let mut first = true;
             for (attr_name, accessor_data) in &primitive.vertex_attributes {
-                println!(
-                    "Attribute: {} with accessor data: {:?}",
-                    attr_name, accessor_data
-                );
-
-                let data: Vec<f32> = parse_attribute_as_f32(accessor_data, &model.buffers[0]);
-                println!("Loaded {} floats for attribute {}", data.len(), attr_name);
+                let data: Vec<f32> = parse_attribute_as_f32(accessor_data, &model.buffers[0])?;
 
                 // Populate vertices
                 let vertex_count = accessor_data.count;
                 if !first && vertices.len() != vertex_count {
-                    panic!("Mismatched vertex counts across attributes");
+                    return Err(GltfError::MismatchedVertexCount { 
+                        primitive: primitive.name.clone(), 
+                        expected: vertices.len(), 
+                        actual: vertex_count 
+                    });
                 }
                 if first {
                     vertices.resize(vertex_count, Vertex::default());
@@ -148,22 +152,47 @@ pub fn form_models(model: &GltfModel) -> (Vec<MaterialDataSet>, Vec<MeshDataSet>
                             continue;
                         }
                         _ => {
-                            panic!(
-                                "Unsupported attribute name during vertex population: {}",
-                                attr_name
-                            );
+                            warn!("Ignoring unsupported attribute '{}' in primitive {}", attr_name, primitive.name);
                         }
                     }
                 }
             }
-            println!("Loaded {} vertices for primitive", vertices.len());
+            trace!("Loaded {} vertices for {}", vertices.len(), primitive.name);
+            
+            // Compute bounding box: try to use accessor min/max, otherwise compute from vertices
+            let mut bb_min = None;
+            let mut bb_max = None;
+            for (attr_name, accessor_data) in &primitive.vertex_attributes {
+                if attr_name == "POSITION" {
+                    if let (Some(min), Some(max)) = (&accessor_data.min, &accessor_data.max)
+                        && min.len() >= 3 && max.len() >= 3
+                    {
+                        bb_min = Some(Vec3::new(min[0], min[1], min[2]));
+                        bb_max = Some(Vec3::new(max[0], max[1], max[2]));
+                    }
+                    break;
+                }
+            }
+            
+            // If accessor didn't have min/max, compute from vertices
+            let (final_min, final_max) = if let (Some(min), Some(max)) = (bb_min, bb_max) {
+                (min, max)
+            } else {
+                let mut min = Vec3::new(f32::MAX, f32::MAX, f32::MAX);
+                let mut max = Vec3::new(f32::MIN, f32::MIN, f32::MIN);
+                for vertex in &vertices {
+                    let pos = Vec3::from(vertex.position);
+                    min = min.min(pos);
+                    max = max.max(pos);
+                }
+                trace!("Computed bounding box from vertices for {}", primitive.name);
+                (min, max)
+            };
+            
             meshes_data.push((indices.unwrap_or(Vec::new()), vertices));
+            bounding_boxes.push((final_min, final_max));
 
             // Store material pointer
-            println!(
-                "Associating material for primitive: {:?}",
-                primitive.material_id
-            );
             match primitive.material_id {
                 Some(mat_id) => meshes_materials_ptr.push(mat_id as usize),
                 None => {
@@ -176,7 +205,7 @@ pub fn form_models(model: &GltfModel) -> (Vec<MaterialDataSet>, Vec<MeshDataSet>
 
     // Log materials without assigned primitives
     if !meshes_null_materials_ptr.is_empty() {
-        println!("The following meshes have primitives without assigned materials");
+        warn!("{} primitives without materials, using default white material", meshes_null_materials_ptr.len());
 
         // Create a default material for primitives without assigned materials
         let default_material = ([1.0, 1.0, 1.0, 1.0], None, 0.0, 1.0, None);
@@ -184,9 +213,8 @@ pub fn form_models(model: &GltfModel) -> (Vec<MaterialDataSet>, Vec<MeshDataSet>
 
         // Assign default material to those meshes
         for &mesh_idx in &meshes_null_materials_ptr {
-            println!("  Mesh at index {} will use default material", mesh_idx);
             meshes_materials_ptr[mesh_idx] = material_datas.len() - 1;
         }
     }
-    (material_datas, meshes_data)
+    Ok((material_datas, meshes_data, bounding_boxes))
 }

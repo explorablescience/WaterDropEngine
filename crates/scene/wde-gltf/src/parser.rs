@@ -1,13 +1,15 @@
 use std::collections::HashMap;
+use wde_logger::prelude::*;
 
 use base64::{Engine, engine::general_purpose};
 use serde_json::Value;
+use crate::error::GltfError;
 use crate::model::{
     AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBuffer, GltfMesh, GltfModel, MaterialData, MeshPrimitive
 };
 
 /// Parse a glTF 2.0 JSON file from `res/` and build an in-memory `GltfModel`.
-pub fn parse_gltf(path: &str) -> GltfModel {
+pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
     // Extract filename and folder path
     let std_path = std::path::Path::new(path);
     let filename = std_path
@@ -20,79 +22,65 @@ pub fn parse_gltf(path: &str) -> GltfModel {
         .and_then(|p| p.to_str())
         .unwrap_or("")
         .to_string();
-    println!("Parsing glTF file: {}", filename);
-    println!("  Folder path: {}", folder_path);
+    trace!("Parsing glTF file '{}'.", path);
 
-    // Read the file content
-    let content =
-        std::fs::read_to_string(format!("./res/{}", path)).expect("Failed to read glTF file");
-
-    // Parse to JSON structure
-    let json: Value = serde_json::from_str(&content).expect("Failed to parse glTF JSON");
-    println!("Successfully parsed glTF JSON");
+    // Read the file content and parse JSON
+    let content = std::fs::read_to_string(format!("./res/{}", path))?;
+    let json: Value = serde_json::from_str(&content)?;
 
     // Assert asset version
     let asset = &json["asset"];
     let version = asset["version"]
         .as_str()
-        .expect("Missing 'version' field in asset");
+        .ok_or(GltfError::MissingField("asset.version".to_string()))?;
     if version != "2.0" {
-        panic!("Unsupported glTF version: {}", version);
+        return Err(GltfError::UnsupportedVersion(version.to_string()));
     }
-    println!("  glTF asset version: {}", version);
 
     // Read buffers
-    let buffers = &json["buffers"]
+    let buffers = json["buffers"]
         .as_array()
-        .expect("No buffers found in glTF JSON");
+        .ok_or(GltfError::MissingField("buffers".to_string()))?;
     if buffers.is_empty() {
-        panic!("No buffers found in glTF JSON");
+        return Err(GltfError::NoBuffers);
     } else if buffers.len() > 1 {
-        println!("Multiple buffers found in glTF JSON:");
+        return Err(GltfError::MultipleBuffers(buffers.len()));
     }
     let single_buffer = &buffers[0];
     let buffer_uri = single_buffer["uri"]
         .as_str()
-        .expect("Buffer URI is missing");
-    println!("Using buffer URI: {}", buffer_uri);
+        .ok_or(GltfError::MissingField("buffer.uri".to_string()))?;
 
     // Decode buffer data
     let buffer_data: Vec<u8> = if buffer_uri.starts_with("data:application/octet-stream;base64,") {
         let base64_data = buffer_uri
             .strip_prefix("data:application/octet-stream;base64,")
-            .expect("Failed to strip data URI prefix");
-        general_purpose::STANDARD
-            .decode(base64_data)
-            .expect("Failed to decode base64 buffer data")
+            .ok_or(GltfError::Base64Error("Invalid data URI".to_string()))?;
+        general_purpose::STANDARD.decode(base64_data)?
     } else {
         let buffer_path = std::path::Path::new(&folder_path).join(buffer_uri);
-        println!("  Resolved buffer file path: {:?}", buffer_path);
-        std::fs::read(format!("./res/{}", buffer_path.display()))
-            .expect("Failed to read buffer file from path")
+        std::fs::read(format!("./res/{}", buffer_path.display()))?
     };
 
     // Read which accessors correspond to which buffer views
-    let accessors = &json["accessors"]
+    let accessors = json["accessors"]
         .as_array()
-        .expect("No accessors found in glTF JSON");
+        .ok_or(GltfError::MissingField("accessors".to_string()))?;
 
     // Read buffer views
-    let buffer_views = &json["bufferViews"]
+    let buffer_views = json["bufferViews"]
         .as_array()
-        .expect("No bufferViews found in glTF JSON");
-    println!(
-        "Found {} bufferViews and {} accessors",
-        buffer_views.len(),
-        accessors.len()
-    );
+        .ok_or(GltfError::MissingField("bufferViews".to_string()))?;
+    trace!("Found {} bufferViews and {} accessors", buffer_views.len(), accessors.len());
+    
     let mut slices_data = Vec::new();
     for (i, buffer_view) in buffer_views.iter().enumerate() {
         // For simplicity, we only handle buffer index 0 in this example
         let buffer_index = buffer_view["buffer"]
             .as_i64()
-            .expect("Buffer index missing in bufferView");
+            .ok_or(GltfError::MissingField(format!("bufferView[{}].buffer", i)))?;
         if buffer_index != 0 {
-            panic!("Only single buffer (index 0) is supported in this loader");
+            return Err(GltfError::MultipleBuffers(buffer_index as usize + 1));
         }
 
         // Get byte offset and length for this view
@@ -100,13 +88,9 @@ pub fn parse_gltf(path: &str) -> GltfModel {
             .get("byteOffset")
             .and_then(|v| v.as_i64())
             .unwrap_or(0);
-        let byte_length = buffer_view["byteLength"]
+        let _byte_length = buffer_view["byteLength"]
             .as_i64()
-            .expect("byteLength missing in bufferView");
-        println!(
-            "  BufferView {}: buffer index {}, byte offset {}, byte length {}",
-            i, buffer_index, byte_offset, byte_length
-        );
+            .ok_or(GltfError::MissingField(format!("bufferView[{}].byteLength", i)))?;
 
         // Store buffer slice data
         let slice_data = BufferSliceData {
@@ -118,17 +102,15 @@ pub fn parse_gltf(path: &str) -> GltfModel {
         data: buffer_data,
         slices: slices_data,
     };
-    println!("Processed {} buffer slices", buffer.slices.len());
-    println!("===> Buffer slices: {:?}", buffer.slices);
 
     // Retrieve the nodes of the default scene
     let scene_index = json["scene"]
         .as_i64()
-        .expect("Missing 'scene' field in glTF JSON");
+        .ok_or(GltfError::MissingField("scene".to_string()))?;
     let nodes_list = json["scenes"][scene_index as usize]["nodes"]
         .as_array()
-        .expect("Scene index not found, or 'nodes' field is missing");
-    println!("Found {} nodes in the scene", nodes_list.len());
+        .ok_or(GltfError::MissingField("scenes.nodes".to_string()))?;
+    trace!("Processing {} nodes", nodes_list.len());
 
     // Handle each nodes
     let mut mesh_primitives: Vec<MeshPrimitive> = Vec::new();
@@ -136,49 +118,57 @@ pub fn parse_gltf(path: &str) -> GltfModel {
     let mut material_map: HashMap<i64, usize> = HashMap::new();
     for node in nodes_list {
         // Retrieve node data
-        let node = &json["nodes"][node.as_i64().unwrap() as usize];
-        println!("  Processing node: {:?}", node);
+        let node_idx = node.as_i64()
+            .ok_or(GltfError::JsonError("Invalid node index".to_string()))?;
+        let node = &json["nodes"][node_idx as usize];
 
         // Handle meshes in the node
-        let mesh_index = node["mesh"].as_i64().expect("Node does not contain a mesh");
+        let mesh_index = node["mesh"].as_i64()
+            .ok_or(GltfError::MissingField("node.mesh".to_string()))?;
         let mesh = &json["meshes"][mesh_index as usize];
-        println!("Processing mesh: {:?}", mesh);
 
         // Process primitives in the mesh (each primitive contains a description of how to draw a part of the mesh)
         let primitives = mesh["primitives"]
             .as_array()
-            .expect("Mesh does not contain primitives");
+            .ok_or(GltfError::MissingField("mesh.primitives".to_string()))?;
         let name = mesh
             .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or("unnamed_mesh");
         for (i, primitive) in primitives.iter().enumerate() {
-            // println!("Processing primitive {}: {}", i, name);
-
             // Process optional indexed vertices
             let vertex_indexed_accessor_id = primitive
                 .get("indices")
-                .map(|index_accessor| index_accessor.as_i64().expect("Invalid indices accessor"));
+                .and_then(|index_accessor| index_accessor.as_i64());
             let vertex_indexed_accessor = if let Some(index_accessor) = vertex_indexed_accessor_id {
                 let accessor = &accessors[index_accessor as usize];
-                // println!("  Indexed vertices accessor: {:?}", accessor);
 
                 // Build AccessorData
                 let buffer_view_index = accessor["bufferView"]
                     .as_i64()
-                    .expect("Accessor missing bufferView");
+                    .ok_or(GltfError::MissingField("accessor.bufferView".to_string()))?;
                 let byte_offset = accessor
                     .get("byteOffset")
                     .and_then(|v| v.as_i64())
                     .unwrap_or(0) as usize;
                 let count = accessor["count"]
                     .as_i64()
-                    .expect("Accessor missing count") as usize;
+                    .ok_or(GltfError::MissingField("accessor.count".to_string()))? as usize;
                 let component_type_value = accessor["componentType"]
                     .as_i64()
-                    .expect("Accessor missing componentType");
+                    .ok_or(GltfError::MissingField("accessor.componentType".to_string()))?;
                 let component_type = GltfAccessorComponentType::from_i64(component_type_value)
-                    .expect("Unsupported accessor component type");
+                    .ok_or(GltfError::UnsupportedComponentType(component_type_value))?;
+                let min = accessor.get("min").and_then(|v| {
+                    v.as_array().map(|arr| {
+                        arr.iter().filter_map(|val| val.as_f64().map(|f| f as f32)).collect()
+                    })
+                });
+                let max = accessor.get("max").and_then(|v| {
+                    v.as_array().map(|arr| {
+                        arr.iter().filter_map(|val| val.as_f64().map(|f| f as f32)).collect()
+                    })
+                });
                 Some(AccessorData {
                     buffer_view_index,
                     byte_offset,
@@ -188,11 +178,12 @@ pub fn parse_gltf(path: &str) -> GltfModel {
                         .as_str()
                         .expect("Accessor missing type")
                         .to_string(),
+                    min,
+                    max,
                 })
             } else {
                 None
             };
-            // println!("  Indexed vertices accessor: {:?}", vertex_indexed_accessor);
 
             // Process vertex attributes
             let attributes = &primitive["attributes"];
@@ -203,7 +194,6 @@ pub fn parse_gltf(path: &str) -> GltfModel {
                     .as_i64()
                     .expect("Invalid accessor index for attribute");
                 let accessor = &accessors[accessor_index as usize];
-                // println!("  Attribute '{}' uses accessor: {:?}", attr_name, accessor);
 
                 // Build AccessorData
                 let buffer_view_index = accessor["bufferView"]
@@ -225,12 +215,24 @@ pub fn parse_gltf(path: &str) -> GltfModel {
                     .as_str()
                     .expect("Accessor missing type")
                     .to_string();
+                let min = accessor.get("min").and_then(|v| {
+                    v.as_array().map(|arr| {
+                        arr.iter().filter_map(|val| val.as_f64().map(|f| f as f32)).collect()
+                    })
+                });
+                let max = accessor.get("max").and_then(|v| {
+                    v.as_array().map(|arr| {
+                        arr.iter().filter_map(|val| val.as_f64().map(|f| f as f32)).collect()
+                    })
+                });
                 let accessor_data = AccessorData {
                     buffer_view_index,
                     byte_offset,
                     component_type,
                     count,
                     accessor_type,
+                    min,
+                    max,
                 };
                 vertex_attributes.push((attr_name.clone(), accessor_data));
             }
@@ -239,21 +241,15 @@ pub fn parse_gltf(path: &str) -> GltfModel {
             let material_index = primitive
                 .get("material")
                 .and_then(|v| v.as_i64());
-            let material_data = if let Some(mat_index) = material_index {
-                if let Some(&mapped_index) = material_map.get(&mat_index) {
-                    Some(material_datas[mapped_index].clone())
-                } else {
-                    let mat_data = parse_material(Some(mat_index), &json["materials"][mat_index as usize], &json);
-                    if let Some(ref mat) = mat_data {
-                        material_datas.push(mat.clone());
-                        material_map.insert(mat_index, material_datas.len() - 1);
-                    }
-                    mat_data
+            if let Some(mat_index) = material_index
+                && !material_map.contains_key(&mat_index)
+            {
+                let mat_data = parse_material(Some(mat_index), &json["materials"][mat_index as usize], &json)?;
+                if let Some(mat) = mat_data {
+                    material_map.insert(mat_index, material_datas.len());
+                    material_datas.push(mat);
                 }
-            } else {
-                None
-            };
-            println!("  Material data: {:?}", material_data);
+            }
 
             // Build MeshPrimitive
             let mesh_primitive = MeshPrimitive {
@@ -262,15 +258,12 @@ pub fn parse_gltf(path: &str) -> GltfModel {
                 vertex_attributes,
                 material_id: material_index.map(|idx| idx as u32)
             };
-            println!("  Processed primitive: {:?}", mesh_primitive.clone());
             mesh_primitives.push(mesh_primitive);
         }
-        println!("Processed {} primitives in the mesh", mesh_primitives.len());
-        println!("===> All primitives: {:?}", mesh_primitives);
     }
 
     // GltfModel construction
-    GltfModel {
+    Ok(GltfModel {
         filename,
         path: folder_path,
         buffers: vec![buffer],
@@ -278,13 +271,15 @@ pub fn parse_gltf(path: &str) -> GltfModel {
             primitives: mesh_primitives,
         }],
         materials: material_datas,
-    }
+    })
 }
 
 
 /// Parse material data from the glTF JSON
-fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Value) -> Option<MaterialData> {
-    material_index?;
+fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Value) -> Result<Option<MaterialData>, GltfError> {
+    if material_index.is_none() {
+        return Ok(None);
+    }
     let pbr = &material_json["pbrMetallicRoughness"];
 
     // Extract material number properties
@@ -310,7 +305,7 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
             let texture = &json["textures"][tex_id as usize];
             let image_index = texture["source"]
                 .as_i64()
-                .expect("Texture missing source image index");
+                .ok_or(GltfError::MissingField("texture.source".to_string()))?;
             Some(image_index)
         } else {
             None
@@ -326,7 +321,7 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
             let texture = &json["textures"][tex_id as usize];
             let image_index = texture["source"]
                 .as_i64()
-                .expect("Texture missing source image index");
+                .ok_or(GltfError::MissingField("texture.source".to_string()))?;
             Some(image_index)
         } else {
             None
@@ -335,7 +330,7 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
         None
     };
 
-    Some(MaterialData {
+    Ok(Some(MaterialData {
         name: material_json
             .get("name")
             .and_then(|v| v.as_str())
@@ -353,15 +348,15 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
             let image = &json["images"][img_index as usize];
             image["uri"]
                 .as_str()
-                .expect("Image missing URI")
+                .unwrap_or("")
                 .to_string()
         }),
         metallic_roughness_texture_url: metallic_roughness_texture_index.map(|img_index| {
             let image = &json["images"][img_index as usize];
             image["uri"]
                 .as_str()
-                .expect("Image missing URI")
+                .unwrap_or("")
                 .to_string()
         })
-    })
+    }))
 }
