@@ -5,22 +5,22 @@ use wde_renderer::prelude::*;
 
 use crate::accessor::{parse_attribute_as_f32, parse_indices};
 use crate::error::GltfError;
+use crate::material::GltfMaterial;
 use crate::model::GltfModel;
 
 // A dataset representing mesh's data (positions, normals, uvs)
 type MeshDataSet = (Vec<u32>, Vec<Vertex>);
 
-// A dataset representing material's properties (base color, metallic, roughness)
-type MaterialDataSet = ([f32; 4], Option<String>, f32, f32, Option<String>);
+
 
 // Result type for form_models function
-type FormedModelsResult = Result<(Vec<MaterialDataSet>, Vec<MeshDataSet>, Vec<(Vec3, Vec3)>), GltfError>;
+type FormedModelsResult = Result<(Vec<GltfMaterial>, Vec<MeshDataSet>, Vec<(Vec3, Vec3)>), GltfError>;
 
 /// Register meshes and spawn entities from the provided datasets.
 pub fn load_models(
     world: &mut World,
     folder_path: &str,
-    raw_materials: &[MaterialDataSet],
+    raw_materials: &[GltfMaterial],
     raw_meshes: &[MeshDataSet],
     bounding_boxes: &[(Vec3, Vec3)],
 ) {
@@ -29,30 +29,7 @@ pub fn load_models(
     // Construct materials
     let materials_handles: Vec<Handle<PbrMaterialAsset>> = raw_materials
         .iter()
-        .map(
-            |(base_color, base_color_texture, _metallic, roughness, metallic_roughness_texture)| {
-                // Load base color texture if available
-                let aldebo_texture_handle = base_color_texture
-                    .as_ref()
-                    .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", folder_path, texture_url)));
-
-                // Load metallic-roughness texture if available
-                let metallic_roughness_texture_handle = metallic_roughness_texture
-                    .as_ref()
-                    .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", folder_path, texture_url)));
-
-                // Create and add the material to the asset server
-                world
-                    .resource_mut::<Assets<PbrMaterialAsset>>()
-                    .add(PbrMaterialAsset {
-                        label: "gltf_material".to_string(),
-                        albedo: (base_color[0], base_color[1], base_color[2], base_color[3]),
-                        specular: *roughness,
-                        albedo_t: aldebo_texture_handle,
-                        specular_t: metallic_roughness_texture_handle
-                    })
-            },
-        )
+        .map(|material| material.to_pbr(world))
         .collect();
 
     // Add meshes to the asset server
@@ -89,18 +66,6 @@ pub fn load_models(
 /// Transform a parsed `GltfModel` into engine `Vertex` arrays and indices.
 pub fn form_models(model: &GltfModel) -> FormedModelsResult {
     trace!("Forming models from glTF data");
-
-    // Extract materials data
-    let mut material_datas: Vec<MaterialDataSet> = Vec::new();
-    for material in &model.materials {
-        material_datas.push((
-            material.base_color_factor,
-            material.base_color_texture_url.clone(),
-            material.metallic_factor,
-            material.roughness_factor,
-            material.metallic_roughness_texture_url.clone(),
-        ));
-    }
 
     // Iterate over meshes in the model
     let mut meshes_data: Vec<MeshDataSet> = Vec::new();
@@ -204,12 +169,12 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
     }
 
     // Log materials without assigned primitives
+    let mut material_datas = model.materials.clone();
     if !meshes_null_materials_ptr.is_empty() {
         warn!("{} primitives without materials, using default white material", meshes_null_materials_ptr.len());
 
         // Create a default material for primitives without assigned materials
-        let default_material = ([1.0, 1.0, 1.0, 1.0], None, 0.0, 1.0, None);
-        material_datas.push(default_material);
+        material_datas.push(GltfMaterial::default());
 
         // Assign default material to those meshes
         for &mesh_idx in &meshes_null_materials_ptr {

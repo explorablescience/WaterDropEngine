@@ -2,6 +2,7 @@ use wde_logger::prelude::*;
 use bevy::prelude::*;
 
 mod model;
+mod material;
 mod parser;
 mod loader;
 mod accessor;

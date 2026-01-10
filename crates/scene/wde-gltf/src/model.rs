@@ -1,6 +1,8 @@
 //! Core glTF model structures used by the loader and parser.
 #![allow(dead_code)]
 
+use crate::material::GltfMaterial;
+
 /// Definitions of glTF model, buffers, meshes, accessors, and materials.
 #[derive(Debug, Clone)]
 pub struct GltfModel {
@@ -8,7 +10,7 @@ pub struct GltfModel {
     pub filename: String,
     pub buffers: Vec<GltfBuffer>,
     pub meshes: Vec<GltfMesh>,
-    pub materials: Vec<MaterialData>
+    pub materials: Vec<GltfMaterial>
 }
 
 /// Representation of a glTF buffer with its raw data and bufferView slices.
@@ -94,14 +96,4 @@ impl GltfAccessorComponentType {
             _ => unreachable!("Unsupported component type: {}", value),
         }
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct MaterialData {
-    pub name: String,
-    pub base_color_factor: [f32; 4],
-    pub base_color_texture_url: Option<String>,
-    pub metallic_factor: f32,
-    pub roughness_factor: f32,
-    pub metallic_roughness_texture_url: Option<String>,
 }

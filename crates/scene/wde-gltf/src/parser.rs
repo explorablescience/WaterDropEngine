@@ -4,8 +4,9 @@ use wde_logger::prelude::*;
 use base64::{Engine, engine::general_purpose};
 use serde_json::Value;
 use crate::error::GltfError;
+use crate::material::GltfMaterial;
 use crate::model::{
-    AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBuffer, GltfMesh, GltfModel, MaterialData, MeshPrimitive
+    AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBuffer, GltfMesh, GltfModel, MeshPrimitive
 };
 
 /// Parse a glTF 2.0 JSON file from `res/` and build an in-memory `GltfModel`.
@@ -114,7 +115,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
 
     // Handle each nodes
     let mut mesh_primitives: Vec<MeshPrimitive> = Vec::new();
-    let mut material_datas: Vec<MaterialData> = Vec::new();
+    let mut material_datas: Vec<GltfMaterial> = Vec::new();
     let mut material_map: HashMap<i64, usize> = HashMap::new();
     for node in nodes_list {
         // Retrieve node data
@@ -244,7 +245,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
             if let Some(mat_index) = material_index
                 && !material_map.contains_key(&mat_index)
             {
-                let mat_data = parse_material(Some(mat_index), &json["materials"][mat_index as usize], &json)?;
+                let mat_data = parse_material(Some(mat_index), &json["materials"][mat_index as usize], &json, &folder_path)?;
                 if let Some(mat) = mat_data {
                     material_map.insert(mat_index, material_datas.len());
                     material_datas.push(mat);
@@ -276,7 +277,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
 
 
 /// Parse material data from the glTF JSON
-fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Value) -> Result<Option<MaterialData>, GltfError> {
+fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Value, folder_path: &str) -> Result<Option<GltfMaterial>, GltfError> {
     if material_index.is_none() {
         return Ok(None);
     }
@@ -330,28 +331,29 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
         None
     };
 
-    Ok(Some(MaterialData {
+    Ok(Some(GltfMaterial {
         name: material_json
             .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or(&format!("material_{}", material_index.unwrap()))
             .to_string(),
-        base_color_factor: [
+        folder_path: folder_path.to_string(),
+        base_color: [
             base_color_factor.first().cloned().unwrap_or(1.0),
             base_color_factor.get(1).cloned().unwrap_or(1.0),
             base_color_factor.get(2).cloned().unwrap_or(1.0),
             base_color_factor.get(3).cloned().unwrap_or(1.0),
         ],
-        metallic_factor,
-        roughness_factor,
-        base_color_texture_url: base_color_texture_index.map(|img_index| {
+        metallic: metallic_factor,
+        roughness: roughness_factor,
+        base_color_url: base_color_texture_index.map(|img_index| {
             let image = &json["images"][img_index as usize];
             image["uri"]
                 .as_str()
                 .unwrap_or("")
                 .to_string()
         }),
-        metallic_roughness_texture_url: metallic_roughness_texture_index.map(|img_index| {
+        metallic_roughness_url: metallic_roughness_texture_index.map(|img_index| {
             let image = &json["images"][img_index as usize];
             image["uri"]
                 .as_str()
