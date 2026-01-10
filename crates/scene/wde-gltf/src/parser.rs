@@ -298,39 +298,36 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
         .unwrap_or(1.0) as f32;
 
     // Extract material textures
-    let base_color_texture_index = if let Some(tex_info) = pbr.get("baseColorTexture") {
-        let tex_id = tex_info["index"].as_i64();
+    const OPT_TEX_CANDIDATES: [&str; 4] = [
+        "baseColorTexture",
+        "metallicRoughnessTexture",
+        "normalTexture",
+        "occlusionTexture"
+    ];
+    let mut opt_textures_urls = HashMap::new();
+    for tex_name in OPT_TEX_CANDIDATES {
+        if let Some(tex_info) = pbr.get(tex_name) {
+            let tex_id = tex_info["index"].as_i64();
 
-        // Retrieve texture data
-        if let Some(tex_id) = tex_id {
-            let texture = &json["textures"][tex_id as usize];
-            let image_index = texture["source"]
-                .as_i64()
-                .ok_or(GltfError::MissingField("texture.source".to_string()))?;
-            Some(image_index)
-        } else {
-            None
+            // Retrieve texture data
+            if let Some(tex_id) = tex_id {
+                let texture = &json["textures"][tex_id as usize];
+                let image_index = texture["source"]
+                    .as_i64()
+                    .ok_or(GltfError::MissingField("texture.source".to_string()))?;
+
+                // Retrieve image URI
+                let image = &json["images"][image_index as usize];
+                let image_uri = image["uri"]
+                    .as_str()
+                    .ok_or(GltfError::MissingField("image.uri".to_string()))?
+                    .to_string();
+                opt_textures_urls.insert(tex_name.to_string(), image_uri);
+            }
         }
-    } else {
-        None
-    };
-    let metallic_roughness_texture_index = if let Some(tex_info) = pbr.get("metallicRoughnessTexture") {
-        let tex_id = tex_info["index"].as_i64();
+    }
 
-        // Retrieve texture data
-        if let Some(tex_id) = tex_id {
-            let texture = &json["textures"][tex_id as usize];
-            let image_index = texture["source"]
-                .as_i64()
-                .ok_or(GltfError::MissingField("texture.source".to_string()))?;
-            Some(image_index)
-        } else {
-            None
-        }
-    } else {
-        None
-    };
-
+    // Build GltfMaterial
     Ok(Some(GltfMaterial {
         name: material_json
             .get("name")
@@ -338,27 +335,12 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
             .unwrap_or(&format!("material_{}", material_index.unwrap()))
             .to_string(),
         folder_path: folder_path.to_string(),
-        base_color: [
-            base_color_factor.first().cloned().unwrap_or(1.0),
-            base_color_factor.get(1).cloned().unwrap_or(1.0),
-            base_color_factor.get(2).cloned().unwrap_or(1.0),
-            base_color_factor.get(3).cloned().unwrap_or(1.0),
-        ],
+        base_color: base_color_factor.try_into().unwrap_or([1.0, 1.0, 1.0, 1.0]),
         metallic: metallic_factor,
         roughness: roughness_factor,
-        base_color_url: base_color_texture_index.map(|img_index| {
-            let image = &json["images"][img_index as usize];
-            image["uri"]
-                .as_str()
-                .unwrap_or("")
-                .to_string()
-        }),
-        metallic_roughness_url: metallic_roughness_texture_index.map(|img_index| {
-            let image = &json["images"][img_index as usize];
-            image["uri"]
-                .as_str()
-                .unwrap_or("")
-                .to_string()
-        })
+        base_color_tex_url: opt_textures_urls.get("baseColorTexture").cloned(),
+        metallic_roughness_tex_url: opt_textures_urls.get("metallicRoughnessTexture").cloned(),
+        normal_tex_url: opt_textures_urls.get("normalTexture").cloned(),
+        occlusion_tex_url: opt_textures_urls.get("occlusionTexture").cloned(),
     }))
 }

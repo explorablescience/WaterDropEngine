@@ -34,7 +34,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmat
         PbrMaterial(pbrmaterials.add(PbrMaterialAsset {
             label: "red".to_string(),
             albedo: (1.0, 0.0, 0.0, 1.0),
-            specular: 0.5,
+            metallic: 0.5,
             ..Default::default()
         }))
     )).id();

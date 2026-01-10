@@ -65,8 +65,8 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmat
 
 fn load(world: &mut World) {
     // Load gltf scene
-    // load_gltf(world, "models/simple_mesh.gltf");
-    load_gltf(world, "models/FlightHelmet/FlightHelmet.gltf");
+    // load_gltf(world, "houses/house_demo1.gltf").unwrap();
+    load_gltf(world, "models/FlightHelmet/FlightHelmet.gltf").unwrap();
 }
 
 // fn cast_ray(

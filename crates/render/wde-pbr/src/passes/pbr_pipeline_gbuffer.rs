@@ -33,12 +33,12 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
             ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         // Get the defered textures
-        let (albedo, normal, material_tex) =
+        let (albedo, normal) =
             match (textures.get(&defered_textures.albedo),
-                   textures.get(&defered_textures.normal), textures.get(&defered_textures.material)
+                   textures.get(&defered_textures.normal)
             ) {
-                (Some(albedo), Some(normal), Some(material_tex))
-                    => (albedo, normal, material_tex),
+                (Some(albedo), Some(normal))
+                    => (albedo, normal),
                 _ => return Err(PrepareAssetError::RetryNextUpdate(asset))
             };
 
@@ -65,7 +65,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
                 ..Default::default()
             },
             render_targets: Some(vec![
-                albedo.texture.format, normal.texture.format, material_tex.texture.format
+                albedo.texture.format, normal.texture.format
             ]),
             ..Default::default()
         };

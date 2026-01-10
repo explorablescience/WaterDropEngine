@@ -18,12 +18,12 @@ impl PbrDeferredTexturesLayout {
         }
 
         // Get the textures
-        let (albedo, normal, material) = match (
+        let (albedo, normal) = match (
             textures.get(&deferred_textures.albedo),
-            textures.get(&deferred_textures.normal), textures.get(&deferred_textures.material)
+            textures.get(&deferred_textures.normal)
         ) {
-            (Some(albedo), Some(normal), Some(material)) =>
-                (albedo, normal, material),
+            (Some(albedo), Some(normal)) =>
+                (albedo, normal),
             _ => return
         };
 
@@ -33,8 +33,6 @@ impl PbrDeferredTexturesLayout {
             builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
             builder.add_texture_view(   2, ShaderStages::FRAGMENT);
             builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   4, ShaderStages::FRAGMENT);
-            builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
         });
 
         // Build the layout
@@ -46,9 +44,7 @@ impl PbrDeferredTexturesLayout {
             BindGroupBuilder::texture_view(   0, &albedo.texture),
             BindGroupBuilder::texture_sampler(1, &albedo.texture),
             BindGroupBuilder::texture_view(   2, &normal.texture),
-            BindGroupBuilder::texture_sampler(3, &normal.texture),
-            BindGroupBuilder::texture_view(   4, &material.texture),
-            BindGroupBuilder::texture_sampler(5, &material.texture)
+            BindGroupBuilder::texture_sampler(3, &normal.texture)
         ]);
 
         // Insert the resources
@@ -61,7 +57,6 @@ impl PbrDeferredTexturesLayout {
 pub(crate) struct PbrDeferredTextures {
     pub albedo: Handle<Texture>,
     pub normal: Handle<Texture>,
-    pub material: Handle<Texture>,
     pub resized: bool
 }
 impl PbrDeferredTextures {
@@ -87,18 +82,9 @@ impl PbrDeferredTextures {
             ..Default::default()
         });
 
-        // Create the material textures (metallic, roughness, reflectance)
-        let material = assets_server.add(Texture {
-            label: "pbr-material".to_string(),
-            size: (resolution.physical_width(), resolution.physical_height()),
-            format: TextureFormat::Rgba8Unorm,
-            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            ..Default::default()
-        });
-
         // Insert the resources
         commands.insert_resource(PbrDeferredTextures {
-            albedo, normal, material, resized: false
+            albedo, normal, resized: false
         });
     }
 
@@ -127,19 +113,9 @@ impl PbrDeferredTextures {
                 ..Default::default()
             });
 
-            // Recreate the material textures
-            let material = server.add(Texture {
-                label: "pbr-material".to_string(),
-                size: (event.width, event.height),
-                format: TextureFormat::Rgba8Unorm,
-                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                ..Default::default()
-            });
-
             // Insert the resources
             deferred_textures.albedo = albedo;
             deferred_textures.normal = normal;
-            deferred_textures.material = material;
             deferred_textures.resized = true;
         }
     }
@@ -154,7 +130,6 @@ impl PbrDeferredTextures {
         commands.insert_resource(PbrDeferredTextures {
             albedo: textures.albedo.clone(),
             normal: textures.normal.clone(),
-            material: textures.material.clone(),
             resized: false
         });
     }

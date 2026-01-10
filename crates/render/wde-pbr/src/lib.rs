@@ -138,7 +138,7 @@ fn init_dummy_element(mut commands: Commands, mut meshes: ResMut<Assets<MeshAsse
         PbrMaterial(pbr_materials.add(PbrMaterialAsset {
             label: "dummy".to_string(),
             albedo: (0.0, 0.0, 0.0, 0.0),
-            specular: 0.0,
+            metallic: 0.0,
             ..Default::default()
         }))
     ));

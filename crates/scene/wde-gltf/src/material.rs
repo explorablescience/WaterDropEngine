@@ -9,10 +9,12 @@ pub struct GltfMaterial {
     pub name: String,
     pub folder_path: String,
     pub base_color: [f32; 4],
-    pub base_color_url: Option<String>,
+    pub base_color_tex_url: Option<String>,
     pub metallic: f32,
     pub roughness: f32,
-    pub metallic_roughness_url: Option<String>,
+    pub metallic_roughness_tex_url: Option<String>,
+    pub normal_tex_url: Option<String>,
+    pub occlusion_tex_url: Option<String>,
 }
 
 impl GltfMaterial {
@@ -26,12 +28,22 @@ impl GltfMaterial {
     /// * `Handle<PbrMaterialAsset>` - Handle to the created PbrMaterialAsset.
     pub fn to_pbr(&self, world: &mut World) -> Handle<PbrMaterialAsset> {
         // Load base color texture if available
-        let aldebo_texture_handle = self.base_color_url
+        let aldebo_texture_handle = self.base_color_tex_url
             .as_ref()
             .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", self.folder_path, texture_url)));
 
         // Load metallic-roughness texture if available
-        let metallic_roughness_texture_handle = self.metallic_roughness_url
+        let metallic_roughness_texture_handle = self.metallic_roughness_tex_url
+            .as_ref()
+            .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", self.folder_path, texture_url)));
+
+        // Load normal texture if available
+        let normal_texture_handle = self.normal_tex_url
+            .as_ref()
+            .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", self.folder_path, texture_url)));
+
+        // Load occlusion texture if available
+        let occlusion_texture_handle = self.occlusion_tex_url
             .as_ref()
             .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", self.folder_path, texture_url)));
 
@@ -39,11 +51,17 @@ impl GltfMaterial {
         world
             .resource_mut::<Assets<PbrMaterialAsset>>()
             .add(PbrMaterialAsset {
-                label: "gltf_material".to_string(),
+                label: format!("gltf_material_{}", self.name),
+
                 albedo: (self.base_color[0], self.base_color[1], self.base_color[2], self.base_color[3]),
-                specular: self.roughness,
                 albedo_t: aldebo_texture_handle,
-                specular_t: metallic_roughness_texture_handle
+
+                metallic: self.metallic,
+                roughness: self.roughness,
+                metallic_roughness_t: metallic_roughness_texture_handle,
+
+                normal_t: normal_texture_handle,
+                occlusion_t: occlusion_texture_handle,
             })
     }
 }
@@ -55,10 +73,14 @@ impl Default for GltfMaterial {
             name: "default_material".to_string(),
             folder_path: "".to_string(),
             base_color: [1.0, 1.0, 1.0, 1.0],
-            base_color_url: None,
+            base_color_tex_url: None,
+
             metallic: 0.0,
             roughness: 1.0,
-            metallic_roughness_url: None,
+            metallic_roughness_tex_url: None,
+            
+            normal_tex_url: None,
+            occlusion_tex_url: None,
         }
     }
 }

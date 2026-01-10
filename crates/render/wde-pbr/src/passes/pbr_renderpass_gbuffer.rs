@@ -199,12 +199,12 @@ impl RenderPass for PbrGBufferRenderPass {
             Some(textures) => textures,
             None => return
         };
-        let (albedo, normal, material_tex) = match (
+        let (albedo, normal) = match (
             textures.get(&deferred_textures.albedo),
-            textures.get(&deferred_textures.normal), textures.get(&deferred_textures.material)
+            textures.get(&deferred_textures.normal)
         ) {
-            (Some(albedo), Some(normal), Some(material_tex))
-                => (albedo, normal, material_tex),
+            (Some(albedo), Some(normal))
+                => (albedo, normal),
             _ => return
         };
 
@@ -222,10 +222,6 @@ impl RenderPass for PbrGBufferRenderPass {
                 });
                 builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&normal.texture.view),
-                    ..Default::default()
-                });
-                builder.add_color_attachment(RenderPassColorAttachment {
-                    texture: Some(&material_tex.texture.view),
                     ..Default::default()
                 });
             });
