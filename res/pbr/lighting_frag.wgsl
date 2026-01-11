@@ -55,6 +55,69 @@ fn world_from_screen_coord_depth(uv: vec2<f32>, depth: f32) -> vec3<f32> {
 
 
 
+// ======= LIGHTING HELPERS =======
+struct LightData {
+    light_dir: vec3<f32>,
+    radiance:  vec3<f32>
+};
+
+/// Get light direction and radiance based on light type and fragment position
+fn get_light_data(light: Light, position: vec3<f32>) -> LightData {
+    // Initialize variables
+    var light_dir: vec3<f32>;
+    var radiance: vec3<f32>;
+    var attenuation: f32 = 1.0;
+
+    // Get the type of light (0 = directional, 1 = point, 2 = spot)
+    let light_type = i32(light.direction_type.w);
+        
+    // Determine light direction and radiance
+    if light_type == 0 { // Directional light
+        light_dir = normalize(-light.direction_type.xyz);
+        radiance = light.diffuse_att_linear.rgb;
+    }
+    else if light_type == 1 { // Point light
+        let light_to_frag = light.position_number.xyz - position;
+        let distance = length(light_to_frag);
+        light_dir = normalize(light_to_frag);
+        
+        // Attenuation for point light
+        attenuation = 1.0 / (light.ambient_att_cst.w 
+            + light.diffuse_att_linear.w * distance 
+            + light.specular_att_quadr.w * distance * distance);
+        
+        radiance = light.diffuse_att_linear.rgb * attenuation;
+    }
+    else if light_type == 2 { // Spot light
+        let light_to_frag = light.position_number.xyz - position;
+        let distance = length(light_to_frag);
+        light_dir = normalize(light_to_frag);
+        
+        // Attenuation for spot light
+        attenuation = 1.0 / (light.ambient_att_cst.w 
+            + light.diffuse_att_linear.w * distance 
+            + light.specular_att_quadr.w * distance * distance);
+        
+        // Spot light cone intensity
+        let theta = dot(light_dir, normalize(-light.direction_type.xyz));
+        let inner_cutoff = light.ambient_att_cst.w; // cos of inner angle
+        let outer_cutoff = light.diffuse_att_linear.w; // cos of outer angle
+        let epsilon = inner_cutoff - outer_cutoff;
+        let intensity = clamp((theta - outer_cutoff) / epsilon, 0.0, 1.0);
+        
+        radiance = light.diffuse_att_linear.rgb * attenuation * intensity;
+    }
+    else {
+        // Unknown light type
+        light_dir = vec3<f32>(0.0, 0.0, 0.0);
+        radiance = vec3<f32>(1.0, 0.0, 1.0); // Magenta to indicate error
+    }
+
+    return LightData(light_dir, radiance);
+}
+
+
+
 // ========= BRDF FUNCTIONS =========
 const PI: f32 = 3.14159265359;
 
@@ -94,8 +157,8 @@ fn fresnel_schlick(cos_theta: f32, f0: vec3<f32>) -> vec3<f32> {
 }
 
 struct SpecularFresnel {
-    specular: vec4<f32>,
-    fresnel:  vec4<f32>
+    specular: vec3<f32>,
+    fresnel:  vec3<f32>
 };
 
 /// Cook-Torrance specular BRDF calculation.
@@ -117,9 +180,7 @@ fn specular_cook_torrance(n: vec3<f32>, v: vec3<f32>, l: vec3<f32>, roughness: f
     let specular = d * f * g / (4.0 * n_dot_v * n_dot_l + 0.0001);
     
     // Return both specular color and fresnel term
-    let sv4 = vec4<f32>(specular, 0.0);
-    let fv4 = vec4<f32>(f, 0.0);
-    return SpecularFresnel(sv4, fv4);
+    return SpecularFresnel(specular, f);
 }
 
 /// Complete BRDF calculation for a given light source.
@@ -133,13 +194,14 @@ fn brdf_for_light(n: vec3<f32>, v: vec3<f32>, l: vec3<f32>, albedo: vec3<f32>, m
     let f = specular_fresnel.fresnel;
         
     // Compute refracted and reflected light ratios
-    let ks = f.xyz; // Fresnel represents kS as it describes the amount of reflected light
+    let ks = f; // Fresnel represents kS as it describes the amount of reflected light
     let metallic_factor = mix(1.0, 0.0, metallic); // Invert metallic for kd calculation (Metallic surfaces don't have diffuse)
     let kd = (vec3<f32>(1.0) - ks) * metallic_factor; // kd = 1 - ks (energy conservation)
     
     // Return the brdf result
-    return (kd * albedo / PI) + specular.xyz;
+    return kd * albedo / PI + specular;
 }
+
 
 
 // ======== MAIN FRAGMENT SHADER ========
@@ -177,61 +239,20 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // Compute lighting for each light
     for (var i = 0; i < lights_count; i = i + 1) {
+        // Get light direction and radiance at fragment position
         let light = in_lights[i];
-        let light_type = i32(light.direction_type.w);
+        let light_data = get_light_data(light, position);
+        let light_dir = light_data.light_dir;
+        let radiance = light_data.radiance;
         
-        // Determine light direction and radiance
-        var light_dir: vec3<f32>;
-        var radiance: vec3<f32>;
-        var attenuation = 1.0;
-        if light_type == 0 { // Directional light
-            light_dir = normalize(-light.direction_type.xyz);
-            radiance = light.diffuse_att_linear.rgb;
-        }
-        else if light_type == 1 { // Point light
-            let light_to_frag = light.position_number.xyz - position;
-            let distance = length(light_to_frag);
-            light_dir = normalize(light_to_frag);
-            
-            // Attenuation for point light
-            attenuation = 1.0 / (light.ambient_att_cst.w 
-                + light.diffuse_att_linear.w * distance 
-                + light.specular_att_quadr.w * distance * distance);
-            
-            radiance = light.diffuse_att_linear.rgb * attenuation;
-        }
-        else if light_type == 2 { // Spot light
-            let light_to_frag = light.position_number.xyz - position;
-            let distance = length(light_to_frag);
-            light_dir = normalize(light_to_frag);
-            
-            // Attenuation for spot light
-            attenuation = 1.0 / (light.ambient_att_cst.w 
-                + light.diffuse_att_linear.w * distance 
-                + light.specular_att_quadr.w * distance * distance);
-            
-            // Spot light cone intensity
-            let theta = dot(light_dir, normalize(-light.direction_type.xyz));
-            let inner_cutoff = light.ambient_att_cst.w; // cos of inner angle
-            let outer_cutoff = light.diffuse_att_linear.w; // cos of outer angle
-            let epsilon = inner_cutoff - outer_cutoff;
-            let intensity = clamp((theta - outer_cutoff) / epsilon, 0.0, 1.0);
-            
-            radiance = light.diffuse_att_linear.rgb * attenuation * intensity;
-        }
-        else {
-            // Unknown light type
-            return vec4<f32>(1.0, 0.0, 1.0, 1.0);
-        }
-        
-        // Calculate BRDF for this light
+        // Calculate BRDF for this light and accumulate
         let n_dot_l = max(dot(normal, light_dir), 0.0);
         let brdf = brdf_for_light(normal, view_dir, light_dir, albedo, metallic, roughness, f0);
         lo += brdf * radiance * n_dot_l;
     }
 
     // HDR tone mapping (simple Reinhard)
-    let hdr_lo = lo / (lo + vec3<f32>(1.0)); // No tone mapping
+    let hdr_lo = lo / (lo + vec3<f32>(1.0));
 
     // Return the final color
     return vec4<f32>(hdr_lo, 1.0);
