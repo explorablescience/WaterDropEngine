@@ -1,6 +1,8 @@
 //! Core glTF model structures used by the loader and parser.
 #![allow(dead_code)]
 
+use bevy::prelude::*;
+
 use crate::material::GltfMaterial;
 
 /// Definitions of glTF model, buffers, meshes, accessors, and materials.

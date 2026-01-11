@@ -1,9 +1,7 @@
-use wde_gltf::load_gltf;
+use wde_gltf::prelude::*;
 use bevy::prelude::*;
 use wde_camera::prelude::*;
 use wde_pbr::prelude::*;
-use wde_renderer::prelude::*;
-use wde_gizmos::prelude::*;
 
 pub struct ScenePlugin;
 impl Plugin for ScenePlugin {
@@ -17,7 +15,7 @@ impl Plugin for ScenePlugin {
 // #[derive(Resource)]
 // struct GroundEntity(Entity);
 
-fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmaterials: ResMut<Assets<PbrMaterialAsset>>, mut gizmomaterials: ResMut<Assets<GizmoMaterialAsset>>, mut meshes: ResMut<Assets<MeshAsset>>) {
+fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Main camera
     commands.spawn((
         Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -63,10 +61,15 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmat
     });
 }
 
-fn load(world: &mut World) {
-    // Load gltf scene
-    // load_gltf(world, "houses/house_demo1.gltf").unwrap();
-    load_gltf(world, "models/FlightHelmet/FlightHelmet.gltf").unwrap();
+
+fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
+    GltfLoader::load("models/FlightHelmet/FlightHelmet.gltf", &asset_server)
+        .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 5.0)))
+        .unwrap();
+
+    GltfLoader::load("houses/house_demo1.gltf", &asset_server)
+        .map(|asset| asset.spawn(&mut commands, Transform::from_xyz(10.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.3)))
+        .unwrap();
 }
 
 // fn cast_ray(

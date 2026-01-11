@@ -22,34 +22,33 @@ impl GltfMaterial {
     /// 
     /// # Arguments
     /// 
-    /// * `world` - Mutable reference to the Bevy world to access resources.
+    /// * `asset_server` - Reference to the Bevy asset server for loading textures.
     /// 
     /// # Returns
     /// * `Handle<PbrMaterialAsset>` - Handle to the created PbrMaterialAsset.
-    pub fn to_pbr(&self, world: &mut World) -> Handle<PbrMaterialAsset> {
+    pub fn to_pbr(&self, asset_server: &AssetServer) -> Handle<PbrMaterialAsset> {
         // Load base color texture if available
         let aldebo_texture_handle = self.base_color_tex_url
             .as_ref()
-            .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", self.folder_path, texture_url)));
+            .map(|texture_url| asset_server.load(format!("{}/{}", self.folder_path, texture_url)));
 
         // Load metallic-roughness texture if available
         let metallic_roughness_texture_handle = self.metallic_roughness_tex_url
             .as_ref()
-            .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", self.folder_path, texture_url)));
+            .map(|texture_url| asset_server.load(format!("{}/{}", self.folder_path, texture_url)));
 
         // Load normal texture if available
         let normal_texture_handle = self.normal_tex_url
             .as_ref()
-            .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", self.folder_path, texture_url)));
+            .map(|texture_url| asset_server.load(format!("{}/{}", self.folder_path, texture_url)));
 
         // Load occlusion texture if available
         let occlusion_texture_handle = self.occlusion_tex_url
             .as_ref()
-            .map(|texture_url| world.resource::<AssetServer>().load(format!("{}/{}", self.folder_path, texture_url)));
+            .map(|texture_url| asset_server.load(format!("{}/{}", self.folder_path, texture_url)));
 
         // Create and add the material to the asset server
-        world
-            .resource_mut::<Assets<PbrMaterialAsset>>()
+        asset_server
             .add(PbrMaterialAsset {
                 label: format!("gltf_material_{}", self.name),
 
