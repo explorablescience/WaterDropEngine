@@ -1,6 +1,6 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_camera::features::CameraFeatureRender;
-use wde_renderer::prelude::*;
+use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
 
 use crate::{assets::PbrMaterialAsset, passes::pbr_ssbo::PbrSsbo};
 
@@ -33,12 +33,13 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
             ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         // Get the defered textures
-        let (albedo, normal) =
-            match (textures.get(&defered_textures.albedo),
+        let (depth, albedo, normal) =
+            match (textures.get(&defered_textures.depth),
+                   textures.get(&defered_textures.albedo),
                    textures.get(&defered_textures.normal)
             ) {
-                (Some(albedo), Some(normal))
-                    => (albedo, normal),
+                (Some(depth), Some(albedo), Some(normal))
+                    => (depth, albedo, normal),
                 _ => return Err(PrepareAssetError::RetryNextUpdate(asset))
             };
 
@@ -65,8 +66,9 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
                 ..Default::default()
             },
             render_targets: Some(vec![
-                albedo.texture.format, normal.texture.format
+                depth.texture.format, albedo.texture.format, normal.texture.format
             ]),
+            sample_count: MSAA_SAMPLE_COUNT,
             ..Default::default()
         };
         let cached_index = pipeline_manager.create_render_pipeline(pipeline_desc);

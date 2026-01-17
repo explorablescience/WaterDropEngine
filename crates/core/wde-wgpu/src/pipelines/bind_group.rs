@@ -108,15 +108,16 @@ impl BindGroupLayoutBuilder {
     /// 
     /// * `binding` - The binding index of the texture.
     /// * `visibility` - The shader stages that can access the texture.
-    pub fn add_texture_view(&mut self, binding: u32, visibility: ShaderStages) -> &mut Self {
+    /// * `multisampled` - Whether the texture is multisampled.
+    pub fn add_texture_view(&mut self, binding: u32, visibility: ShaderStages, multisampled: bool) -> &mut Self {
         // Create bind group layout
         self.layout_entries.push(wgpu::BindGroupLayoutEntry {
             binding,
             visibility,
             ty: wgpu::BindingType::Texture {
-                multisampled: false,
+                multisampled,
                 view_dimension: wgpu::TextureViewDimension::D2,
-                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                sample_type: wgpu::TextureSampleType::Float { filterable: !multisampled },
             },
             count: None
         });
@@ -130,13 +131,14 @@ impl BindGroupLayoutBuilder {
     /// 
     /// * `binding` - The binding index of the texture.
     /// * `visibility` - The shader stages that can access the texture.
-    pub fn add_depth_texture_view(&mut self, binding: u32, visibility: ShaderStages) -> &mut Self {
+    /// * `multisampled` - Whether the texture is multisampled.
+    pub fn add_depth_texture_view(&mut self, binding: u32, visibility: ShaderStages, multisampled: bool) -> &mut Self {
         // Create bind group layout
         self.layout_entries.push(wgpu::BindGroupLayoutEntry {
             binding,
             visibility,
             ty: wgpu::BindingType::Texture {
-                multisampled: false,
+                multisampled,
                 view_dimension: wgpu::TextureViewDimension::D2,
                 sample_type: wgpu::TextureSampleType::Depth,
             },

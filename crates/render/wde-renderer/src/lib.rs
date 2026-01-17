@@ -265,6 +265,9 @@ use assets::AssetsPlugin;
 use wde_logger::prelude::*;
 use bevy::prelude::*;
 
+/** Multisample anti-aliasing sample count used throughout the renderer. */
+pub const MSAA_SAMPLE_COUNT: u32 = 4;
+
 pub struct RenderPlugin;
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {

@@ -240,6 +240,7 @@ fn load_render_pipelines(
         if let Some(ref render_targets) = descriptor.render_targets {
             pipeline.set_render_targets(render_targets.clone());
         }
+        pipeline.set_sample_count(descriptor.sample_count);
         for push_constant in descriptor.push_constants.iter() {
             pipeline.add_push_constant(push_constant.stages, push_constant.offset, push_constant.size);
         }

@@ -54,6 +54,7 @@ struct RenderPipelineConfig {
     vertex_shader: String,
     fragment_shader: String,
     cull_mode: Option<Face>,
+    sample_count: u32,
 }
 
 
@@ -118,6 +119,7 @@ impl RenderPipeline {
                 vertex_shader: String::new(),
                 fragment_shader: String::new(),
                 cull_mode: Some(Face::Back),
+                sample_count: 1,
             },
         }
     }
@@ -186,6 +188,16 @@ impl RenderPipeline {
     /// * `targets` - The render targets.
     pub fn set_render_targets(&mut self, targets: Vec<TextureFormat>) -> &mut Self {
         self.config.render_targets = targets;
+        self
+    }
+
+    /// Set the sample count for multisampling.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `count` - The sample count.
+    pub fn set_sample_count(&mut self, count: u32) -> &mut Self {
+        self.config.sample_count = count;
         self
     }
 
@@ -336,7 +348,11 @@ impl RenderPipeline {
                 stencil: wgpu::StencilState::default(),
                 bias: wgpu::DepthBiasState::default(),
             }) } else { None },
-            multisample: wgpu::MultisampleState::default(),
+            multisample: wgpu::MultisampleState {
+                count: d.sample_count,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
             multiview: Default::default(),
         });
 

@@ -11,15 +11,14 @@ struct Camera {
 }
 @group(0) @binding(0) var<uniform> in_camera: Camera;
 
-// Depth texture and sampler
-@group(1) @binding(0) var in_depth_texture: texture_depth_2d;
-@group(1) @binding(1) var in_depth_sampler: sampler;
-
 // G-Buffer textures
-@group(2) @binding(0) var in_albedo_metallic_t:  texture_2d<f32>;
-@group(2) @binding(1) var in_albedo_metallic_s:  sampler;
-@group(2) @binding(2) var in_normal_roughness_t: texture_2d<f32>;
-@group(2) @binding(3) var in_normal_roughness_s: sampler;
+// Depth texture: NDC space (z/w), range [0, 1], stored in R32Float
+@group(1) @binding(0) var in_depth_texture: texture_2d<f32>;
+@group(1) @binding(1) var in_depth_sampler: sampler;
+@group(1) @binding(2) var in_albedo_metallic_t:  texture_2d<f32>;
+@group(1) @binding(3) var in_albedo_metallic_s:  sampler;
+@group(1) @binding(4) var in_normal_roughness_t: texture_2d<f32>;
+@group(1) @binding(5) var in_normal_roughness_s: sampler;
 
 // Light structure and storage buffer
 struct Light {
@@ -36,7 +35,7 @@ struct Light {
     /// Inner and outer cut-off angles in radians if the light is a spot light.
     cut_off: vec4<f32>
 };
-@group(3) @binding(0) var<storage> in_lights: array<Light>;
+@group(2) @binding(0) var<storage> in_lights: array<Light>;
 
 
 
@@ -207,9 +206,9 @@ fn brdf_for_light(n: vec3<f32>, v: vec3<f32>, l: vec3<f32>, albedo: vec3<f32>, m
 // ======== MAIN FRAGMENT SHADER ========
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
-    // Read world position of the object in world space from depth buffer
-    let depth = textureSample(in_depth_texture, in_depth_sampler, in.tex_coord);
-    if depth == 1.0 { // Discard background
+    // Read world position of the object in world space from depth buffer (interval [0, 1])
+    let depth = textureSample(in_depth_texture, in_depth_sampler, in.tex_coord).r;
+    if depth < 0.01 { // Discard background
         discard;
     }
     let position = world_from_screen_coord_depth(in.tex_coord, depth);

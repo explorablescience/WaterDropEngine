@@ -199,12 +199,16 @@ impl RenderPass for PbrGBufferRenderPass {
             Some(textures) => textures,
             None => return
         };
-        let (albedo, normal) = match (
+        let (depth, depth_resolved, albedo, albedo_resolved, normal, normal_resolved) = match (
+            textures.get(&deferred_textures.depth),
+            textures.get(&deferred_textures.depth_resolved),
             textures.get(&deferred_textures.albedo),
-            textures.get(&deferred_textures.normal)
+            textures.get(&deferred_textures.albedo_resolved),
+            textures.get(&deferred_textures.normal),
+            textures.get(&deferred_textures.normal_resolved)
         ) {
-            (Some(albedo), Some(normal))
-                => (albedo, normal),
+            (Some(depth), Some(depth_resolved), Some(albedo), Some(albedo_resolved), Some(normal), Some(normal_resolved))
+                => (depth, depth_resolved, albedo, albedo_resolved, normal, normal_resolved),
             _ => return
         };
 
@@ -217,11 +221,18 @@ impl RenderPass for PbrGBufferRenderPass {
                     ..Default::default()
                 });
                 builder.add_color_attachment(RenderPassColorAttachment {
+                    texture: Some(&depth.texture.view),
+                    resolve_target: Some(&depth_resolved.texture.view),
+                    ..Default::default()
+                });
+                builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&albedo.texture.view),
+                    resolve_target: Some(&albedo_resolved.texture.view),
                     ..Default::default()
                 });
                 builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&normal.texture.view),
+                    resolve_target: Some(&normal_resolved.texture.view),
                     ..Default::default()
                 });
             });

@@ -82,14 +82,12 @@ impl RenderPass for PbrLightingRenderPass {
             if let (
                 CachedPipelineStatus::OkRender(pipeline),
                 Some(camera_bind_group),
-                Some(depth_bind_group),
-                Some(deferred_bind_group),
+                Some(deferred_bind_group_resolved),
                 Some(lights_bind_group)
             ) = (
                 pipeline_manager.get_pipeline(lighting_pipeline.cached_pipeline_index),
                 &world.get_resource::<CameraFeatureRender>().unwrap().bind_group,
-                &world.get_resource::<DepthTextureLayout>().unwrap().bind_group,
-                &world.get_resource::<PbrDeferredTexturesLayout>().unwrap().deferred_bind_group,
+                &world.get_resource::<PbrDeferredTexturesLayout>().unwrap().deferred_bind_group_resolved,
                 &world.get_resource::<LightsFeatureBuffer>().unwrap().bind_group
             ) {
                 // Set the pipeline
@@ -100,9 +98,8 @@ impl RenderPass for PbrLightingRenderPass {
 
                     // Set bind groups
                     render_pass.set_bind_group(0, camera_bind_group);
-                    render_pass.set_bind_group(1, depth_bind_group);
-                    render_pass.set_bind_group(2, deferred_bind_group);
-                    render_pass.set_bind_group(3, lights_bind_group);
+                    render_pass.set_bind_group(1, deferred_bind_group_resolved);
+                    render_pass.set_bind_group(2, lights_bind_group);
                     
                     // Draw the mesh
                     match render_pass.draw_indexed(0..deferred_mesh.index_count, 0..1) {

@@ -23,7 +23,7 @@ impl RenderAsset for GpuDisplayTexturePipeline {
         // Create the layout
         let layout = BindGroupLayout::new("display-texture", |builder| {
             // Set the texture view and sampler
-            builder.add_texture_view(0, ShaderStages::FRAGMENT);
+            builder.add_texture_view(0, ShaderStages::FRAGMENT, false);
             builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
         });
 

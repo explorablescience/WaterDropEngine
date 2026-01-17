@@ -5,8 +5,9 @@ struct VertexOutput {
 };
 
 struct FragOutput {
-    @location(0) albedo_metallic:  vec4<f32>, // (r, g, b) = albedo color - a = metallic
-    @location(1) normal_roughness: vec4<f32>, // (r, g, b) = normal - a = roughness
+    @location(0) depth: f32,                  // Depth value (NDC, range [0, 1], 1.0 = far plane)
+    @location(1) albedo_metallic:  vec4<f32>, // (r, g, b) = albedo color - a = metallic
+    @location(2) normal_roughness: vec4<f32>, // (r, g, b) = normal - a = roughness
 };
 
 struct PbrMaterialUniform {
@@ -29,6 +30,9 @@ struct PbrMaterialUniform {
 @fragment
 fn main(in: VertexOutput) -> FragOutput {
     var out: FragOutput;
+
+    // Depth (NDC space: z/w, range [0, 1])
+    out.depth = in.clip_position.z / in.clip_position.w;
     
     // Albedo and Metallic
     var albedo_color: vec3<f32> = in_pbr_material.albedo.rgb;

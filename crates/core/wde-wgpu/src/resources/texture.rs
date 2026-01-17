@@ -66,6 +66,7 @@ pub struct Texture {
     pub view: TextureView,
     pub sampler: wgpu::Sampler,
     pub size: (u32, u32),
+    pub sample_count: u32
 }
 
 impl std::fmt::Debug for Texture {
@@ -94,7 +95,8 @@ impl Texture {
     /// * `size` - Size of the texture (width, height).
     /// * `format` - Format of the texture (e.g. Rgba8Unorm, Depth32Float, etc.).
     /// * `usage` - Usage of the texture (e.g. RENDER_ATTACHMENT, COPY_SRC, COPY_DST, etc.).
-    pub fn new(instance: &RenderInstanceData<'_>, label: &str, size: (u32, u32), format: TextureFormat, usage: TextureUsages) -> Self {
+    /// * `sample_count` - Sample count of the texture (e.g. 1 for no MSAA, 4 for 4x MSAA, etc.).
+    pub fn new(instance: &RenderInstanceData<'_>, label: &str, size: (u32, u32), format: TextureFormat, usage: TextureUsages, sample_count: u32) -> Self {
         event!(Level::DEBUG, "Creating wgpu texture {}.", label);
         
         // Create texture
@@ -106,7 +108,7 @@ impl Texture {
                 depth_or_array_layers: 1,
             },
             mip_level_count: 1,
-            sample_count: 1,
+            sample_count,
             dimension: wgpu::TextureDimension::D2,
             format,
             usage: usage | wgpu::TextureUsages::COPY_DST,
@@ -130,7 +132,7 @@ impl Texture {
             base_mip_level: 0,
             base_array_layer: 0,
             mip_level_count: None,
-            array_layer_count: None
+            array_layer_count: None,
         });
 
         // Create sampler
@@ -157,6 +159,7 @@ impl Texture {
             view,
             sampler,
             size,
+            sample_count
         }
     }
 

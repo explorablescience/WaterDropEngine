@@ -7,7 +7,7 @@
 use bevy::prelude::*;
 use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{Texture as WTexture, TextureUsages}};
 
-use crate::core::RenderInstance;
+use crate::{MSAA_SAMPLE_COUNT, core::RenderInstance};
 
 use crate::{assets::{GpuTexture, RenderAssets, Texture}, core::{extract_macros::ExtractWorld, window::SurfaceResized}};
 
@@ -49,7 +49,7 @@ impl DepthTextureLayout {
 
         // Create the deferred layout
         let layout = BindGroupLayout::new("depth-texture", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_depth_texture_view(   0, ShaderStages::FRAGMENT);
+            builder.add_depth_texture_view(   0, ShaderStages::FRAGMENT, depth_texture.texture.sample_count > 1);
             builder.add_depth_texture_sampler(1, ShaderStages::FRAGMENT);
         });
 
@@ -94,6 +94,7 @@ impl DepthTexture {
             size: (resolution.physical_width(), resolution.physical_height()),
             format: WTexture::DEPTH_FORMAT,
             usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+            sample_count: MSAA_SAMPLE_COUNT,
             ..Default::default()
         });
         commands.insert_resource(DepthTexture { texture, resized: false });
@@ -115,6 +116,7 @@ impl DepthTexture {
                 size: (event.width, event.height),
                 format: WTexture::DEPTH_FORMAT,
                 usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+                sample_count: MSAA_SAMPLE_COUNT,
                 ..Default::default()
             });
 

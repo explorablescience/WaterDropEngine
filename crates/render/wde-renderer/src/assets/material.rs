@@ -234,7 +234,7 @@ impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
                     }
                     MaterialBuilderType::TextureView => {
                         let view = &material_builder.texture_views[*material_index as usize];
-                        builder.add_texture_view(view.binding, view.visibility);
+                        builder.add_texture_view(view.binding, view.visibility, false);
                     }
                     MaterialBuilderType::TextureSampler => {
                         let sampler = &material_builder.texture_samplers[*material_index as usize];

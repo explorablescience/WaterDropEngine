@@ -20,25 +20,19 @@ impl RenderAsset for GpuPbrLightingRenderPipeline {
     type SourceAsset = PbrLightingRenderPipelineAsset;
     type Param = (
         SRes<AssetServer>, SResMut<PipelineManager>, SRes<PbrDeferredTexturesLayout>,
-        SRes<DepthTextureLayout>, SRes<CameraFeatureRender>, SRes<LightsFeatureBuffer>
+        SRes<CameraFeatureRender>, SRes<LightsFeatureBuffer>
     );
 
     fn prepare_asset(
             asset: Self::SourceAsset,
             (
                 assets_server, pipeline_manager,
-                deferred_layout, depth_texture_layout,
+                deferred_layout,
                 camera_feature, lights_buffer
             ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        // Get the depth layout
-        let depth_layout = match &depth_texture_layout.layout {
-            Some(layout) => layout,
-            None => return Err(PrepareAssetError::RetryNextUpdate(asset))
-        };
-
         // Get the deferred layout
-        let deferred_layout = match &deferred_layout.deferred_layout {
+        let deferred_layout_resolved = match &deferred_layout.deferred_layout_resolved {
             Some(layout) => layout,
             None => return Err(PrepareAssetError::RetryNextUpdate(asset))
         };
@@ -54,7 +48,7 @@ impl RenderAsset for GpuPbrLightingRenderPipeline {
             label: "lighting-pbr",
             vert: Some(assets_server.load("pbr/lighting_vert.wgsl")),
             frag: Some(assets_server.load("pbr/lighting_frag.wgsl")),
-            bind_group_layouts: vec![camera_feature.layout.clone(), depth_layout.clone(), deferred_layout.clone(), lights_layout.clone()],
+            bind_group_layouts: vec![camera_feature.layout.clone(), deferred_layout_resolved.clone(), lights_layout.clone()],
             depth: DepthStencilDescriptor {
                 enabled: false,
                 ..Default::default()

@@ -49,6 +49,9 @@ pub struct RenderPassColorAttachment<'pass> {
     pub load: LoadOp<Color>,
     /// The color store operation. By default, store the texture.
     pub store: StoreOp,
+    /// An optional resolve target for multi-sampled textures.
+    /// This will resolve the multi-sampled texture into the single-sampled target at the end of the render pass, when using multi-sampling.
+    pub resolve_target: Option<&'pass TextureView>,
 }
 impl Default for RenderPassColorAttachment<'_> {
     fn default() -> Self {
@@ -57,6 +60,7 @@ impl Default for RenderPassColorAttachment<'_> {
             texture: None,
             load: wgpu::LoadOp::Clear(Color { r: color_srgb, g: color_srgb, b: color_srgb, a: 1.0 }),
             store: wgpu::StoreOp::Store,
+            resolve_target: None,
         }
     }
 }
@@ -194,7 +198,7 @@ impl CommandBuffer {
         let color_attachments = builder.color_attachments.iter().map(|attachment| {
             attachment.texture.map(|texture| wgpu::RenderPassColorAttachment {
                 view: texture,
-                resolve_target: None,
+                resolve_target: attachment.resolve_target,
                 ops: wgpu::Operations {
                     load: attachment.load,
                     store: attachment.store
