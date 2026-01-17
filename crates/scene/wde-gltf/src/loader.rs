@@ -9,8 +9,8 @@ use crate::error::GltfError;
 use crate::material::GltfMaterial;
 use crate::model::{GltfModel};
 
-/// A dataset representing mesh's data (positions, normals, uvs)
-type MeshDataSet = (Vec<u32>, Vec<Vertex>);
+/// A dataset representing mesh's data (indices, vertices) and its material ID.
+type MeshDataSet = (Vec<u32>, Vec<Vertex>, usize);
 
 /// Result type for form_models function
 type FormedModelsResult = Result<(Vec<GltfMaterial>, Vec<MeshDataSet>, Vec<(Vec3, Vec3)>), GltfError>;
@@ -34,7 +34,7 @@ pub fn load_models(
 
     // Add meshes to the asset server
     let mut models = Vec::new();
-    for (i, (indices_data, vertices)) in raw_meshes.iter().enumerate() {
+    for (i, (indices_data, vertices, material_id)) in raw_meshes.iter().enumerate() {
         let label = format!("gltf_mesh_{}", i);
         let (bb_min, bb_max) = bounding_boxes[i];
         let mesh_asset = MeshAsset {
@@ -46,7 +46,7 @@ pub fn load_models(
                 max: bb_max,
             },
         };
-        models.push((asset_server.add(mesh_asset), materials_handles[i].clone()));
+        models.push((asset_server.add(mesh_asset), materials_handles[*material_id].clone()));
         trace!("Added mesh: {} (bbox min={:?}, max={:?})", label, bb_min, bb_max);
     }
 
@@ -148,7 +148,8 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                 (min, max)
             };
             
-            meshes_data.push((indices.unwrap_or(Vec::new()), vertices));
+            let material_id = primitive.material_id.unwrap_or(0); // Default to first material if none assigned
+            meshes_data.push((indices.unwrap_or(Vec::new()), vertices, material_id as usize));
             bounding_boxes.push((final_min, final_max));
 
             // Store material pointer

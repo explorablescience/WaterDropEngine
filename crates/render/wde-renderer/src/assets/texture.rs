@@ -143,7 +143,7 @@ impl RenderAsset for GpuTexture {
             asset: Self::SourceAsset,
             render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Param>,
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        debug!(asset.label, "Loading texture on the GPU.");
+        debug!("Uploading texture '{}' to the GPU.", asset.label);
 
         let render_instance = render_instance.0.as_ref().read().unwrap();
 

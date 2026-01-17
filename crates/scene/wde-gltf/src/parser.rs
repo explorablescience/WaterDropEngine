@@ -263,6 +263,19 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
         }
     }
 
+    // Add the remaining materials that were not assigned to any mesh
+    let raw_materials = json["materials"]
+        .as_array()
+        .ok_or(GltfError::MissingField("materials".to_string()))?;
+    for (i, material_json) in raw_materials.iter().enumerate() {
+        if !material_map.contains_key(&(i as i64)) {
+            let mat_data = parse_material(Some(i as i64), material_json, &json, &folder_path)?;
+            if let Some(mat) = mat_data {
+                material_datas.push(mat);
+            }
+        }
+    }
+
     // GltfModel construction
     Ok(GltfModel {
         filename,

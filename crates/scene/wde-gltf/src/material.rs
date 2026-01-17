@@ -2,6 +2,7 @@
 
 use wde_pbr::assets::PbrMaterialAsset;
 use bevy::prelude::*;
+use wde_renderer::assets::TextureLoaderSettings;
 
 /// Representation of a glTF material's data.
 #[derive(Debug, Clone)]
@@ -30,22 +31,50 @@ impl GltfMaterial {
         // Load base color texture if available
         let aldebo_texture_handle = self.base_color_tex_url
             .as_ref()
-            .map(|texture_url| asset_server.load(format!("{}/{}", self.folder_path, texture_url)));
+            .map(|texture_url| {
+                let label = format!("gltf_albedo_{}", self.name);
+                asset_server.load_with_settings(format!("{}/{}", self.folder_path, texture_url), 
+                    move |settings: &mut TextureLoaderSettings| {
+                        settings.label = label.clone();
+                    }
+                )
+            });
 
         // Load metallic-roughness texture if available
         let metallic_roughness_texture_handle = self.metallic_roughness_tex_url
             .as_ref()
-            .map(|texture_url| asset_server.load(format!("{}/{}", self.folder_path, texture_url)));
+            .map(|texture_url| {
+                let label = format!("gltf_metallic_roughness_{}", self.name);
+                asset_server.load_with_settings(format!("{}/{}", self.folder_path, texture_url), 
+                    move |settings: &mut TextureLoaderSettings| {
+                        settings.label = label.clone();
+                    }
+                )
+            });
 
         // Load normal texture if available
         let normal_texture_handle = self.normal_tex_url
             .as_ref()
-            .map(|texture_url| asset_server.load(format!("{}/{}", self.folder_path, texture_url)));
+            .map(|texture_url| {
+                let label = format!("gltf_normal_{}", self.name);
+                asset_server.load_with_settings(format!("{}/{}", self.folder_path, texture_url), 
+                    move |settings: &mut TextureLoaderSettings| {
+                        settings.label = label.clone();
+                    }
+                )
+            });
 
         // Load occlusion texture if available
         let occlusion_texture_handle = self.occlusion_tex_url
             .as_ref()
-            .map(|texture_url| asset_server.load(format!("{}/{}", self.folder_path, texture_url)));
+            .map(|texture_url| {
+                let label = format!("gltf_occlusion_{}", self.name);
+                asset_server.load_with_settings(format!("{}/{}", self.folder_path, texture_url), 
+                    move |settings: &mut TextureLoaderSettings| {
+                        settings.label = label.clone();
+                    }
+                )
+            });
 
         // Create and add the material to the asset server
         asset_server
