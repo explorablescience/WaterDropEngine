@@ -291,7 +291,7 @@ impl Plugin for MaterialsPluginRaw {
     fn finish(&self, app: &mut App) {
         // Load the dummy texture
         let assets_server = app.world().get_resource::<AssetServer>().unwrap();
-        let dummy_texture = assets_server.load_with_settings("pbr/dummy_texture.png",
+        let dummy_texture = assets_server.load_with_settings("core/models/pbr/dummy_texture.png",
         |settings: &mut TextureLoaderSettings| {
             settings.label = "dummy-texture".to_string();
             settings.format = TextureFormat::R8Unorm;

@@ -53,7 +53,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 
 fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
-    GltfLoader::load("models/FlightHelmet/FlightHelmet.gltf", &asset_server)
+    GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server)
         .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 5.0)))
         .unwrap();
 

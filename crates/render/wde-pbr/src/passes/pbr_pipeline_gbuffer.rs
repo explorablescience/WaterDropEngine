@@ -58,8 +58,8 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
         // Create the pipeline
         let pipeline_desc = RenderPipelineDescriptor {
             label: "gbuffer-pbr",
-            vert: Some(assets_server.load("pbr/gbuffer_vert.wgsl")),
-            frag: Some(assets_server.load("pbr/gbuffer_frag.wgsl")),
+            vert: Some(assets_server.load("core/render/pbr/gbuffer_vert.wgsl")),
+            frag: Some(assets_server.load("core/render/pbr/gbuffer_frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
             depth: DepthStencilDescriptor {
                 enabled: true,

@@ -46,8 +46,8 @@ impl RenderAsset for GpuGizmoRenderPipeline {
         // Create the pipeline
         let pipeline_desc = RenderPipelineDescriptor {
             label: "gizmo",
-            vert: Some(assets_server.load("gizmo/vert.wgsl")),
-            frag: Some(assets_server.load("gizmo/frag.wgsl")),
+            vert: Some(assets_server.load("core/render/gizmo/vert.wgsl")),
+            frag: Some(assets_server.load("core/render/gizmo/frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
             depth: DepthStencilDescriptor {
                 enabled: true,

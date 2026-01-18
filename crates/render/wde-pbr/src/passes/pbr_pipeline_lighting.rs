@@ -46,8 +46,8 @@ impl RenderAsset for GpuPbrLightingRenderPipeline {
         // Create the pipeline
         let pipeline_desc = RenderPipelineDescriptor {
             label: "lighting-pbr",
-            vert: Some(assets_server.load("pbr/lighting_vert.wgsl")),
-            frag: Some(assets_server.load("pbr/lighting_frag.wgsl")),
+            vert: Some(assets_server.load("core/render/pbr/lighting_vert.wgsl")),
+            frag: Some(assets_server.load("core/render/pbr/lighting_frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone(), deferred_layout_resolved.clone(), lights_layout.clone()],
             depth: DepthStencilDescriptor {
                 enabled: false,

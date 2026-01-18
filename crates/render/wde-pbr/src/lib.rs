@@ -131,11 +131,11 @@ impl Plugin for PbrPlugin {
     }
 }
 
-fn init_dummy_element(mut commands: Commands, mut meshes: ResMut<Assets<MeshAsset>>, mut pbr_materials: ResMut<Assets<PbrMaterialAsset>>) {
+fn init_dummy_element(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Transform::from_xyz(1000.0, 1000.0, 1000.0).with_scale(Vec3::ZERO),
-        Mesh(meshes.add(CubeMesh::from("dummy", 1.0))),
-        PbrMaterial(pbr_materials.add(PbrMaterialAsset {
+        Mesh(asset_server.add(CubeMesh::from("dummy", 1.0))),
+        PbrMaterial(asset_server.add(PbrMaterialAsset {
             label: "dummy".to_string(),
             albedo: (0.0, 0.0, 0.0, 0.0),
             metallic: 0.0,

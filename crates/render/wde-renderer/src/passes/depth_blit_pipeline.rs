@@ -29,8 +29,8 @@ impl RenderAsset for GpuDepthBlitRenderPipeline {
         // Create the pipeline
         let pipeline_desc = RenderPipelineDescriptor {
             label: "depth_blit",
-            vert: Some(assets_server.load("depth_blit/vert.wgsl")),
-            frag: Some(assets_server.load("depth_blit/frag.wgsl")),
+            vert: Some(assets_server.load("core/render/depth_blit/vert.wgsl")),
+            frag: Some(assets_server.load("core/render/depth_blit/frag.wgsl")),
             bind_group_layouts: vec![depth_msaa_layout.clone()],
             depth: DepthStencilDescriptor {
                 enabled: true,
