@@ -10,7 +10,8 @@ impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
         app
             // .insert_resource(TimerResource(Timer::from_seconds(5.0, TimerMode::Once)))
-            .add_systems(Startup, (init_scene, load).chain());
+            .add_systems(Startup, (init_scene, load).chain())
+            .add_systems(Update, rotate_light_sources);
     }
 }
 
@@ -42,20 +43,29 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     // Spawn the lights
     commands.spawn(PointLight {
-        position: Vec3::new(5.0, 5.0, 5.0),
+        position: Vec3::new(5.0, 15.0, 5.0),
         color: WColor::from_srgba(0.8, 0.2, 0.2, 1.0),
         ..Default::default()
     });
     commands.spawn(PointLight {
-        position: Vec3::new(-5.0, 5.0, 5.0),
+        position: Vec3::new(-5.0, 10.0, 5.0),
         color: WColor::from_srgba(0.2, 0.8, 0.2, 1.0),
         ..Default::default()
     });
     commands.spawn(PointLight {
-        position: Vec3::new(0.0, 5.0, -5.0),
+        position: Vec3::new(0.0, 8.0, -5.0),
         color: WColor::from_srgba(0.2, 0.2, 0.8, 1.0),
         ..Default::default()
     });
+}
+
+fn rotate_light_sources(mut lights: Query<&mut PointLight>, time: Res<Time>) {
+    for (i, mut light) in lights.iter_mut().enumerate() {
+        let angle = time.elapsed_secs() * 0.5 + (i as f32) * std::f32::consts::FRAC_PI_2;
+        let radius = 5.0;
+        light.position.x = radius * angle.cos();
+        light.position.z = radius * angle.sin();
+    }
 }
 
 

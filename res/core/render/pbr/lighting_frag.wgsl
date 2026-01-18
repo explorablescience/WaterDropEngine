@@ -263,11 +263,11 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let ambient = kd * diffuse; // Note: * ambiant_occlusion (not implemented here)
 
     // Final color before tone mapping
-    let color = lo + ambient;
+    var color = lo + ambient;
 
-    // HDR tone mapping (simple Reinhard)
-    let hdr_lo = color / (color + vec3<f32>(1.0));
+    // HDR tone mapping (Reinhard)
+    color = color / (color + vec3<f32>(1.0));
 
     // Return the final color
-    return vec4<f32>(hdr_lo, 1.0);
+    return vec4<f32>(color, 1.0);
 }
