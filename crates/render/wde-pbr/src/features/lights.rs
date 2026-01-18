@@ -100,45 +100,31 @@ fn extract(
     let render_instance = render_instance.0.read().unwrap();
     lights_buffer_cpu.buffer.map_write(&render_instance, |mut view| {
         let data = view.as_mut_ptr() as *mut LightsStorageElement;
-        let mut offset = 0;
-        let mut first_element = None;
+        let mut light_index = 0;
 
         // Extract directional lights
         for light in lights_directional.iter() {
             let element = LightsStorageElement::from_directional(light);
-            if first_element.is_none() { first_element = Some(element); }
-            unsafe { *data.add(offset) = element; }
-            offset += 1;
+            unsafe { *data.add(light_index) = element; }
+            light_index += 1;
         }
 
         // Extract point lights
         for light in lights_point.iter() {
             let element = LightsStorageElement::from_point(light);
-            if first_element.is_none() { first_element = Some(element); }
-            unsafe { *data.add(offset) = element; }
-            offset += 1;
+            unsafe { *data.add(light_index) = element; }
+            light_index += 1;
         }
 
         // Extract spot lights
         for light in lights_spot.iter() {
             let element = LightsStorageElement::from_spot(light);
-            if first_element.is_none() { first_element = Some(element); }
-            unsafe { *data.add(offset) = element; }
-            offset += 1;
-        }
-
-        // Set the number of lights
-        let lights_number = offset as f32;
-        if let Some(mut first_element) = first_element {
-            first_element.position_number = [
-                first_element.position_number[0], first_element.position_number[1],
-                first_element.position_number[2], lights_number
-            ];
-            unsafe { *data.add(0) = first_element; }
+            unsafe { *data.add(light_index) = element; }
+            light_index += 1;
         }
 
         // Warn if the number of lights exceeds the maximum
-        if lights_number > MAX_LIGHTS as f32 {
+        if light_index > MAX_LIGHTS {
             warn!("The number of lights exceeds the maximum of {}.", MAX_LIGHTS);
         }
     });

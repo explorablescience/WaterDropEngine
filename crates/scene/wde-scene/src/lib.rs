@@ -1,9 +1,9 @@
 use wde_gltf::prelude::*;
-use bevy::prelude::*;
 use wde_camera::prelude::*;
 use wde_pbr::prelude::*;
-use wde_renderer::prelude::*;
+use wde_renderer::prelude::{*, Color as WColor};
 use wde_gizmos::prelude::*;
+use bevy::prelude::*;
 
 pub struct ScenePlugin;
 impl Plugin for ScenePlugin {
@@ -41,12 +41,19 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     // commands.insert_resource(GroundEntity(ground));
 
     // Spawn the lights
-    commands.spawn(DirectionalLight {
-        direction: Vec3::new(-0.1, -1.2, -0.2),
+    commands.spawn(PointLight {
+        position: Vec3::new(5.0, 5.0, 5.0),
+        color: WColor::from_srgba(0.8, 0.2, 0.2, 1.0),
         ..Default::default()
     });
-    commands.spawn(DirectionalLight {
-        direction: Vec3::new(0.1, 1.2, 0.2),
+    commands.spawn(PointLight {
+        position: Vec3::new(-5.0, 5.0, 5.0),
+        color: WColor::from_srgba(0.2, 0.8, 0.2, 1.0),
+        ..Default::default()
+    });
+    commands.spawn(PointLight {
+        position: Vec3::new(0.0, 5.0, -5.0),
+        color: WColor::from_srgba(0.2, 0.2, 0.8, 1.0),
         ..Default::default()
     });
 }
@@ -54,7 +61,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
     GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server)
-        .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 5.0)))
+        .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 25.0)))
         .unwrap();
 
     // GltfLoader::load("houses/house_demo1.gltf", &asset_server)

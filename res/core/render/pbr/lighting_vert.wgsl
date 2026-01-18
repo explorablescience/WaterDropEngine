@@ -8,13 +8,6 @@ struct VertexOutput {
     @location(0) tex_coord: vec2<f32>
 };
 
-struct Camera {
-    world_to_ndc: mat4x4<f32>,
-    ndc_to_world: mat4x4<f32>,
-    position: vec4<f32>
-}
-@group(0) @binding(0) var<uniform> in_camera: Camera;
-
 @vertex
 fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutput {
     var out: VertexOutput;

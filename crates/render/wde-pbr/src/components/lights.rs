@@ -2,10 +2,9 @@
 use bevy::prelude::{*, Color as BevyColor};
 use wde_renderer::prelude::Color;
 
-/// Default color values for the lights.
-const AMBIENT_DEFAULT:  f32 = 0.05;
-const DIFFUSE_DEFAULT:  f32 = 0.8;
-const SPECULAR_DEFAULT: f32 = 1.0;
+/// Default values for the lights.
+const DEFAULT_INTENSITY: f32 = 1.0;
+const INTENSITY_MULTIPLIER: f32 = 10.0; // To convert from "standard" intensity to lumens
 
 /// A directional light is a light that emits light in a single direction from an infinite distance.
 #[derive(Component, Clone, Copy, Reflect)]
@@ -14,138 +13,47 @@ pub struct DirectionalLight {
     /// World space direction of the light.
     pub direction: Vec3,
 
-    /// Ambient color of the light.
-    pub ambient:  Color,
-    /// Diffuse color of the light.
-    pub diffuse:  Color,
-    /// Specular color of the light.
-    pub specular: Color
+    /// Light color (RGB).
+    pub color: Color,
+    /// Light intensity/brightness (in lumens, physical-based).
+    pub intensity: f32
 }
 impl Default for DirectionalLight {
     fn default() -> Self {
         Self {
             direction: Vec3::new(0.0, -1.0, 0.0),
-
-            ambient:  Color::from_srgba(AMBIENT_DEFAULT,  AMBIENT_DEFAULT,  AMBIENT_DEFAULT,  1.0),
-            diffuse:  Color::from_srgba(DIFFUSE_DEFAULT,  DIFFUSE_DEFAULT,  DIFFUSE_DEFAULT,  1.0),
-            specular: Color::from_srgba(SPECULAR_DEFAULT, SPECULAR_DEFAULT, SPECULAR_DEFAULT, 1.0)
+            color: Color::from_srgba(1.0, 1.0, 1.0, 1.0),
+            intensity: DEFAULT_INTENSITY * INTENSITY_MULTIPLIER
         }
     }
 }
 
 /// A point light is a light that emits light in all directions from a single point.
-/// Use the `set_attenuation` method to set the attenuation factors of the light. By default, the
-/// light has a full attenuation at 100 units.
 #[derive(Component, Clone, Copy, Reflect)]
 #[reflect(Component)]
 pub struct PointLight {
     /// World space position of the light.
     pub position: Vec3,
 
-    /// Ambient color of the light.
-    pub ambient:  Color,
-    /// Diffuse color of the light.
-    pub diffuse:  Color,
-    /// Specular color of the light.
-    pub specular: Color,
-
-    /// Constant attenuation factor of the light.
-    pub constant:  f32,
-    /// Linear attenuation factor of the light.
-    pub linear:    f32,
-    /// Quadratic attenuation factor of the light.
-    pub quadratic: f32
-}
-impl PointLight {
-    /// Sets the attenuation factors of the light.
-    /// If the range is not a value in {7, 13, 20, 32, 50, 65, 100, 160, 200, 325, 600, 3250},
-    /// the method will return None. Note that most of the light will be already attenuated at 20%.
-    pub fn with_range(&mut self, range: f32) -> Option<Self> {
-        match range {
-            3250.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.0014;
-                self.quadratic = 0.000007;
-            },
-            600.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.007;
-                self.quadratic = 0.0002;
-            },
-            325.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.014;
-                self.quadratic = 0.0007;
-            },
-            200.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.022;
-                self.quadratic = 0.0019;
-            },
-            160.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.027;
-                self.quadratic = 0.0028;
-            },
-            100.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.045;
-                self.quadratic = 0.0075;
-            },
-            65.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.07;
-                self.quadratic = 0.017;
-            },
-            50.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.09;
-                self.quadratic = 0.032;
-            },
-            32.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.14;
-                self.quadratic = 0.07;
-            },
-            20.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.22;
-                self.quadratic = 0.20;
-            },
-            13.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.35;
-                self.quadratic = 0.44;
-            },
-            7.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.7;
-                self.quadratic = 1.8;
-            },
-            _ => return None,
-        }
-        Some(*self)
-    }
+    /// Light color (RGB).
+    pub color: Color,
+    /// Light intensity/brightness (in lumens, physical-based).
+    pub intensity: f32,
+    /// Maximum range of light influence (in world units).
+    pub range: f32
 }
 impl Default for PointLight {
     fn default() -> Self {
         Self {
             position: Vec3::new(0.0, 0.0, 0.0),
-
-            ambient:  Color::from_srgba(AMBIENT_DEFAULT,  AMBIENT_DEFAULT,  AMBIENT_DEFAULT,  1.0),
-            diffuse:  Color::from_srgba(DIFFUSE_DEFAULT,  DIFFUSE_DEFAULT,  DIFFUSE_DEFAULT,  1.0),
-            specular: Color::from_srgba(SPECULAR_DEFAULT, SPECULAR_DEFAULT, SPECULAR_DEFAULT, 1.0),
-
-            constant:  0.0,
-            linear:    0.0,
-            quadratic: 0.0
-        }.with_range(100.0).unwrap()
+            color: Color::from_srgba(1.0, 1.0, 1.0, 1.0),
+            intensity: DEFAULT_INTENSITY * INTENSITY_MULTIPLIER,
+            range: 100.0
+        }
     }
 }
 
-/// A spotlight is a point light with a direction and a cut-off angle.
-/// Use the `set_attenuation` method to set the attenuation factors of the light. By default, the
-/// light has a full attenuation at 50 units.
+/// A spotlight is a point light with a direction and cone angles.
 #[derive(Component, Clone, Copy, Reflect)]
 #[reflect(Component)]
 pub struct SpotLight {
@@ -154,175 +62,75 @@ pub struct SpotLight {
     /// World space direction of the light.
     pub direction: Vec3,
 
-    /// Ambient color of the light.
-    pub ambient:  Color,
-    /// Diffuse color of the light.
-    pub diffuse:  Color,
-    /// Specular color of the light.
-    pub specular: Color,
+    /// Light color (RGB).
+    pub color: Color,
+    /// Light intensity/brightness (in lumens, physical-based).
+    pub intensity: f32,
+    /// Maximum range of light influence (in world units).
+    pub range: f32,
 
-    /// Constant attenuation factor of the light.
-    pub constant:  f32,
-    /// Linear attenuation factor of the light.
-    pub linear:    f32,
-    /// Quadratic attenuation factor of the light.
-    pub quadratic: f32,
-
-    /// Inner cut-off angle of the light (in degrees): the angle at which the light starts to decay.
-    pub inner_cutoff:  f32,
-    /// Outer cut-off angle of the light (in degrees): the angle at which the light is completely attenuated.
-    pub outer_cutoff: f32
-}
-impl SpotLight {
-    /// Sets the attenuation factors of the light.
-    /// If the range is not a value in {7, 13, 20, 32, 50, 65, 100, 160, 200, 325, 600, 3250},
-    /// the method will return None.
-    pub fn with_range(&mut self, range: f32) -> Option<Self> {
-        match range {
-            3250.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.0014;
-                self.quadratic = 0.000007;
-            },
-            600.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.007;
-                self.quadratic = 0.0002;
-            },
-            325.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.014;
-                self.quadratic = 0.0007;
-            },
-            200.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.022;
-                self.quadratic = 0.0019;
-            },
-            160.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.027;
-                self.quadratic = 0.0028;
-            },
-            100.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.045;
-                self.quadratic = 0.0075;
-            },
-            65.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.07;
-                self.quadratic = 0.017;
-            },
-            50.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.09;
-                self.quadratic = 0.032;
-            },
-            32.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.14;
-                self.quadratic = 0.07;
-            },
-            20.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.22;
-                self.quadratic = 0.20;
-            },
-            13.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.35;
-                self.quadratic = 0.44;
-            },
-            7.0 => {
-                self.constant  = 1.0;
-                self.linear    = 0.7;
-                self.quadratic = 1.8;
-            },
-            _ => return None,
-        }
-        Some(*self)
-    }
+    /// Inner cone angle of the light (in radians): full brightness cone.
+    pub inner_cone: f32,
+    /// Outer cone angle of the light (in radians): edge of cone with smooth falloff.
+    pub outer_cone: f32
 }
 impl Default for SpotLight {
     fn default() -> Self {
         Self {
             position:  Vec3::new(0.0,  0.0, 0.0),
             direction: Vec3::new(0.0, -1.0, 0.0),
-
-            ambient:  Color::from_srgba(AMBIENT_DEFAULT,  AMBIENT_DEFAULT,  AMBIENT_DEFAULT,  1.0),
-            diffuse:  Color::from_srgba(DIFFUSE_DEFAULT,  DIFFUSE_DEFAULT,  DIFFUSE_DEFAULT,  1.0),
-            specular: Color::from_srgba(SPECULAR_DEFAULT, SPECULAR_DEFAULT, SPECULAR_DEFAULT, 1.0),
-
-            constant:  0.0,
-            linear:    0.0,
-            quadratic: 0.0,
-
-            inner_cutoff: 0.0,
-            outer_cutoff: std::f32::consts::PI / 4.0
-        }.with_range(50.0).unwrap()
+            color: Color::from_srgba(1.0, 1.0, 1.0, 1.0),
+            intensity: DEFAULT_INTENSITY * INTENSITY_MULTIPLIER,
+            range: 50.0,
+            inner_cone: std::f32::consts::PI / 12.0, // 15 degrees
+            outer_cone: std::f32::consts::PI / 6.0   // 30 degrees
+        }
     }
 }
 
 
 
-/// Lights storage buffer
+/// Lights storage buffer (matches the shader Light struct)
 #[repr(C)]
 #[derive(Resource, Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct LightsStorageElement {
-    /// World space position of the directional light for xyz. If it is the first element, the w component is the number of lights.
-    pub position_number: [f32; 4],
-    /// World space direction of the light. The w component is the type of the light: 0 for directional, 1 for point, 2 for spot.
-    pub direction_type:  [f32; 4],
-    /// Ambient color of the light. The w component is the constant attenuation factor if the light is a point light. It is the cos of the inner cut-off angle in radians if the light is a spot light.
-    pub ambient_const:   [f32; 4],
-    /// Diffuse color of the light. The w component is the linear attenuation factor if the light is a point light. It is the cos of the outer cut-off angle in radians if the light is a spot light.
-    pub diffuse_linea:   [f32; 4],
-    /// Specular color of the light. The w component is the quadratic attenuation factor if the light is a point light.
-    pub specular_quadr:  [f32; 4],
-    /// Inner and outer cut-off angles in radians if the light is a spot light.
-    pub cut_off:         [f32; 4]
+    /// (x, y, z) = World space position of the light - w = Light intensity (brightness in lumens)
+    pub position_intensity: [f32; 4],
+    /// (x, y, z) = Light color - w = Light type (0 = directional, 1 = point, 2 = spot)
+    pub color_type: [f32; 4],
+    /// (x, y, z) = Direction of the light - w = Light range (max influence distance)
+    pub direction_range: [f32; 4],
+    /// Spot light inner and outer cone angles (cos values). Only used for spot lights.
+    pub spot_cone: [f32; 4]
 }
 impl LightsStorageElement {
     pub fn from_directional(light: &DirectionalLight) -> Self {
-        let ambient  = light.ambient.to_linear_rgba();
-        let diffuse  = light.diffuse.to_linear_rgba();
-        let specular = light.specular.to_linear_rgba();
+        let color = light.color.to_linear_rgba();
         Self {
-            position_number:    [0.0, 0.0, 0.0, 0.0],
-            direction_type:     [light.direction.x, light.direction.y, light.direction.z, 0.0],
-            ambient_const:      [ambient.r(),  ambient.g(),  ambient.b(),  0.0],
-            diffuse_linea:      [diffuse.r(),  diffuse.g(),  diffuse.b(),  0.0],
-            specular_quadr:     [specular.r(), specular.g(), specular.b(), 0.0],
-            cut_off:            [0.0, 0.0, 0.0, 0.0]
+            position_intensity: [0.0, 0.0, 0.0, light.intensity * INTENSITY_MULTIPLIER],
+            color_type:         [color.r(), color.g(), color.b(), 0.0],
+            direction_range:    [light.direction.x, light.direction.y, light.direction.z, 0.0],
+            spot_cone:          [0.0, 0.0, 0.0, 0.0]
         }
     }
 
     pub fn from_point(light: &PointLight) -> Self {
-        let ambient  = light.ambient.to_linear_rgba();
-        let diffuse  = light.diffuse.to_linear_rgba();
-        let specular = light.specular.to_linear_rgba();
+        let color = light.color.to_linear_rgba();
         Self {
-            position_number:    [light.position.x, light.position.y, light.position.z, 0.0],
-            direction_type:     [0.0, 0.0, 0.0, 1.0],
-            ambient_const:      [ambient.r(),  ambient.g(),  ambient.b(),  light.constant],
-            diffuse_linea:      [diffuse.r(),  diffuse.g(),  diffuse.b(),  light.linear],
-            specular_quadr:     [specular.r(), specular.g(), specular.b(), light.quadratic],
-            cut_off:            [0.0, 0.0, 0.0, 0.0]
+            position_intensity: [light.position.x, light.position.y, light.position.z, light.intensity * INTENSITY_MULTIPLIER],
+            color_type:         [color.r(), color.g(), color.b(), 1.0],
+            direction_range:    [0.0, 0.0, 0.0, light.range],
+            spot_cone:          [0.0, 0.0, 0.0, 0.0]
         }
     }
 
     pub fn from_spot(light: &SpotLight) -> Self {
-        let ambient  = light.ambient.to_linear_rgba();
-        let diffuse  = light.diffuse.to_linear_rgba();
-        let specular = light.specular.to_linear_rgba();
+        let color = light.color.to_linear_rgba();
         Self {
-            position_number:    [light.position.x,  light.position.y,  light.position.z,  0.0],
-            direction_type:     [light.direction.x, light.direction.y, light.direction.z, 2.0],
-            ambient_const:      [ambient.r(),  ambient.g(),  ambient.b(),  light.constant],
-            diffuse_linea:      [diffuse.r(),  diffuse.g(),  diffuse.b(),  light.linear],
-            specular_quadr:     [specular.r(), specular.g(), specular.b(), light.quadratic],
-            cut_off:            [light.inner_cutoff.cos(), light.outer_cutoff.cos(), 0.0, 0.0]
+            position_intensity: [light.position.x, light.position.y, light.position.z, light.intensity * INTENSITY_MULTIPLIER],
+            color_type:         [color.r(), color.g(), color.b(), 2.0],
+            direction_range:    [light.direction.x, light.direction.y, light.direction.z, light.range],
+            spot_cone:          [light.inner_cone.cos(), light.outer_cone.cos(), 0.0, 0.0]
         }
     }
 }

@@ -1,13 +1,14 @@
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,  // Clip space position (after projection)
-    @location(0) tex_coord:    vec2<f32>,    // Texture coordinates (UV)
-    @location(1) normal_world: vec3<f32>,    // Normal in world space
-    @location(2) tangent_world: vec4<f32>,   // Tangent in world space
-    @location(3) bitangent_world: vec3<f32>  // Bitangent in world space
+    @location(0) tex_coord:    vec2<f32>,     // Texture coordinates (UV)
+    @location(1) normal_world: vec3<f32>,     // Normal in world space
+    @location(2) tangent_world: vec4<f32>,    // Tangent in world space
+    @location(3) bitangent_world: vec3<f32>,  // Bitangent in world space
+    @location(4) view_z: f32,                 // View-space Z (linear depth)
 };
 
 struct FragOutput {
-    @location(0) depth: f32,                  // Depth value (NDC, range [0, 1], 1.0 = far plane)
+    @location(0) depth: f32,                  // Linear view-space depth
     @location(1) albedo_metallic:  vec4<f32>, // (r, g, b) = albedo color - a = metallic
     @location(2) normal_roughness: vec4<f32>, // (r, g, b) = normal - a = roughness
 };
@@ -33,8 +34,8 @@ struct PbrMaterialUniform {
 fn main(in: VertexOutput) -> FragOutput {
     var out: FragOutput;
 
-    // Depth (NDC space: z/w, range [0, 1])
-    out.depth = in.clip_position.z / in.clip_position.w;
+    // Store linear view-space depth for better precision
+    out.depth = in.view_z;
     
     // Albedo and Metallic
     var albedo_color: vec3<f32> = in_pbr_material.albedo.rgb;

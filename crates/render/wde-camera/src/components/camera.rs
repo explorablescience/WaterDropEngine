@@ -71,10 +71,14 @@ pub struct Camera;
 #[repr(C)]
 #[derive(Resource, Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct CameraUniform {
-    // From world to NDC coordinates
-    pub world_to_ndc: [[f32; 4]; 4],
-    // From NDC to world coordinates
-    pub ndc_to_world: [[f32; 4]; 4],
+    // From world to view coordinates
+    pub world_to_view: [[f32; 4]; 4],
+    // From view to ndc coordinates
+    pub view_to_ndc: [[f32; 4]; 4],
+    // From ndc to view coordinates
+    pub ndc_to_view: [[f32; 4]; 4],
+    // From view to world coordinates
+    pub view_to_world: [[f32; 4]; 4],
     // Camera position
     pub position: [f32; 4]
 }
@@ -91,12 +95,16 @@ impl CameraUniform {
     /// 
     /// The camera uniform buffer.
     pub fn new(transform: &Transform, camera_view: &CameraView, aspect_ratio: f32) -> Self {
-        let world_to_ndc = Self::get_world_to_ndc(transform, camera_view, aspect_ratio).to_cols_array_2d();
-        let ndc_to_world = Self::get_ndc_to_world(transform, camera_view, aspect_ratio).to_cols_array_2d();
+        let world_to_view = Self::get_world_to_view(transform).to_cols_array_2d();
+        let view_to_ndc = Self::get_view_to_ndc(camera_view, aspect_ratio).to_cols_array_2d();
+        let ndc_to_view = Mat4::from_cols_array_2d(&view_to_ndc).inverse().to_cols_array_2d();
+        let view_to_world = Mat4::from_cols_array_2d(&world_to_view).inverse().to_cols_array_2d();
 
         Self {
-            world_to_ndc,
-            ndc_to_world,
+            world_to_view,
+            view_to_ndc,
+            ndc_to_view,
+            view_to_world,
             position: [transform.translation.x, transform.translation.y, transform.translation.z, 1.0]
         }
     }
@@ -105,39 +113,52 @@ impl CameraUniform {
     /// 
     /// # Arguments
     /// 
-    /// * `camera` - The camera component.
     /// * `transform` - The transform component.
+    /// * `camera_view` - The camera view component.
     /// * `aspect_ratio` - The aspect ratio of the screen.
     /// 
     /// # Returns
     /// 
     /// The world to screen (NDC) matrix ((openGL to WGPU) * projection * view).
     #[inline]
+    #[allow(dead_code)]
     fn get_world_to_ndc(transform: &Transform, camera_view: &CameraView, aspect_ratio: f32) -> Mat4 {
-        // World to camera
-        let view = TransformUniform::transform_world_to_obj(transform);
-
-        // Projection from camera to NDC
-        let proj = Mat4::perspective_rh(
-            camera_view.fov.to_radians(), aspect_ratio,
-            camera_view.znear, camera_view.zfar
-        );
+        let view = Self::get_world_to_view(transform);
+        let proj = Self::get_view_to_ndc(camera_view, aspect_ratio);
         proj * view
     }
 
-    /// Get the ndc to world matrix.
+    /// Get the world to view matrix.
     /// 
     /// # Arguments
     /// 
-    /// * `camera` - The camera component.
     /// * `transform` - The transform component.
+    /// 
+    /// # Returns
+    /// 
+    /// The world to view matrix.
+    #[inline]
+    fn get_world_to_view(transform: &Transform) -> Mat4 {
+        // World to camera
+        TransformUniform::transform_world_to_obj(transform)
+    }
+
+    /// Get the view to ndc matrix.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `camera_view` - The camera view component.
     /// * `aspect_ratio` - The aspect ratio of the screen.
     /// 
     /// # Returns
     /// 
-    /// The screen (NDC) to world matrix (inverse(projection * view) * inverse(openGL to WGPU)).
+    /// The view to screen (NDC) matrix (projection * openGL to WGPU).
     #[inline]
-    fn get_ndc_to_world(transform: &Transform, camera_view: &CameraView, aspect_ratio: f32) -> Mat4 {
-        Self::get_world_to_ndc(transform, camera_view, aspect_ratio).inverse()
+    fn get_view_to_ndc(camera_view: &CameraView, aspect_ratio: f32) -> Mat4 {
+        // Projection from camera to NDC
+        Mat4::perspective_rh(
+            camera_view.fov.to_radians(), aspect_ratio,
+            camera_view.znear, camera_view.zfar
+        )
     }
 }
