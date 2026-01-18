@@ -2,6 +2,8 @@ use wde_gltf::prelude::*;
 use bevy::prelude::*;
 use wde_camera::prelude::*;
 use wde_pbr::prelude::*;
+use wde_renderer::prelude::*;
+use wde_gizmos::prelude::*;
 
 pub struct ScenePlugin;
 impl Plugin for ScenePlugin {
@@ -25,30 +27,18 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         ActiveCamera
     ));
 
-    // // Spawn a house centered at the origin
-    // commands.spawn((
-    //     Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.05),
-    //     Mesh(asset_server.load("houses/house_demo1.obj")),
-    //     PbrMaterial(pbrmaterials.add(PbrMaterialAsset {
-    //         label: "house".to_string(),
-    //         albedo: (0.8, 0.8, 0.8, 1.0),
-    //         specular: 0.5,
-    //         ..Default::default()
-    //     }))
-    // ));
-
-    // // Create the ground
-    // let scaling: u32 = 25; // Must be odd
-    // let _ground = commands.spawn((
-    //     Transform::from_xyz(0.0, -0.0001, 0.0).with_scale(Vec3::ONE * scaling as f32),
-    //     Mesh(meshes.add(PlaneMesh::from("ground", scaling, Vec3::Y))),
-    //     GizmoMaterial(gizmomaterials.add(GizmoMaterialAsset {
-    //         label: "grid".to_string(),
-    //         color: [0.8, 0.8, 0.8, 1.0],
-    //     })),
-    //     Collider::cuboid(50.0, 0.1, 50.0),
-    // )).id();
-    // // commands.insert_resource(GroundEntity(ground));
+    // Create the ground
+    let scaling: u32 = 25; // Must be odd
+    let _ground = commands.spawn((
+        Transform::from_xyz(0.0, -0.0001, 0.0).with_scale(Vec3::ONE * scaling as f32),
+        Mesh(asset_server.add(PlaneMesh::from("ground", scaling, Vec3::Y))),
+        GizmoMaterial(asset_server.add(GizmoMaterialAsset {
+            label: "grid".to_string(),
+            color: [0.8, 0.8, 0.8, 1.0],
+        })),
+        // Collider::cuboid(50.0, 0.1, 50.0),
+    )).id();
+    // commands.insert_resource(GroundEntity(ground));
 
     // Spawn the lights
     commands.spawn(DirectionalLight {
@@ -67,13 +57,13 @@ fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
     //     .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 5.0)))
     //     .unwrap();
 
-    // GltfLoader::load("houses/house_demo1.gltf", &asset_server)
-    //     .map(|asset| asset.spawn(&mut commands, Transform::from_xyz(10.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.3)))
-    //     .unwrap();
-
-    GltfLoader::load("models/chess_game/ABeautifulGame.gltf", &asset_server)
-        .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 10.0)))
+    GltfLoader::load("houses/house_demo1.gltf", &asset_server)
+        .map(|asset| asset.spawn(&mut commands, Transform::from_xyz(2.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.3)))
         .unwrap();
+
+    // GltfLoader::load("models/chess_game/ABeautifulGame.gltf", &asset_server)
+    //     .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 10.0)))
+    //     .unwrap();
 }
 
 // fn cast_ray(

@@ -137,7 +137,7 @@ impl CustomRenderPass {
             Res<RenderAssets<GpuMesh>>, Res<RenderAssets<GpuTexture>>, Res<RenderAssets<GpuMaterial<CustomMaterialAsset>>>
         ),
         (mesh_pipeline, render_mesh_pass, depth_texture): (
-            Res<RenderAssets<GpuCustomRenderPipeline>>, Res<CustomRenderPass>, Res<DepthTexture>
+            Res<RenderAssets<GpuCustomRenderPipeline>>, Res<CustomRenderPass>, Res<DepthTextureMSAA>
         )
     ) {
         // Get the render instance and swapchain frame

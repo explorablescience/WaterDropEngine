@@ -175,7 +175,7 @@ impl RenderPass for PbrGBufferRenderPass {
 
         // Check if depth texture is ready
         let textures = render_world.get_resource::<RenderAssets<GpuTexture>>().unwrap();
-        let depth_texture = match textures.get(&render_world.get_resource::<DepthTexture>().unwrap().texture) {
+        let depth_texture = match textures.get(&render_world.get_resource::<DepthTextureMSAA>().unwrap().texture) {
             Some(tex) => if render_instance.surface_config.as_ref().unwrap().width == tex.texture.size.0
                 && render_instance.surface_config.as_ref().unwrap().height == tex.texture.size.1 {
                 tex

@@ -247,7 +247,7 @@ pub mod prelude {
     pub use crate::components::TransformUniform;
     pub use crate::pipelines::{WgpuBindGroupLayout, BindGroup, BindGroupBuilder, BindGroupLayout, ShaderStages, CachedPipelineIndex, DepthStencilDescriptor, PipelineManager, RenderPipelineDescriptor, ComputePipelineDescriptor, CachedPipelineStatus, Vertex, CompareFunction, Face, RenderTopology, BindGroupLayoutBuilder};
     pub use crate::assets::{Material, MaterialBuilder, MaterialsPluginRegister, Texture, TextureLoaderSettings, Shader};
-    pub use crate::passes::{render_graph::{RenderGraph, RenderPass}, depth::{DepthTexture, DepthTextureLayout}};
+    pub use crate::passes::{render_graph::{RenderGraph, RenderPass}, depth_msaa::{DepthTextureMSAA}, depth::{DepthTexture}};
     pub use crate::utils::Color;
 }
 
