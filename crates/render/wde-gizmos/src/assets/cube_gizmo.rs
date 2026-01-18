@@ -42,6 +42,7 @@ impl CubeGizmoMesh {
                 position: [x, y, z],
                 normal: [0.0, 0.0, 0.0], // Normals are not used for gizmo
                 uv: [0.0, 0.0], // UVs are not used for gizmo
+                tangent: [0.0, 0.0, 0.0, 0.0],
             });
         }
 

@@ -53,13 +53,13 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 
 fn load(mut commands: Commands, asset_server: Res<AssetServer>) {
-    // GltfLoader::load("models/FlightHelmet/FlightHelmet.gltf", &asset_server)
-    //     .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 5.0)))
-    //     .unwrap();
-
-    GltfLoader::load("houses/house_demo1.gltf", &asset_server)
-        .map(|asset| asset.spawn(&mut commands, Transform::from_xyz(2.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.3)))
+    GltfLoader::load("models/FlightHelmet/FlightHelmet.gltf", &asset_server)
+        .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 5.0)))
         .unwrap();
+
+    // GltfLoader::load("houses/house_demo1.gltf", &asset_server)
+    //     .map(|asset| asset.spawn(&mut commands, Transform::from_xyz(2.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.3)))
+    //     .unwrap();
 
     // GltfLoader::load("models/chess_game/ABeautifulGame.gltf", &asset_server)
     //     .map(|asset| asset.spawn(&mut commands, Transform::from_scale(Vec3::ONE * 10.0)))

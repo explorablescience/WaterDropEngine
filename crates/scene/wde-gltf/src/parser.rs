@@ -311,15 +311,20 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
         .unwrap_or(1.0) as f32;
 
     // Extract material textures
-    const OPT_TEX_CANDIDATES: [&str; 4] = [
-        "baseColorTexture",
-        "metallicRoughnessTexture",
-        "normalTexture",
-        "occlusionTexture"
+    const OPT_TEX_CANDIDATES: [(&str, &str); 4] = [
+        ("pbr", "baseColorTexture"),
+        ("pbr", "metallicRoughnessTexture"),
+        ("root", "normalTexture"),
+        ("root", "occlusionTexture")
     ];
     let mut opt_textures_urls = HashMap::new();
     for tex_name in OPT_TEX_CANDIDATES {
-        if let Some(tex_info) = pbr.get(tex_name) {
+        let try_get_image = match tex_name.0 {
+            "pbr" => pbr.get(tex_name.1),
+            "root" => material_json.get(tex_name.1),
+            _ => None
+        };
+        if let Some(tex_info) = try_get_image {
             let tex_id = tex_info["index"].as_i64();
 
             // Retrieve texture data
@@ -335,7 +340,7 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
                     .as_str()
                     .ok_or(GltfError::MissingField("image.uri".to_string()))?
                     .to_string();
-                opt_textures_urls.insert(tex_name.to_string(), image_uri);
+                opt_textures_urls.insert(tex_name.1.to_string(), image_uri);
             }
         }
     }

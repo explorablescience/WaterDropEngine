@@ -53,6 +53,7 @@ impl PlaneMesh {
                     position: [position.x, position.y, position.z],
                     normal: [normal.x, normal.y, normal.z],
                     uv: [u, v],
+                    tangent: [tangent.x, tangent.y, tangent.z, 1.0],
                 });
             }
         }

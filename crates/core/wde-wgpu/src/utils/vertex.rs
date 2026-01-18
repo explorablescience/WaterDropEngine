@@ -16,6 +16,8 @@ pub struct Vertex {
     pub uv: [f32; 2],
     /// The normal of the vertex (must be normalized).
     pub normal: [f32; 3],
+    /// The tangent of the vertex (xyz: tangent, w: handedness).
+    pub tangent: [f32; 4],
 }
 
 impl Vertex {
@@ -51,6 +53,11 @@ impl Vertex {
                     offset: std::mem::size_of::<[f32; 5]>() as wgpu::BufferAddress,
                     shader_location: 2,
                     format: wgpu::VertexFormat::Float32x3,
+                },
+                wgpu::VertexAttribute { // Tangent
+                    offset: std::mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                    shader_location: 3,
+                    format: wgpu::VertexFormat::Float32x4,
                 },
             ],
         }

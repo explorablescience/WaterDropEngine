@@ -108,7 +108,7 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                             vertices[i].uv = [data[i * 2], data[i * 2 + 1]];
                         }
                         "TANGENT" => {
-                            continue;
+                            vertices[i].tangent = [data[i * 4], data[i * 4 + 1], data[i * 4 + 2], data[i * 4 + 3]];
                         }
                         _ => {
                             warn!("Ignoring unsupported attribute '{}' in primitive {}", attr_name, primitive.name);

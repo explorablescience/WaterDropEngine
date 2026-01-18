@@ -1,7 +1,9 @@
 struct VertexOutput {
-    @builtin(position) clip_position: vec4<f32>,
-    @location(0) tex_coord:    vec2<f32>,
-    @location(1) normal_world: vec3<f32>  // Normal in world space
+    @builtin(position) clip_position: vec4<f32>,  // Clip space position (after projection)
+    @location(0) tex_coord:    vec2<f32>,    // Texture coordinates (UV)
+    @location(1) normal_world: vec3<f32>,    // Normal in world space
+    @location(2) tangent_world: vec4<f32>,   // Tangent in world space
+    @location(3) bitangent_world: vec3<f32>  // Bitangent in world space
 };
 
 struct FragOutput {
@@ -40,23 +42,34 @@ fn main(in: VertexOutput) -> FragOutput {
     if (in_pbr_material.flags.x == 1.0) { // Albedo texture present
         albedo_color = textureSample(in_albedo_texture, in_albedo_sampler, in.tex_coord).rgb;
     }
-    if (in_pbr_material.flags.z == 1.0) { // Occlusion texture present
-        let occlusion_value: f32 = textureSample(in_occlusion_texture, in_occlusion_sampler, in.tex_coord).r;
-        albedo_color *= occlusion_value; // Modulate albedo by occlusion
-    }
     if (in_pbr_material.flags.y == 1.0) { // Metallic-roughness texture present
         metallic_value = textureSample(in_metallic_roughness_texture, in_metallic_roughness_sampler, in.tex_coord).b;
     }
     out.albedo_metallic = vec4<f32>(albedo_color, metallic_value);
+
+    // Normal mapping
+    var normal_world: vec3<f32> = normalize(in.normal_world);
+    if (in_pbr_material.flags.z == 1.0) { // Normal texture present
+        let normal_sample: vec3<f32> = textureSample(in_normal_texture, in_normal_sampler, in.tex_coord).rgb;
+        let normal_tangent: vec3<f32> = normalize(normal_sample * 2.0 - vec3<f32>(1.0, 1.0, 1.0));
+        let tangent_world: vec3<f32> = normalize(in.tangent_world.xyz);
+        let bitangent_world: vec3<f32> = normalize(in.bitangent_world);
+        let tbn_matrix: mat3x3<f32> = mat3x3<f32>(
+            tangent_world,
+            bitangent_world,
+            normal_world
+        );
+        normal_world = normalize(tbn_matrix * normal_tangent);
+    }
 
     // Roughness, and Normal
     var roughness_value: f32 = in_pbr_material.roughness;
     if (in_pbr_material.flags.y == 1.0) { // Metallic-roughness texture present
         roughness_value = textureSample(in_metallic_roughness_texture, in_metallic_roughness_sampler, in.tex_coord).g;
     }
-    out.normal_roughness = vec4<f32>(normalize(in.normal_world), roughness_value);
+    out.normal_roughness = vec4<f32>(normal_world, roughness_value);
     
-    // Note: For now, normal and occlusion textures are not processed in this shader
+    // Note: For now, occlusion texture is not processed in this shader (w flag)
 
     // Return G-buffer output
     return out;

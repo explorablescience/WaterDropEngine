@@ -100,6 +100,7 @@ impl CubeMesh {
                 position: [x, y, z],
                 normal: [nx, ny, nz],
                 uv: [u, v],
+                tangent: [0.0, 0.0, 0.0, 0.0],
             });
         }
 

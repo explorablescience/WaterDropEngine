@@ -172,6 +172,7 @@ impl AssetLoader for MeshLoader {
                     position: [x, y, z],
                     normal: [nx, ny, nz],
                     uv: [u, v],
+                    tangent: [0.0, 0.0, 0.0, 0.0],
                 });
 
                 // Update bounding box
