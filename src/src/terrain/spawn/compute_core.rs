@@ -77,7 +77,7 @@ impl MCComputePointsCore {
     /** Create the bind groups if they are not already created. */
     pub fn create_bind_groups(
         handler: Res<MCComputeHandlerGPU>, mut buffers: ResMut<RenderAssets<GpuBuffer>>,
-        render_instance: Res<RenderInstance<'static>>, mut pipeline: ResMut<RenderAssets<GpuMCComputePipelineSpawn>>,
+        render_instance: Res<RenderInstance>, mut pipeline: ResMut<RenderAssets<GpuMCComputePipelineSpawn>>,
         mut registered_chunks: Query<&mut MCRegisteredChunk>,
         noise_parameters: Res<MCTerrainNoiseParameters>
     ) {
@@ -159,7 +159,7 @@ impl MCComputePointsCore {
         (query, mut commands): (Query<(Entity, &MCRegisteredChunk)>, Commands),
         (chunks_list, handler): (Res<MCChunksListRender>, Res<MCComputeHandlerGPU>),
         mut buffers: ResMut<RenderAssets<GpuBuffer>>,
-        render_instance: Res<RenderInstance<'static>>,
+        render_instance: Res<RenderInstance>,
         (pipeline, pipeline_manager): (
             Res<RenderAssets<GpuMCComputePipelineSpawn>>, Res<PipelineManager>
         )

@@ -30,7 +30,7 @@ impl DepthMSAATextureLayout {
     /// Called during the Render phase once GPU textures are ready.
     /// Rebuilds if depth was resized; otherwise reuses cached bind group.
     pub fn build_bind_group(
-        render_instance: Res<RenderInstance<'static>>, mut textures_layout: ResMut<DepthMSAATextureLayout>,
+        render_instance: Res<RenderInstance>, mut textures_layout: ResMut<DepthMSAATextureLayout>,
         depth_texture: Res<DepthTextureMSAA>, textures: Res<RenderAssets<GpuTexture>>
     ) {
         // Check if the bind group is already created

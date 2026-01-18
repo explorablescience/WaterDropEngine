@@ -12,7 +12,7 @@ pub struct CameraFeatureRender {
 }
 impl FromWorld for CameraFeatureRender {
     fn from_world(world: &mut World) -> Self {
-        let render_instance = world.get_resource::<RenderInstance<'static>>().unwrap();
+        let render_instance = world.get_resource::<RenderInstance>().unwrap();
 
         // Create the camera layout
         let layout = BindGroupLayout::new("camera", |builder| {
@@ -60,7 +60,7 @@ impl Plugin for CameraFeature {
 
 // Create the bind group for the camera
 fn build_bind_group(
-    render_instance: Res<RenderInstance<'static>>, mut camera_feature_render: ResMut<CameraFeatureRender>,
+    render_instance: Res<RenderInstance>, mut camera_feature_render: ResMut<CameraFeatureRender>,
     camera_buffer: Res<CameraFeatureBuffer>, mut buffers: ResMut<RenderAssets<GpuBuffer>>)
 {
     // Check if the bind group is already created
@@ -96,7 +96,7 @@ fn extract(
 // Update the camera buffer
 fn update_buffer(
     (render_instance, camera_uniform, camera_buffer): (
-        Res<RenderInstance<'static>>, Res<CameraUniform>, Res<CameraFeatureBuffer>
+        Res<RenderInstance>, Res<CameraUniform>, Res<CameraFeatureBuffer>
     ),
     mut buffers: ResMut<RenderAssets<GpuBuffer>>
 ) {

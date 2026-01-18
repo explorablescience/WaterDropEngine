@@ -172,7 +172,7 @@ fn extract_shaders(
 /// Load the pipelines that are queued in the pipeline manager.
 fn load_render_pipelines(
     mut pipeline_manager: ResMut<PipelineManager>,
-    render_instance: Res<RenderInstance<'static>>
+    render_instance: Res<RenderInstance>
 ) {
     let mut pipelines_loaded_indices: Vec<(usize, RenderPipeline)> = Vec::new();
     let mut pipelines_loaded_desc: HashMap<CachedPipelineIndex, RenderPipelineDescriptor> = HashMap::new();
@@ -271,7 +271,7 @@ fn load_render_pipelines(
 /// Load the pipelines that are queued in the pipeline manager.
 fn load_compute_pipelines(
     mut pipeline_manager: ResMut<PipelineManager>,
-    render_instance: Res<RenderInstance<'static>>
+    render_instance: Res<RenderInstance>
 ) {
     let mut pipelines_loaded_indices: Vec<(usize, ComputePipeline)> = Vec::new();
     let mut pipelines_loaded_desc: HashMap<CachedPipelineIndex, ComputePipelineDescriptor> = HashMap::new();

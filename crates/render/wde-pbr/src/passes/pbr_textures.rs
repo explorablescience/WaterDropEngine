@@ -11,7 +11,7 @@ pub(crate) struct PbrDeferredTexturesLayout {
 impl PbrDeferredTexturesLayout {
     /// Build the bind group for the deferred renderer.
     pub fn build_bind_group(
-        textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance<'static>>,
+        textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance>,
         mut textures_layout: ResMut<PbrDeferredTexturesLayout>, deferred_textures: Res<PbrDeferredTextures>
     ) {
         // Check if the bind group is already created

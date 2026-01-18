@@ -75,7 +75,7 @@ pub(crate) fn send_surface_resized(
 
 
 /// Extract the window size from the primary window and update the surface configuration.
-pub(crate) fn extract_surface_size(render_instance: ResMut<RenderInstance<'static>>, windows: ExtractWorld<Query<&Window>>) {
+pub(crate) fn extract_surface_size(render_instance: ResMut<RenderInstance>, windows: ExtractWorld<Query<&Window>>) {
     // Check if there is a window
     if windows.iter().count() == 0 {
         return

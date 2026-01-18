@@ -18,7 +18,7 @@ pub(crate) struct LightsFeatureBuffer {
 impl LightsFeatureBuffer {
     pub fn build_bind_group(
         buffers: Res<RenderAssets<GpuBuffer>>, mut lights_buffer: ResMut<LightsFeatureBuffer>,
-        render_instance: Res<RenderInstance<'static>>
+        render_instance: Res<RenderInstance>
     ) {
         // Check if the bind group is already created
         if lights_buffer.bind_group.is_some() {
@@ -89,7 +89,7 @@ fn extract(
     (lights_buffer, buffers): (
         Res<LightsFeatureBuffer>, Res<RenderAssets<GpuBuffer>>
     ),
-    render_instance: Res<RenderInstance<'static>>
+    render_instance: Res<RenderInstance>
 ) {
     // Get the lights buffer
     let lights_buffer_cpu = match buffers.get(&lights_buffer.buffer_cpu) {

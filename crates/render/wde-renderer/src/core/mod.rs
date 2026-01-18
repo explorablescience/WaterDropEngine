@@ -105,7 +105,7 @@ pub struct RenderApp;
 
 /// The wgpu render instance resource.
 #[derive(Resource)]
-pub struct RenderInstance<'a>(pub Arc<RwLock<wde_wgpu::RenderInstanceData<'a>>>);
+pub struct RenderInstance(pub Arc<RwLock<wde_wgpu::RenderInstanceData<'static>>>);
 
 /// The plugin that is responsible for the renderer.
 pub struct RenderCorePlugin;

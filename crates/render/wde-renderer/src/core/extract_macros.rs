@@ -3,7 +3,7 @@
 //! Provides the [`ExtractWorld`] system parameter, which allows accessing data from the main world in the render world.
 //! Also provides the [`ExtractState`] system parameter state, which is used to manage the [`ExtractWorld`] system parameter.
 
-use bevy::{ecs::{component::Tick, system::{ReadOnlySystemParam, SystemMeta, SystemParam, SystemParamItem, SystemState}, world::unsafe_world_cell::UnsafeWorldCell}, prelude::*};
+use bevy::{ecs::{change_detection::Tick, system::{ReadOnlySystemParam, SystemMeta, SystemParam, SystemParamItem, SystemState}, world::unsafe_world_cell::UnsafeWorldCell}, prelude::*};
 use std::ops::{Deref, DerefMut};
 
 use super::MainWorld;

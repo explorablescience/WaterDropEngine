@@ -132,7 +132,7 @@ pub struct GpuMaterial<M: Material + Sync + Send + Asset + Clone> {
 impl<M: Material + Sync + Send + Asset + Clone> RenderAsset for GpuMaterial<M> {
     type SourceAsset = M;
     type Param = (
-        SRes<RenderInstance<'static>>, SResMut<MaterialsBuilderCache>, SRes<AssetServer>,
+        SRes<RenderInstance>, SResMut<MaterialsBuilderCache>, SRes<AssetServer>,
         SRes<DummyTexture>, SRes<RenderAssets<GpuBuffer>>, SRes<RenderAssets<GpuTexture>>
     );
 

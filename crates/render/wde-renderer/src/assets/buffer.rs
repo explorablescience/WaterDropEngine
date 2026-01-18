@@ -51,7 +51,7 @@ pub struct GpuBuffer {
 }
 impl RenderAsset for GpuBuffer {
     type SourceAsset = Buffer;
-    type Param = SRes<RenderInstance<'static>>;
+    type Param = SRes<RenderInstance>;
 
     fn prepare_asset(
             asset: Self::SourceAsset,

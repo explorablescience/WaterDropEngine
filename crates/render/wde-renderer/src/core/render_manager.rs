@@ -18,7 +18,7 @@ pub(crate) fn init_main_world(mut commands: Commands) {
 }
 
 /// Initialize the wgpu surface.
-pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<RenderInstance<'static>>, primary_window: ExtractWorld<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>>, windows: ExtractWorld<Query<&Window>>) {
+pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<RenderInstance>, primary_window: ExtractWorld<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>>, windows: ExtractWorld<Query<&Window>>) {
     trace!("Initializing wgpu surface");
     
     // Create the wgpu surface
@@ -63,7 +63,7 @@ pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<R
 }
 
 /// Prepare the rendering frame.
-pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instance: Res<RenderInstance<'static>>) {
+pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instance: Res<RenderInstance>) {
     // Wait for the surface to be initialized
     if render_instance.0.read().unwrap().surface.is_none() {
         debug!("Waiting for surface to be initialized.");

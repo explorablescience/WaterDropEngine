@@ -12,7 +12,7 @@ pub(crate) struct GizmoSsbo {
     pub bind_group: Option<BindGroup>
 }
 impl GizmoSsbo {
-    pub fn build_bind_group(buffers: Res<RenderAssets<GpuBuffer>>, mut ssbo: ResMut<GizmoSsbo>, render_instance: Res<RenderInstance<'static>>) {
+    pub fn build_bind_group(buffers: Res<RenderAssets<GpuBuffer>>, mut ssbo: ResMut<GizmoSsbo>, render_instance: Res<RenderInstance>) {
         // Check if the ssbo bind group is already created
         if ssbo.bind_group.is_some() {
             return;

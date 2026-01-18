@@ -28,7 +28,7 @@ pub struct Shader {
     pub content: String
 }
 
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct ShaderLoader;
 
 #[derive(Serialize, Deserialize, Default)]
@@ -52,7 +52,7 @@ impl AssetLoader for ShaderLoader {
         _settings: &Self::Settings,
         load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
-        debug!("Loading shader on the CPU from {}.", load_context.asset_path());
+        debug!("Loading shader on the CPU from {}.", load_context.path());
 
         // Read the texture data
         let mut bytes = Vec::new();

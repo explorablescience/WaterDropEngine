@@ -17,7 +17,7 @@ impl RenderPass for MCRenderPass {
         }
 
         // Get the render instance and swapchain frame
-        let render_instance = render_world.get_resource::<RenderInstance<'static>>().unwrap();
+        let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.0.read().unwrap();
 
         // Check if depth texture is ready

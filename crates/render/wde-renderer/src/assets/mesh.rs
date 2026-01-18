@@ -58,7 +58,7 @@ pub struct MeshAsset {
     pub bounding_box: ModelBoundingBox,
 }
 
-#[derive(Default)]
+#[derive(Default, TypePath)]
 pub struct MeshLoader;
 
 #[derive(Serialize, Deserialize)]
@@ -91,11 +91,11 @@ impl AssetLoader for MeshLoader {
         settings: &Self::Settings,
         load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
-        info!("Loading mesh on the CPU from {}.", load_context.asset_path());
+        info!("Loading mesh on the CPU from {}.", load_context.path());
 
         // Update the label from the path
         let label = if settings.label.is_empty() {
-            load_context.asset_path().to_string()
+            load_context.path().to_string()
         } else {
             settings.label.clone()
         };
@@ -216,7 +216,7 @@ pub struct GpuMesh {
 }
 impl RenderAsset for GpuMesh {
     type SourceAsset = MeshAsset;
-    type Param = SRes<RenderInstance<'static>>;
+    type Param = SRes<RenderInstance>;
 
     fn prepare_asset(
             asset: Self::SourceAsset,

@@ -46,7 +46,7 @@ impl Default for Texture {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, TypePath)]
 /// Bevy asset loader that decodes images and fills a CPU-side [`Texture`].
 pub struct TextureLoader;
 
@@ -87,7 +87,7 @@ impl AssetLoader for TextureLoader {
         settings: &TextureLoaderSettings,
         load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
-        debug!("Loading texture on the CPU from {}.", load_context.asset_path());
+        debug!("Loading texture on the CPU from {}.", load_context.path());
 
         // Read the texture data bytes
         let mut bytes = Vec::new();
@@ -137,7 +137,7 @@ pub struct GpuTexture {
 }
 impl RenderAsset for GpuTexture {
     type SourceAsset = Texture;
-    type Param = SRes<RenderInstance<'static>>;
+    type Param = SRes<RenderInstance>;
 
     fn prepare_asset(
             asset: Self::SourceAsset,

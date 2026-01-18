@@ -12,7 +12,7 @@ pub(crate) struct PbrSsbo {
     pub bind_group: Option<BindGroup>
 }
 impl PbrSsbo {
-    pub fn build_bind_group(buffers: Res<RenderAssets<GpuBuffer>>, mut ssbo: ResMut<PbrSsbo>, render_instance: Res<RenderInstance<'static>>) {
+    pub fn build_bind_group(buffers: Res<RenderAssets<GpuBuffer>>, mut ssbo: ResMut<PbrSsbo>, render_instance: Res<RenderInstance>) {
         // Check if the ssbo bind group is already created
         if ssbo.bind_group.is_some() {
             return;

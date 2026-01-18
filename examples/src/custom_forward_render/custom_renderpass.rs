@@ -18,7 +18,7 @@ pub struct CustomRenderPass {
 impl CustomRenderPass {
     /// Create the batches with the correct mesh and material.
     pub fn create_batches(
-        mut pass: ResMut<CustomRenderPass>, render_instance: Res<RenderInstance<'static>>,
+        mut pass: ResMut<CustomRenderPass>, render_instance: Res<RenderInstance>,
         entities: ExtractWorld<Query<(&Transform, &Mesh, &CustomMaterial)>>,
         meshes: Res<RenderAssets<GpuMesh>>, materials: Res<RenderAssets<GpuMaterial<CustomMaterialAsset>>>,
         buffers: Res<RenderAssets<GpuBuffer>>, ssbo: Res<CustomSsbo>
@@ -130,7 +130,7 @@ impl CustomRenderPass {
     /// Render the different batches.
     pub fn render(
         (render_instance, swapchain_frame, pipeline_manager): (
-            Res<RenderInstance<'static>>, Res<SwapchainFrame>,  Res<PipelineManager>
+            Res<RenderInstance>, Res<SwapchainFrame>,  Res<PipelineManager>
         ),
         (camera_layout, ssbo) : (Res<CameraFeatureRender>, Res<CustomSsbo>),
         (meshes, textures, materials): (

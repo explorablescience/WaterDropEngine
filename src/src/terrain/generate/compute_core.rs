@@ -11,7 +11,7 @@ impl MCComputeCorePoints {
     /** Create the bind groups if they are not already created. */
     pub fn create_bind_groups(
         handler: Res<MCComputeHandlerGPU>, buffers: Res<RenderAssets<GpuBuffer>>,
-        render_instance: Res<RenderInstance<'static>>, mut pipeline: ResMut<RenderAssets<GpuMCComputePipelineGenerate>>,
+        render_instance: Res<RenderInstance>, mut pipeline: ResMut<RenderAssets<GpuMCComputePipelineGenerate>>,
         mut loading_chunks: Query<&mut MCLoadingChunk>
     ) {
         // Get the compute pipeline
@@ -90,7 +90,7 @@ impl MCComputeCorePoints {
         (query, mut commands): (Query<(Entity, &MCLoadingChunk)>, Commands),
         (chunks_list, handler): (Res<MCChunksListRender>, Res<MCComputeHandlerGPU>),
         mut buffers: ResMut<RenderAssets<GpuBuffer>>,
-        render_instance: Res<RenderInstance<'static>>,
+        render_instance: Res<RenderInstance>,
         (pipeline, pipeline_manager): (
             Res<RenderAssets<GpuMCComputePipelineGenerate>>, Res<PipelineManager>
         )
