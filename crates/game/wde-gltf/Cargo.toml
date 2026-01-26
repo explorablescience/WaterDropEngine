@@ -18,9 +18,9 @@ incremental = false
 debug = false
 
 [dependencies]
-wde-renderer = { path = "../../render/wde-renderer" }
+wde-renderer = { path = "../../core/wde-renderer" }
 wde-pbr = { path = "../../render/wde-pbr" }
-wde-logger = { path = "../../core/wde-logger" }
+wde-logger = { path = "../../wrappers/wde-logger" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 serde_json = "1.0"

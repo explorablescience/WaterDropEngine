@@ -1,11 +1,8 @@
 [workspace]
 members = [
     "src",
+    "crates/*/*",
     "examples",
-    "crates/core/*",
-    "crates/render/*",
-    "crates/scene/*",
-    "crates/wde/"
 ]
 resolver = "2"
 

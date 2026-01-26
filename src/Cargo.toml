@@ -5,7 +5,7 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
-wde = { path = "../crates/wde" }
+wde = { path = "../crates/core/wde" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 

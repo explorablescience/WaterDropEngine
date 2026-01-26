@@ -18,14 +18,14 @@ incremental = false
 debug = false
 
 [dependencies]
-wde-logger = { path = "../../core/wde-logger" }
-wde-wgpu = { path = "../../core/wde-wgpu" }
-wde-renderer = { path = "../../render/wde-renderer" }
+wde-logger = { path = "../../wrappers/wde-logger" }
+wde-wgpu = { path = "../../wrappers/wde-wgpu" }
+wde-renderer = { path = "../wde-renderer" }
 wde-pbr = { path = "../../render/wde-pbr" }
 wde-camera = { path = "../../render/wde-camera" }
 wde-gizmos = { path = "../../render/wde-gizmos" }
-wde-gltf = { path = "../wde-gltf" }
-wde-physics = { path = "../wde-physics" }
+wde-gltf = { path = "../../game/wde-gltf" }
+wde-physics = { path = "../../game/wde-physics" }
 bevy = { workspace = true }
 serde = { workspace = true }
 bytemuck = { workspace = true }
