@@ -1,0 +1,26 @@
+[package]
+name = "wde-egui"
+version = "0.1.0"
+authors = ["MecanicaScience"]
+edition = "2024"
+description = "Egui wrapper for WaterDropEngine"
+
+[profile.dev]
+opt-level = 0
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+incremental = false
+debug = false
+
+[dependencies]
+bevy = { workspace = true }
+wde-renderer = { path = "../../core/wde-renderer" }
+egui = "0.33"
+egui-wgpu = "0.33"
+wgpu = "27.0"

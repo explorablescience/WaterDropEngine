@@ -237,6 +237,9 @@ pub mod prelude {
 
     #[cfg(feature = "pbr")]
     pub use wde_pbr::prelude::*;
+
+    #[cfg(feature = "egui")]
+    pub use wde_egui::prelude::*;
 }
 
 /// Rendering module.

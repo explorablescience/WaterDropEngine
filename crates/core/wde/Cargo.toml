@@ -25,6 +25,7 @@ wde-camera = { path = "../../render/wde-camera" }
 wde-physics = { path = "../../game/wde-physics" }
 wde-gizmos = { path = "../../render/wde-gizmos", optional = true }
 wde-pbr = { path = "../../render/wde-pbr", optional = true }
+wde-egui = { path = "../../wrappers/wde-egui", optional = true }
 bevy = { workspace = true }
 
 [features]
@@ -33,3 +34,4 @@ gizmos = ["wde-gizmos"]
 pbr = ["wde-pbr"]
 watch = ["bevy/file_watcher"]
 tracing = ["wde-logger/tracing", "bevy/trace_tracy_memory"]
+egui = ["wde-egui"]

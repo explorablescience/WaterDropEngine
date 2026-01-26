@@ -11,6 +11,7 @@ pub fn main() {
     // Add default plugins
     info!("Adding default plugins.");
     app.add_plugins(WdeDefaultPlugins);
+    app.add_plugins(EguiPlugin);
 
     // Run the app
     info!("Running game engine.");
