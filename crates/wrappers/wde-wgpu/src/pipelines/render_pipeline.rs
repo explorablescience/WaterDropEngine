@@ -311,13 +311,13 @@ impl RenderPipeline {
             cache: None,
             vertex: wgpu::VertexState {
                 module: &shader_module_vert,
-                entry_point: "main",
+                entry_point: Some("main"),
                 buffers: &[Vertex::describe()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState { // Always write to swapchain format
                 module: &shader_module_frag,
-                entry_point: "main",
+                entry_point: Some("main"),
                 targets: d.render_targets.iter().map(|format| Some(wgpu::ColorTargetState {
                     format: *format,
                     blend: Some(wgpu::BlendState::REPLACE),

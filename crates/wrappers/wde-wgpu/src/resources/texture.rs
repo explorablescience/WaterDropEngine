@@ -133,6 +133,7 @@ impl Texture {
             base_array_layer: 0,
             mip_level_count: None,
             array_layer_count: None,
+            usage: None,
         });
 
         // Create sampler
@@ -185,14 +186,14 @@ impl Texture {
 
         // Copy buffer to texture
         instance.queue.write_texture(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             buffer,
-            wgpu::ImageDataLayout {
+            wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(self.size.0 * format_size as u32),
                 rows_per_image: None,
@@ -223,13 +224,13 @@ impl Texture {
 
         // Copy texture to texture
         command.encoder().copy_texture_to_texture(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,

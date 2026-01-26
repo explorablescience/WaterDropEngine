@@ -163,7 +163,7 @@ impl ComputePipeline {
             label: Some(format!("{}-compute-pip", self.label).as_str()),
             layout: Some(&layout),
             module: &shader_module,
-            entry_point: "main",
+            entry_point: Some("main"),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
             cache: None
         });

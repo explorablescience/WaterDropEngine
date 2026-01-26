@@ -203,6 +203,7 @@ impl CommandBuffer {
                     load: attachment.load,
                     store: attachment.store
                 },
+                depth_slice: None,
             })
         }).collect::<Vec<_>>();
 
@@ -274,9 +275,9 @@ impl CommandBuffer {
         let texture_copy = source.as_image_copy();
 
         // Create buffer copy
-        let buffer_copy = wgpu::ImageCopyBuffer {
+        let buffer_copy = wgpu::TexelCopyBufferInfo {
             buffer: &destination.buffer,
-            layout: wgpu::ImageDataLayout {
+            layout: wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(4 * 4 * size.width),
                 rows_per_image: None,

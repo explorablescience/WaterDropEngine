@@ -2,7 +2,7 @@
 
 use bevy::window::RawHandleWrapperHolder;
 use wde_logger::prelude::*;
-use wgpu::{Device, Limits as WLimits, PresentMode as WPresentMode, Surface, SurfaceConfiguration, SurfaceTexture};
+use wgpu::{BackendOptions, Device, Limits as WLimits, MemoryBudgetThresholds, PresentMode as WPresentMode, Surface, SurfaceConfiguration, SurfaceTexture};
 
 use crate::texture::TextureView;
 
@@ -126,11 +126,11 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
 
     // Create wgpu instance
     debug!(label, "Creating wgpu instance.");
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends: wgpu::Backends::all(),
         flags,
-        dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
-        gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+        memory_budget_thresholds: MemoryBudgetThresholds::default(),
+        backend_options: BackendOptions::default(),
     });
 
     // Retrieve surface
@@ -156,7 +156,7 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
             ..Default::default()
         })
         .await
-        .unwrap_or_else(|| panic!("Failed to create adapter for '{}'.", label));
+        .unwrap_or_else(|e| panic!("Failed to create adapter for '{}' : {}", label, e));
 
     // Check adaptater infos
     let adapter_info = adapter.get_info();
@@ -188,11 +188,12 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
             &wgpu::DeviceDescriptor {
                 label: Some(label), required_features, required_limits,
                 memory_hints: wgpu::MemoryHints::Performance,
+                experimental_features: wgpu::ExperimentalFeatures::disabled(),
+                trace: wgpu::Trace::Off,
             },
-            None,
         )
         .await
-        .unwrap_or_else(|_| panic!("Failed to create device for '{}'.", label));
+        .unwrap_or_else(|e| panic!("Failed to create device for '{}' : {}", label, e));
 
     // Log device infos
     debug!("Configured wgpu adapter Limits: {:#?}", device.limits());
@@ -292,6 +293,7 @@ pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfigurat
                 mip_level_count: None,
                 base_array_layer: 0,
                 array_layer_count: None,
+                usage: None
             });
             let cur_render = RenderTexture {
                 texture: surface_texture,
@@ -311,6 +313,11 @@ pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfigurat
         // Timeout of the surface
         Err(wgpu::SurfaceError::Timeout) => {
             warn!("Timeout of the surface.");
+            RenderEvent::None
+        }
+        // Other errors
+        Err(e) => {
+            error!("Failed to acquire next swapchain texture: {:?}", e);
             RenderEvent::None
         }
     }

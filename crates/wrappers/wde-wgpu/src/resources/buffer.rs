@@ -13,7 +13,7 @@ pub type BufferUsage = wgpu::BufferUsages;
 pub type BufferBindingType = wgpu::BufferBindingType;
 
 /// Map the buffer.
-pub type BufferViewMut<'a> = wgpu::BufferViewMut<'a>;
+pub type BufferViewMut = wgpu::BufferViewMut;
 
 /// Create and manage GPU buffers.
 ///
@@ -203,7 +203,9 @@ impl Buffer {
             move |r| sender.send(r).unwrap());
 
         // Wait for the buffer to be mapped
-        instance.device.poll(wgpu::Maintain::Wait);
+        if let Err(e) = instance.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None }) {
+            error!("Failed to poll device while mapping buffer '{}': {:?}", self.label, e);
+        }
         receiver.recv().unwrap().unwrap();
 
         // Call callback
@@ -233,7 +235,9 @@ impl Buffer {
             move |r| sender.send(r).unwrap());
 
         // Wait for the buffer to be mapped
-        instance.device.poll(wgpu::Maintain::Wait);
+        if let Err(e) = instance.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None }) {
+            error!("Failed to poll device while mapping buffer '{}': {:?}", self.label, e);
+        }
         receiver.recv().unwrap().unwrap();
 
         // Call callback
