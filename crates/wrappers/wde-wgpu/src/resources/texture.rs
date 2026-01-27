@@ -16,6 +16,12 @@ pub type TextureUsages = wgpu::TextureUsages;
 /// Texture format.
 pub type TextureFormat = wgpu::TextureFormat;
 
+
+/// The swapchain texture format.
+pub const SWAPCHAIN_FORMAT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
+/// The depth texture format.
+pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
+
 /// Texture wrapper with a ready-to-use view and sampler.
 ///
 /// # Examples
@@ -80,12 +86,6 @@ impl std::fmt::Debug for Texture {
 }
 
 impl Texture {
-    /// The swapchain texture format.
-    pub const SWAPCHAIN_FORMAT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
-    /// The depth texture format.
-    pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
-
-
     /// Create a new texture.
     /// 
     /// # Arguments
@@ -118,12 +118,12 @@ impl Texture {
         // Create texture view
         let view = texture.create_view(&wgpu::TextureViewDescriptor {
             label: Some(format!("{}-texture-view", label).as_str()),
-            format: if format == Self::DEPTH_FORMAT {
+            format: if format == DEPTH_FORMAT {
                 None
             } else {
                 Some(format)
             },
-            dimension: if format == Self::DEPTH_FORMAT {
+            dimension: if format == DEPTH_FORMAT {
                 None
             } else {
                 Some(wgpu::TextureViewDimension::D2)

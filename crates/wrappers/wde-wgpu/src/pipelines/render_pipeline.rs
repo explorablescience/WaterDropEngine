@@ -3,7 +3,7 @@
 use wde_logger::prelude::*;
 use wgpu::{naga, BindGroupLayout};
 
-use crate::{instance::{RenderError, RenderInstanceData}, texture::{Texture, TextureFormat}, vertex::Vertex};
+use crate::{instance::{RenderError, RenderInstanceData}, texture::{DEPTH_FORMAT, SWAPCHAIN_FORMAT, TextureFormat}, vertex::Vertex};
 
 /// List of available shaders.
 pub type ShaderStages = wgpu::ShaderStages;
@@ -112,7 +112,7 @@ impl RenderPipeline {
             is_initialized: false,
             config: RenderPipelineConfig {
                 depth: DepthStencilDescriptor::default(),
-                render_targets: Vec::from([Texture::SWAPCHAIN_FORMAT]),
+                render_targets: Vec::from([SWAPCHAIN_FORMAT]),
                 primitive_topology: wgpu::PrimitiveTopology::TriangleList,
                 push_constants: Vec::new(),
                 bind_groups: Vec::new(),
@@ -335,7 +335,7 @@ impl RenderPipeline {
                 unclipped_depth: false,
             },
             depth_stencil: if d.depth.enabled { Some(wgpu::DepthStencilState {
-                format: match Texture::DEPTH_FORMAT {
+                format: match DEPTH_FORMAT {
                     TextureFormat::Depth32Float => wgpu::TextureFormat::Depth32Float,
                     _ => {
                         error!("Depth format is not supported for render pipeline '{}'.", self.label);

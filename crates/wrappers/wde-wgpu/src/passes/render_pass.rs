@@ -269,4 +269,22 @@ impl<'a> RenderPass<'a> {
         self.render_pass.multi_draw_indexed_indirect(&buffer.buffer, offset, count);
         Ok(())
     }
+
+    /// Forgets the lifetime of the render pass.
+    /// This is used to return the inner `wgpu::RenderPass` when needed.
+    pub fn forget_lifetime(self) -> RenderPass<'static> {
+        let render_pass = self.render_pass.forget_lifetime();
+        RenderPass {
+            label: self.label,
+            render_pass,
+            pipeline_set: self.pipeline_set,
+            vertex_buffer_set: self.vertex_buffer_set,
+            index_buffer_set: self.index_buffer_set,
+        }
+    }
+
+    /// Consumes the render pass and returns the inner `wgpu::RenderPass`.
+    pub fn into_inner(self) -> wgpu::RenderPass<'a> {
+        self.render_pass
+    }
 }

@@ -5,7 +5,7 @@
 //! depth resource for sampling in fragment shaders or depth testing.
 
 use bevy::prelude::*;
-use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{Texture as WTexture, TextureUsages}};
+use wde_wgpu::{bind_group::{BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup}, render_pipeline::ShaderStages, texture::{DEPTH_FORMAT, TextureUsages}};
 
 use crate::{MSAA_SAMPLE_COUNT, core::RenderInstance};
 
@@ -90,7 +90,7 @@ impl DepthTextureMSAA {
         let texture = server.add(Texture {
             label: "depth".to_string(),
             size: (resolution.physical_width(), resolution.physical_height()),
-            format: WTexture::DEPTH_FORMAT,
+            format: DEPTH_FORMAT,
             usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             sample_count: MSAA_SAMPLE_COUNT,
             ..Default::default()
@@ -117,7 +117,7 @@ impl DepthTextureMSAA {
             let texture = server.add(Texture {
                 label: "depth".to_string(),
                 size: (event.width, event.height),
-                format: WTexture::DEPTH_FORMAT,
+                format: DEPTH_FORMAT,
                 usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 sample_count: MSAA_SAMPLE_COUNT,
                 ..Default::default()

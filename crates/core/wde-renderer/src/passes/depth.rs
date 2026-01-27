@@ -5,7 +5,7 @@
 //! depth resource for sampling in fragment shaders or depth testing.
 
 use bevy::prelude::*;
-use wde_wgpu::texture::{Texture as WTexture, TextureUsages};
+use wde_wgpu::texture::{DEPTH_FORMAT, TextureUsages};
 
 use crate::{assets::Texture, core::{extract_macros::ExtractWorld, window::SurfaceResized}};
 
@@ -31,7 +31,7 @@ impl DepthTexture {
         let texture = server.add(Texture {
             label: "depth".to_string(),
             size: (resolution.physical_width(), resolution.physical_height()),
-            format: WTexture::DEPTH_FORMAT,
+            format: DEPTH_FORMAT,
             usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
             ..Default::default()
         });
@@ -52,7 +52,7 @@ impl DepthTexture {
             let texture = server.add(Texture {
                 label: "depth".to_string(),
                 size: (event.width, event.height),
-                format: WTexture::DEPTH_FORMAT,
+                format: DEPTH_FORMAT,
                 usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 ..Default::default()
             });

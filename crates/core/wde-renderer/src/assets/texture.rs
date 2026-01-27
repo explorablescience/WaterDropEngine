@@ -16,7 +16,7 @@ use crate::core::RenderInstance;
 use super::render_assets::{PrepareAssetError, RenderAsset};
 
 // Reexport structs
-pub use wde_wgpu::texture::{TextureFormat, TextureUsages};
+pub use wde_wgpu::texture::{TextureFormat, TextureUsages, SWAPCHAIN_FORMAT, DEPTH_FORMAT};
 
 #[derive(Asset, TypePath, Clone)]
 pub struct Texture {
