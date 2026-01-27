@@ -5,9 +5,14 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
-wde = { path = "../crates/core/wde", features=["egui"] }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
+
+[dependencies.wde]
+path = "../crates/core/wde"
+features = [
+    "egui"
+]
 
 [build-dependencies]
 anyhow = "1.0"

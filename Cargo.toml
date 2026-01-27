@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "src",
+    "src/",
     "crates/*/*",
     "examples",
 ]

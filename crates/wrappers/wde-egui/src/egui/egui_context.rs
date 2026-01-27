@@ -4,7 +4,7 @@ use wde_renderer::core::RenderApp;
 
 /// Resource to store the egui context
 #[derive(Resource)]
-pub(crate) struct EguiContext(pub Context);
+pub struct EguiContext(pub Context);
 
 /// Resource to store egui frame data between update and render passes
 #[derive(Resource, Default)]

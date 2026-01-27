@@ -177,6 +177,8 @@ impl Plugin for CustomWdePlugins {
         app.add_plugins(wde_gizmos::GizmosPlugin);
         #[cfg(feature = "pbr")]
         app.add_plugins(wde_pbr::PbrPlugin);
+        #[cfg(feature = "egui")]
+        app.add_plugins(wde_egui::EguiPlugin);
 
         app.add_plugins(wde_scene::ScenePlugin);
     }
