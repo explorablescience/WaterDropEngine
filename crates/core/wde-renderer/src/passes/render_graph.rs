@@ -82,7 +82,9 @@ impl RenderGraph {
     /// (Internal; called automatically by the renderer.)
     pub(crate) fn extract(&mut self, main_world: &mut World, render_world: &mut World) {
         // Extract the passes
-        for pass in self.sorted_passes.iter().map(|id| self.passes.get(id).unwrap()) {
+        for id in self.sorted_passes.iter() {
+            let _span = debug_span!("render_pass_extract", pass_id = *id).entered();
+            let pass = self.passes.get(id).unwrap();
             pass.extract(main_world, render_world);
         }
     }
@@ -90,8 +92,6 @@ impl RenderGraph {
     /// Render phase: issue GPU commands for each pass.
     /// (Internal; called automatically by the renderer.)
     pub(crate) fn render(render_world: &mut World) {
-        trace!("Rendering the render passes.");
-
         // Check if there is a swapchain frame
         if !render_world.contains_resource::<SwapchainFrame>() {
             warn!("No swapchain frame available, skipping render passes.");
@@ -105,7 +105,9 @@ impl RenderGraph {
 
         // Run the update methods for each pass
         render_world.resource_scope(|render_world, graph: Mut<RenderGraph>| {
-            for pass in graph.sorted_passes.iter().map(|id| graph.passes.get(id).unwrap()) {
+            for id in graph.sorted_passes.iter() {
+                let _span = debug_span!("render_pass_render", pass_id = *id).entered();
+                let pass = graph.passes.get(id).unwrap();
                 pass.render(render_world);
             }
         });

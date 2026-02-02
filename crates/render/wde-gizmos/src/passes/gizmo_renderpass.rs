@@ -23,6 +23,8 @@ pub(crate) struct GizmoRenderPass {
 }
 impl RenderPass for GizmoRenderPass {
     fn extract(&self, main_world: &mut World, render_world: &mut World) {
+        let _span = debug_span!("gizmo_render_pass_extract").entered();
+
         // Get the ssbo
         let buffers = render_world.get_resource::<RenderAssets<GpuBuffer>>().unwrap();
         let ssbo_bf = match buffers.get(&render_world.get_resource::<GizmoSsbo>().unwrap().buffer) {
@@ -157,6 +159,7 @@ impl RenderPass for GizmoRenderPass {
         if render_world.get_resource::<GizmoRenderPass>().unwrap().batches.is_empty() {
             return;
         }
+        let _span = debug_span!("gizmo_render_pass_render").entered();
 
         // Get the render instance and swapchain frame
         let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
@@ -181,6 +184,7 @@ impl RenderPass for GizmoRenderPass {
         };
 
         // Create the render pass
+        let _span = debug_span!("gizmo_render_pass_command_buffer").entered();
         let mut command_buffer = CommandBuffer::new(&render_instance, "gizmo");
         {
             let swapchain_frame = render_world.get_resource::<SwapchainFrame>().unwrap();
@@ -209,6 +213,8 @@ impl RenderPass for GizmoRenderPass {
                 &render_world.get_resource::<CameraFeatureRender>().unwrap().bind_group,
                 &render_world.get_resource::<GizmoSsbo>().unwrap().bind_group
             ) {
+                let _span = debug_span!("gizmo_render_pass_draw").entered();
+
                 // Set the camera bind group
                 render_pass.set_bind_group(0, camera_bg);
 

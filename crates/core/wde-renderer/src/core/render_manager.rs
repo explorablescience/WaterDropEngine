@@ -64,6 +64,8 @@ pub(crate) fn init_surface(mut commands: Commands, mut render_instance: ResMut<R
 
 /// Prepare the rendering frame.
 pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instance: Res<RenderInstance>) {
+    let _ = debug_span!("prepare_swapchain_frame").entered();
+
     // Wait for the surface to be initialized
     if render_instance.0.read().unwrap().surface.is_none() {
         debug!("Waiting for surface to be initialized.");
@@ -114,6 +116,8 @@ pub(crate) fn prepare(mut swapchain_frame: ResMut<SwapchainFrame>, render_instan
 
 /// Present the rendered frame to the screen.
 pub(crate) fn present(mut swapchain_frame: ResMut<SwapchainFrame>) {
+    let _ = debug_span!("present_swapchain_frame").entered();
+
     let _ = instance::present(match swapchain_frame.data.take() {
         Some(render_texture) => render_texture.texture,
         None => {

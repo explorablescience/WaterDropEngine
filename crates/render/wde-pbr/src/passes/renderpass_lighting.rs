@@ -36,6 +36,7 @@ impl PbrLightingRenderPassMesh {
 pub struct PbrLightingRenderPass;
 impl RenderPass for PbrLightingRenderPass {
     fn extract(&self, main_world: &mut World, render_world: &mut World) {
+        let _span = debug_span!("lighting_pbr_render_pass_extract").entered();
         let mesh_cpu = main_world.get_resource::<PbrLightingRenderPassMesh>().unwrap();
         let mut render_pass = render_world.get_resource_mut::<PbrLightingRenderPassMesh>().unwrap();
         render_pass.deferred_mesh = None;
@@ -45,6 +46,8 @@ impl RenderPass for PbrLightingRenderPass {
     }
 
     fn render(&self, world: &mut World) {
+        let _span = debug_span!("lighting_pbr_render_pass_render").entered();
+
         // Get the render instance and swapchain frame
         let render_instance = world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.0.read().unwrap();

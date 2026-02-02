@@ -54,14 +54,16 @@ impl Plugin for LightsFeature {
     fn build(&self, app: &mut App) {
         app.get_sub_app_mut(RenderApp).unwrap()
             .add_systems(Extract, extract)
-            .add_systems(Render, LightsFeatureBuffer::build_bind_group.in_set(RenderSet::BindGroups));
+            .add_systems(Render, LightsFeatureBuffer::build_bind_group.in_set(RenderSet::BindGroups))
+            .init_resource::<ExtractedLights>()
+            .add_systems(Render, update_lights_buffer.in_set(RenderSet::Prepare));
     }
 
     fn finish(&self, app: &mut App) {
         let buffer_cpu: Handle<Buffer> = app.world_mut().add_asset(Buffer {
             label: "lights".to_string(),
             size:  std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
-            usage: BufferUsage::COPY_SRC | BufferUsage::MAP_WRITE,
+            usage: BufferUsage::COPY_SRC | BufferUsage::COPY_DST,
             content: None,
         });
         let buffer_gpu: Handle<Buffer> = app.world_mut().add_asset(Buffer {
@@ -82,15 +84,44 @@ impl Plugin for LightsFeature {
     }
 }
 
+#[derive(Resource, Default)]
+struct ExtractedLights {
+    pub directional_lights: Vec<DirectionalLight>,
+    pub point_lights: Vec<PointLight>,
+    pub spot_lights: Vec<SpotLight>
+}
+
 fn extract(
     (lights_directional, lights_point, lights_spot): (
         ExtractWorld<Query<&DirectionalLight>>, ExtractWorld<Query<&PointLight>>, ExtractWorld<Query<&SpotLight>>
     ), 
-    (lights_buffer, buffers): (
-        Res<LightsFeatureBuffer>, Res<RenderAssets<GpuBuffer>>
-    ),
-    render_instance: Res<RenderInstance>
+    mut extracted_lights: ResMut<ExtractedLights>
 ) {
+    // Extract directional lights
+    extracted_lights.directional_lights = lights_directional.iter().copied().collect();
+
+    // Extract point lights
+    extracted_lights.point_lights = lights_point.iter().copied().collect();
+
+    // Extract spot lights
+    extracted_lights.spot_lights = lights_spot.iter().copied().collect();
+}
+
+fn update_lights_buffer(
+    lights_buffer: Res<LightsFeatureBuffer>,
+    buffers: Res<RenderAssets<GpuBuffer>>,
+    render_instance: Res<RenderInstance>,
+    extracted_lights: Res<ExtractedLights>,
+    mut local_frame_counter: Local<bool>
+) {
+    // If even frame, skip updating to reduce overhead
+    if *local_frame_counter {
+        *local_frame_counter = false;
+        return;
+    } else {
+        *local_frame_counter = true;
+    }
+
     // Get the lights buffer
     let lights_buffer_cpu = match buffers.get(&lights_buffer.buffer_cpu) {
         Some(lights_buffer) => lights_buffer,
@@ -98,36 +129,25 @@ fn extract(
     };
     
     let render_instance = render_instance.0.read().unwrap();
-    lights_buffer_cpu.buffer.map_write(&render_instance, |mut view| {
-        let data = view.as_mut_ptr() as *mut LightsStorageElement;
-        let mut light_index = 0;
-
-        // Extract directional lights
-        for light in lights_directional.iter() {
-            let element = LightsStorageElement::from_directional(light);
-            unsafe { *data.add(light_index) = element; }
-            light_index += 1;
-        }
-
-        // Extract point lights
-        for light in lights_point.iter() {
-            let element = LightsStorageElement::from_point(light);
-            unsafe { *data.add(light_index) = element; }
-            light_index += 1;
-        }
-
-        // Extract spot lights
-        for light in lights_spot.iter() {
-            let element = LightsStorageElement::from_spot(light);
-            unsafe { *data.add(light_index) = element; }
-            light_index += 1;
-        }
-
-        // Warn if the number of lights exceeds the maximum
-        if light_index > MAX_LIGHTS {
-            warn!("The number of lights exceeds the maximum of {}.", MAX_LIGHTS);
-        }
-    });
+    let mut offset = 0;
+    for light in extracted_lights.directional_lights.iter() {
+        let data = LightsStorageElement::from_directional(light);
+        lights_buffer_cpu.buffer.write(&render_instance, bytemuck::bytes_of(&data), offset * std::mem::size_of::<LightsStorageElement>());
+        offset += 1;
+    }
+    for light in extracted_lights.point_lights.iter() {
+        let data = LightsStorageElement::from_point(light);
+        lights_buffer_cpu.buffer.write(&render_instance, bytemuck::bytes_of(&data), offset * std::mem::size_of::<LightsStorageElement>());
+        offset += 1;
+    }
+    for light in extracted_lights.spot_lights.iter() {
+        let data = LightsStorageElement::from_spot(light);
+        lights_buffer_cpu.buffer.write(&render_instance, bytemuck::bytes_of(&data), offset * std::mem::size_of::<LightsStorageElement>());
+        offset += 1;
+    }
+    if offset > MAX_LIGHTS {
+        warn!("Number of lights exceeded the maximum of {}. Some lights will be ignored in rendering.", MAX_LIGHTS);
+    }
 
     // Update the buffer
     let lights_buffer_gpu = match buffers.get(&lights_buffer.buffer_gpu) {

@@ -12,24 +12,28 @@ use super::{EmptyWorld, Extract, MainWorld};
 /// Then, it runs the extract schedule.
 /// Extract commands are registered during the extract schedule but are not applied until the apply_extract_commands system is run.
 pub(crate) fn main_extract(main_world: &mut World, render_world: &mut World) {
+    let _span = debug_span!("main_extract").entered();
+    
     // Temporarily add the main world to the render world
     let empty_world = main_world.remove_resource::<EmptyWorld>().unwrap();
     let previous_main_world = std::mem::replace(main_world, empty_world.0);
     render_world.insert_resource(MainWorld(previous_main_world));
 
     {
-        let _extract_span = debug_span!("extract").entered();
-
         // Run the render graph extract
         // We bypass the render graph system because we need to extract the render graph before running the extract schedule
         render_world.resource_scope(|render_world, mut graph: Mut<RenderGraph>| {
+            let _graph_span = debug_span!("render_graph_extract").entered();
             let main_world = &mut render_world.get_resource_mut::<MainWorld>().unwrap().0 as *mut World;
             let main_world = unsafe { &mut *main_world };
             graph.extract(main_world, render_world);
         });
 
         // Run the extract schedule
-        render_world.run_schedule(Extract);
+        {
+            let _schedule_span = debug_span!("extract_schedule").entered();
+            render_world.run_schedule(Extract);
+        }
     }
     
     // Move the app world back
@@ -41,6 +45,7 @@ pub(crate) fn main_extract(main_world: &mut World, render_world: &mut World) {
 /// Apply the extract commands registered during the extract schedule.
 pub(crate) fn apply_extract_commands(render_world: &mut World) {
     render_world.resource_scope(|render_world, mut schedules: Mut<Schedules>| {
+        let _apply_span = debug_span!("apply_extract_commands").entered();
         schedules
             .get_mut(Extract)
             .unwrap()

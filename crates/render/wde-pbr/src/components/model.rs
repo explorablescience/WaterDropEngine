@@ -14,8 +14,11 @@ pub type PbrModelElementUuid = u128; // Unique identifier for each model element
 #[require(Transform)]
 pub struct PbrModel(pub Vec<(Handle<MeshAsset>, Handle<PbrMaterialAsset>)>);
 
-/// Resource to manage PBR render entities and their UUIDs
 #[derive(Resource, Default)]
+pub struct ModelUuidToTransformUuidRender(pub HashMap<PbrModelElementUuid, u32>);
+
+/// Resource to manage PBR render entities and their UUIDs
+#[derive(Resource, Default, Clone)]
 pub struct PbrModelRegistry {
     /// Maps between entities and their model element UUIDs
     pub entity_to_model_uuids: HashMap<Entity, Vec<PbrModelElementUuid>>,
@@ -51,7 +54,6 @@ impl PbrModelRegistry {
             .or_default()
             .push(uuid);
         self.model_uuid_to_transform_id.insert(uuid, transform_id);
-        println!("Registered PbrModelElementUuid {} for entity {:?} with transform ID {}", uuid, entity, transform_id);
         uuid
     }
 }
@@ -86,7 +88,7 @@ impl PbrSsboIdHandler {
 
 /// Resource to track dirty transforms that need to be updated in the SSBO
 #[derive(Resource, Default)]    
-pub struct DirtyTransforms(pub Vec<(PbrModelElementUuid, Transform)>);
+pub struct DirtyTransforms(pub Option<Vec<(PbrModelElementUuid, TransformUniform)>>);
 
 pub struct PbrModelRegistryPlugin;
 impl Plugin for PbrModelRegistryPlugin {
@@ -96,6 +98,9 @@ impl Plugin for PbrModelRegistryPlugin {
             .init_resource::<PbrSsboIdHandler>()
             .init_resource::<DirtyTransforms>()
             .add_systems(Update, on_models_updates);
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .init_resource::<ModelUuidToTransformUuidRender>()
+            .init_resource::<DirtyTransforms>();
     }
 }
 
@@ -107,6 +112,8 @@ fn on_models_updates(
     mut ssbo: ResMut<PbrSsboIdHandler>,
     mut dirty_transforms: ResMut<DirtyTransforms>
 ) {
+    let mut new_dirty_transforms = Vec::new();
+
     // Handle modified PbrModel components
     for (entity, transform, pbr_model) in modified_models_query.iter() {
         // Remove existing uuids and free their transform IDs
@@ -122,7 +129,7 @@ fn on_models_updates(
         // Register the new model elements
         for (mesh_handle, material_handle) in pbr_model.0.iter() {
             let uuid = registry.register_model(entity, mesh_handle, material_handle, ssbo.allocate_transform_id());
-            dirty_transforms.0.push((uuid, *transform));
+            new_dirty_transforms.push((uuid, TransformUniform::new(transform)));
         }
     }
 
@@ -130,7 +137,7 @@ fn on_models_updates(
     for (entity, transform) in modified_transforms_query.iter() {
         if let Some(uuids) = registry.entity_to_model_uuids.get(&entity) {
             for uuid in uuids.iter() {
-                dirty_transforms.0.push((*uuid, *transform));
+                new_dirty_transforms.push((*uuid, TransformUniform::new(transform)));
             }
         }
     }
@@ -152,4 +159,7 @@ fn on_models_updates(
             }
         }
     }
+
+    // Set the dirty transforms resource
+    dirty_transforms.0 = Some(new_dirty_transforms.to_vec());
 }

@@ -17,7 +17,7 @@ impl Plugin for PbrSsboPlugin {
         let buffer: Handle<Buffer> = app.world_mut().add_asset(Buffer {
             label: "pbr-ssbo-cpu".to_string(),
             size: std::mem::size_of::<TransformUniform>() * MAX_ENTITY_COUNT,
-            usage: BufferUsage::COPY_SRC | BufferUsage::MAP_WRITE,
+            usage: BufferUsage::COPY_SRC | BufferUsage::COPY_DST,
             content: None,
         });
         let buffer_gpu: Handle<Buffer> = app.world_mut().add_asset(Buffer {
@@ -31,7 +31,7 @@ impl Plugin for PbrSsboPlugin {
         let instance_to_transform_buffer: Handle<Buffer> = app.world_mut().add_asset(Buffer {
             label: "pbr-instance-to-transform-buffer-cpu".to_string(),
             size: std::mem::size_of::<u32>() * MAX_ENTITY_COUNT,
-            usage: BufferUsage::COPY_SRC | BufferUsage::MAP_WRITE,
+            usage: BufferUsage::COPY_SRC | BufferUsage::COPY_DST,
             content: None,
         });
         let instance_to_transform_buffer_gpu: Handle<Buffer> = app.world_mut().add_asset(Buffer {

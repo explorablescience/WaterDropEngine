@@ -73,6 +73,11 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         color: WdeColor::from_srgba(0.2, 0.2, 0.8, 1.0),
         ..Default::default()
     });
+    commands.spawn(DirectionalLight {
+        direction: Vec3::new(-1.0, -2.0, -1.0).normalize(),
+        intensity: 0.1,
+        ..Default::default()
+    });
 }
 
 fn rotate_light_sources(mut lights: Query<&mut PointLight>, time: Res<Time>) {
@@ -89,14 +94,24 @@ fn load(mut commands: Commands, asset_server: Res<AssetServer>, mut selected_ent
     let gltf_asset = GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server).unwrap();
     let model = PbrModel(gltf_asset.models.clone());
 
-    let t = Transform::from_scale(Vec3::ONE * 25.0);
+    let t = Transform::from_scale(Vec3::ONE * 2.0);
     let gltf = commands.spawn((model.clone(), t)).id();
     selected_entity.0 = Some(gltf);
 
-    commands.spawn((model.clone(), t.with_translation(Vec3::new(10.0, 0.0, 10.0))));
-    commands.spawn((model.clone(), t.with_translation(Vec3::new(-10.0, 0.0, -10.0))));
-    commands.spawn((model.clone(), t.with_translation(Vec3::new(-10.0, 0.0, 10.0))));
-    commands.spawn((model.clone(), t.with_translation(Vec3::new(10.0, 0.0, -10.0))));
+    // Spawn a grid of models
+    const N: i32 = 10;
+    let spacing = 4.0;
+    for i in 0..N {
+        for j in 0..N {
+            let pos = Vec3::new(
+                (i as f32 - N as f32 / 2.0) * spacing,
+                0.0,
+                (j as f32 - N as f32 / 2.0) * spacing,
+            );
+            let t = Transform::from_translation(pos).with_scale(Vec3::ONE * 5.0);
+            commands.spawn((model.clone(), t));
+        }
+    }
 }
 
 fn cast_ray(

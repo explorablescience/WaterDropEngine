@@ -130,8 +130,6 @@ impl Buffer {
     /// * `instance` - The render instance.
     /// * `buffer` - The buffer to copy from.
     pub fn copy_from_buffer(&self, instance: &RenderInstanceData<'_>, buffer: &Buffer) {
-        event!(Level::TRACE, "Copying data from buffer {} to buffer {}.", buffer.label, self.label);
-
         // Create command encoder
         let mut command_buffer = CommandBuffer::new(
             instance,
@@ -152,8 +150,6 @@ impl Buffer {
     /// * `instance` - The render instance.
     /// * `texture` - The texture to copy from.
     pub fn copy_from_texture(&mut self, instance: &RenderInstanceData<'_>, texture: &wgpu::Texture) {
-        event!(Level::TRACE, "Copying data from texture to buffer {}.", self.label);
-
         // Create command encoder
         let mut command_buffer = CommandBuffer::new(
             instance,
@@ -174,9 +170,7 @@ impl Buffer {
     /// * `instance` - The render instance.
     /// * `content` - The content to write to the buffer.
     /// * `offset` - The offset to write the content to.
-    pub fn write(&mut self, instance: &RenderInstanceData, content: &[u8], offset: usize) {
-        event!(Level::TRACE, "Writing data to buffer {}.", self.label);
-
+    pub fn write(&self, instance: &RenderInstanceData, content: &[u8], offset: usize) {
         instance.queue.write_buffer(
             &self.buffer,
             offset as u64,
@@ -194,8 +188,6 @@ impl Buffer {
     /// * `callback` - A closure that takes a reference to the buffer.
     ///   The callback takes reference to the buffer.
     pub fn map_read(&self, instance: &RenderInstanceData, callback: impl FnOnce(BufferView)) {
-        event!(Level::TRACE, "Mapping buffer {} for reading.", self.label);
-
         // Map buffer
         let (sender, receiver) = std::sync::mpsc::channel();
         let buffer_slice = self.buffer.slice(..);
@@ -226,8 +218,6 @@ impl Buffer {
     /// * `callback` - A closure that takes a mutable reference to the buffer.
     ///   The callback takes a mutable reference to the buffer.
     pub fn map_write(&self, instance: &RenderInstanceData, callback: impl FnOnce(BufferViewMut)) {
-        event!(Level::TRACE, "Mapping buffer {} for writing.", self.label);
-
         // Map buffer
         let (sender, receiver) = std::sync::mpsc::channel();
         let buffer_slice = self.buffer.slice(..);
@@ -235,10 +225,13 @@ impl Buffer {
             move |r| sender.send(r).unwrap());
 
         // Wait for the buffer to be mapped
-        if let Err(e) = instance.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None }) {
-            error!("Failed to poll device while mapping buffer '{}': {:?}", self.label, e);
+        {
+            let _span = trace_span!("wait_for_buffer_mapping").entered();
+            if let Err(e) = instance.device.poll(wgpu::PollType::Wait { submission_index: None, timeout: None }) {
+                error!("Failed to poll device while mapping buffer '{}': {:?}", self.label, e);
+            }
+            receiver.recv().unwrap().unwrap();
         }
-        receiver.recv().unwrap().unwrap();
 
         // Call callback
         callback(buffer_slice.get_mapped_range_mut());
