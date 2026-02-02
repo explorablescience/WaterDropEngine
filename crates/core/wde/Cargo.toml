@@ -23,6 +23,7 @@ wde-renderer = { path = "../wde-renderer" }
 wde-scene = { path = "../wde-scene" }
 wde-camera = { path = "../../render/wde-camera" }
 wde-physics = { path = "../../game/wde-physics" }
+wde-gltf = { path = "../../game/wde-gltf" }
 wde-gizmos = { path = "../../render/wde-gizmos", optional = true }
 wde-pbr = { path = "../../render/wde-pbr", optional = true }
 wde-egui = { path = "../../wrappers/wde-egui", optional = true }

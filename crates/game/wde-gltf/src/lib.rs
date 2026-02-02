@@ -46,9 +46,6 @@ pub use error::GltfError;
 /// - `path`: The path to the glTF file.
 /// - `models`: The list of parsed glTF models. Each model is represented by a mesh and its associated material.
 /// 
-/// # Methods
-/// - `spawn`: Spawn the glTF model into the Bevy world with a specified transform.
-/// 
 /// # Example
 /// ```rust,no_run
 /// let gltf_asset = GltfLoader::load("models/model.gltf", &asset_server).unwrap();
@@ -62,36 +59,6 @@ pub struct GltfAsset {
     /// The list of parsed glTF models. Each model is represented by a mesh and its associated material.
     pub models: Vec<(Handle<MeshAsset>, Handle<PbrMaterialAsset>)>,
 }
-impl GltfAsset {
-    /// Util function to spawn the glTF model into the world.
-    /// 
-    /// # Arguments
-    /// - `commands`: Mutable commands to spawn entities.
-    /// - `transform`: The transform to apply to each spawned mesh.
-    /// 
-    /// # Returns
-    /// - `Entity`: The parent entity ID containing the spawned model.
-    pub fn spawn(&self, commands: &mut Commands, transform: Transform) -> Entity {
-        trace!("Spawning glTF model from asset '{}'", self.path);
-
-        // Create a parent entity to hold the model
-        let parent = commands.spawn(Transform::default()).id();
-
-        // Spawn the model's meshes and materials as children of the parent entity
-        for (mesh_handle, material_handle) in &self.models {
-            commands.entity(parent).with_children(|parent| {
-                parent.spawn((
-                    transform,
-                    Mesh(mesh_handle.clone()),
-                    PbrMaterial(material_handle.clone()),
-                ));
-            });
-        }
-
-        // Return the parent entity ID
-        parent
-    }
-}
 
 /// Manager to load glTF models into the Bevy world.
 /// 
@@ -103,7 +70,6 @@ impl GltfAsset {
 /// ```rust,no_run
 /// let gltf_asset = GltfLoader::load("models/model.gltf", &asset_server).unwrap();
 /// ```
-/// Then, you can spawn the model using `gltf_asset.spawn(commands, transform)`.
 pub struct GltfLoader;
 impl GltfLoader {
     /// Load a glTF file and register its models and materials into the Bevy world.

@@ -1,150 +1,131 @@
-use wde::{assets::{Mesh, materials::{PbrMaterial, PbrMaterialAsset}, meshes::PlaneMesh}, bevy::prelude::*, components::{ActiveCamera, Camera, CameraController, CameraView, DirectionalLight, PointLight, SpotLight}};
-// use super::terrain::TerrainSpawner;
+use wde::prelude::{*, Color as WdeColor};
+use bevy::{prelude::*, window::PrimaryWindow};
 
-pub struct ScenePlugin;
-impl Plugin for ScenePlugin {
+pub struct TestPlugin;
+impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init);
+        app
+            .add_systems(Startup, (init_scene, load))
+            .add_systems(Update, (rotate_light_sources, ui, cast_ray))
+            .init_resource::<SelectEntity>()
+            .init_resource::<UiInfo>();
     }
 }
 
-fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<PbrMaterialAsset>>) {
+
+#[derive(Resource, Default)]
+struct SelectEntity(Option<Entity>);
+
+#[derive(Resource, Default)]
+struct UiInfo(String);
+
+fn ui(ctx: Res<EguiContext>, info: ResMut<UiInfo>, window: Single<&Window, With<PrimaryWindow>>) {
+    // General UI parameters
+    let painter = ctx.0.debug_painter();
+    let window_size = window.size();
+
+    // Calculate text position
+    let text_layout = painter.layout(info.0.clone(), egui::FontId::default(), egui::Color32::WHITE, f32::INFINITY);
+    let pos = egui::Pos2::new(window_size.x - text_layout.size().x - 10.0, window_size.y - text_layout.size().y);
+    
+    // Draw instructionss
+    painter
+        .text(pos, egui::Align2::LEFT_BOTTOM, info.0.clone(), egui::FontId::default(), egui::Color32::DARK_GRAY);
+}
+
+
+
+fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Main camera
     commands.spawn((
-        (
-            Camera,
-            Transform::from_xyz(5.0, 20.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
-            CameraView {
-                zfar: 10000.0,
-                ..Default::default()
-            }
-        ),
+        Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Camera,
+        CameraView::default(),
         CameraController::default(),
-        ActiveCamera,
-        // TerrainSpawner::default()
+        ActiveCamera
     ));
 
-    // Dummy pbr object
+    // Create the ground
+    let scaling: u32 = 25; // Must be odd
     commands.spawn((
-        Transform::IDENTITY.with_scale(Vec3::splat(0.0)),
-        Mesh(asset_server.add(PlaneMesh::from("dummy", [1.0, 1.0]))),
-        PbrMaterial(materials.add(PbrMaterialAsset {
-            label: "dummy".to_string(),
-            ..Default::default()
-        }))
+        Transform::from_xyz(0.0, -0.0001, 0.0).with_scale(Vec3::ONE * scaling as f32),
+        Mesh(asset_server.add(PlaneMesh::from("ground", scaling, Vec3::Y))),
+        GizmoMaterial(asset_server.add(GizmoMaterialAsset {
+            label: "grid".to_string(),
+            color: [0.8, 0.8, 0.8, 1.0],
+        })),
+        Collider::cuboid(50.0, 0.1, 50.0),
     ));
-
-    // Load the materials
-    // let container_albedo = asset_server.load_with_settings("models/container_albedo.png", |settings: &mut TextureLoaderSettings| {
-    //     settings.label = "container-albedo".to_string();
-    //     settings.format = WTextureFormat::Rgba8UnormSrgb;
-    //     settings.usages = WTextureUsages::TEXTURE_BINDING;
-    // });
-    // let container_specular = asset_server.load_with_settings("models/container_specular.png", |settings: &mut TextureLoaderSettings| {
-    //     settings.label = "container-specular".to_string();
-    //     settings.format = WTextureFormat::R8Unorm;
-    //     settings.usages = WTextureUsages::TEXTURE_BINDING;
-    // });
-    // let red_box = materials.add(PbrMaterialAsset {
-    //     label: "container".to_string(),
-    //     albedo: (1.0, 0.0, 0.0, 1.0),
-    //     // albedo_t:   Some(container_albedo),
-    //     // specular_t: Some(container_specular),
-    //     ..Default::default()
-    // });
-    // let blue = materials.add(PbrMaterial {
-    //     label: "blue".to_string(),
-    //     albedo: (0.0, 0.0, 1.0, 1.0),
-    //     specular: 0.5,
-    //     ..Default::default()
-    // });
-
-    // Load the models
-    // let suzanne = asset_server.load("models/suzanne.obj");
-    // let cube = asset_server.load("models/container.obj");
-
-    // Spawn the entities
-    // commands.spawn((
-    //     Transform::from_xyz(0.0, 0.0, 0.0),
-    //     Mesh(cube.clone()),
-    //     PbrMaterial(red_box.clone())
-    // ));
-    // commands.spawn(PbrBundle {
-    //     transform: Transform::from_xyz(5.0, 0.0, 0.0).with_scale(Vec3::splat(3.0)),
-    //     mesh: cube.clone(),
-    //     material: red_box.clone()
-    // });
-    // commands.spawn(PbrBundle {
-    //     transform: Transform::from_xyz(10.0, 0.0, 0.0),
-    //     mesh: cube.clone(),
-    //     material: blue.clone()
-    // });
-    // commands.spawn(PbrBundle {
-    //     transform: Transform::from_xyz(15.0, 0.0, 0.0),
-    //     mesh: suzanne.clone(),
-    //     material: blue.clone()
-    // });
-    // commands.spawn(PbrBundle {
-    //     transform: Transform::from_xyz(20.0,0.0, 0.0),
-    //     mesh: cube.clone(),
-    //     material: blue.clone()
-    // });
-    // commands.spawn(PbrBundle {
-    //     transform: Transform::from_xyz(25.0, 0.0, 0.0),
-    //     mesh: cube.clone(),
-    //     material: red_box.clone()
-    // });
-    // for i in 1..100 {
-    //     for j in 1..100 {
-    //         let angle = i as f32 * 0.05;
-    //         let axis = if i % 2 == 0 { Vec3::Y } else if i % 3 == 0 { Vec3::Z } else { Vec3::X };
-    //         commands.spawn(PbrBundle {
-    //             transform: Transform::from_xyz(i as f32 * 5.0, 0.0, j as f32 * 5.0 + 5.0)
-    //                 .with_rotation(Quat::from_axis_angle(axis, angle)),
-    //             mesh: cube.clone(),
-    //             material: red_box.clone()
-    //         });
-    //     }
-    // }
-    
-    // // Load the materials
-    // let planks_albedo = asset_server.load_with_settings("models/planks_albedo.jpg", |settings: &mut TextureLoaderSettings| {
-    //     settings.label = "planks-albedo".to_string();
-    //     settings.format = WTextureFormat::Rgba8UnormSrgb;
-    //     settings.usages = WTextureUsages::TEXTURE_BINDING;
-    // });
-    // let planks = materials.add(PbrMaterial {
-    //     label: "planks".to_string(),
-    //     albedo_t: Some(planks_albedo),
-    //     specular: 0.8,
-    //     ..Default::default()
-    // });
-
-    // // Spawn the ground
-    // let ground = asset_server.add(PlaneMesh::from("ground", [200.0, 200.0]));
-    // commands.spawn(PbrBundle {
-    //     transform: Transform::from_xyz(0.0, 0.0, 0.0),
-    //     mesh: ground,
-    //     material: planks
-    // });
 
     // Spawn the lights
     commands.spawn(PointLight {
-        position: Vec3::new(10.0, 3.0, 20.0),
-        ..Default::default()
-    }.with_range(100.0).unwrap());
-    commands.spawn(SpotLight {
-        position: Vec3::new(70.0, 5.0, 40.0),
-        direction: Vec3::new(-0.8, -0.5, 0.0),
+        position: Vec3::new(5.0, 15.0, 5.0),
+        color: WdeColor::from_srgba(0.8, 0.2, 0.2, 1.0),
         ..Default::default()
     });
-    commands.spawn(SpotLight {
-        position: Vec3::new(120.0, 20.0, 156.0),
-        direction: Vec3::new(0.8, -0.5, -0.1),
+    commands.spawn(PointLight {
+        position: Vec3::new(-5.0, 10.0, 5.0),
+        color: WdeColor::from_srgba(0.2, 0.8, 0.2, 1.0),
         ..Default::default()
     });
-    commands.spawn(DirectionalLight {
-        direction: Vec3::new(-0.1, -0.8, -0.2),
+    commands.spawn(PointLight {
+        position: Vec3::new(0.0, 8.0, -5.0),
+        color: WdeColor::from_srgba(0.2, 0.2, 0.8, 1.0),
         ..Default::default()
     });
+}
+
+fn rotate_light_sources(mut lights: Query<&mut PointLight>, time: Res<Time>) {
+    for (i, mut light) in lights.iter_mut().enumerate() {
+        let angle = time.elapsed_secs() * 0.5 + (i as f32) * std::f32::consts::FRAC_PI_2;
+        let radius = 5.0;
+        light.position.x = radius * angle.cos();
+        light.position.z = radius * angle.sin();
+    }
+}
+
+
+fn load(mut commands: Commands, asset_server: Res<AssetServer>, mut selected_entity: ResMut<SelectEntity>) {
+    let gltf_asset = GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server).unwrap();
+    let model = PbrModel(gltf_asset.models.clone());
+
+    let t = Transform::from_scale(Vec3::ONE * 25.0);
+    let gltf = commands.spawn((model.clone(), t)).id();
+    selected_entity.0 = Some(gltf);
+
+    commands.spawn((model.clone(), t.with_translation(Vec3::new(10.0, 0.0, 10.0))));
+    commands.spawn((model.clone(), t.with_translation(Vec3::new(-10.0, 0.0, -10.0))));
+    commands.spawn((model.clone(), t.with_translation(Vec3::new(-10.0, 0.0, 10.0))));
+    commands.spawn((model.clone(), t.with_translation(Vec3::new(10.0, 0.0, -10.0))));
+}
+
+fn cast_ray(
+    mut commands: Commands,
+    phworld: Res<PhysicsWorld>,
+    window: Single<&Window, With<PrimaryWindow>>,
+    selected_entity: Res<SelectEntity>,
+    camera_query: Query<(&Transform, &CameraView), With<Camera>>,
+    mut ui_info: ResMut<UiInfo>,
+) {
+    // Return if no entity is selected
+    if selected_entity.0.is_none() {
+        return;
+    }
+
+    // Create the ray from ndc position
+    let cursor_ndc_position = match window.cursor_position() {
+        Some(pos) => pos / window.size(),
+        None => return,
+    };
+    let (camera_transform, camera_view) = camera_query.single().map_err(|_| "No camera found").unwrap();
+    let ray = Ray::from_ndc(cursor_ndc_position, window.size().x / window.size().y, camera_transform, camera_view);
+
+    // Cast the ray in the physics world
+    if let Some((_, toi)) = phworld.as_ref().cast_ray(&ray, &RayCastConfig::default()) {
+        let hit_point = ray.point_at(toi);
+
+        // Move the cube up to the position of the hit point.
+        commands.entity(selected_entity.0.unwrap()).insert(Transform::from_translation(hit_point));
+        ui_info.0 = format!("Hit at point: ({:.2}, {:.2}, {:.2})", hit_point.x, hit_point.y, hit_point.z);
+    }
 }

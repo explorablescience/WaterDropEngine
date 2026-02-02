@@ -48,22 +48,18 @@ pub struct Extract;
 /// The render schedule will be executed by the renderer app.
 #[derive(SystemSet, Hash, PartialEq, Eq, Clone, Copy, Debug)]
 pub enum RenderSet {
-    /// Run the extract commands registered during the extract schedule.
-    ExtractCommands,
+    /// Run the extract commands registered during the extract schedule. This set is executed automatically and should not be used directly. Instead, use the Extract schedule.
+    ExtractAuto,
     /// Initialize the newly created assets.
     PrepareAssets,
-    /// Prepare resources.
+    /// Prepare resources before rendering. This includes updating buffers, textures, etc.
     Prepare,
     /// Prepare the bind groups.
     BindGroups,
-    /// Process the logic just before rendering.
-    Process,
     /// Render commands.
     Render,
     /// Submit commands.
-    Submit,
-    /// Cleanup resources.
-    Cleanup,
+    Submit
 }
 
 /// The renderer schedule.
@@ -77,14 +73,12 @@ impl Render {
 
         let mut schedule = Schedule::new(Self);
         schedule.configure_sets((
-            ExtractCommands,
+            ExtractAuto,
             PrepareAssets,
             Prepare,
             BindGroups,
-            Process,
             Render,
-            Submit,
-            Cleanup,
+            Submit
         ).chain());
 
         schedule
@@ -161,7 +155,7 @@ impl Plugin for RenderCorePlugin {
             // Add extract command systems
             render_app
                 .add_systems(Render, 
-                    apply_extract_commands.in_set(RenderSet::ExtractCommands)) // Apply the extract commands
+                    apply_extract_commands.in_set(RenderSet::ExtractAuto)) // Apply the extract commands
                 .set_extract(main_extract); // Register the extract commands
 
             // Add render graph system

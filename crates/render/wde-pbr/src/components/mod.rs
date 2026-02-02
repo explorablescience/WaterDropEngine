@@ -1,8 +1,9 @@
 use bevy::prelude::{App, Plugin};
 
-use crate::components::lights::*;
+use crate::{components::lights::*, prelude::PbrModelRegistryPlugin};
 
 pub mod lights;
+pub mod model;
 
 pub(crate) struct PbrComponentsPlugin;
 impl Plugin for PbrComponentsPlugin {
@@ -10,6 +11,7 @@ impl Plugin for PbrComponentsPlugin {
         app
             .register_type::<DirectionalLight>()
             .register_type::<PointLight>()
-            .register_type::<SpotLight>();
+            .register_type::<SpotLight>()
+            .add_plugins(PbrModelRegistryPlugin);
     }
 }

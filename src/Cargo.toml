@@ -8,6 +8,9 @@ build = "build.rs"
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 
+[target.'cfg(debug_assertions)'.dependencies]
+bevy = { workspace = true, features = [ "debug" ] }
+
 [dependencies.wde]
 path = "../crates/core/wde"
 features = [

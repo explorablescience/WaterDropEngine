@@ -24,7 +24,8 @@ struct Camera {
 struct ObjectToWorld {
     obj_to_world:  mat4x4<f32>
 }
-@group(1) @binding(0) var<storage> in_model: array<ObjectToWorld>;
+@group(1) @binding(0) var<storage, read> in_raw_transform: array<ObjectToWorld>;
+@group(1) @binding(1) var<storage, read> in_instance_to_transform: array<u32>;
 
 // Function to compute the inverse of a 3x3 matrix
 fn inverse(m: mat3x3<f32>) -> mat3x3<f32> {
@@ -50,7 +51,7 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     var out: VertexOutput;
 
     // Transform position to clip space
-    let obj_to_world = in_model[instance].obj_to_world;
+    let obj_to_world = in_raw_transform[in_instance_to_transform[instance]].obj_to_world;
     let view_pos4 = in_camera.world_to_view
         * obj_to_world
         * vec4<f32>(model.position, 1.0);

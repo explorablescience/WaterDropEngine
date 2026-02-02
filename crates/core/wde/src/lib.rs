@@ -232,6 +232,7 @@ pub mod prelude {
     pub use wde_renderer::prelude::*;
     pub use wde_camera::prelude::*;
     pub use wde_physics::prelude::*;
+    pub use wde_gltf::prelude::*;
 
     // Optional feature modules
     #[cfg(feature = "gizmos")]

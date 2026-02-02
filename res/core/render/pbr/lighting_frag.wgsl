@@ -33,7 +33,7 @@ struct Light {
     /// Spot light inner and outer cone angles (cos values). Only used for spot lights.
     spot_cone: vec4<f32>
 };
-@group(2) @binding(0) var<storage> in_lights: array<Light>;
+@group(2) @binding(0) var<storage, read> in_lights: array<Light>;
 
 
 

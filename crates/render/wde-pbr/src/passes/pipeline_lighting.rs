@@ -2,9 +2,7 @@ use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
-use crate::features::lights::LightsFeatureBuffer;
-
-use super::PbrDeferredTexturesLayout;
+use crate::logic::{lights::LightsFeatureBuffer, textures::PbrDeferredTexturesLayout};
 
 
 #[derive(Default, Asset, Clone, TypePath)]

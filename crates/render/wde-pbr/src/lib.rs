@@ -97,18 +97,18 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{assets::{PbrAssetsPlugin, PbrMaterial, PbrMaterialAsset}, components::PbrComponentsPlugin, features::PbrFeaturesPlugin, passes::{PbrFeaturesPlugin as PbrPassesPlugin, PbrGBufferRenderPass, PbrLightingRenderPass}};
+use crate::{assets::{PbrAssetsPlugin, PbrMaterial, PbrMaterialAsset}, components::PbrComponentsPlugin, logic::PbrLogicPlugin, passes::{PbrFeaturesPlugin as PbrPassesPlugin, PbrGBufferRenderPass, PbrLightingRenderPass}};
 
 pub mod prelude {
     pub use crate::PbrPlugin;
     pub use crate::assets::{PbrMaterial, PbrMaterialAsset};
-    pub use crate::components::lights::*;
+    pub use crate::components::{lights::*, model::*};
 }
 
 pub mod assets;
 pub mod components;
-pub mod features;
-pub mod passes;
+mod passes;
+mod logic;
 
 pub struct PbrPlugin;
 impl Plugin for PbrPlugin {
@@ -118,7 +118,7 @@ impl Plugin for PbrPlugin {
             .add_plugins(PbrAssetsPlugin)
             .add_plugins(PbrComponentsPlugin)
             .add_plugins(PbrPassesPlugin)
-            .add_plugins(PbrFeaturesPlugin);
+            .add_plugins(PbrLogicPlugin);
 
         // Always create a dummy resource such that the render pass extraction can run
         app.add_systems(Startup, init_dummy_element);

@@ -4,6 +4,10 @@
 use wde::prelude::*;
 use bevy::prelude::*;
 
+use crate::scene::TestPlugin;
+
+mod scene;
+
 pub fn main() {
     // Create the app
     let mut app = App::new();
@@ -18,22 +22,3 @@ pub fn main() {
     info!("Running game engine.");
     app.run();
 }
-
-pub struct TestPlugin;
-impl Plugin for TestPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Update, test_window);
-    }
-}
-
-/// System to update the egui context with new input and generate frame output
-fn test_window(ctx: Res<EguiContext>, mut checked: Local<bool>) {
-    egui::Window::new("Test")
-        .show(&ctx.0, |ui| {
-            ui.label("Label!");
-            if ui.checkbox(&mut checked, "Check me!").changed() {
-                info!("Checkbox changed: {}", *checked);
-            }
-        });
-}
-

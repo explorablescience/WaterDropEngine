@@ -2,9 +2,7 @@ use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_camera::features::CameraFeatureRender;
 use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
 
-use crate::{assets::PbrMaterialAsset, passes::pbr_ssbo::PbrSsbo};
-
-use super::{PbrDeferredTextures};
+use crate::{assets::PbrMaterialAsset, logic::{ssbo::PbrSsbo, textures::PbrDeferredTextures}};
 
 
 #[derive(Default, Asset, Clone, TypePath)]

@@ -2,34 +2,19 @@ use wde_renderer::prelude::*;
 
 use bevy::prelude::*;
 
-mod pbr_pipeline_gbuffer;
-mod pbr_renderpass_gbuffer;
-mod pbr_pipeline_lighting;
-mod pbr_renderpass_lighting;
-mod pbr_ssbo;
-mod pbr_textures;
+mod pipeline_gbuffer;
+mod renderpass_gbuffer;
+mod pipeline_lighting;
+mod renderpass_lighting;
 
-pub use pbr_renderpass_gbuffer::*;
-pub use pbr_renderpass_lighting::*;
+pub use renderpass_gbuffer::*;
+pub use renderpass_lighting::*;
 
-use crate::passes::{pbr_pipeline_gbuffer::{GpuPbrGBufferRenderPipeline, PbrGBufferRenderPipeline, PbrGBufferRenderPipelineAsset}, pbr_pipeline_lighting::{GpuPbrLightingRenderPipeline, PbrLightingRenderPipeline, PbrLightingRenderPipelineAsset}, pbr_ssbo::PbrSsboPlugin, pbr_textures::{PbrDeferredTextures, PbrDeferredTexturesLayout}};
+use crate::passes::{pipeline_gbuffer::{GpuPbrGBufferRenderPipeline, PbrGBufferRenderPipeline, PbrGBufferRenderPipelineAsset}, pipeline_lighting::{GpuPbrLightingRenderPipeline, PbrLightingRenderPipeline, PbrLightingRenderPipelineAsset}};
 
 pub(crate) struct PbrFeaturesPlugin;
 impl Plugin for PbrFeaturesPlugin {
     fn build(&self, app: &mut App) {
-        // Add the pbr ssbo
-        app
-            .add_plugins(PbrSsboPlugin);
-
-        // Add the pbr defered textures
-        app
-            .add_systems(Startup, PbrDeferredTextures::create_textures)
-            .add_systems(Update, PbrDeferredTextures::resize_textures);
-        app.get_sub_app_mut(RenderApp).unwrap()
-            .init_resource::<PbrDeferredTexturesLayout>()
-            .add_systems(Extract, PbrDeferredTextures::extract_textures)
-            .add_systems(Render, PbrDeferredTexturesLayout::build_bind_group.in_set(RenderSet::BindGroups));
-
         // Add the pbr pipelines
         app
             .init_asset::<PbrGBufferRenderPipelineAsset>()
