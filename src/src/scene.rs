@@ -91,15 +91,15 @@ fn rotate_light_sources(mut lights: Query<&mut PointLight>, time: Res<Time>) {
 
 
 fn load(mut commands: Commands, asset_server: Res<AssetServer>, mut selected_entity: ResMut<SelectEntity>) {
-    let gltf_asset = GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server).unwrap();
+    // let gltf_asset = GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server).unwrap();
+    let gltf_asset = GltfLoader::load("tests/models/houses/house_demo1.gltf", &asset_server).unwrap();
     let model = PbrModel(gltf_asset.models.clone());
 
-    let t = Transform::from_scale(Vec3::ONE * 2.0);
-    let gltf = commands.spawn((model.clone(), t)).id();
+    let gltf = commands.spawn((model.clone(), Transform::default())).id();
     selected_entity.0 = Some(gltf);
 
     // Spawn a grid of models
-    const N: i32 = 10;
+    const N: i32 = 100;
     let spacing = 4.0;
     for i in 0..N {
         for j in 0..N {
@@ -108,7 +108,7 @@ fn load(mut commands: Commands, asset_server: Res<AssetServer>, mut selected_ent
                 0.0,
                 (j as f32 - N as f32 / 2.0) * spacing,
             );
-            let t = Transform::from_translation(pos).with_scale(Vec3::ONE * 5.0);
+            let t = Transform::from_translation(pos).with_scale(Vec3::ONE * 0.1);
             commands.spawn((model.clone(), t));
         }
     }
@@ -140,7 +140,7 @@ fn cast_ray(
         let hit_point = ray.point_at(toi);
 
         // Move the cube up to the position of the hit point.
-        commands.entity(selected_entity.0.unwrap()).insert(Transform::from_translation(hit_point));
+        commands.entity(selected_entity.0.unwrap()).insert(Transform::from_translation(hit_point).with_scale(Vec3::ONE * 0.1));
         ui_info.0 = format!("Hit at point: ({:.2}, {:.2}, {:.2})", hit_point.x, hit_point.y, hit_point.z);
     }
 }
