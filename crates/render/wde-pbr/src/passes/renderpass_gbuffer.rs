@@ -84,20 +84,15 @@ impl RenderPass for PbrGBufferRenderPass {
                 Some(batches) => batches,
                 None => return
             };
+            
             // Write the instance-to-transform data
             let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
             let render_instance = render_instance.0.read().unwrap();
             ssbo_instance_to_transform_buffer.buffer.map_write(&render_instance, |mut view| {
                 let data = view.as_mut_ptr() as *mut u32;
-
-                let mut instance_index: usize = 0;
-                for batch in batches.render_batches.iter() {
-                    for i in 0..batch.instance_count {
-                        let transform_id = batch.first_instance + i ;
-                        unsafe {
-                            *data.add(instance_index) = transform_id;
-                        }
-                        instance_index += 1;
+                for (instance_index, transform_index) in batches.transform_ids.iter().enumerate() {
+                    unsafe {
+                        *data.add(instance_index) = *transform_index;
                     }
                 }
             });
