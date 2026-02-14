@@ -64,8 +64,12 @@ impl RenderPass for DisplayTexturePass {
                 // Set the pipeline
                 if render_pass.set_pipeline(pipeline).is_ok() {
                     // Get the mesh
-                    render_pass.set_vertex_buffer(0, &mesh.vertex_buffer);
-                    render_pass.set_index_buffer(&mesh.index_buffer);
+                    if let Some(vertex_buffer) = &mesh.vertex_buffer {
+                        render_pass.set_vertex_buffer(0, vertex_buffer);
+                    }
+                    if let Some(index_buffer) = &mesh.index_buffer {
+                        render_pass.set_index_buffer(index_buffer);
+                    }
 
                     // Set bind group
                     render_pass.set_bind_group(0, &material.bind_group);

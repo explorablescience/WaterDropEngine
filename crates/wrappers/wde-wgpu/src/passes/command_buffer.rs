@@ -260,6 +260,26 @@ impl CommandBuffer {
             source.buffer.size());
     }
 
+
+    /// Copy a buffer to another buffer with offsets.
+    /// Please use the `copy_from_buffer` method of the buffer to copy data.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `source` - The source buffer.
+    /// * `destination` - The destination buffer.
+    /// * `source_offset` - The offset in the source buffer.
+    /// * `destination_offset` - The offset in the destination buffer.
+    /// * `size` - The size to copy.
+    pub fn copy_buffer_to_buffer_offset(&mut self, source: &Buffer, destination: &Buffer, source_offset: u64, destination_offset: u64, size: u64) {
+        event!(Level::TRACE, "Copying buffer {} to buffer {}.", source.label, destination.label);
+
+        self.encoder.copy_buffer_to_buffer(
+            &source.buffer, source_offset,
+            &destination.buffer, destination_offset,
+            size);
+    }
+
     /// Copy a texture to a buffer.
     /// Please use the `copy_from_texture` method of the buffer to copy data.
     /// 

@@ -2,12 +2,18 @@ use wde_logger::prelude::*;
 
 use bevy::prelude::*;
 use wde_camera::features::CameraFeatureRender;
-use wde_renderer::prelude::*;
+use wde_renderer::{prelude::*, ssbos::ssbo_mesh::SsboMesh};
 
 use crate::{assets::PbrMaterialAsset, logic::{batches::Batches, ssbo::PbrSsbo, textures::PbrDeferredTextures}, prelude::{DirtyTransforms, ModelUuidToTransformUuidRender, PbrModelRegistry}};
 
 use super::{GpuPbrGBufferRenderPipeline};
 
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub(crate) struct PushConstants {
+    first_vertex: u32,
+    first_index: u32
+}
 
 #[derive(Resource, Default)]
 pub struct PbrGBufferRenderPass;
@@ -72,6 +78,12 @@ impl RenderPass for PbrGBufferRenderPass {
             _ => return
         };
 
+        // Get the SSBO mesh
+        let ssbo_mesh = match render_world.get_resource::<SsboMesh>() {
+            Some(ssbo) => ssbo,
+            None => return
+        };
+
         // Create the render pass
         let _span = debug_span!("gbuffer_pbr_render_pass").entered();
         let mut command_buffer = CommandBuffer::new(&render_instance, "gbuffer-pbr");
@@ -113,23 +125,28 @@ impl RenderPass for PbrGBufferRenderPass {
             let camera_layout = render_world.get_resource::<CameraFeatureRender>().unwrap();
             let ssbo = render_world.get_resource::<PbrSsbo>().unwrap();
             if let (
+                Some(mesh_ssbo_bg),
                 CachedPipelineStatus::OkRender(pipeline),
                 Some(camera_bg),
                 Some(ssbo_bind_group)
             ) = (
+                ssbo_mesh.bind_group.as_ref(),
                 pipeline_manager.get_pipeline(gbuffer_pipeline.cached_pipeline_index),
                 &camera_layout.bind_group,
                 &ssbo.bind_group
             ) {
                 let _span = debug_span!("draw_gbuffer_pbr").entered();
 
+                // Set the vertex and index buffers from the SSBO mesh
+                render_pass.set_bind_group(0, mesh_ssbo_bg);
+
                 // Set the camera bind group
-                render_pass.set_bind_group(0, camera_bg);
+                render_pass.set_bind_group(1, camera_bg);
 
                 // Set the pipeline
                 if render_pass.set_pipeline(pipeline).is_ok() {
                     // Set the ssbo
-                    render_pass.set_bind_group(1, ssbo_bind_group);
+                    render_pass.set_bind_group(2, ssbo_bind_group);
 
                     // For each set of mesh and material
                     let mut current_mesh_id = None;
@@ -143,11 +160,15 @@ impl RenderPass for PbrGBufferRenderPass {
                                 None => continue
                             };
                             current_index_count = mesh.index_count;
-
-                            // Set the mesh buffers
-                            render_pass.set_vertex_buffer(0, &mesh.vertex_buffer);
-                            render_pass.set_index_buffer(&mesh.index_buffer);
                             current_mesh_id = Some(batch.mesh_id);
+
+                            // Set push constants
+                            render_pass.set_push_constants(ShaderStages::VERTEX, bytemuck::bytes_of(&[
+                                PushConstants {
+                                    first_vertex: mesh.first_vertex,
+                                    first_index: mesh.first_index
+                                }
+                            ]));
                         }
 
                         // Set the material
@@ -158,12 +179,12 @@ impl RenderPass for PbrGBufferRenderPass {
                             };
 
                             // Set the material bind group
-                            render_pass.set_bind_group(2, &material.bind_group);
+                            render_pass.set_bind_group(3, &material.bind_group);
                             current_material_id = Some(batch.material_id);
                         }
 
                         // Draw the mesh
-                        if let Err(e) = render_pass.draw_indexed(
+                        if let Err(e) = render_pass.draw(
                             0..current_index_count,
                             batch.first_instance..(batch.first_instance + batch.instance_count)
                         ) {

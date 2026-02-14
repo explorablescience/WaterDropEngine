@@ -237,6 +237,7 @@ fn load_render_pipelines(
         pipeline.set_topology(descriptor.topology);
         pipeline.set_cull_mode(descriptor.cull_mode);
         pipeline.set_depth(descriptor.depth.clone());
+        pipeline.set_use_vertices_buffer(descriptor.vertex_buffer);
         if let Some(ref render_targets) = descriptor.render_targets {
             pipeline.set_render_targets(render_targets.clone());
         }

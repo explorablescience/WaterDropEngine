@@ -91,6 +91,7 @@ impl PlaneMesh {
             vertices,
             indices,
             bounding_box,
+            use_ssbo: false,
         }
     }
 }

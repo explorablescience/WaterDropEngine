@@ -66,6 +66,7 @@ pub fn load_entity(mut commands: Commands, server: Res<AssetServer>) {
             min: Vec3::new(-1.0, -1.0, 0.0),
             max: Vec3::new(1.0, 1.0, 0.0),
         },
+        use_ssbo: false,
     });
 
     // Create the entity

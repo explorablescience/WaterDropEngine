@@ -27,6 +27,7 @@ impl PbrLightingRenderPassMesh {
                 min: Vec3::new(-1.0, -1.0, 0.0),
                 max: Vec3::new(1.0, 1.0, 0.0),
             },
+            use_ssbo: false
         });
         render_pass.deferred_mesh = Some(deferred_mesh);
     }
@@ -95,8 +96,8 @@ impl RenderPass for PbrLightingRenderPass {
                 // Set the pipeline
                 if render_pass.set_pipeline(pipeline).is_ok() {
                     // Get the mesh
-                    render_pass.set_vertex_buffer(0, &deferred_mesh.vertex_buffer);
-                    render_pass.set_index_buffer(&deferred_mesh.index_buffer);
+                    render_pass.set_vertex_buffer(0, deferred_mesh.vertex_buffer.as_ref().unwrap());
+                    render_pass.set_index_buffer(deferred_mesh.index_buffer.as_ref().unwrap());
 
                     // Set bind groups
                     render_pass.set_bind_group(0, camera_bind_group);

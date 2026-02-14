@@ -66,6 +66,8 @@ pub struct RenderPipelineDescriptor {
     pub cull_mode: Option<Face>,
     /// The sample count for multisampling (default: 1).
     pub sample_count: u32,
+    /// Whether the pipeline should expect a vertex buffer.
+    pub vertex_buffer: bool
 }
 impl Default for RenderPipelineDescriptor {
     fn default() -> Self {
@@ -79,7 +81,8 @@ impl Default for RenderPipelineDescriptor {
             push_constants: vec![],
             topology: RenderTopology::TriangleList,
             cull_mode: Some(Face::Back),
-            sample_count: 1
+            sample_count: 1,
+            vertex_buffer: true
         }
     }
 }

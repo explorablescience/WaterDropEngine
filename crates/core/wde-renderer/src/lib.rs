@@ -256,6 +256,7 @@ pub mod assets;
 pub mod pipelines;
 pub mod components;
 pub mod core;
+pub mod ssbos;
 pub mod passes;
 pub mod utils;
 
@@ -273,6 +274,9 @@ impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
         // First, add the renderer plugin
         app.add_plugins(RenderCorePlugin);
+
+        // Add the ssbo mesh plugin
+        app.add_plugins(ssbos::SsboPlugin);
 
         // Register the scene plugin
         app.add_plugins(AssetsPlugin);

@@ -67,6 +67,7 @@ impl CubeGizmoMesh {
             vertices,
             indices,
             bounding_box,
+            use_ssbo: false,
         }
     }
 }

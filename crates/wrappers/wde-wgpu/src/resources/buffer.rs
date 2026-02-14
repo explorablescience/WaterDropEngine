@@ -142,6 +142,30 @@ impl Buffer {
         command_buffer.submit(instance);
     }
 
+
+    /// Copy data to the buffer from another buffer offset by a given offset.
+    /// Note that the buffer must have the COPY_DST usage.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `instance` - The render instance.
+    /// * `buffer` - The buffer to copy from.
+    /// * `source_offset` - The offset in the source buffer to start copying from.
+    /// * `destination_offset` - The offset in the destination buffer to start copying to.
+    /// * `size` - The size of the data to copy.
+    pub fn copy_from_buffer_offset(&self, instance: &RenderInstanceData<'_>, buffer: &Buffer, source_offset: u64, destination_offset: u64, size: u64) {
+        // Create command encoder
+        let mut command_buffer = CommandBuffer::new(
+            instance,
+            &format!("copy-from-{}-to-{}", buffer.label, self.label));
+
+        // Copy buffer
+        command_buffer.copy_buffer_to_buffer_offset(buffer, self, source_offset, destination_offset, size);
+
+        // Submit commands
+        command_buffer.submit(instance);
+    }
+
     /// Copy data to the buffer from a texture.
     /// Note that the buffer must have the COPY_DST usage.
     /// 

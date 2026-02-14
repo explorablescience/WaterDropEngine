@@ -7,13 +7,13 @@
 use std::{fs::File, io::BufReader};
 
 use wde_logger::prelude::*;
-use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::lifetimeless::SRes, prelude::*};
+use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use thiserror::Error;
 use serde::{Deserialize, Serialize};
 use tobj::LoadError;
 use wde_wgpu::{buffer::{BufferUsage, Buffer}, vertex::Vertex};
 
-use crate::core::RenderInstance;
+use crate::{assets::{GpuBuffer, RenderAssets}, core::RenderInstance, ssbos::ssbo_mesh::SsboMesh};
 
 use super::render_assets::{PrepareAssetError, RenderAsset};
 
@@ -56,6 +56,8 @@ pub struct MeshAsset {
     pub indices: Vec<u32>,
     /// Axis-aligned bounding box in object space.
     pub bounding_box: ModelBoundingBox,
+    /// Should the vertices and indices be in the SSBO mesh buffers? (true by default)
+    pub use_ssbo: bool,
 }
 
 #[derive(Default, TypePath)]
@@ -66,11 +68,13 @@ pub struct MeshLoader;
 pub struct MeshLoaderSettings {
     /// Label to apply to the loaded mesh; defaults to the asset path when empty.
     pub label: String,
+    /// Should the vertices and indices be in the SSBO mesh buffers? (true by default)
+    pub use_ssbo: bool,
 }
 
 impl Default for MeshLoaderSettings {
     fn default() -> Self {
-        Self { label: "".to_string() }
+        Self { label: "".to_string(), use_ssbo: true }
     }
 }
 
@@ -189,10 +193,7 @@ impl AssetLoader for MeshLoader {
         }
 
         // Return the mesh
-        Ok(MeshAsset {
-            label,
-            vertices, indices, bounding_box
-        })
+        Ok(MeshAsset { label, vertices, indices, bounding_box, use_ssbo: settings.use_ssbo })
     }
 
     fn extensions(&self) -> &[&str] {
@@ -205,48 +206,115 @@ impl AssetLoader for MeshLoader {
 pub struct GpuMesh {
     /// Copy of the CPU label applied to GPU buffers for debugging.
     pub label: String,
-    /// GPU vertex buffer containing tightly packed [`Vertex`] data.
-    pub vertex_buffer: Buffer,
-    /// GPU index buffer containing `u32` indices.
-    pub index_buffer: Buffer,
+
+    /// The offset to the vertex buffer in the SSBO.
+    pub first_vertex: u32,
+    /// The offset to the index buffer in the SSBO.
+    pub first_index: u32,
     /// Total index count for draw calls.
     pub index_count: u32,
+    
     /// Axis-aligned bounding box in object space, mirrored from CPU asset.
     pub bounding_box: ModelBoundingBox,
+
+    /// Should the vertices and indices be in the SSBO mesh buffers? (true by default)
+    pub use_ssbo: bool,
+    /// If true, the GPU vertex buffer containing tightly packed [`Vertex`] data.
+    pub vertex_buffer: Option<Buffer>,
+    /// If true, the GPU index buffer containing `u32` indices.
+    pub index_buffer: Option<Buffer>,
 }
 impl RenderAsset for GpuMesh {
     type SourceAsset = MeshAsset;
-    type Param = SRes<RenderInstance>;
+    type Param = (SRes<RenderInstance>, SResMut<SsboMesh>, SRes<RenderAssets<GpuBuffer>>);
 
     fn prepare_asset(
             asset: Self::SourceAsset,
-            render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Param>,
+            (render_instance, ssbo_mesh, gpu_buffers): &mut SystemParamItem<Self::Param>,
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         debug!(asset.label, "Loading mesh on the GPU.");
 
-        // Create vertex buffer
+        // Get the ssbo buffers
+        let (ssbo_vertex_buffer, ssbo_index_buffer) = match (
+            gpu_buffers.get(&ssbo_mesh.vertex_buffer),
+            gpu_buffers.get(&ssbo_mesh.index_buffer)
+        ) {
+            (Some(vb), Some(ib)) => (vb, ib),
+            _ => {
+                return Err(PrepareAssetError::RetryNextUpdate(asset));
+            }
+        };
+
+        // Buffer usage
+        let usage_vertex = if asset.use_ssbo {
+            BufferUsage::COPY_SRC
+        } else {
+            BufferUsage::VERTEX
+        };
+        let usage_index = if asset.use_ssbo {
+            BufferUsage::COPY_SRC
+        } else {
+            BufferUsage::INDEX
+        };
+
+        // Create staging buffers
         let render_instance = render_instance.0.read().unwrap();
         let vertex_buffer = Buffer::new(
             &render_instance,
-            format!("{}-vertex", asset.label).as_str(),
+            format!("{}-vertex-staging", asset.label).as_str(),
             std::mem::size_of::<Vertex>() * asset.vertices.len(),
-            BufferUsage::VERTEX,
+            usage_vertex,
             Some(bytemuck::cast_slice(&asset.vertices)));
-
-        // Create index buffer
         let index_buffer = Buffer::new(
             &render_instance,
-            format!("{}-indices", asset.label).as_str(),
+            format!("{}-indices-staging", asset.label).as_str(),
             std::mem::size_of::<u32>() * asset.indices.len(),
-            BufferUsage::INDEX,
+            usage_index,
             Some(bytemuck::cast_slice(&asset.indices)));
+
+        // If not using SSBO, return the buffers directly
+        if !asset.use_ssbo {
+            return Ok(GpuMesh {
+                label: asset.label,
+                first_vertex: 0,
+                first_index: 0,
+                index_count: asset.indices.len() as u32,
+                bounding_box: asset.bounding_box,
+                use_ssbo: asset.use_ssbo,
+                vertex_buffer: Some(vertex_buffer),
+                index_buffer: Some(index_buffer),
+            });
+        }
+
+        // Copy to GPU buffers
+        let first_vertex = ssbo_mesh.vertex_buffer_offset;
+        let first_index = ssbo_mesh.index_buffer_offset;
+        let vertices_count = asset.vertices.len() as u32;
+        let indices_count = asset.indices.len() as u32;
+
+        // Calculate byte offsets and sizes for buffer copy operations
+        let vertices_offset_bytes = (first_vertex as u64) * (std::mem::size_of::<Vertex>() as u64);
+        let indices_offset_bytes = (first_index as u64) * (std::mem::size_of::<u32>() as u64);
+        let vertices_size_bytes = (vertices_count as u64) * (std::mem::size_of::<Vertex>() as u64);
+        let indices_size_bytes = (indices_count as u64) * (std::mem::size_of::<u32>() as u64);
+
+        ssbo_vertex_buffer.buffer.copy_from_buffer_offset(
+            &render_instance, &vertex_buffer, 0, vertices_offset_bytes, vertices_size_bytes);
+        ssbo_mesh.vertex_buffer_offset += vertices_count;
+        
+        ssbo_index_buffer.buffer.copy_from_buffer_offset(
+            &render_instance, &index_buffer, 0, indices_offset_bytes, indices_size_bytes);
+        ssbo_mesh.index_buffer_offset += indices_count;
         
         Ok(GpuMesh {
             label: asset.label,
-            vertex_buffer,
-            index_buffer,
-            index_count: asset.indices.len() as u32,
+            first_vertex,
+            first_index,
+            index_count: indices_count,
             bounding_box: asset.bounding_box,
+            use_ssbo: asset.use_ssbo,
+            vertex_buffer: None,
+            index_buffer: None,
         })
     }
 

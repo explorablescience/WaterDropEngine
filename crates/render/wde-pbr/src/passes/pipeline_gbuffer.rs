@@ -1,8 +1,8 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_camera::features::CameraFeatureRender;
-use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
+use wde_renderer::{MSAA_SAMPLE_COUNT, pipelines::PushConstantDescriptor, prelude::*, ssbos::ssbo_mesh::SsboMesh};
 
-use crate::{assets::PbrMaterialAsset, logic::{ssbo::PbrSsbo, textures::PbrDeferredTextures}};
+use crate::{assets::PbrMaterialAsset, logic::{ssbo::PbrSsbo, textures::PbrDeferredTextures}, passes::PushConstants};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
@@ -19,7 +19,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
     type Param = (
         SRes<AssetServer>, SResMut<PipelineManager>,
         SRes<CameraFeatureRender>, SRes<RenderAssets<GpuMaterial<PbrMaterialAsset>>>, SRes<PbrSsbo>,
-        SRes<PbrDeferredTextures>, SRes<RenderAssets<GpuTexture>>
+        SRes<PbrDeferredTextures>, SRes<RenderAssets<GpuTexture>>, SRes<SsboMesh>
     );
 
     fn prepare_asset(
@@ -27,7 +27,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
             (
                 assets_server, pipeline_manager,
                 camera_feature, materials, ssbo,
-                defered_textures, textures
+                defered_textures, textures, mesh_ssbo
             ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         // Get the defered textures
@@ -47,6 +47,12 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
             None => return Err(PrepareAssetError::RetryNextUpdate(asset))
         };
 
+        // Get the mesh ssbo layout
+        let mesh_ssbo_layout = match &mesh_ssbo.bind_group_layout {
+            Some(layout) => layout,
+            None => return Err(PrepareAssetError::RetryNextUpdate(asset))
+        };
+
         // Get the material layout
         let material = match materials.iter().next() {
             Some((_, material)) => material,
@@ -58,7 +64,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
             label: "gbuffer-pbr",
             vert: Some(assets_server.load("core/render/pbr/gbuffer_vert.wgsl")),
             frag: Some(assets_server.load("core/render/pbr/gbuffer_frag.wgsl")),
-            bind_group_layouts: vec![camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
+            bind_group_layouts: vec![mesh_ssbo_layout.clone(), camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
             depth: DepthStencilDescriptor {
                 enabled: true,
                 ..Default::default()
@@ -66,7 +72,15 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
             render_targets: Some(vec![
                 depth.texture.format, albedo.texture.format, normal.texture.format
             ]),
+            push_constants: vec![
+                PushConstantDescriptor {
+                    stages: ShaderStages::VERTEX,
+                    offset: 0,
+                    size: std::mem::size_of::<PushConstants>() as u32
+                }
+            ],
             sample_count: MSAA_SAMPLE_COUNT,
+            vertex_buffer: false,
             ..Default::default()
         };
         let cached_index = pipeline_manager.create_render_pipeline(pipeline_desc);

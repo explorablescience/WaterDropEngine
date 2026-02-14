@@ -164,15 +164,10 @@ impl<'a> RenderPass<'a> {
     /// # Errors
     /// 
     /// * `RenderError::PipelineNotSet` - The pipeline is not set.
-    /// * `RenderError::MissingVertexBuffer` - The vertex buffer is not set.
     pub fn draw(&mut self, vertices: Range<u32>, instances: Range<u32>) -> Result<(), RenderError> {
         if !self.pipeline_set {
             error!(self.label, "Pipeline is not set.");
             return Err(RenderError::PipelineNotSet);
-        }
-        if !self.vertex_buffer_set {
-            error!(self.label, "Vertex buffer is not set.");
-            return Err(RenderError::MissingVertexBuffer);
         }
         event!(Level::TRACE, "Drawing {} vertices and {} instances.", vertices.end - vertices.start, instances.end - instances.start);
         self.render_pass.draw(vertices, instances);
@@ -189,20 +184,10 @@ impl<'a> RenderPass<'a> {
     /// # Errors
     /// 
     /// * `RenderError::PipelineNotSet` - The pipeline is not set.
-    /// * `RenderError::MissingVertexBuffer` - The vertex buffer is not set.
-    /// * `RenderError::MissingIndexBuffer` - The index buffer is not set.
     pub fn draw_indexed(&mut self, indices: Range<u32>, instance_index: Range<u32>) -> Result<(), RenderError> {
         if !self.pipeline_set {
             error!(self.label, "Pipeline is not set.");
             return Err(RenderError::PipelineNotSet);
-        }
-        if !self.vertex_buffer_set {
-            error!(self.label, "Vertex buffer is not set.");
-            return Err(RenderError::MissingVertexBuffer);
-        }
-        if !self.index_buffer_set {
-            error!(self.label, "Index buffer is not set.");
-            return Err(RenderError::MissingIndexBuffer);
         }
         event!(Level::TRACE, "Drawing indexed {} indices and {} instances.", indices.end - indices.start, instance_index.end - instance_index.start);
         self.render_pass.draw_indexed(indices, 0, instance_index);
@@ -256,14 +241,6 @@ impl<'a> RenderPass<'a> {
         if !self.pipeline_set {
             error!(self.label, "Pipeline is not set.");
             return Err(RenderError::PipelineNotSet);
-        }
-        if !self.vertex_buffer_set {
-            error!(self.label, "Vertex buffer is not set.");
-            return Err(RenderError::MissingVertexBuffer);
-        }
-        if !self.index_buffer_set {
-            error!(self.label, "Index buffer is not set.");
-            return Err(RenderError::MissingIndexBuffer);
         }
         event!(Level::TRACE, "Drawing indexed {} instances from indirect buffer.", count);
         self.render_pass.multi_draw_indexed_indirect(&buffer.buffer, offset, count);

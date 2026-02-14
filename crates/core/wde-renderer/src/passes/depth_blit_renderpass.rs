@@ -23,6 +23,7 @@ impl DepthBlitRenderPass {
                 min: Vec3::new(-1.0, -1.0, 0.0),
                 max: Vec3::new(1.0, 1.0, 0.0),
             },
+            use_ssbo: false,
         });
         render_pass.mesh = Some(mesh);
     }
@@ -101,8 +102,8 @@ impl RenderPass for DepthBlitRenderPass {
                     render_pass.set_bind_group(0, textures_layout.bind_group.as_ref().unwrap());
 
                     // Set the mesh buffers
-                    render_pass.set_vertex_buffer(0, &gpu_mesh.vertex_buffer);
-                    render_pass.set_index_buffer(&gpu_mesh.index_buffer);
+                    render_pass.set_vertex_buffer(0, gpu_mesh.vertex_buffer.as_ref().unwrap());
+                    render_pass.set_index_buffer(gpu_mesh.index_buffer.as_ref().unwrap());
 
                     // Draw the mesh
                     match render_pass.draw_indexed(0..gpu_mesh.index_count, 0..1) {

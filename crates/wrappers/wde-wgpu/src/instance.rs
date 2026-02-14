@@ -2,7 +2,7 @@
 
 use bevy::window::RawHandleWrapperHolder;
 use wde_logger::prelude::*;
-use wgpu::{BackendOptions, Device, Limits as WLimits, MemoryBudgetThresholds, PresentMode as WPresentMode, Surface, SurfaceConfiguration, SurfaceTexture};
+use wgpu::{BackendOptions, Device, Features, Limits as WLimits, MemoryBudgetThresholds, PresentMode as WPresentMode, Surface, SurfaceConfiguration, SurfaceTexture};
 
 use crate::texture::TextureView;
 
@@ -172,7 +172,7 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
     }
 
     // Set required features
-    let required_features = wgpu::Features::empty();
+    let required_features = wgpu::Features::empty() | Features::PUSH_CONSTANTS;
         
     // Set limits
     let required_limits = Limits {

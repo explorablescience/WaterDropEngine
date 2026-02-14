@@ -20,15 +20,15 @@ struct PbrMaterialUniform {
     roughness: f32,      // Roughness intensity of the material
     _padding: vec2<f32>, // Unused padding to align to 16 bytes
 };
-@group(2) @binding(0) var<uniform> in_pbr_material: PbrMaterialUniform;    /// Material uniform buffer
-@group(2) @binding(1) var in_albedo_texture: texture_2d<f32>;              /// Albedo texture (r, g, b)
-@group(2) @binding(2) var in_albedo_sampler: sampler;                      /// Albedo texture sampler
-@group(2) @binding(3) var in_metallic_roughness_texture: texture_2d<f32>;  /// Metallic-roughness texture (b = metallic, g = roughness)
-@group(2) @binding(4) var in_metallic_roughness_sampler: sampler;          /// Metallic-roughness texture sampler
-@group(2) @binding(5) var in_normal_texture: texture_2d<f32>;              /// Normal texture (x, y, z)
-@group(2) @binding(6) var in_normal_sampler: sampler;                      /// Normal texture sampler
-@group(2) @binding(7) var in_occlusion_texture: texture_2d<f32>;           /// Occlusion texture (r)
-@group(2) @binding(8) var in_occlusion_sampler: sampler;                   /// Occlusion texture sampler
+@group(3) @binding(0) var<uniform> in_pbr_material: PbrMaterialUniform;    /// Material uniform buffer
+@group(3) @binding(1) var in_albedo_texture: texture_2d<f32>;              /// Albedo texture (r, g, b)
+@group(3) @binding(2) var in_albedo_sampler: sampler;                      /// Albedo texture sampler
+@group(3) @binding(3) var in_metallic_roughness_texture: texture_2d<f32>;  /// Metallic-roughness texture (b = metallic, g = roughness)
+@group(3) @binding(4) var in_metallic_roughness_sampler: sampler;          /// Metallic-roughness texture sampler
+@group(3) @binding(5) var in_normal_texture: texture_2d<f32>;              /// Normal texture (x, y, z)
+@group(3) @binding(6) var in_normal_sampler: sampler;                      /// Normal texture sampler
+@group(3) @binding(7) var in_occlusion_texture: texture_2d<f32>;           /// Occlusion texture (r)
+@group(3) @binding(8) var in_occlusion_sampler: sampler;                   /// Occlusion texture sampler
 
 @fragment
 fn main(in: VertexOutput) -> FragOutput {

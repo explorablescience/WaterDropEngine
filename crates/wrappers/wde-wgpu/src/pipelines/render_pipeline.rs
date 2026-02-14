@@ -55,6 +55,7 @@ struct RenderPipelineConfig {
     fragment_shader: String,
     cull_mode: Option<Face>,
     sample_count: u32,
+    use_vertices_buffer: bool,
 }
 
 
@@ -100,6 +101,8 @@ impl RenderPipeline {
     /// By default, the render pipeline does not have a depth or stencil.
     /// By default, the primitive topology is `Topology::TriangleList`.
     /// By default, the cull mode is `Some(Face::Back)`.
+    /// By default, the sample count is 1.
+    /// By default, this pipeline expects a vertex buffer to be used.
     /// 
     /// # Arguments
     /// 
@@ -120,6 +123,7 @@ impl RenderPipeline {
                 fragment_shader: String::new(),
                 cull_mode: Some(Face::Back),
                 sample_count: 1,
+                use_vertices_buffer: true
             },
         }
     }
@@ -198,6 +202,16 @@ impl RenderPipeline {
     /// * `count` - The sample count.
     pub fn set_sample_count(&mut self, count: u32) -> &mut Self {
         self.config.sample_count = count;
+        self
+    }
+
+    /// Set whether the pipeline uses a vertex buffer.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `use_buffer` - Whether to use a vertex buffer.
+    pub fn set_use_vertices_buffer(&mut self, use_buffer: bool) -> &mut Self {
+        self.config.use_vertices_buffer = use_buffer;
         self
     }
 
@@ -303,6 +317,13 @@ impl RenderPipeline {
             push_constant_ranges: &d.push_constants,
         });
 
+        // Define vertex buffers
+        let vertex_buffers: &[wgpu::VertexBufferLayout] = if d.use_vertices_buffer {
+            &[Vertex::describe()]
+        } else {
+            &[]
+        };
+
         // Create pipeline
         let mut res: Result<(), RenderError> = Ok(());
         let pipeline = instance.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -312,7 +333,7 @@ impl RenderPipeline {
             vertex: wgpu::VertexState {
                 module: &shader_module_vert,
                 entry_point: Some("main"),
-                buffers: &[Vertex::describe()],
+                buffers: vertex_buffers,
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState { // Always write to swapchain format

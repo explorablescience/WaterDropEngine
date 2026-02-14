@@ -45,6 +45,7 @@ pub fn load_models(
                 min: bb_min,
                 max: bb_max,
             },
+            use_ssbo: true
         };
         models.push((asset_server.add(mesh_asset), materials_handles[*material_id].clone()));
         trace!("Added mesh: {} (bbox min={:?}, max={:?})", label, bb_min, bb_max);
