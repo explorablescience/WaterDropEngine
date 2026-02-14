@@ -4,9 +4,9 @@
 use wde::prelude::*;
 use bevy::prelude::*;
 
-use crate::scene::TestPlugin;
+use crate::test::TestPlugin;
 
-mod scene;
+mod test;
 
 pub fn main() {
     // Create the app
