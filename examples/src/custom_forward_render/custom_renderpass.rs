@@ -217,8 +217,8 @@ impl CustomRenderPass {
                             };
 
                             // Set the mesh buffers
-                            render_pass.set_vertex_buffer(0, &mesh.vertex_buffer);
-                            render_pass.set_index_buffer(&mesh.index_buffer);
+                            // render_pass.set_vertex_buffer(0, &mesh.vertex_buffer);
+                            // render_pass.set_index_buffer(&mesh.index_buffer);
                             old_mesh_id = Some(batch.mesh.id());
                         }
 
