@@ -20,6 +20,7 @@ extern crate alloc;
 use core::error::Error;
 
 mod once;
+pub use once::OnceFlag;
 
 // This crate is already using `tracing` as the global allocator when the `tracing` feature is
 // enabled, so we don't need to do it again here.

@@ -126,8 +126,8 @@ impl Plugin for PbrPlugin {
         // Add the pbr render passes
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass::<PbrGBufferRenderPass>(0);
-        render_graph.add_pass::<PbrLightingRenderPass>(1);
+        render_graph.add_pass::<PbrGBufferRenderPass>(50);
+        render_graph.add_pass::<PbrLightingRenderPass>(51);
     }
 }
 

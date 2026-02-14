@@ -21,6 +21,7 @@ debug = false
 [dependencies]
 wde-logger = { path = "../wde-logger" }
 wgpu = { version = "27", features = [ "serde" ] }
+futures-lite = "2.6"
 bevy = { workspace = true }
 serde = { workspace = true }
 bytemuck = { workspace = true}

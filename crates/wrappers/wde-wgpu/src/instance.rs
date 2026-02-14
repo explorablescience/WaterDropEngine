@@ -45,6 +45,8 @@ pub enum RenderError {
     UnsupportedDepthFormat,
     /// Shader compilation error.
     ShaderCompilationError,
+    /// Missing a bind group required by the shader.
+    MissingBindGroup,
 }
 
 /// Swapchain image plus an already-created view.

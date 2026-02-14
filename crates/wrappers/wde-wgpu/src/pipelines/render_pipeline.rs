@@ -1,5 +1,6 @@
 //! Render pipeline module.
 
+use futures_lite::future;
 use wde_logger::prelude::*;
 use wgpu::{naga, BindGroupLayout};
 
@@ -239,7 +240,7 @@ impl RenderPipeline {
     /// 
     /// * `Result<(), RenderError>` - The result of the initialization.
     pub fn init(&mut self, instance: &RenderInstanceData<'_>) -> Result<(), RenderError> {
-        event!(Level::DEBUG, "Creating render pipeline {}.", self.label);
+        event!(Level::TRACE, "Creating render pipeline {}.", self.label);
         let d = &self.config;
 
         // Security checks
@@ -326,6 +327,7 @@ impl RenderPipeline {
 
         // Create pipeline
         let mut res: Result<(), RenderError> = Ok(());
+        instance.device.push_error_scope(wgpu::ErrorFilter::Validation);
         let pipeline = instance.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some(format!("{}-render-pip", self.label).as_str()),
             layout: Some(&layout),
@@ -375,6 +377,22 @@ impl RenderPipeline {
                 alpha_to_coverage_enabled: false,
             },
             multiview: Default::default(),
+        });
+
+        // Check for errors
+        future::block_on(async {
+            let error = instance.device.pop_error_scope().await;
+            match error {
+                Some(wgpu::Error::Validation { source, description }) => {
+                    error!(self.label, "Failed to create render pipeline with source error: {:?}. Description: {}.", source, description);
+                    res = Err(RenderError::ShaderCompilationError);
+                },
+                Some(e) => {
+                    error!(self.label, "Failed to create render pipeline: {:?}.", e);
+                    res = Err(RenderError::ShaderCompilationError);
+                },
+                None => (),
+            }
         });
 
         // Set pipeline

@@ -113,7 +113,7 @@ impl PipelineManager {
         } else if let Some(pipeline) = self.loaded_compute_pipelines.get(&id) {
             CachedPipelineStatus::OkCompute(pipeline)
         } else {
-            error!("Pipeline with id {} not found", id);
+            error_once!("Pipeline with id {} not found", id);
             CachedPipelineStatus::Error
         }
     }
@@ -218,8 +218,6 @@ fn load_render_pipelines(
         shaders_to_pipelines.entry(descriptor.vert.as_ref().unwrap().id()).or_default().push(*id);
         shaders_to_pipelines.entry(descriptor.frag.as_ref().unwrap().id()).or_default().push(*id);
 
-        debug!("Loading pipeline with id {}", id);
-
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
@@ -249,10 +247,11 @@ fn load_render_pipelines(
         match pipeline.init(&render_instance.0.read().unwrap()) {
             Ok(_) => (),
             Err(e) => {
-                error!("Failed to load pipeline: {:?}", e);
+                error_once!("Failed to load pipeline: {:?}", e);
                 continue;
             }
         }
+        debug!("Loaded pipeline with id {}", id);
 
         // Add the pipeline to the loaded pipelines
         pipelines_loaded_indices.push((*id, pipeline));
@@ -319,7 +318,7 @@ fn load_compute_pipelines(
         match pipeline.init(&render_instance.0.read().unwrap()) {
             Ok(_) => (),
             Err(e) => {
-                error!("Failed to load pipeline: {:?}", e);
+                error_once!("Failed to load pipeline: {:?}", e);
                 continue;
             }
         }

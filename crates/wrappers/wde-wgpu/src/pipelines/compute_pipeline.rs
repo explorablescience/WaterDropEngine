@@ -1,5 +1,5 @@
 //! Compute pipeline module.
-use bevy::prelude::*;
+use futures_lite::future;
 use wde_logger::prelude::*;
 use wgpu::{naga, BindGroupLayout, ShaderStages};
 
@@ -110,7 +110,7 @@ impl ComputePipeline {
     /// 
     /// * `Result<(), RenderError>` - The result of the initialization.
     pub fn init(&mut self, instance: &RenderInstanceData) -> Result<(), RenderError> {
-        event!(Level::DEBUG, "Creating compute pipeline {}.", self.label);
+        event!(Level::TRACE, "Creating compute pipeline {}.", self.label);
         let d = &self.config;
 
         // Security checks
@@ -159,6 +159,7 @@ impl ComputePipeline {
         });
 
         // Create a compute pipeline
+        instance.device.push_error_scope(wgpu::ErrorFilter::Validation);
         let pipeline = instance.device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
             label: Some(format!("{}-compute-pip", self.label).as_str()),
             layout: Some(&layout),
@@ -168,12 +169,29 @@ impl ComputePipeline {
             cache: None
         });
 
+        // Check for errors
+        let mut res: Result<(), RenderError> = Ok(());
+        future::block_on(async {
+            let error = instance.device.pop_error_scope().await;
+            match error {
+                Some(wgpu::Error::Validation { source, description }) => {
+                    error!(self.label, "Failed to create compute pipeline with source error: {:?}. Description: {}.", source, description);
+                    res = Err(RenderError::ShaderCompilationError);
+                },
+                Some(e) => {
+                    error!(self.label, "Failed to create compute pipeline: {:?}.", e);
+                    res = Err(RenderError::ShaderCompilationError);
+                },
+                None => (),
+            }
+        });
+
         // Set pipeline
         self.pipeline = Some(pipeline);
         self.layout = Some(layout);
         self.is_initialized = true;
 
-        Ok(())
+        res
     }
 
 
