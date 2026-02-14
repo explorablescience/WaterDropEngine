@@ -4,7 +4,9 @@ use wde::prelude::{Color as WdeColor, *};
 pub struct TestPlugin;
 impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_scene);
+        app
+        .add_plugins(TerrainPlugin)
+        .add_systems(Startup, init_scene);
     }
 }
 
@@ -53,7 +55,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         Mesh(asset_server.add(CapsuleMesh::from("character", CapsuleMeshConfig::default()))),
         GizmoMaterial(asset_server.add(GizmoMaterialAsset {
             label: "character".to_string(),
-            color: [0.8, 0.4, 0.4, 1.0]s
+            color: [0.8, 0.4, 0.4, 1.0]
         })),
     ));
 
