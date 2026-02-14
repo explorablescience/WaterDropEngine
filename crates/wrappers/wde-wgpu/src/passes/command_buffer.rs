@@ -55,10 +55,9 @@ pub struct RenderPassColorAttachment<'pass> {
 }
 impl Default for RenderPassColorAttachment<'_> {
     fn default() -> Self {
-        let color_srgb = 0.1_f64.powf(2.2);
         Self {
             texture: None,
-            load: wgpu::LoadOp::Clear(Color { r: color_srgb, g: color_srgb, b: color_srgb, a: 1.0 }),
+            load: wgpu::LoadOp::Clear(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }),
             store: wgpu::StoreOp::Store,
             resolve_target: None,
         }

@@ -221,6 +221,12 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let view_z = textureSample(in_depth_texture, in_depth_sampler, in.tex_coord).r;
     let world_position = world_from_screen_coord_depth(in.tex_coord, view_z);
 
+    // Render background color if depth is at far plane (no geometry)
+    if view_z <= 0.0 {
+        let c = 0.01; // Dark gray background
+        return vec4<f32>(c, c, c, 1.0);
+    }
+
     // Read G-Buffer
     let tmp_g_albedo_metallic  = textureSample(in_albedo_metallic_t, in_albedo_metallic_s, in.tex_coord);
     let tmp_g_normal_roughness = textureSample(in_normal_roughness_t, in_normal_roughness_s, in.tex_coord);
