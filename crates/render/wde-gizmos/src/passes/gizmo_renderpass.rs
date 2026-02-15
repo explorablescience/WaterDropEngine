@@ -192,7 +192,7 @@ impl RenderPass for GizmoRenderPass {
             let mut render_pass = command_buffer.create_render_pass("gizmo", |builder: &mut RenderPassBuilder| {
                 builder.set_depth_texture(RenderPassDepth {
                     texture: Some(&depth_texture.texture.view),
-                    load_operation: LoadOp::Load,
+                    load: LoadOp::Load,
                     ..Default::default()
                 });
                 builder.add_color_attachment(RenderPassColorAttachment {

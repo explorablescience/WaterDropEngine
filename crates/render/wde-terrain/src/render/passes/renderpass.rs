@@ -1,7 +1,7 @@
 use wde_logger::prelude::*;
+use wde_renderer::prelude::*;
 use bevy::prelude::*;
 use wde_camera::features::CameraFeatureRender;
-use wde_renderer::prelude::*;
 
 use crate::render::passes::pipeline::GpuTerrainRenderPipeline;
 
@@ -13,23 +13,22 @@ pub(crate) struct TerrainRenderPassMesh {
 impl TerrainRenderPassMesh {
     // Creates the rendering mesh.
     pub fn init(assets_server: Res<AssetServer>, mut render_pass: ResMut<TerrainRenderPassMesh>) {
-        // Create the 2d quad mesh
-        let deferred_mesh: Handle<MeshAsset> = assets_server.add(MeshAsset {
-            label: "deferred-lighting-pass".to_string(),
-            vertices: vec![
-                Vertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], ..Default::default() },
-                Vertex { position: [-1.0, -1.0, 0.0], uv: [0.0, 0.0], ..Default::default() },
-                Vertex { position: [1.0, -1.0, 0.0], uv: [1.0, 0.0], ..Default::default() },
-                Vertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], ..Default::default() },
-            ],
-            indices: vec![0, 1, 2, 0, 2, 3],
-            bounding_box: ModelBoundingBox {
-                min: Vec3::new(-1.0, -1.0, 0.0),
-                max: Vec3::new(1.0, 1.0, 0.0),
-            },
-            use_ssbo: false
-        });
-        render_pass.deferred_mesh = Some(deferred_mesh);
+        let mut mesh = PlaneMesh::from("terrain_tile", 1000, Vec3::Y);
+
+        // Scale the plane to cover the entire terrain tile size
+        let tile_size = 100.0;
+        for vertex in &mut mesh.vertices {
+            vertex.position[0] *= tile_size;
+            vertex.position[2] *= tile_size;
+        }
+
+        // Fix the UVs to cover the entire texture
+        for vertex in &mut mesh.vertices {
+            vertex.uv[0] = vertex.position[0] / tile_size;
+            vertex.uv[1] = vertex.position[2] / tile_size;
+        }
+
+        render_pass.deferred_mesh = Some(assets_server.add(mesh));
     }
 }
 
@@ -64,6 +63,18 @@ impl RenderPass for TerrainRenderPass {
             None => return
         };
 
+        // Check if depth texture is ready
+        let textures = world.get_resource::<RenderAssets<GpuTexture>>().unwrap();
+        let depth_texture = match textures.get(&world.get_resource::<DepthTexture>().unwrap().texture) {
+            Some(tex) => if render_instance.surface_config.as_ref().unwrap().width == tex.texture.size.0
+                && render_instance.surface_config.as_ref().unwrap().height == tex.texture.size.1 {
+                tex
+            } else {
+                return
+            },
+            None => return
+        };
+
         // Check if pipeline is ready
         let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
         let pipeline = match world.get_resource::<RenderAssets<GpuTerrainRenderPipeline>>().unwrap().iter().next() {
@@ -75,6 +86,10 @@ impl RenderPass for TerrainRenderPass {
         let mut command_buffer = CommandBuffer::new(&render_instance, "terrain");
         {
             let mut render_pass = command_buffer.create_render_pass("terrain", |builder: &mut RenderPassBuilder| {
+                builder.set_depth_texture(RenderPassDepth {
+                    texture: Some(&depth_texture.texture.view),
+                    ..Default::default()
+                });
                 builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&swapchain_frame.view),
                     ..Default::default()

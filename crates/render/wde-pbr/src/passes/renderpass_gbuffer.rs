@@ -91,21 +91,25 @@ impl RenderPass for PbrGBufferRenderPass {
             let mut render_pass = command_buffer.create_render_pass("gbuffer-pbr", |builder: &mut RenderPassBuilder| {
                 builder.set_depth_texture(RenderPassDepth {
                     texture: Some(&depth_texture.texture.view),
+                    load: LoadOp::Clear(1.0),
                     ..Default::default()
                 });
                 builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&depth.texture.view),
                     resolve_target: Some(&depth_resolved.texture.view),
+                    load: LoadOp::Clear(WgpuColor { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }),
                     ..Default::default()
                 });
                 builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&albedo.texture.view),
                     resolve_target: Some(&albedo_resolved.texture.view),
+                    load: LoadOp::Clear(WgpuColor { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }),
                     ..Default::default()
                 });
                 builder.add_color_attachment(RenderPassColorAttachment {
                     texture: Some(&normal.texture.view),
                     resolve_target: Some(&normal_resolved.texture.view),
+                    load: LoadOp::Clear(WgpuColor { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }),
                     ..Default::default()
                 });
             });

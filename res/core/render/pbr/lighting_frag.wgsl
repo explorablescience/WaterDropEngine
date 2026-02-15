@@ -223,8 +223,7 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // Render background color if depth is at far plane (no geometry)
     if view_z <= 0.0 {
-        let c = 0.01; // Dark gray background
-        return vec4<f32>(c, c, c, 1.0);
+        discard;
     }
 
     // Read G-Buffer

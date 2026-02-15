@@ -37,17 +37,17 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         ActiveCamera,
     ));
 
-    // Create the ground
-    let scaling: u32 = 25; // Must be odd
-    commands.spawn((
-        Transform::from_xyz(0.0, -0.0001, 0.0).with_scale(Vec3::ONE * scaling as f32),
-        Mesh(asset_server.add(PlaneMesh::from("ground", scaling, Vec3::Y))),
-        GizmoMaterial(asset_server.add(GizmoMaterialAsset {
-            label: "grid".to_string(),
-            color: [0.8, 0.8, 0.8, 1.0],
-        })),
-        Collider::cuboid(50.0, 0.1, 50.0),
-    ));
+    // // Create the ground
+    // let scaling: u32 = 25; // Must be odd
+    // commands.spawn((
+    //     Transform::from_xyz(0.0, -0.0001, 0.0).with_scale(Vec3::ONE * scaling as f32),
+    //     Mesh(asset_server.add(PlaneMesh::from("ground", scaling, Vec3::Y))),
+    //     GizmoMaterial(asset_server.add(GizmoMaterialAsset {
+    //         label: "grid".to_string(),
+    //         color: [0.8, 0.8, 0.8, 1.0],
+    //     })),
+    //     Collider::cuboid(50.0, 0.1, 50.0),
+    // ));
 
     // Create a typical character
     commands.spawn((
@@ -58,6 +58,10 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
             color: [0.8, 0.4, 0.4, 1.0]
         })),
     ));
+
+    let gltf_asset = GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server).unwrap();
+    let model = PbrModel(gltf_asset.models.clone());
+    commands.spawn((model.clone(), Transform::default().with_scale(Vec3::ONE * 3.0)));
 
     // Spawn the lights
     commands.spawn(PointLight {

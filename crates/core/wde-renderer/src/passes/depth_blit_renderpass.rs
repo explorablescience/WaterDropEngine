@@ -88,7 +88,7 @@ impl RenderPass for DepthBlitRenderPass {
             let mut render_pass = command_buffer.create_render_pass("depth_blit", |builder: &mut RenderPassBuilder| {
                 builder.set_depth_texture(RenderPassDepth {
                     texture: Some(&depth_texture.texture.view),
-                    load_operation: LoadOp::Load,
+                    load: LoadOp::Load,
                     ..Default::default()
                 });
             });

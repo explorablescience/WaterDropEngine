@@ -30,6 +30,10 @@ impl RenderAsset for GpuTerrainRenderPipeline {
             vert: Some(assets_server.load("core/render/terrain/render_terrain_vert.wgsl")),
             frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone()],
+            depth: DepthStencilDescriptor {
+                enabled: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let cached_index = pipeline_manager.create_render_pipeline(pipeline_desc);

@@ -7,7 +7,7 @@ use crate::{buffer::Buffer, compute_pass::WComputePass, instance::RenderInstance
 use super::render_pass::RenderPass;
 
 /// Type of a color.
-pub type Color = wgpu::Color;
+pub type WgpuColor = wgpu::Color;
 
 /// Type of a load operation.
 pub type LoadOp<V> = wgpu::LoadOp<V>;
@@ -26,17 +26,18 @@ pub struct Operations<V> {
 pub struct RenderPassDepth<'pass> {
     /// The depth texture. If `None`, the render pass will not have a depth texture.
     pub texture: Option<&'pass TextureView>,
-    /// The depth operation when loading the texture. By default, clear the texture to 1.0 (farthest).
-    pub load_operation: LoadOp<f32>,
+    /// The depth operation when loading the texture. By default, load the existing texture.
+    pub load: LoadOp<f32>,
     /// The depth operation when storing the texture. By default, store the texture.
-    pub store_operation: StoreOp,
+    pub store: StoreOp,
 }
 impl Default for RenderPassDepth<'_> {
     fn default() -> Self {
         Self {
             texture: None,
-            load_operation: wgpu::LoadOp::Clear(1.0),
-            store_operation: wgpu::StoreOp::Store,
+            // load: wgpu::LoadOp::Clear(1.0),
+            load: wgpu::LoadOp::Load,
+            store: wgpu::StoreOp::Store,
         }
     }
 }
@@ -45,8 +46,8 @@ impl Default for RenderPassDepth<'_> {
 pub struct RenderPassColorAttachment<'pass> {
     /// The color texture.
     pub texture: Option<&'pass TextureView>,
-    /// The color load operation. By default, clear the texture to a dark gray. The color must be in sRGB.
-    pub load: LoadOp<Color>,
+    /// The color load operation. By default, load the existing texture.
+    pub load: LoadOp<WgpuColor>,
     /// The color store operation. By default, store the texture.
     pub store: StoreOp,
     /// An optional resolve target for multi-sampled textures.
@@ -57,7 +58,8 @@ impl Default for RenderPassColorAttachment<'_> {
     fn default() -> Self {
         Self {
             texture: None,
-            load: wgpu::LoadOp::Clear(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }),
+            // load: wgpu::LoadOp::Clear(Color { r: 0.0, g: 0.0, b: 0.0, a: 1.0 }),
+            load: wgpu::LoadOp::Load,
             store: wgpu::StoreOp::Store,
             resolve_target: None,
         }
@@ -187,8 +189,8 @@ impl CommandBuffer {
             depth_attachment = Some(wgpu::RenderPassDepthStencilAttachment {
                 view: depth_texture,
                 depth_ops: Some(wgpu::Operations {
-                    load: builder.depth.load_operation,
-                    store: builder.depth.store_operation
+                    load: builder.depth.load,
+                    store: builder.depth.store
                 }),
                 stencil_ops: None,
             });
