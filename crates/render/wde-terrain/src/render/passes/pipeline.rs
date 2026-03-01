@@ -2,6 +2,8 @@ use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
+use crate::render::terrain::Terrain;
+
 
 #[derive(Default, Asset, Clone, TypePath)]
 pub(crate) struct TerrainRenderPipelineAsset;
@@ -15,21 +17,33 @@ pub(crate) struct GpuTerrainRenderPipeline {
 impl RenderAsset for GpuTerrainRenderPipeline {
     type SourceAsset = TerrainRenderPipelineAsset;
     type Param = (
-        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>
+        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<Terrain>
     );
 
     fn prepare_asset(
-            _asset: Self::SourceAsset,
+            asset: Self::SourceAsset,
             (
-                assets_server, pipeline_manager, camera_feature
+                assets_server, pipeline_manager, camera_feature, terrain
             ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        // Get the terrain resource
+        let terrain_layout = match terrain.tiles.first() {
+            Some(tile) => {
+                if let Some(layout) = &tile.bind_group_layout {
+                    layout
+                } else {
+                    return Err(PrepareAssetError::RetryNextUpdate(asset));
+                }
+            },
+            None => return Err(PrepareAssetError::RetryNextUpdate(asset)),
+        };
+
         // Create the pipeline
         let pipeline_desc = RenderPipelineDescriptor {
             label: "terrain",
             vert: Some(assets_server.load("core/render/terrain/render_terrain_vert.wgsl")),
             frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
-            bind_group_layouts: vec![camera_feature.layout.clone()],
+            bind_group_layouts: vec![camera_feature.layout.clone(), terrain_layout.clone()],
             depth: DepthStencilDescriptor {
                 enabled: true,
                 ..Default::default()
