@@ -25,18 +25,17 @@ struct VertexOutput {
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Sample the splatmap to determine material blending
     let splatmap = textureSample(in_splatmap_1, in_splatmap_1_sampler, in.tex_coord);
-    
-    // For now, use the first channel (red) to blend between materials
-    // Red channel controls grass (material 0), green for dirt (material 1), etc.
     let weights = vec4<f32>(splatmap.r, splatmap.g, splatmap.b, splatmap.a);
+
+    // Compute material UVs (could be world position based for better tiling)
+    let material_uv = in.tex_coord * 10.0 % 1.0; // Simple tiling based on vertex UVs
     
     // Sample albedo from each material layer and blend
     var albedo = vec3<f32>(0.0);
-    let s = 1.0; // Scale for texture coordinates, adjust as needed
-    albedo += textureSample(material_albedo, material_albedo_sampler, in.tex_coord / s, 0).rgb * weights.r;
-    albedo += textureSample(material_albedo, material_albedo_sampler, in.tex_coord / s, 1).rgb * weights.g;
-    albedo += textureSample(material_albedo, material_albedo_sampler, in.tex_coord / s, 2).rgb * weights.b;
-    albedo += textureSample(material_albedo, material_albedo_sampler, in.tex_coord / s, 3).rgb * weights.a;
+    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 0).rgb * weights.r;
+    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 1).rgb * weights.g;
+    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 2).rgb * weights.b;
+    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 3).rgb * weights.a;
     
     // Simple lighting calculation
     let sun_dir = normalize(vec3<f32>(0.5, 1.0, 0.5));
