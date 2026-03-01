@@ -50,6 +50,8 @@ pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
 ///     TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
 /// );
 /// texture.copy_from_buffer(instance, TextureFormat::Rgba8Unorm, pixels);
+/// // Or
+/// texture.copy_from_buffer_layered(instance, TextureFormat::Rgba8Unorm, 0, pixels); // For texture arrays
 /// ```
 ///
 /// Copy one GPU texture into another:
@@ -72,7 +74,8 @@ pub struct Texture {
     pub view: TextureView,
     pub sampler: wgpu::Sampler,
     pub size: (u32, u32),
-    pub sample_count: u32
+    pub sample_count: u32,
+    pub layer_count: u32,
 }
 
 impl std::fmt::Debug for Texture {
@@ -81,6 +84,8 @@ impl std::fmt::Debug for Texture {
             .field("label", &self.label)
             .field("sampler", &self.sampler)
             .field("size", &self.size)
+            .field("sample_count", &self.sample_count)
+            .field("layer_count", &self.layer_count)
             .finish()
     }
 }
@@ -96,7 +101,8 @@ impl Texture {
     /// * `format` - Format of the texture (e.g. Rgba8Unorm, Depth32Float, etc.).
     /// * `usage` - Usage of the texture (e.g. RENDER_ATTACHMENT, COPY_SRC, COPY_DST, etc.).
     /// * `sample_count` - Sample count of the texture (e.g. 1 for no MSAA, 4 for 4x MSAA, etc.).
-    pub fn new(instance: &RenderInstanceData<'_>, label: &str, size: (u32, u32), format: TextureFormat, usage: TextureUsages, sample_count: u32) -> Self {
+    /// * `layer_count` - Number of layers in the texture array. Default is 1 (for non-array textures).
+    pub fn new(instance: &RenderInstanceData<'_>, label: &str, size: (u32, u32), format: TextureFormat, usage: TextureUsages, sample_count: u32, layer_count: u32) -> Self {
         event!(Level::DEBUG, "Creating wgpu texture {}.", label);
         
         // Create texture
@@ -105,7 +111,7 @@ impl Texture {
             size: wgpu::Extent3d {
                 width: size.0,
                 height: size.1,
-                depth_or_array_layers: 1,
+                depth_or_array_layers: layer_count,
             },
             mip_level_count: 1,
             sample_count,
@@ -125,6 +131,8 @@ impl Texture {
             },
             dimension: if format == DEPTH_FORMAT {
                 None
+            } else if layer_count > 1 {
+                Some(wgpu::TextureViewDimension::D2Array)
             } else {
                 Some(wgpu::TextureViewDimension::D2)
             },
@@ -132,7 +140,7 @@ impl Texture {
             base_mip_level: 0,
             base_array_layer: 0,
             mip_level_count: None,
-            array_layer_count: None,
+            array_layer_count: if layer_count > 1 { Some(layer_count) } else { None },
             usage: None,
         });
 
@@ -160,7 +168,8 @@ impl Texture {
             view,
             sampler,
             size,
-            sample_count
+            sample_count,
+            layer_count
         }
     }
 
@@ -205,7 +214,54 @@ impl Texture {
             },
         );
     } 
-    
+
+
+    /// Copy texture to buffer at a given array layer.
+    /// It is assumed that the buffer is the same size as the texture.
+    /// It will be copied on the next queue submit.
+    /// Note that the buffer must have the COPY_DST usage.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `instance` - Game instance.
+    /// * `texture_format` - The wgpu texture format.
+    /// * `array_layer` - The array layer to copy from (for texture arrays). Default is 0 for non-array textures.
+    /// * `buffer` - Image buffer.
+    pub fn copy_from_buffer_layered(&self, instance: &RenderInstanceData, texture_format: TextureFormat, array_layer: u32, buffer: &[u8]) {
+        event!(Level::TRACE, "Copying texture to buffer.");
+
+        // Retrieve size corresponding to the texture format
+        let format_size = match texture_format.block_dimensions() {
+            (1, 1) => texture_format.block_copy_size(None).unwrap() as usize,
+            _ => panic!("Using pixel_size for compressed textures is invalid"),
+        };
+
+        // Copy buffer to texture
+        instance.queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d {
+                    x: 0,
+                    y: 0,
+                    z: array_layer,
+                },
+                aspect: wgpu::TextureAspect::All,
+            },
+            buffer,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(self.size.0 * format_size as u32),
+                rows_per_image: None,
+            },
+            wgpu::Extent3d {
+                width: self.size.0,
+                height: self.size.1,
+                depth_or_array_layers: 1,
+            },
+        );
+    } 
+
 
     /// Copy texture to texture.
     /// It is assumed that the texture is the same size as the source texture.
@@ -234,6 +290,51 @@ impl Texture {
                 texture: &self.texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::Extent3d {
+                width: size.0,
+                height: size.1,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        // Submit the commands
+        command.submit(instance);
+    }
+
+    /// Copy texture to texture at a given array layer.
+    /// It is assumed that the texture is the same size as the source texture.
+    /// Note that the input texture must have the COPY_SRC usage, and the output texture must have the COPY_DST usage.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `instance` - Game instance.
+    /// * `texture` - Texture to copy from.
+    /// * `array_layer` - The array layer to copy to (for texture arrays). Default is 0 for non-array textures.
+    /// * `size` - Size of the texture.
+    pub fn copy_from_texture_layered(&self, instance: &RenderInstanceData<'_>, texture: &wgpu::Texture, array_layer: usize, size: (u32, u32)) {
+        event!(Level::TRACE, "Copying texture to texture.");
+
+        // Create command buffer
+        let mut command = crate::command_buffer::CommandBuffer::new(instance, "Copy Texture");
+
+        // Copy texture to texture
+        command.encoder().copy_texture_to_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d {
+                    x: 0,
+                    y: 0,
+                    z: array_layer as u32,
+                },
                 aspect: wgpu::TextureAspect::All,
             },
             wgpu::Extent3d {

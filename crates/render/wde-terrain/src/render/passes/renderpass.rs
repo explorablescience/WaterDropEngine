@@ -1,11 +1,12 @@
 use wde_logger::prelude::*;
 use bevy::prelude::*;
-use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
+use wde_camera::features::CameraFeatureRender;
 
 use crate::{
     render::terrain::{TILE_SIZE, TILE_SUBDIVISIONS, Terrain},
     render::passes::pipeline::GpuTerrainRenderPipeline,
+    render::materials::TerrainMaterialArrays,
 };
 
 #[derive(Resource, Default)]
@@ -48,6 +49,17 @@ impl RenderPass for TerrainRenderPass {
         if let Some(ref mesh_cpu) = mesh_cpu.deferred_mesh {
             render_pass.deferred_mesh = Some(mesh_cpu.clone());
         }
+
+        // Extract the material arrays bind group
+        if let Some(material_arrays_cpu) = main_world.get_resource::<TerrainMaterialArrays>() {
+            let mut material_arrays_render = render_world
+                .get_resource_mut::<TerrainMaterialArrays>()
+                .unwrap();
+            
+            // Only copy the bind group and layout, not the texture arrays themselves
+            material_arrays_render.bind_group_layout = material_arrays_cpu.bind_group_layout.clone();
+            material_arrays_render.bind_group = material_arrays_cpu.bind_group.clone();
+        }
     }
 
     fn render(&self, world: &mut World) {
@@ -56,6 +68,18 @@ impl RenderPass for TerrainRenderPass {
         // Get the tiles
         let terrain = match world.get_resource::<Terrain>() {
             Some(terrain) => terrain,
+            None => return,
+        };
+
+        // Get material arrays bind group
+        let material_arrays_bind_group = match world.get_resource::<TerrainMaterialArrays>() {
+            Some(arrays) => match &arrays.bind_group {
+                Some(bg) => bg,
+                None => {
+                    // Material arrays not ready yet
+                    return;
+                }
+            },
             None => return,
         };
 
@@ -149,6 +173,8 @@ impl RenderPass for TerrainRenderPass {
                         } else {
                             continue;
                         }
+                        // Set material arrays bind group (group 2)
+                        render_pass.set_bind_group(2, material_arrays_bind_group);
 
                         // Draw the mesh
                         match render_pass.draw_indexed(0..deferred_mesh.index_count, 0..1) {

@@ -30,6 +30,8 @@ pub struct Texture {
     pub usages: TextureUsages,
     /// Sample count for the texture (1 for no MSAA, etc.).
     pub sample_count: u32,
+    /// Number of layers for array textures (1 for non-arrays, etc.).
+    pub layer_count: u32,
     /// Raw pixel payload matching `format`; empty means allocate-only.
     pub data: Vec<u8>
 }
@@ -41,6 +43,7 @@ impl Default for Texture {
             format: TextureFormat::Rgba8Unorm,
             usages: TextureUsages::TEXTURE_BINDING,
             sample_count: 1,
+            layer_count: 1,
             data: Vec::new()
         }
     }
@@ -118,6 +121,7 @@ impl AssetLoader for TextureLoader {
             usages: settings.usages,
             size,
             sample_count: 1,
+            layer_count: 1,
             data
         })
     }
@@ -152,7 +156,8 @@ impl RenderAsset for GpuTexture {
         // Create the texture
         let texture = wde_wgpu::texture::Texture::new(
             &render_instance, &asset.label, (asset.size.0, asset.size.1),
-            asset.format, asset.usages, asset.sample_count);
+            asset.format, asset.usages, asset.sample_count, asset.layer_count
+        );
 
         // Copy the texture data
         if !asset.data.is_empty() {

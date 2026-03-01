@@ -20,6 +20,8 @@ debug = false
 [dependencies]
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-renderer = { path = "../../core/wde-renderer" }
+wde-wgpu = { path = "../../wrappers/wde-wgpu" }
 wde-camera = { path = "../wde-camera" }
+wde-pbr = { path = "../wde-pbr" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }

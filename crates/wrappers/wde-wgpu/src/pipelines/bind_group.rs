@@ -16,8 +16,8 @@
 //! };
 //! 
 //! let uniform_buffer = Buffer::new(instance, "material-uniform", 64, BufferUsage::UNIFORM, None);
-//! let albedo = Texture::new(instance, "albedo", (512, 512), TextureFormat::Rgba8Unorm, TextureUsages::TEXTURE_BINDING);
-//! let normal = Texture::new(instance, "normal", (512, 512), TextureFormat::Rgba8Unorm, TextureUsages::TEXTURE_BINDING);
+//! let albedo = Texture::new(instance, "albedo", (512, 512), TextureFormat::Rgba8Unorm, TextureUsages::TEXTURE_BINDING, 1, 1);
+//! let normal = Texture::new(instance, "normal", (512, 512), TextureFormat::Rgba8Unorm, TextureUsages::TEXTURE_BINDING, 1, 1);
 //!
 //! let layout = BindGroupLayout::new("material-layout", |builder| {
 //!     builder.add_buffer(0, ShaderStages::FRAGMENT, BufferBindingType::Uniform);
@@ -118,6 +118,28 @@ impl BindGroupLayoutBuilder {
                 multisampled,
                 view_dimension: wgpu::TextureViewDimension::D2,
                 sample_type: wgpu::TextureSampleType::Float { filterable: !multisampled },
+            },
+            count: None
+        });
+
+        self
+    }
+
+    /// Add a texture array to the bind group.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `binding` - The binding index of the texture array.
+    /// * `visibility` - The shader stages that can access the texture array.
+    pub fn add_texture_array_view(&mut self, binding: u32, visibility: ShaderStages) -> &mut Self {
+        // Create bind group layout
+        self.layout_entries.push(wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility,
+            ty: wgpu::BindingType::Texture {
+                multisampled: false,
+                view_dimension: wgpu::TextureViewDimension::D2Array,
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
             },
             count: None
         });

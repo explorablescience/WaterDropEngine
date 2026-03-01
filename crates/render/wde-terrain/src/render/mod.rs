@@ -1,21 +1,24 @@
 use bevy::prelude::*;
 use wde_renderer::core::{Render, RenderApp, RenderSet};
 
-use crate::render::{passes::TerrainRenderFeaturesPlugin, terrain::Terrain};
+use crate::render::{materials::{TerrainMaterialsPlugin, TerrainMaterialArrays}, passes::TerrainRenderFeaturesPlugin, terrain::Terrain};
 
 mod passes;
 mod terrain;
+mod materials;
 
 pub struct TerrainRenderPlugin;
 impl Plugin for TerrainRenderPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(TerrainRenderFeaturesPlugin);
+            .add_plugins(TerrainRenderFeaturesPlugin)
+            .add_plugins(TerrainMaterialsPlugin);
 
         // Spawn the terrain
         let terrain = Terrain::init(1, "tests/terrain", app.world().resource::<AssetServer>());
         app.get_sub_app_mut(RenderApp).unwrap()
-            .insert_resource(terrain);
+            .insert_resource(terrain)
+            .init_resource::<TerrainMaterialArrays>();
 
         if cfg!(debug_assertions) {
             app.get_sub_app_mut(RenderApp).unwrap()

@@ -146,7 +146,6 @@ impl Terrain {
             }
 
             // Insert the resources
-            println!("Built bind group for tile at position ({}, {})", tile.position.x, tile.position.y);
             tile.bind_group_layout = Some(bind_group_layout);
             tile.bind_group = Some(bind_group);
         }
