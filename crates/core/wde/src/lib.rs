@@ -179,8 +179,6 @@ impl Plugin for CustomWdePlugins {
         app.add_plugins(wde_pbr::PbrPlugin);
         #[cfg(feature = "egui")]
         app.add_plugins(wde_egui::EguiPlugin);
-
-        app.add_plugins(wde_scene::ScenePlugin);
     }
 }
 
@@ -264,16 +262,6 @@ pub mod render {
 /// - NDC coordinate conversions
 pub mod camera {
     pub use wde_camera::*;
-}
-
-/// Scene management module.
-///
-/// Handles scene organization and entity management:
-/// - Scene loading and saving
-/// - Entity hierarchies
-/// - Component serialization
-pub mod scene {
-    pub use wde_scene::*;
 }
 
 /// Gizmo rendering module (requires `gizmos` feature).

@@ -18,7 +18,7 @@ incremental = false
 debug = false
 
 [dependencies]
-wde-logger = { path = "../../wrappers/wde-logger" }
+wde-logger = { path = "../wde-logger" }
 wde-camera = { path = "../../render/wde-camera" }
 bevy = { workspace = true }
 rapier3d = { version = "0.23", default-features = false, features = [ "dim3", "f32", "parallel", "simd-stable", "serde-serialize" ] }
