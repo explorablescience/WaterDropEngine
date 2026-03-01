@@ -17,8 +17,8 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let light = max(dot(in.normal, sun_dir), 0.0);
     let color = mix(vec3<f32>(0.1, 0.4, 0.1), vec3<f32>(0.2, 0.7, 0.2), light);
 
-    return vec4<f32>(color, 1.0);
+    // return vec4<f32>(color, 1.0);
     // return vec4<f32>(vec3<f32>(in.tex_coord, 0.0), 1.0);
-    // return vec4<f32>(textureSample(in_splatmap_1, in_splatmap_1_sampler, in.tex_coord).rgb, 1.0);
+    return vec4<f32>(textureSample(in_heightmap, in_heightmap_sampler, in.tex_coord).rgb, 1.0);
     // return vec4<f32>(textureSample(in_heightmap, in_heightmap_sampler, in.tex_coord).rgb, 1.0);
 }

@@ -39,8 +39,8 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
 
     // Add some noise to the height based on the xz position
     let a = 6.0;
-    world_pos.y = textureSampleLevel(in_heightmap, in_heightmap_sampler, model.tex_coord / a, 0.0).r * 100.0 - 50.0;
-    // world_pos.y = model.position.y;
+    let h = 20.0;
+    world_pos.y = textureSampleLevel(in_heightmap, in_heightmap_sampler, model.tex_coord, 0.0).r * h - h / 2.0;
 
     let view_pos4 = in_camera.world_to_view
         * world_pos;
@@ -49,10 +49,10 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
 
     // Compute normal with finite differences
     let delta = 0.1;
-    let heightL = textureSampleLevel(in_heightmap, in_heightmap_sampler, (model.tex_coord + vec2<f32>(-delta, 0.0)) / a, 0.0).r * 100.0 - 50.0;
-    let heightR = textureSampleLevel(in_heightmap, in_heightmap_sampler, (model.tex_coord + vec2<f32>( delta, 0.0)) / a, 0.0).r * 100.0 - 50.0;
-    let heightD = textureSampleLevel(in_heightmap, in_heightmap_sampler, (model.tex_coord + vec2<f32>(0.0, -delta)) / a, 0.0).r * 100.0 - 50.0;
-    let heightU = textureSampleLevel(in_heightmap, in_heightmap_sampler, (model.tex_coord + vec2<f32>(0.0,  delta)) / a, 0.0).r * 100.0 - 50.0;
+    let heightL = textureSampleLevel(in_heightmap, in_heightmap_sampler, (model.tex_coord + vec2<f32>(-delta, 0.0)), 0.0).r * h - h / 2.0;
+    let heightR = textureSampleLevel(in_heightmap, in_heightmap_sampler, (model.tex_coord + vec2<f32>( delta, 0.0)), 0.0).r * h - h / 2.0;
+    let heightD = textureSampleLevel(in_heightmap, in_heightmap_sampler, (model.tex_coord + vec2<f32>(0.0, -delta)), 0.0).r * h - h / 2.0;
+    let heightU = textureSampleLevel(in_heightmap, in_heightmap_sampler, (model.tex_coord + vec2<f32>(0.0,  delta)), 0.0).r * h - h / 2.0;
     let normal = normalize(vec3<f32>(heightL - heightR, 2.0 * delta * 1e-1, heightD - heightU));
     out.normal = normal;
 

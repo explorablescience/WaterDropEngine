@@ -15,7 +15,14 @@ impl Plugin for TerrainRenderPlugin {
         // Spawn the terrain
         let terrain = Terrain::init(1, "tests/terrain", app.world().resource::<AssetServer>());
         app.get_sub_app_mut(RenderApp).unwrap()
-            .insert_resource(terrain)
-            .add_systems(Render, Terrain::build_bind_group.in_set(RenderSet::BindGroups).run_if(run_once));
+            .insert_resource(terrain);
+
+        if cfg!(debug_assertions) {
+            app.get_sub_app_mut(RenderApp).unwrap()
+                .add_systems(Render, Terrain::build_bind_group.in_set(RenderSet::BindGroups));
+        } else {
+            app.get_sub_app_mut(RenderApp).unwrap()
+                .add_systems(Render, Terrain::build_bind_group.in_set(RenderSet::BindGroups).run_if(run_once));
+        }
     }
 }

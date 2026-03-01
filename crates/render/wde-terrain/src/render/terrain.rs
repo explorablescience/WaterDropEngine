@@ -21,7 +21,7 @@ pub(crate) struct TerrainTile {
 
     // The bind group for the different maps
     pub bind_group_layout: Option<BindGroupLayout>,
-    pub bind_group: Option<BindGroup>,
+    pub bind_group: Option<BindGroup>
 }
 
 /// The main terrain resource that holds all the terrain tiles.
@@ -76,7 +76,7 @@ impl Terrain {
                     normalmap,
                     splatmaps,
                     bind_group_layout: None,
-                    bind_group: None,
+                    bind_group: None
                 });
             }
         }
@@ -85,14 +85,9 @@ impl Terrain {
     }
 
     /// Build the bind group for the deferred renderer.
-    pub fn build_bind_group(textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance>, mut terrain: ResMut<Terrain>) {
+    pub fn build_bind_group(mut textures: ResMut<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance>, mut terrain: ResMut<Terrain>) {
         let render_instance = render_instance.0.read().unwrap();
         for tile in &mut terrain.tiles {
-            // Check if the bind group is already created
-            if tile.bind_group.is_some() {
-                continue;
-            }
-
             // Get the maps
             let (heightmap, normalmap, splatmaps) = match (
                 textures.get(&tile.heightmap),
@@ -102,6 +97,13 @@ impl Terrain {
                 (Some(heightmap), Some(normalmap), Some(splatmaps)) => (heightmap, normalmap, splatmaps),
                 _ => continue,
             };
+
+            // Check if any of the textures is dirty, if so we need to rebuild the bind group
+            if cfg!(debug_assertions)
+                && !heightmap.dirty && !normalmap.dirty
+                && splatmaps.iter().all(|splatmap| !splatmap.dirty) {
+                continue;
+            }
 
             // Create the bind group layout
             let ss = ShaderStages::FRAGMENT | ShaderStages::VERTEX;
@@ -134,7 +136,17 @@ impl Terrain {
                 entries
             });
 
+            // Mark the textures as clean
+            {
+                textures.get_mut(&tile.heightmap).unwrap().dirty = false;
+                textures.get_mut(&tile.normalmap).unwrap().dirty = false;
+                for splatmap in &tile.splatmaps {
+                    textures.get_mut(splatmap).unwrap().dirty = false;
+                }
+            }
+
             // Insert the resources
+            println!("Built bind group for tile at position ({}, {})", tile.position.x, tile.position.y);
             tile.bind_group_layout = Some(bind_group_layout);
             tile.bind_group = Some(bind_group);
         }
