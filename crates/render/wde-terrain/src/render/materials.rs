@@ -1,4 +1,5 @@
 use wde_renderer::prelude::*;
+use wde_logger::prelude::*;
 use bevy::prelude::*;
 
 const TEX_SIZE: (u32, u32) = (1024, 1024);
@@ -78,13 +79,14 @@ fn load_material_textures(asset_server: Res<AssetServer>, mut materials: ResMut<
 
     // Build texture arrays for each type
     let size = TEX_SIZE; // Assume all textures have the same size
-    let usages = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
+    let usages = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::RENDER_ATTACHMENT;
     let albedo_array = asset_server.add(Texture {
         label: "terrain_material_albedo_array".to_string(),
         size,
         format: TextureFormat::Rgba8UnormSrgb,
         usages,
         layer_count: materials.albedo_textures.len() as u32,
+        mip_level_count: 0, // Auto-calculate max mip levels
         ..Default::default()
     });
     let normal_array = asset_server.add(Texture {
@@ -93,6 +95,7 @@ fn load_material_textures(asset_server: Res<AssetServer>, mut materials: ResMut<
         format: TextureFormat::Rgba8Unorm,
         usages,
         layer_count: materials.normal_textures.len() as u32,
+        mip_level_count: 0, // Auto-calculate max mip levels
         ..Default::default()
     });
     let roughness_array = asset_server.add(Texture {
@@ -101,6 +104,7 @@ fn load_material_textures(asset_server: Res<AssetServer>, mut materials: ResMut<
         format: TextureFormat::R8Unorm,
         usages,
         layer_count: materials.roughness_textures.len() as u32,
+        mip_level_count: 0, // Auto-calculate max mip levels
         ..Default::default()
     });
     let ao_array = asset_server.add(Texture {
@@ -109,6 +113,7 @@ fn load_material_textures(asset_server: Res<AssetServer>, mut materials: ResMut<
         format: TextureFormat::R8Unorm,
         usages,
         layer_count: materials.ao_textures.len() as u32,
+        mip_level_count: 0, // Auto-calculate max mip levels
         ..Default::default()
     });
     materials.albedo_array = Some(albedo_array);
@@ -225,6 +230,13 @@ fn build_material_arrays(
         };
         ao_array.texture.copy_from_texture_layered(&render_instance, &ao_tex.texture.texture, i, size);
     }
+
+    // Generate mipmaps for all texture arrays
+    debug!("Generating mipmaps for terrain material arrays.");
+    albedo_array.texture.generate_mipmaps(&render_instance);
+    normal_array.texture.generate_mipmaps(&render_instance);
+    roughness_array.texture.generate_mipmaps(&render_instance);
+    ao_array.texture.generate_mipmaps(&render_instance);
 
     // Build the bind group for the material arrays
     let bind_group_layout = BindGroupLayout::new("terrain_material_arrays", |builder: &mut BindGroupLayoutBuilder| {

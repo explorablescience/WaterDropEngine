@@ -32,6 +32,8 @@ pub struct Texture {
     pub sample_count: u32,
     /// Number of layers for array textures (1 for non-arrays, etc.).
     pub layer_count: u32,
+    /// Number of mip levels (1 = no mipmaps, 0 = auto-calculate max levels).
+    pub mip_level_count: u32,
     /// Raw pixel payload matching `format`; empty means allocate-only.
     pub data: Vec<u8>
 }
@@ -44,6 +46,7 @@ impl Default for Texture {
             usages: TextureUsages::TEXTURE_BINDING,
             sample_count: 1,
             layer_count: 1,
+            mip_level_count: 1,
             data: Vec::new()
         }
     }
@@ -122,6 +125,7 @@ impl AssetLoader for TextureLoader {
             size,
             sample_count: 1,
             layer_count: 1,
+            mip_level_count: 1,
             data
         })
     }
@@ -153,10 +157,10 @@ impl RenderAsset for GpuTexture {
 
         let render_instance = render_instance.0.as_ref().read().unwrap();
 
-        // Create the texture
+        // Create the texture with mip levels
         let texture = wde_wgpu::texture::Texture::new(
             &render_instance, &asset.label, (asset.size.0, asset.size.1),
-            asset.format, asset.usages, asset.sample_count, asset.layer_count
+            asset.format, asset.usages, asset.sample_count, asset.layer_count, asset.mip_level_count
         );
 
         // Copy the texture data

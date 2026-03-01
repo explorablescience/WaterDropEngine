@@ -28,7 +28,7 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let weights = vec4<f32>(splatmap.r, splatmap.g, splatmap.b, splatmap.a);
 
     // Compute material UVs (could be world position based for better tiling)
-    let material_uv = in.tex_coord * 10.0 % 1.0; // Simple tiling based on vertex UVs
+    let material_uv = in.tex_coord * 25.0 % 1.0; // Simple tiling based on vertex UVs
     
     // Sample albedo from each material layer and blend
     var albedo = vec3<f32>(0.0);

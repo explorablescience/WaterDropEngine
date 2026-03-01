@@ -76,6 +76,7 @@ pub struct Texture {
     pub size: (u32, u32),
     pub sample_count: u32,
     pub layer_count: u32,
+    pub mip_level_count: u32,
 }
 
 impl std::fmt::Debug for Texture {
@@ -86,6 +87,7 @@ impl std::fmt::Debug for Texture {
             .field("size", &self.size)
             .field("sample_count", &self.sample_count)
             .field("layer_count", &self.layer_count)
+            .field("mip_level_count", &self.mip_level_count)
             .finish()
     }
 }
@@ -102,9 +104,18 @@ impl Texture {
     /// * `usage` - Usage of the texture (e.g. RENDER_ATTACHMENT, COPY_SRC, COPY_DST, etc.).
     /// * `sample_count` - Sample count of the texture (e.g. 1 for no MSAA, 4 for 4x MSAA, etc.).
     /// * `layer_count` - Number of layers in the texture array. Default is 1 (for non-array textures).
-    pub fn new(instance: &RenderInstanceData<'_>, label: &str, size: (u32, u32), format: TextureFormat, usage: TextureUsages, sample_count: u32, layer_count: u32) -> Self {
+    /// * `mip_level_count` - Number of mip levels. Default is 1 (no mipmaps). If set to 0, it will be auto-calculated based on the texture size.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(instance: &RenderInstanceData<'_>, label: &str, size: (u32, u32), format: TextureFormat, usage: TextureUsages, sample_count: u32, layer_count: u32, mip_level_count: u32) -> Self {
         event!(Level::DEBUG, "Creating wgpu texture {}.", label);
         
+        // Calculate max mip levels if requested
+        let mip_level_count = if mip_level_count == 0 {
+            (size.0.max(size.1) as f32).log2().floor() as u32 + 1
+        } else {
+            mip_level_count
+        };
+
         // Create texture
         let texture = instance.device.create_texture(&wgpu::TextureDescriptor {
             label: Some(format!("{}-texture", label).as_str()),
@@ -113,7 +124,7 @@ impl Texture {
                 height: size.1,
                 depth_or_array_layers: layer_count,
             },
-            mip_level_count: 1,
+            mip_level_count,
             sample_count,
             dimension: wgpu::TextureDimension::D2,
             format,
@@ -152,9 +163,9 @@ impl Texture {
             address_mode_w: wgpu::AddressMode::ClampToEdge,
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: if mip_level_count > 1 { wgpu::FilterMode::Linear } else { wgpu::FilterMode::Nearest },
             lod_min_clamp: 0.0,
-            lod_max_clamp: 100.0,
+            lod_max_clamp: mip_level_count as f32,
             compare: None,
             anisotropy_clamp: 1,
             border_color: None,
@@ -169,7 +180,8 @@ impl Texture {
             sampler,
             size,
             sample_count,
-            layer_count
+            layer_count,
+            mip_level_count
         }
     }
 
@@ -346,5 +358,195 @@ impl Texture {
 
         // Submit the commands
         command.submit(instance);
+    }
+
+    /// Generate mipmaps for this texture.
+    /// The texture must have been created with TEXTURE_BINDING | RENDER_ATTACHMENT | COPY_SRC usage.
+    /// This method uses a simple blit approach to downsample each mip level from the previous one.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `instance` - Game instance.
+    pub fn generate_mipmaps(&self, instance: &RenderInstanceData<'_>) {
+        if self.mip_level_count <= 1 {
+            event!(Level::TRACE, "Texture {} has no mipmaps to generate.", self.label);
+            return;
+        }
+
+        event!(Level::DEBUG, "Generating {} mip levels for texture {}.", self.mip_level_count, self.label);
+
+        // Create the blit shader module
+        let shader_source = r#"
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) tex_coord: vec2<f32>,
+}
+
+@vertex
+fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
+    var out: VertexOutput;
+    let x = f32((vertex_index << 1u) & 2u);
+    let y = f32(vertex_index & 2u);
+    out.position = vec4<f32>(x * 2.0 - 1.0, y * 2.0 - 1.0, 0.0, 1.0);
+    out.tex_coord = vec2<f32>(x, 1.0 - y);
+    return out;
+}
+
+@group(0) @binding(0) var src_texture: texture_2d<f32>;
+@group(0) @binding(1) var src_sampler: sampler;
+
+@fragment
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    return textureSample(src_texture, src_sampler, in.tex_coord);
+}
+"#;
+
+        let shader = instance.device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("mipmap_blit_shader"),
+            source: wgpu::ShaderSource::Wgsl(shader_source.into()),
+        });
+
+        // Create sampler for mipmap generation (linear filtering for downsampling)
+        let blit_sampler = instance.device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("mipmap_blit_sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        // Create bind group layout
+        let bind_group_layout = instance.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("mipmap_blit_bind_group_layout"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled: false,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        });
+
+        // Create pipeline layout
+        let pipeline_layout = instance.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("mipmap_blit_pipeline_layout"),
+            bind_group_layouts: &[&bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+        // Create render pipeline
+        let pipeline = instance.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("mipmap_blit_pipeline"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: Some("vs_main"),
+                buffers: &[],
+                compilation_options: Default::default(),
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: Some("fs_main"),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: self.format,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+                compilation_options: Default::default(),
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                ..Default::default()
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState::default(),
+            multiview: None,
+            cache: None,
+        });
+
+        // Generate each mip level
+        let mut command = crate::command_buffer::CommandBuffer::new(instance, "Generate Mipmaps");
+
+        for layer in 0..self.layer_count {
+            for mip_level in 1..self.mip_level_count {
+                let src_view = self.texture.create_view(&wgpu::TextureViewDescriptor {
+                    label: Some(&format!("{}_mip_{}_src", self.label, mip_level)),
+                    format: Some(self.format),
+                    dimension: Some(wgpu::TextureViewDimension::D2),
+                    aspect: wgpu::TextureAspect::All,
+                    base_mip_level: mip_level - 1,
+                    mip_level_count: Some(1),
+                    base_array_layer: layer,
+                    array_layer_count: Some(1),
+                    usage: None,
+                });
+
+                let dst_view = self.texture.create_view(&wgpu::TextureViewDescriptor {
+                    label: Some(&format!("{}_mip_{}_dst", self.label, mip_level)),
+                    format: Some(self.format),
+                    dimension: Some(wgpu::TextureViewDimension::D2),
+                    aspect: wgpu::TextureAspect::All,
+                    base_mip_level: mip_level,
+                    mip_level_count: Some(1),
+                    base_array_layer: layer,
+                    array_layer_count: Some(1),
+                    usage: None,
+                });
+
+                let bind_group = instance.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some(&format!("{}_mip_{}_bind_group", self.label, mip_level)),
+                    layout: &bind_group_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&src_view),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(&blit_sampler),
+                        },
+                    ],
+                });
+
+                {
+                    let mut render_pass = command.encoder().begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some(&format!("{}_mip_{}_render_pass", self.label, mip_level)),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: &dst_view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                                store: wgpu::StoreOp::Store,
+                            },
+                            depth_slice: None,
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                    });
+
+                    render_pass.set_pipeline(&pipeline);
+                    render_pass.set_bind_group(0, &bind_group, &[]);
+                    render_pass.draw(0..3, 0..1);
+                }
+            }
+        }
+
+        command.submit(instance);
+        event!(Level::DEBUG, "Finished generating mipmaps for texture {}.", self.label);
     }
 }
