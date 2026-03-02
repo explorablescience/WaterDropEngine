@@ -22,6 +22,15 @@ impl Plugin for TerrainRenderFeaturesPlugin {
         app.get_sub_app_mut(RenderApp).unwrap()
             .init_resource::<TerrainRenderPassMesh>();
 
+        // Add the render pass
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .init_resource::<TerrainRenderPass>()
+            .add_systems(Render, TerrainRenderPass::prepare_tiles.in_set(RenderSet::BindGroups));
+        if cfg!(debug_assertions) {
+            app.get_sub_app_mut(RenderApp).unwrap()
+                .add_systems(Render, TerrainRenderPass::check_dirty_tiles.in_set(RenderSet::Prepare));
+        }
+
         // Add the terrain render passes
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();

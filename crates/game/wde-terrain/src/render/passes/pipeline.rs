@@ -2,10 +2,7 @@ use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
-use crate::{
-    render::terrain::Terrain,
-    render::materials::TerrainMaterialArrays,
-};
+use crate::render::{materials::TerrainMaterialArrays, passes::renderpass::TerrainRenderPass};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
@@ -20,7 +17,7 @@ pub(crate) struct GpuTerrainRenderPipeline {
 impl RenderAsset for GpuTerrainRenderPipeline {
     type SourceAsset = TerrainRenderPipelineAsset;
     type Param = (
-        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<Terrain>, SRes<TerrainMaterialArrays>
+        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<TerrainRenderPass>, SRes<TerrainMaterialArrays>
     );
 
     fn prepare_asset(
@@ -30,7 +27,7 @@ impl RenderAsset for GpuTerrainRenderPipeline {
             ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         // Get the terrain resource
-        let terrain_layout = match terrain.tiles.first() {
+        let terrain_layout = match terrain.ready_tiles.first() {
             Some(tile) => {
                 if let Some(layout) = &tile.bind_group_layout {
                     layout
