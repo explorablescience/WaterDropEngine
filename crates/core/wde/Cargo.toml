@@ -23,10 +23,11 @@ wde-renderer = { path = "../wde-renderer" }
 wde-camera = { path = "../../render/wde-camera" }
 wde-physics = { path = "../../wrappers/wde-physics" }
 wde-gltf = { path = "../../game/wde-gltf" }
-wde-terrain = { path = "../../game/wde-terrain" }
 wde-gizmos = { path = "../../render/wde-gizmos", optional = true }
 wde-pbr = { path = "../../render/wde-pbr", optional = true }
 wde-egui = { path = "../../wrappers/wde-egui", optional = true }
+wde-terrain = { path = "../../game/wde-terrain", optional = true }
+wde-terrain-terraform = { path = "../../game/wde-terrain-terraform", optional = true }
 bevy = { workspace = true }
 
 [features]
@@ -36,3 +37,4 @@ pbr = ["wde-pbr"]
 watch = ["bevy/file_watcher"]
 tracing = ["wde-logger/tracing", "bevy/trace_tracy_memory"]
 egui = ["wde-egui"]
+terrain = ["wde-terrain", "wde-terrain-terraform"]

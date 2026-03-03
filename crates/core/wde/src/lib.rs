@@ -179,6 +179,8 @@ impl Plugin for CustomWdePlugins {
         app.add_plugins(wde_pbr::PbrPlugin);
         #[cfg(feature = "egui")]
         app.add_plugins(wde_egui::EguiPlugin);
+        #[cfg(feature = "terrain")]
+        app.add_plugins(wde_terrain::TerrainPlugin);
     }
 }
 
@@ -231,7 +233,6 @@ pub mod prelude {
     pub use wde_camera::prelude::*;
     pub use wde_physics::prelude::*;
     pub use wde_gltf::prelude::*;
-    pub use wde_terrain::prelude::*;
 
     // Optional feature modules
     #[cfg(feature = "gizmos")]
@@ -242,6 +243,11 @@ pub mod prelude {
 
     #[cfg(feature = "egui")]
     pub use wde_egui::prelude::*;
+
+    #[cfg(feature = "terrain")]
+    pub use wde_terrain::prelude::*;
+    #[cfg(feature = "terrain")]
+    pub use wde_terrain_terraform::prelude::*;
 }
 
 /// Rendering module.

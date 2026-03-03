@@ -5,7 +5,7 @@ pub struct TestPlugin;
 impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(TerrainPlugin)
+            .add_plugins(TerrainTerraformPlugin)
             .add_systems(Startup, init_scene);
     }
 }
@@ -50,18 +50,18 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     // ));
 
     // Create a typical character
-    commands.spawn((
-        Transform::from_xyz(0.0, 1.0, 0.0),
-        Mesh(asset_server.add(CapsuleMesh::from("character", CapsuleMeshConfig::default()))),
-        GizmoMaterial(asset_server.add(GizmoMaterialAsset {
-            label: "character".to_string(),
-            color: [0.8, 0.4, 0.4, 1.0]
-        })),
-    ));
+    // commands.spawn((
+    //     Transform::from_xyz(0.0, 1.0, 0.0),
+    //     Mesh(asset_server.add(CapsuleMesh::from("character", CapsuleMeshConfig::default()))),
+    //     GizmoMaterial(asset_server.add(GizmoMaterialAsset {
+    //         label: "character".to_string(),
+    //         color: [0.8, 0.4, 0.4, 1.0]
+    //     })),
+    // ));
 
-    let gltf_asset = GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server).unwrap();
-    let model = PbrModel(gltf_asset.models.clone());
-    commands.spawn((model.clone(), Transform::default().with_scale(Vec3::ONE * 3.0)));
+    // let gltf_asset = GltfLoader::load("tests/models/FlightHelmet/FlightHelmet.gltf", &asset_server).unwrap();
+    // let model = PbrModel(gltf_asset.models.clone());
+    // commands.spawn((model.clone(), Transform::default().with_scale(Vec3::ONE * 3.0)));
 
     // Spawn the lights
     commands.spawn(PointLight {

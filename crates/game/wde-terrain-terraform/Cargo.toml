@@ -1,8 +1,8 @@
 [package]
-name = "wde-terrain"
+name = "wde-terrain-terraform"
 version = "0.1.0"
 edition = "2024"
-description = "The terrain module for WaterDrop Engine, providing terrain generation and management."
+description = "The terrain terraforming module for WaterDrop Engine."
 
 [profile.dev]
 opt-level = 0
@@ -24,6 +24,5 @@ wde-camera = { path = "../../render/wde-camera" }
 wde-pbr = { path = "../../render/wde-pbr" }
 wde-gizmos = { path = "../../render/wde-gizmos" }
 wde-physics = { path = "../../wrappers/wde-physics" }
+wde-terrain = { path = "../wde-terrain" }
 bevy = { workspace = true }
-bytemuck = { workspace = true }
-png = "0.18"

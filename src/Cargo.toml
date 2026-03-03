@@ -14,7 +14,8 @@ bevy = { workspace = true, features = [ "debug" ] }
 [dependencies.wde]
 path = "../crates/core/wde"
 features = [
-    "egui"
+    "egui",
+    "terrain"
 ]
 
 [build-dependencies]

@@ -18,7 +18,7 @@ impl Plugin for TerrainBufferPlugin {
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TerrainDescription {
-    pub tile_size: f32,
+    pub tile_size: [f32; 3],
     pub _padding: f32,
 }
 #[repr(C)]

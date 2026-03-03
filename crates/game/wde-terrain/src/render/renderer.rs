@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::manager::{DirtyTile, SPLAT_MAP_COUNT, TERRAIN_SIZE, TILE_SUBDIVISIONS, Terrain, TilePos};
+use crate::manager::{DirtyTile, SPLAT_MAP_COUNT, TERRAIN_TILES_COUNT, RENDER_TILE_SUBDIVISIONS, Terrain, TilePos};
 
 /// Represents a single terrain tile, containing its position and the associated heightmap, normal map, and splat maps.
 #[derive(Default, Clone)]
@@ -37,12 +37,12 @@ impl TerrainRenderer {
         let usages = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
         let mut pos_to_tile = HashMap::new();
         let mut tiles = Vec::new();
-        for i in 0..TERRAIN_SIZE {
-            for j in 0..TERRAIN_SIZE {
+        for i in 0..TERRAIN_TILES_COUNT {
+            for j in 0..TERRAIN_TILES_COUNT {
                 // Create the empty heightmap and splatmap textures for the tile
                 let heightmap = asset_server.add(Texture {
                     label: format!("heightmap_{}_{}", i, j),
-                    size: (TILE_SUBDIVISIONS, TILE_SUBDIVISIONS),
+                    size: (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS),
                     format: TextureFormat::R8Unorm,
                     usages,
                     ..Default::default()
@@ -51,7 +51,7 @@ impl TerrainRenderer {
                 for k in 0..SPLAT_MAP_COUNT / 4 {
                     splatmaps.push(asset_server.add(Texture {
                         label: format!("splatmap_{}_{}-{}", i, j, k),
-                        size: (TILE_SUBDIVISIONS, TILE_SUBDIVISIONS),
+                        size: (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS),
                         format: TextureFormat::Rgba8Unorm,
                         usages,
                         ..Default::default()
@@ -59,8 +59,8 @@ impl TerrainRenderer {
                 }
 
                 // Calculate the world position of the tile (centered around the origin)
-                let px = i as i32 - (TERRAIN_SIZE as i32 / 2);
-                let pz = j as i32 - (TERRAIN_SIZE as i32 / 2);
+                let px = i as i32 - (TERRAIN_TILES_COUNT as i32 / 2);
+                let pz = j as i32 - (TERRAIN_TILES_COUNT as i32 / 2);
                 let position = IVec2::new(px, pz);
 
                 // Create the tile and add it to the list

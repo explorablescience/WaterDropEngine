@@ -18,7 +18,7 @@ struct Camera {
 
 // Description of the terrain
 struct TerrainDescription {
-    tile_size: f32,
+    tile_size: vec3<f32>,
     _padding: f32
 }
 @group(2) @binding(0) var<uniform> in_terrain_description: TerrainDescription;
@@ -41,7 +41,7 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
 
     // Compute world position
     let tile = in_terrain_tiles[instance];
-    let tile_offset = tile.pos * in_terrain_description.tile_size;
+    let tile_offset = tile.pos * in_terrain_description.tile_size.xy;
     let obj_to_world = mat4x4<f32>(
         vec4<f32>(1.0, 0.0, 0.0, 0.0),
         vec4<f32>(0.0, 1.0, 0.0, 0.0),
@@ -51,9 +51,8 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     var world_pos = obj_to_world * vec4<f32>(model.position, 1.0);
 
     // Add some noise to the height based on the xz position
-    let a = 6.0;
-    let h = 20.0;
-    world_pos.y = textureSampleLevel(in_heightmap, in_heightmap_sampler, model.tex_coord, 0.0).r * h - h / 2.0;
+    let h = in_terrain_description.tile_size.y;
+    world_pos.y = textureSampleLevel(in_heightmap, in_heightmap_sampler, model.tex_coord, 0.0).r * h;
 
     let view_pos4 = in_camera.world_to_view
         * world_pos;

@@ -6,14 +6,18 @@ use bevy::prelude::*;
 use crate::utils::image_decoder::decode_png_as_channels;
 
 /// The size of the terrain in terms of number of tiles (e.g., 4 means the terrain is made up of a 4x4 grid of tiles)
-pub const TERRAIN_SIZE: usize = 4;
-/// The size of each terrain tile in world units (e.g., 100.0 means each tile covers 100x100 units)
-pub const TILE_SIZE: f32 = 100.0;
+pub const TERRAIN_TILES_COUNT: usize = 4;
+/// The size of each terrain tile in world units
+pub const TILE_SIZE: [f32; 3] = [100.0, 100.0, 100.0];
+
 /// The number of splat maps per tile (must be a multiple of 4, as each splat map can store 4 channels for texture blending)
 pub const SPLAT_MAP_COUNT: u32 = 4;
 /// The number of subdivisions per tile (e.g., 16 means each tile is divided into a 16x16 grid of vertices)
 /// This should match the width and height of the texture maps.
-pub const TILE_SUBDIVISIONS: u32 = 256;
+pub const RENDER_TILE_SUBDIVISIONS: u32 = 256;
+
+/// The size of the heightmap subdivisions per tile (e.g., 16 means the heightmap is divided into a 16x16 grid of height samples)
+pub const PHYSICS_TILE_SUBDIVISIONS: u32 = 256;
 
 // The structure describing the 2d position of a given terrain tile.
 pub type TilePos = IVec2;
@@ -53,11 +57,11 @@ impl Terrain {
         let mut pos_to_tile = HashMap::new();
         let mut tiles = Vec::new();
         let mut dirty = Vec::new();
-        for i in 0..TERRAIN_SIZE {
-            for j in 0..TERRAIN_SIZE {
+        for i in 0..TERRAIN_TILES_COUNT {
+            for j in 0..TERRAIN_TILES_COUNT {
                 // Calculate the world position of the tile (centered around the origin)
-                let px = i as i32 - (TERRAIN_SIZE as i32) / 2;
-                let pz = j as i32 - (TERRAIN_SIZE as i32) / 2;
+                let px = i as i32 - (TERRAIN_TILES_COUNT as i32) / 2;
+                let pz = j as i32 - (TERRAIN_TILES_COUNT as i32) / 2;
                 let pos = IVec2::new(px, pz);
 
                 // Compute files_names
@@ -86,7 +90,7 @@ impl Terrain {
                 };
 
                 // Load heightmap as R8 (1 channel)
-                tile.heightmap = match decode_png_as_channels(&heightmap_path, 1, (TILE_SUBDIVISIONS, TILE_SUBDIVISIONS)) {
+                tile.heightmap = match decode_png_as_channels(&heightmap_path, 1, (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS)) {
                     Ok(data) => data,
                     Err(e) => {
                         error!("Failed to decode heightmap for tile ({}, {}): {}", pos.x, pos.y, e);
@@ -96,7 +100,7 @@ impl Terrain {
 
                 // Load splat maps
                 for splatmap_path in splatmap_paths {
-                    let splatmap = match decode_png_as_channels(&splatmap_path, 4, (TILE_SUBDIVISIONS, TILE_SUBDIVISIONS)) {
+                    let splatmap = match decode_png_as_channels(&splatmap_path, 4, (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS)) {
                         Ok(data) => data,
                         Err(e) => {
                             error!("Failed to decode splatmap for tile ({}, {}): {}", pos.x, pos.y, e);
