@@ -1,4 +1,5 @@
-use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::MouseButtonInput, prelude::*}, prelude::*};
+use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::{MouseButtonInput, MouseWheel}, prelude::*}, prelude::*};
+use super::egui_context::EguiContext;
 
 /// Resource to store egui inputs
 #[derive(Resource, Default)]
@@ -13,20 +14,33 @@ impl Plugin for EguiInputsPlugin {
 }
 
 /// System to handle Bevy input events and convert them to egui inputs
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn handle_input(
-    mut mouse_button_events: MessageReader<MouseButtonInput>,
-    mut keyboard_events: MessageReader<KeyboardInput>,
     windows: Query<&Window>,
+    egui_ctx: Res<EguiContext>,
     mut egui_inputs: ResMut<EguiInputs>,
+    mut mouse_input: ResMut<ButtonInput<MouseButton>>,
+    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
+    mut keyboard_input_messages: ResMut<Messages<KeyboardInput>>,
+    mut mouse_wheel_messages: ResMut<Messages<MouseWheel>>,
+    mut mouse_button_input_messages: ResMut<Messages<MouseButtonInput>>,
 ) {
     let mut raw_input = egui::RawInput::default();
+
+    // Check if egui wants keyboard or pointer input, or if a popup is open
+    let egui_wants_keyboard = egui_ctx.0.wants_keyboard_input()
+        || egui_ctx.0.is_popup_open();
+    let egui_wants_pointer = egui_ctx.0.wants_pointer_input()
+        || egui_ctx.0.is_pointer_over_area()
+        || egui_ctx.0.is_using_pointer()
+        || egui_ctx.0.is_popup_open();
 
     // Get mouse position
     let window = windows.iter().next().unwrap();
     let mouse_position = window.cursor_position().map(|pos| egui::Pos2 { x: pos.x, y: pos.y });
 
     // Handle mouse buttons
-    for event in mouse_button_events.read() {
+    for event in mouse_button_input_messages.get_cursor().read(&mouse_button_input_messages) {
         let pointer_button = match event.button {
             MouseButton::Left => Some(egui::PointerButton::Primary),
             MouseButton::Right => Some(egui::PointerButton::Secondary),
@@ -57,7 +71,7 @@ pub(crate) fn handle_input(
     }
 
     // Handle keyboard input
-    for event in keyboard_events.read() {
+    for event in keyboard_input_messages.get_cursor().read(&keyboard_input_messages) {
         if event.state == ButtonState::Pressed {
             if let Some(key) = bevy_to_egui_key(event.key_code) {
                 raw_input.events.push(egui::Event::Key {
@@ -79,8 +93,32 @@ pub(crate) fn handle_input(
                 });
             }
     }
-
     egui_inputs.0 = raw_input;
+
+    // Clear the input events after processing
+    let modifiers = [
+        KeyCode::SuperLeft,
+        KeyCode::SuperRight,
+        KeyCode::ControlLeft,
+        KeyCode::ControlRight,
+        KeyCode::AltLeft,
+        KeyCode::AltRight,
+        KeyCode::ShiftLeft,
+        KeyCode::ShiftRight,
+    ];
+    let pressed = modifiers.map(|key| keyboard_input.pressed(key).then_some(key));
+    if egui_wants_keyboard {
+        keyboard_input.reset_all();
+        keyboard_input_messages.clear();
+    }
+    if egui_wants_pointer {
+        mouse_input.reset_all();
+        mouse_wheel_messages.clear();
+        mouse_button_input_messages.clear();
+    }
+    for key in pressed.into_iter().flatten() {
+        keyboard_input.press(key);
+    }
 }
 
 /// Convert Bevy KeyCode to egui Key
