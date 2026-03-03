@@ -141,9 +141,7 @@ pub struct GpuTexture {
     /// Copy of the CPU label applied to the GPU handle.
     pub label: String,
     /// GPU texture handle allocated through `wde-wgpu`.
-    pub texture: wde_wgpu::texture::Texture,
-    /// Whether the bind group using this texture needs to be rebuilt.
-    pub dirty: bool
+    pub texture: wde_wgpu::texture::Texture
 }
 impl RenderAsset for GpuTexture {
     type SourceAsset = Texture;
@@ -168,7 +166,7 @@ impl RenderAsset for GpuTexture {
             texture.copy_from_buffer(&render_instance, asset.format, &asset.data);
         }
 
-        Ok(GpuTexture { label: asset.label, texture, dirty: true })
+        Ok(GpuTexture { label: asset.label, texture })
     }
 
     fn label(&self) -> &str {

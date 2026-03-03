@@ -2,7 +2,7 @@ use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
-use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer}, passes::tiles_extractor::GpuTerrainTiles};
+use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer}, renderer_gpu::TerrainRendererGPU};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
@@ -17,17 +17,22 @@ pub(crate) struct GpuTerrainRenderPipeline {
 impl RenderAsset for GpuTerrainRenderPipeline {
     type SourceAsset = TerrainRenderPipelineAsset;
     type Param = (
-        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<GpuTerrainTiles>, SRes<TerrainMaterialArrays>, SRes<TerrainBuffer>
+        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<TerrainRendererGPU>, SRes<TerrainMaterialArrays>, SRes<TerrainBuffer>
     );
 
     fn prepare_asset(
             asset: Self::SourceAsset,
             (
-                assets_server, pipeline_manager, camera_feature, terrain, material_arrays, terrain_buffer
+                assets_server, pipeline_manager, camera_feature, terrain_renderer, material_arrays, terrain_buffer
             ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        // Check if the terrain renderer is ready
+        if !terrain_renderer.ready {
+            return Err(PrepareAssetError::RetryNextUpdate(asset));
+        }
+
         // Get the terrain resource
-        let terrain_layout = match terrain.ready_tiles.first() {
+        let terrain_layout = match terrain_renderer.tiles.first() {
             Some(tile) => {
                 if let Some(layout) = &tile.bind_group_layout {
                     layout

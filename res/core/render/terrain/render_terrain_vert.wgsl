@@ -31,10 +31,8 @@ struct TerrainTile {
 
 @group(3) @binding(0) var in_heightmap: texture_2d<f32>;
 @group(3) @binding(1) var in_heightmap_sampler: sampler;
-@group(3) @binding(2) var in_normalmap: texture_2d<f32>;
-@group(3) @binding(3) var in_normalmap_sampler: sampler;
-@group(3) @binding(4) var in_splatmap_1: texture_2d<f32>;
-@group(3) @binding(5) var in_splatmap_1_sampler: sampler;
+@group(3) @binding(2) var in_splatmap_1: texture_2d<f32>;
+@group(3) @binding(3) var in_splatmap_1_sampler: sampler;
 
 
 @vertex

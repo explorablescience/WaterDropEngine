@@ -1,7 +1,7 @@
 use wde_renderer::prelude::*;
 use bevy::{asset::io::embedded::GetAssetServer, prelude::*};
 
-use crate::{manager::TILE_SIZE, render::passes::tiles_extractor::GpuTerrainTiles};
+use crate::{manager::TILE_SIZE, render::renderer_gpu::TerrainRendererGPU};
 
 // The maximum number of terrain tiles that can be rendered
 const MAX_TERRAIN_TILES: usize = 1000;
@@ -101,10 +101,15 @@ fn build_terrain_bind_group(render_instance: Res<RenderInstance>, mut terrain_bu
 // System to update the terrain tiles buffer with the current visible tiles
 fn update_terrain_tiles_buffer(
     render_instance: Res<RenderInstance>, terrain_buffer: Res<TerrainBuffer>, buffers: Res<RenderAssets<GpuBuffer>>,
-    terrain_tiles: Res<GpuTerrainTiles>
+    terrain_tiles: Res<TerrainRendererGPU>, mut is_set: Local<bool>
 ) {
-    // Check if the bind group is already created
-    if terrain_buffer.bind_group.is_none() {
+    // Check if the buffer is ready
+    if *is_set {
+        return;
+    }
+
+    // Check if the bind group is already created or if the terrain is not ready
+    if !terrain_tiles.ready || terrain_buffer.bind_group.is_none() {
         return;
     }
 
@@ -115,7 +120,7 @@ fn update_terrain_tiles_buffer(
     };
 
     // Prepare the data
-    let data: Vec<TerrainTileDescription> = terrain_tiles.ready_tiles.iter().map(|tile| {
+    let data: Vec<TerrainTileDescription> = terrain_tiles.tiles.iter().map(|tile| {
         TerrainTileDescription {
             pos: [tile.position.x as f32, tile.position.y as f32],
             lod: 1.0,
@@ -126,4 +131,6 @@ fn update_terrain_tiles_buffer(
     // Update the buffer
     let render_instance = render_instance.0.read().unwrap();
     tile_buffer.buffer.write(&render_instance, bytemuck::cast_slice(&data), 0);
+
+    *is_set = true;
 }

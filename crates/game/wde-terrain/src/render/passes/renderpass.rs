@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use wde_renderer::prelude::*;
 use wde_camera::features::CameraFeatureRender;
 
-use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::{tiles_extractor::GpuTerrainTiles, pipeline::GpuTerrainRenderPipeline}};
+use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::pipeline::GpuTerrainRenderPipeline, renderer_gpu::TerrainRendererGPU};
 
 #[derive(Resource, Default)]
 pub struct TerrainRenderPass;
@@ -12,7 +12,7 @@ impl RenderPass for TerrainRenderPass {
         let _span = debug_span!("terrain_render_pass_extract").entered();
 
         // Extract the dirty terrain tiles
-        GpuTerrainTiles::extract_tiles(main_world, render_world);
+        TerrainRendererGPU::extract_dirty(main_world, render_world);
     }
 
     fn render(&self, world: &mut World) {
@@ -111,8 +111,13 @@ impl RenderPass for TerrainRenderPass {
                     .unwrap()
                     .bind_group,
                 &world.get_resource::<TerrainBuffer>().unwrap().bind_group,
-                &world.get_resource::<GpuTerrainTiles>()
+                &world.get_resource::<TerrainRendererGPU>()
             ) {
+                // Check if terrain is ready
+                if !terrain.ready {
+                    return;
+                }
+
                 // Set the pipeline
                 if render_pass.set_pipeline(pipeline).is_ok() {
                     // Get the mesh
@@ -124,7 +129,7 @@ impl RenderPass for TerrainRenderPass {
                     render_pass.set_bind_group(1, material_arrays_bind_group);
                     render_pass.set_bind_group(2, terrain_description_bind_group);
 
-                    for (i, tile) in terrain.ready_tiles.iter().enumerate() {
+                    for (i, tile) in terrain.tiles.iter().enumerate() {
                         if let Some(bind_group) = &tile.bind_group {
                             // Set bind groups
                             render_pass.set_bind_group(3, bind_group);

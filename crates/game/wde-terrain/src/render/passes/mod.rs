@@ -2,9 +2,8 @@ use wde_renderer::prelude::*;
 
 use bevy::prelude::*;
 
-use crate::render::passes::{tiles_extractor::GpuTerrainTiles, pipeline::{GpuTerrainRenderPipeline, TerrainRenderPipeline, TerrainRenderPipelineAsset}, renderpass::TerrainRenderPass};
+use crate::render::passes::{pipeline::{GpuTerrainRenderPipeline, TerrainRenderPipeline, TerrainRenderPipelineAsset}, renderpass::TerrainRenderPass};
 
-pub mod tiles_extractor;
 mod pipeline;
 mod renderpass;
 
@@ -18,13 +17,7 @@ impl Plugin for TerrainPassesPlugin {
 
         // Add the render pass
         app.get_sub_app_mut(RenderApp).unwrap()
-            .init_resource::<TerrainRenderPass>()
-            .init_resource::<GpuTerrainTiles>()
-            .add_systems(Render, GpuTerrainTiles::prepare_tiles.in_set(RenderSet::BindGroups));
-        if cfg!(debug_assertions) {
-            app.get_sub_app_mut(RenderApp).unwrap()
-                .add_systems(Render, GpuTerrainTiles::check_dirty_tiles.in_set(RenderSet::Prepare));
-        }
+            .init_resource::<TerrainRenderPass>();
 
         // Add the terrain render passes
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()

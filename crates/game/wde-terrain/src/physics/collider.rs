@@ -14,15 +14,11 @@ pub struct TerrainCollider {
     // A list of terrain tiles that make up the entire terrain
     pub tiles: Vec<TerrainTileCollider>,
 
-    // The list of indices that are dirty and for which the collision data needs to be updated
+    // The list of indices that are dirty and need to be re-uploaded to the GPU
     pub dirty_tiles: Vec<IVec2>
 }
 impl TerrainCollider {
     pub fn new(path: &str, terrain_size: u8) -> Self {
-        Self {
-            tile_map: HashMap::new(),
-            tiles: Vec::new(),
-            dirty_tiles: Vec::new()
-        }
+        Self { tile_map: HashMap::new(), tiles: Vec::new(), dirty_tiles: Vec::new() }
     }
 }
