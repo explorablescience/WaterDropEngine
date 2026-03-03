@@ -11,8 +11,8 @@ pub struct TerrainRenderTile {
     /// The position of the tile in world space (x, z)
     pub position: TilePos,
     /// The heightmap and splat maps for this tile
-    pub heightmap: Handle<Texture>,
-    pub splatmaps: Vec<Handle<Texture>>
+    pub heightmap: Handle<Buffer>,
+    pub splatmaps: Vec<Handle<Buffer>>
 }
 
 /// Holds the tiles used for rendering. Note that all tiles are not necessarily rendered.
@@ -34,27 +34,25 @@ impl TerrainRenderer {
     /// # Returns
     /// A `TerrainRenderer` component containing the initialized terrain render tiles with their respective heightmap and splat map textures, as well as the mapping from tile positions to their data.
     pub fn new(asset_server: &AssetServer) -> Self {
-        let usages = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
+        let usage = BufferUsage::STORAGE | BufferUsage::COPY_DST;
         let mut pos_to_tile = HashMap::new();
         let mut tiles = Vec::new();
         for i in 0..TERRAIN_TILES_COUNT {
             for j in 0..TERRAIN_TILES_COUNT {
                 // Create the empty heightmap and splatmap textures for the tile
-                let heightmap = asset_server.add(Texture {
+                let heightmap = asset_server.add(Buffer {
                     label: format!("heightmap_{}_{}", i, j),
-                    size: (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS),
-                    format: TextureFormat::R8Unorm,
-                    usages,
-                    ..Default::default()
+                    size: (RENDER_TILE_SUBDIVISIONS * RENDER_TILE_SUBDIVISIONS) as usize * std::mem::size_of::<f32>(),
+                    usage,
+                    content: None
                 });
                 let mut splatmaps = Vec::new();
                 for k in 0..SPLAT_MAP_COUNT / 4 {
-                    splatmaps.push(asset_server.add(Texture {
+                    splatmaps.push(asset_server.add(Buffer {
                         label: format!("splatmap_{}_{}-{}", i, j, k),
-                        size: (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS),
-                        format: TextureFormat::Rgba8Unorm,
-                        usages,
-                        ..Default::default()
+                        size: (RENDER_TILE_SUBDIVISIONS * RENDER_TILE_SUBDIVISIONS * 4) as usize * std::mem::size_of::<f32>(),
+                        usage,
+                        content: None
                     }));
                 }
 

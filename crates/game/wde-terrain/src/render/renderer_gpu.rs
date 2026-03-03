@@ -12,8 +12,8 @@ pub struct TerrainRenderTileGPU {
     pub position: TilePos,
 
     /// The heightmap and splat maps for this tile
-    pub heightmap: AssetId<Texture>,
-    pub splatmaps: Vec<AssetId<Texture>>,
+    pub heightmap: AssetId<Buffer>,
+    pub splatmaps: Vec<AssetId<Buffer>>,
 
     // The bind group for the different maps
     pub bind_group_layout: Option<BindGroupLayout>,
@@ -64,8 +64,8 @@ impl TerrainRendererGPU {
         }
     }
 
-    // Upload the dirty tiles to the GPU by updating the corresponding textures with the new data, and clear the dirty list.
-    pub fn upload_dirty(mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>, textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance>) {
+    // Upload the dirty tiles to the GPU by updating the corresponding buffers with the new data, and clear the dirty list.
+    pub fn upload_dirty(mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>, buffers: Res<RenderAssets<GpuBuffer>>, render_instance: Res<RenderInstance>) {
         let render_instance = render_instance.0.read().unwrap();
 
         // Process the dirty tiles by updating the corresponding textures with the new data
@@ -79,18 +79,18 @@ impl TerrainRendererGPU {
                 let tile = &mut gpu_terrain_renderer.tiles[tile_index];
                 match map_type {
                     0 => { // Heightmap
-                        let heightmap = match textures.get(tile.heightmap) {
-                            Some(texture) => texture,
+                        let heightmap = match buffers.get(tile.heightmap) {
+                            Some(buffer) => buffer,
                             None => continue,
                         };
-                        heightmap.texture.copy_from_buffer(&render_instance, heightmap.texture.format, &tile_data);
-                    },
+                        heightmap.buffer.write(&render_instance, bytemuck::cast_slice(&tile_data), 0);
+                    }
                     1 => { // Splatmap
-                        let splatmap = match textures.get(tile.splatmaps[splat_map_index as usize]) {
-                            Some(texture) => texture,
+                        let splatmap = match buffers.get(tile.splatmaps[splat_map_index as usize]) {
+                            Some(buffer) => buffer,
                             None => continue,
                         };
-                        splatmap.texture.copy_from_buffer(&render_instance, splatmap.texture.format, &tile_data);
+                        splatmap.buffer.write(&render_instance, bytemuck::cast_slice(&tile_data), 0);
                     }
                     _ => unreachable!(),
                 };
@@ -99,7 +99,7 @@ impl TerrainRendererGPU {
     }
 
     // Create the bind groups and layouts for tiles that are not ready
-    pub fn prepare_bind_groups(mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>, textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance>) {
+    pub fn prepare_bind_groups(mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>, buffers: Res<RenderAssets<GpuBuffer>>, render_instance: Res<RenderInstance>) {
         // Check if all tiles gpu data is read
         if gpu_terrain_renderer.ready {
             return;
@@ -115,8 +115,8 @@ impl TerrainRendererGPU {
 
             // Get the maps
             let (heightmap, splatmaps) = match (
-                textures.get(tile.heightmap),
-                tile.splatmaps.iter().map(|splatmap| textures.get(*splatmap)).collect::<Option<Vec<_>>>(),
+                buffers.get(tile.heightmap),
+                tile.splatmaps.iter().map(|splatmap| buffers.get(*splatmap)).collect::<Option<Vec<_>>>(),
             ) {
                 (Some(heightmap), Some(splatmaps)) => (heightmap, splatmaps),
                 _ => continue,
@@ -125,11 +125,9 @@ impl TerrainRendererGPU {
             // Create the bind group layout
             let ss = ShaderStages::FRAGMENT | ShaderStages::VERTEX;
             let bind_group_layout = BindGroupLayout::new(&format!("terrain-tile-{}-{}", tile.position.x, tile.position.y), |builder: &mut BindGroupLayoutBuilder| {
-                builder.add_texture_view(   0, ss, false);
-                builder.add_texture_sampler(1, ss);
+                builder.add_buffer(0, ss, BufferBindingType::Storage { read_only: true });
                 for i in 0..SPLAT_MAP_COUNT / 4 {
-                    builder.add_texture_view(   2 + i * 2, ss, false);
-                    builder.add_texture_sampler(3 + i * 2, ss);
+                    builder.add_buffer(i + 1, ss, BufferBindingType::Storage { read_only: true });
                 }
             });
 
@@ -139,12 +137,10 @@ impl TerrainRendererGPU {
             // Create the bind group
             let bind_group = BindGroupBuilder::build(&format!("terrain-tile-{}-{}", tile.position.x, tile.position.y), &render_instance, &bind_group_layout_built, &{
                 let mut entries = vec![
-                    BindGroupBuilder::texture_view(   0, &heightmap.texture),
-                    BindGroupBuilder::texture_sampler(1, &heightmap.texture),
+                    BindGroupBuilder::buffer(0, &heightmap.buffer),
                 ];
                 for i in 0..SPLAT_MAP_COUNT / 4 {
-                    entries.push(BindGroupBuilder::texture_view(   2 + i * 2, &splatmaps[i as usize].texture));
-                    entries.push(BindGroupBuilder::texture_sampler(3 + i * 2, &splatmaps[i as usize].texture));
+                    entries.push(BindGroupBuilder::buffer(i + 1, &splatmaps[i as usize].buffer));
                 }
                 entries
             });

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use wde_physics::prelude::*;
 use bevy::prelude::*;
 
-use crate::manager::{PHYSICS_TILE_SUBDIVISIONS, TILE_SIZE, Terrain, TilePos};
+use crate::manager::{TILE_SIZE, Terrain, TilePos};
 
 #[derive(Component, Default)]
 pub struct TerrainPhysics {
@@ -29,18 +29,8 @@ impl TerrainPhysics {
                 continue;
             }
 
-            // Format the height data
-            let ss = PHYSICS_TILE_SUBDIVISIONS;
-            let mut heights = vec![0.0; ss as usize * ss as usize];
-            for i in 0..ss {
-                for j in 0..ss {
-                    let idx = (i * ss + j) as usize;
-                    heights[idx] = data[idx] as f32 / 255.0;
-                }
-            }
-
             // Create the heightfield collider for the tile
-            let collider = Collider::heightfield(heights, TILE_SIZE);
+            let collider = Collider::heightfield(data.clone(), TILE_SIZE);
 
             // Spawn or update the collider entity for the tile
             if let Some(entity) = terrain_renderer.pos_to_entity.get(tile_pos) {
