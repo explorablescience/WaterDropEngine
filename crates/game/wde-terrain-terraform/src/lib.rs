@@ -90,20 +90,26 @@ impl Default for PaintingSettings {
 }
 
 fn terrain_terraforming_gui(ctx: Res<EguiContext>, mut terraforming_settings: ResMut<TerraformingSettings>) {
-    egui::Window::new("Terrain Terraforming").show(&ctx.0, |ui| {
-        ui.checkbox(&mut terraforming_settings.is_drawing, "Enable Terraforming");
-        ui.add(egui::Slider::new(&mut terraforming_settings.brush_size, 0.1..=100.0).text("Brush Size"));
-        ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.0001..=0.01).text("Brush Strength"));
-    });
+    egui::Window::new("Terrain Terraforming")
+        .resizable(false)
+        .default_pos(egui::pos2(10.0, 10.0))
+        .show(&ctx.0, |ui| {
+            ui.checkbox(&mut terraforming_settings.is_drawing, "Enable Terraforming");
+            ui.add(egui::Slider::new(&mut terraforming_settings.brush_size, 0.1..=100.0).text("Brush Size"));
+            ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.0001..=0.01).text("Brush Strength"));
+        });
 }
 
-fn terrain_painting(ctx: Res<EguiContext>, mut terraforming_settings: ResMut<PaintingSettings>) {
-    // egui::Window::new("Terrain Painting").show(&ctx.0, |ui| {
-    //     ui.checkbox(&mut terraforming_settings.is_drawing, "Enable Painting");
-    //     ui.add(egui::Slider::new(&mut terraforming_settings.brush_size, 0.1..=100.0).text("Brush Size"));
-    //     ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.1..=1.0).text("Brush Strength"));
-    //     ui.color_edit_button_srgb(&mut terraforming_settings.paint_color);
-    // });
+fn terrain_painting(ctx: Res<EguiContext>, mut painting_settings: ResMut<PaintingSettings>) {
+    egui::Window::new("Terrain Painting")
+        .resizable(false)
+        .default_pos(egui::pos2(10.0, 150.0))
+        .show(&ctx.0, |ui| {
+            ui.checkbox(&mut painting_settings.is_drawing, "Enable Painting");
+            ui.add(egui::Slider::new(&mut painting_settings.brush_size, 0.1..=100.0).text("Brush Size"));
+            ui.add(egui::Slider::new(&mut painting_settings.brush_strength, 0.1..=1.0).text("Brush Strength"));
+            ui.color_edit_button_srgb(&mut painting_settings.paint_color);
+        });
 }
 
 fn mouse_picking(

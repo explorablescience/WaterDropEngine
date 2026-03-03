@@ -22,6 +22,7 @@ pub(crate) fn handle_input(
     mut keyboard_input_messages: MessageReader<KeyboardInput>,
     mut mouse_button_input_messages: MessageReader<MouseButtonInput>,
     mut mouse_motion_messages: MessageReader<MouseMotion>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
     let mut raw_input = egui::RawInput::default();
 
@@ -40,6 +41,16 @@ pub(crate) fn handle_input(
         // We just need to consume the messages here
     }
 
+    // Track modifiers
+    let modifiers = egui::Modifiers {
+        ctrl: keyboard_input.pressed(KeyCode::ControlLeft) || keyboard_input.pressed(KeyCode::ControlRight),
+        shift: keyboard_input.pressed(KeyCode::ShiftLeft) || keyboard_input.pressed(KeyCode::ShiftRight),
+        alt: keyboard_input.pressed(KeyCode::AltLeft) || keyboard_input.pressed(KeyCode::AltRight),
+        mac_cmd: false, // Can add Mac support if needed
+        command: keyboard_input.pressed(KeyCode::ControlLeft) || keyboard_input.pressed(KeyCode::ControlRight),
+    };
+    raw_input.modifiers = modifiers;
+
     // Handle mouse buttons
     for event in mouse_button_input_messages.read() {
         let pointer_button = match event.button {
@@ -56,7 +67,7 @@ pub(crate) fn handle_input(
                         pos: mouse_position.unwrap_or_default(),
                         button,
                         pressed: true,
-                        modifiers: egui::Modifiers::default(),
+                        modifiers,
                     });
                 }
                 ButtonState::Released => {
@@ -64,7 +75,7 @@ pub(crate) fn handle_input(
                         pos: mouse_position.unwrap_or_default(),
                         button,
                         pressed: false,
-                        modifiers: egui::Modifiers::default(),
+                        modifiers,
                     });
                 }
             }
@@ -73,13 +84,20 @@ pub(crate) fn handle_input(
 
     // Handle keyboard input
     for event in keyboard_input_messages.read() {
+        // Handle text input from logical_key
         if event.state == ButtonState::Pressed {
+            if let bevy::input::keyboard::Key::Character(ref s) = event.logical_key {
+                // Send text to egui for typing in text fields
+                raw_input.events.push(egui::Event::Text(s.to_string()));
+            }
+            
+            // Also send key events for special keys
             if let Some(key) = bevy_to_egui_key(event.key_code) {
                 raw_input.events.push(egui::Event::Key {
                     key,
                     pressed: true,
                     repeat: false,
-                    modifiers: egui::Modifiers::default(),
+                    modifiers,
                     physical_key: None,
                 });
             }
@@ -89,7 +107,7 @@ pub(crate) fn handle_input(
                     key,
                     pressed: false,
                     repeat: false,
-                    modifiers: egui::Modifiers::default(),
+                    modifiers,
                     physical_key: None,
                 });
             }
@@ -155,6 +173,36 @@ fn bevy_to_egui_key(key: KeyCode) -> Option<egui::Key> {
         KeyCode::End => Some(egui::Key::End),
         KeyCode::PageUp => Some(egui::Key::PageUp),
         KeyCode::PageDown => Some(egui::Key::PageDown),
+        KeyCode::Insert => Some(egui::Key::Insert),
+        
+        // Letters for shortcuts (Ctrl+A, Ctrl+C, etc.)
+        KeyCode::KeyA => Some(egui::Key::A),
+        KeyCode::KeyB => Some(egui::Key::B),
+        KeyCode::KeyC => Some(egui::Key::C),
+        KeyCode::KeyD => Some(egui::Key::D),
+        KeyCode::KeyE => Some(egui::Key::E),
+        KeyCode::KeyF => Some(egui::Key::F),
+        KeyCode::KeyG => Some(egui::Key::G),
+        KeyCode::KeyH => Some(egui::Key::H),
+        KeyCode::KeyI => Some(egui::Key::I),
+        KeyCode::KeyJ => Some(egui::Key::J),
+        KeyCode::KeyK => Some(egui::Key::K),
+        KeyCode::KeyL => Some(egui::Key::L),
+        KeyCode::KeyM => Some(egui::Key::M),
+        KeyCode::KeyN => Some(egui::Key::N),
+        KeyCode::KeyO => Some(egui::Key::O),
+        KeyCode::KeyP => Some(egui::Key::P),
+        KeyCode::KeyQ => Some(egui::Key::Q),
+        KeyCode::KeyR => Some(egui::Key::R),
+        KeyCode::KeyS => Some(egui::Key::S),
+        KeyCode::KeyT => Some(egui::Key::T),
+        KeyCode::KeyU => Some(egui::Key::U),
+        KeyCode::KeyV => Some(egui::Key::V),
+        KeyCode::KeyW => Some(egui::Key::W),
+        KeyCode::KeyX => Some(egui::Key::X),
+        KeyCode::KeyY => Some(egui::Key::Y),
+        KeyCode::KeyZ => Some(egui::Key::Z),
+        
         _ => None,
     }
 }
