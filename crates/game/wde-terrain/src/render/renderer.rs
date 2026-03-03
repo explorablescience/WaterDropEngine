@@ -17,15 +17,15 @@ pub(crate) struct TerrainRenderTile {
     // The heightmap, normal map, and splat maps for this tile
     pub heightmap: Handle<Texture>,
     pub normalmap: Handle<Texture>,
-    pub splatmaps: Vec<Handle<Texture>>,
-
-    // Is this tile dirty ?
-    pub dirty: bool,
+    pub splatmaps: Vec<Handle<Texture>>
 }
 
 /// The main terrain resource that holds all the terrain tiles.
 #[derive(Component)]
 pub struct TerrainRenderer {
+    // The list of indices that are dirty and need to be re-uploaded to the GPU
+    pub(crate) dirty_tiles: Vec<usize>,
+    // A list of terrain tiles that make up the entire terrain
     pub(crate) tiles: Vec<TerrainRenderTile>
 }
 impl TerrainRenderer {
@@ -73,12 +73,14 @@ impl TerrainRenderer {
                     position,
                     heightmap,
                     normalmap,
-                    splatmaps,
-                    dirty: true,
+                    splatmaps
                 });
             }
         }
 
-        TerrainRenderer { tiles }
+        // Generate the list of dirty tiles
+        let dirty_tiles = (0..tiles.len()).collect();
+
+        TerrainRenderer { tiles, dirty_tiles }
     }
 }

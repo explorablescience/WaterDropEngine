@@ -47,8 +47,6 @@ pub(crate) struct ExtractedTerrainTile {
 
 #[derive(Resource, Default)]
 pub struct TerrainRenderPass {
-    // The position of the tiles that are ready to be rendered (i.e., have their textures loaded and bind groups created)
-    pub ready_tile_positions: Vec<Vec2>,
     // The tiles that are ready to be rendered (i.e., have their textures loaded and bind groups created)
     pub ready_tiles: Vec<ExtractedTerrainTile>,
     // The tiles that were extracted from the main world but may not be ready for rendering yet (e.g., waiting for textures to load)
@@ -119,7 +117,6 @@ impl TerrainRenderPass {
         while i < render_pass.extracted_tiles.len() {
             if render_pass.extracted_tiles[i].bind_group.is_some() {
                 let tile = render_pass.extracted_tiles.remove(i);
-                render_pass.ready_tile_positions.push(tile.position);
                 render_pass.ready_tiles.push(tile);
             } else {
                 i += 1;
@@ -180,7 +177,7 @@ impl RenderPass for TerrainRenderPass {
             material_arrays_render.bind_group = material_arrays_cpu.bind_group.clone();
         }
 
-        // Extract the terrain tiles
+        // Extract the dirty terrain tiles
         {
             let mut terrain = match main_world.query::<&mut TerrainRenderer>().iter_mut(main_world).next() {
                 Some(terrain) => terrain,
@@ -189,14 +186,11 @@ impl RenderPass for TerrainRenderPass {
             let mut render_pass = render_world
                 .get_resource_mut::<TerrainRenderPass>()
                 .unwrap();
-            for tile in &mut terrain.tiles {
+            for tile_index in &terrain.dirty_tiles {
+                let tile = &terrain.tiles[*tile_index];
                 let position = tile.position;
 
                 // Process new tiles
-                if render_pass.ready_tile_positions.contains(&position) && !tile.dirty {
-                    continue;
-                }
-                tile.dirty = false;
                 render_pass.extracted_tiles.push(ExtractedTerrainTile {
                     position,
                     heightmap: tile.heightmap.id(),
@@ -206,6 +200,7 @@ impl RenderPass for TerrainRenderPass {
                     bind_group: None
                 });
             }
+            terrain.dirty_tiles.clear();
         }
     }
 
