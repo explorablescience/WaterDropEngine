@@ -1,4 +1,4 @@
-use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::{MouseButtonInput, MouseWheel}, prelude::*}, prelude::*};
+use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::{MouseButtonInput, MouseMotion, MouseWheel}, prelude::*}, prelude::*};
 use super::egui_context::EguiContext;
 
 /// Resource to store egui inputs
@@ -9,7 +9,8 @@ pub(crate) struct EguiInputs(pub egui::RawInput);
 pub(crate) struct EguiInputsPlugin;
 impl Plugin for EguiInputsPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<EguiInputs>();
+        app
+            .init_resource::<EguiInputs>();
     }
 }
 
@@ -17,30 +18,30 @@ impl Plugin for EguiInputsPlugin {
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn handle_input(
     windows: Query<&Window>,
-    egui_ctx: Res<EguiContext>,
     mut egui_inputs: ResMut<EguiInputs>,
-    mut mouse_input: ResMut<ButtonInput<MouseButton>>,
-    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
-    mut keyboard_input_messages: ResMut<Messages<KeyboardInput>>,
-    mut mouse_wheel_messages: ResMut<Messages<MouseWheel>>,
-    mut mouse_button_input_messages: ResMut<Messages<MouseButtonInput>>,
+    mut keyboard_input_messages: MessageReader<KeyboardInput>,
+    mut mouse_button_input_messages: MessageReader<MouseButtonInput>,
+    mut mouse_motion_messages: MessageReader<MouseMotion>,
 ) {
     let mut raw_input = egui::RawInput::default();
-
-    // Check if egui wants keyboard or pointer input, or if a popup is open
-    let egui_wants_keyboard = egui_ctx.0.wants_keyboard_input()
-        || egui_ctx.0.is_popup_open();
-    let egui_wants_pointer = egui_ctx.0.wants_pointer_input()
-        || egui_ctx.0.is_pointer_over_area()
-        || egui_ctx.0.is_using_pointer()
-        || egui_ctx.0.is_popup_open();
 
     // Get mouse position
     let window = windows.iter().next().unwrap();
     let mouse_position = window.cursor_position().map(|pos| egui::Pos2 { x: pos.x, y: pos.y });
 
+    // Add pointer position event if we have cursor position
+    if let Some(pos) = mouse_position {
+        raw_input.events.push(egui::Event::PointerMoved(pos));
+    }
+
+    // Handle mouse motion for continuous tracking
+    for _motion in mouse_motion_messages.read() {
+        // Motion events are handled by the PointerMoved event above
+        // We just need to consume the messages here
+    }
+
     // Handle mouse buttons
-    for event in mouse_button_input_messages.get_cursor().read(&mouse_button_input_messages) {
+    for event in mouse_button_input_messages.read() {
         let pointer_button = match event.button {
             MouseButton::Left => Some(egui::PointerButton::Primary),
             MouseButton::Right => Some(egui::PointerButton::Secondary),
@@ -71,7 +72,7 @@ pub(crate) fn handle_input(
     }
 
     // Handle keyboard input
-    for event in keyboard_input_messages.get_cursor().read(&keyboard_input_messages) {
+    for event in keyboard_input_messages.read() {
         if event.state == ButtonState::Pressed {
             if let Some(key) = bevy_to_egui_key(event.key_code) {
                 raw_input.events.push(egui::Event::Key {
@@ -94,6 +95,20 @@ pub(crate) fn handle_input(
             }
     }
     egui_inputs.0 = raw_input;
+}
+
+pub(crate) fn clear_egui_inputs(
+    egui_ctx: Res<EguiContext>,
+    mut mouse_input: ResMut<ButtonInput<MouseButton>>,
+    mut keyboard_input: ResMut<ButtonInput<KeyCode>>,
+    mut keyboard_input_messages: ResMut<Messages<KeyboardInput>>,
+    mut mouse_wheel_messages: ResMut<Messages<MouseWheel>>,
+    mut mouse_button_input_messages: ResMut<Messages<MouseButtonInput>>,
+    mut mouse_motion_messages: ResMut<Messages<MouseMotion>>,
+) {
+    // Check if egui wants keyboard or pointer input (now accurate since begin_pass was called)
+    let egui_wants_keyboard = egui_ctx.0.wants_keyboard_input();
+    let egui_wants_pointer = egui_ctx.0.wants_pointer_input() || egui_ctx.0.is_pointer_over_area();
 
     // Clear the input events after processing
     let modifiers = [
@@ -115,6 +130,7 @@ pub(crate) fn handle_input(
         mouse_input.reset_all();
         mouse_wheel_messages.clear();
         mouse_button_input_messages.clear();
+        mouse_motion_messages.clear();
     }
     for key in pressed.into_iter().flatten() {
         keyboard_input.press(key);

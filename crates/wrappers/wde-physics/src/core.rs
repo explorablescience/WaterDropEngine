@@ -176,7 +176,7 @@ pub(crate) fn handle_changes(
                 // Update the mappings
                 phworld.entity_to_collider.insert(entity, new_col_handle);
                 phworld.collider_to_entity.insert(new_col_handle, entity);
-                debug!("Updated collider for entity {:?} with new handle {:?}", entity, new_col_handle);
+                trace!("Updated collider for entity {:?} with new handle {:?}", entity, new_col_handle);
             }
         }
     }

@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
-use crate::egui::{egui_context::{EguiContext, EguiFrameData, tessellate}, egui_inputs::{EguiInputs, handle_input}};
+use crate::egui::{egui_context::{EguiContext, EguiFrameData, tessellate}, egui_inputs::{clear_egui_inputs, EguiInputs, handle_input}};
 
 /// Plugin to add systems for updating egui and tessellating paint jobs
 pub struct EguiRenderPlugin;
 impl Plugin for EguiRenderPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(PreUpdate, (handle_input, preupdate).chain())
+            .add_systems(PreUpdate, (handle_input, preupdate, clear_egui_inputs).chain())
             .add_systems(PostUpdate, (postupdate, tessellate).chain());
     }
 }
