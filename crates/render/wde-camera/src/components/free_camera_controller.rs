@@ -12,8 +12,8 @@ use super::CameraView;
 /// it because it felt nice.
 pub(crate) const RADIANS_PER_DOT: f32 = 1.0 / 180.0;
 
-pub(crate) struct CameraControllerPlugin;
-impl Plugin for CameraControllerPlugin {
+pub(crate) struct FreeCameraControllerPlugin;
+impl Plugin for FreeCameraControllerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, update);
     }
@@ -21,7 +21,7 @@ impl Plugin for CameraControllerPlugin {
 
 #[derive(Component, Reflect)]
 #[reflect(Component)]
-pub struct CameraController {
+pub struct FreeCameraController {
     pub enabled: bool,
     pub initialized: bool,
     pub sensitivity: f32,
@@ -43,7 +43,7 @@ pub struct CameraController {
     pub velocity: Vec3,
 }
 
-impl Default for CameraController {
+impl Default for FreeCameraController {
     fn default() -> Self {
         Self {
             enabled: true,
@@ -71,7 +71,7 @@ impl Default for CameraController {
 
 // Update the camera controller
 fn update(
-    mut camera_query: Query<(&mut Transform, &mut CameraController), With<CameraView>>,
+    mut camera_query: Query<(&mut Transform, &mut FreeCameraController), With<CameraView>>,
     time: Res<Time>, mut windows: Query<&mut Window>,
     (keyboard_input, mouse_button_input): (Res<ButtonInput<KeyCode>>, Res<ButtonInput<MouseButton>>),
     (mut mouse_events, mut mouse_scroll_events): (MessageReader<MouseMotion>, MessageReader<MouseWheel>),

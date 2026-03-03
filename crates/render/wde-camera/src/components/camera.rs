@@ -19,7 +19,7 @@ impl Default for CameraView {
         Self {
             fov: 60.0,
             znear: 0.1,
-            zfar: 1000.0,
+            zfar: 10000.0,
         }
     }
 }

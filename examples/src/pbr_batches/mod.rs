@@ -17,7 +17,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
             Camera,
             Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y)
         ),
-        CameraController::default()
+        FreeCameraController::default()
     ));
 
     // Load the assets

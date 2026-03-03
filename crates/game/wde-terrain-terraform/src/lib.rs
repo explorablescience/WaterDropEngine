@@ -90,20 +90,20 @@ impl Default for PaintingSettings {
 }
 
 fn terrain_terraforming_gui(ctx: Res<EguiContext>, mut terraforming_settings: ResMut<TerraformingSettings>) {
-    // egui::Window::new("Terrain Terraforming").show(&ctx.0, |ui| {
-    //     ui.checkbox(&mut terraforming_settings.is_drawing, "Enable Terraforming");
-    //     ui.add(egui::Slider::new(&mut terraforming_settings.brush_size, 0.1..=100.0).text("Brush Size"));
-    //     ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.0001..=0.01).text("Brush Strength"));
-    // });
+    egui::Window::new("Terrain Terraforming").show(&ctx.0, |ui| {
+        ui.checkbox(&mut terraforming_settings.is_drawing, "Enable Terraforming");
+        ui.add(egui::Slider::new(&mut terraforming_settings.brush_size, 0.1..=100.0).text("Brush Size"));
+        ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.0001..=0.01).text("Brush Strength"));
+    });
 }
 
 fn terrain_painting(ctx: Res<EguiContext>, mut terraforming_settings: ResMut<PaintingSettings>) {
-    egui::Window::new("Terrain Painting").show(&ctx.0, |ui| {
-        ui.checkbox(&mut terraforming_settings.is_drawing, "Enable Painting");
-        ui.add(egui::Slider::new(&mut terraforming_settings.brush_size, 0.1..=100.0).text("Brush Size"));
-        ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.1..=1.0).text("Brush Strength"));
-        ui.color_edit_button_srgb(&mut terraforming_settings.paint_color);
-    });
+    // egui::Window::new("Terrain Painting").show(&ctx.0, |ui| {
+    //     ui.checkbox(&mut terraforming_settings.is_drawing, "Enable Painting");
+    //     ui.add(egui::Slider::new(&mut terraforming_settings.brush_size, 0.1..=100.0).text("Brush Size"));
+    //     ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.1..=1.0).text("Brush Strength"));
+    //     ui.color_edit_button_srgb(&mut terraforming_settings.paint_color);
+    // });
 }
 
 fn mouse_picking(
@@ -175,7 +175,7 @@ fn apply_brush(
         (terraforming_settings.world_position.z - (pos.y as f32 * TILE_SIZE[2])) / TILE_SIZE[2] + 0.5,
     );
     let radius = terraforming_settings.brush_size / TILE_SIZE[0]; // Brush size in tile space
-    let ss = (data.len() / 4) as f32; // Subdivision size of the tile (assuming 4 channels per pixel)
+    let ss = data.len() as f32; // Subdivision size of the tile
     let ss = ss.sqrt(); // Square root to get the side length of the square grid
     for x in 0..ss as usize {
         for y in 0..ss as usize {
@@ -183,7 +183,7 @@ fn apply_brush(
             let distance = tile_pos.distance(in_tile_pos);
             if distance < radius {
                 let strength = (1.0 - (distance / radius)) * terraforming_settings.brush_strength;
-                let idx = (y * ss as usize + x) * 4; // RGBA channels
+                let idx = (y * ss as usize + x) as usize; // Index in the heightmap data
                 data[idx] += strength; // Increase height by brush strength, you can modify this to create different effects
             }
         }

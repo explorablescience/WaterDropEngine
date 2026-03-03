@@ -23,7 +23,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmat
         Transform::from_xyz(5.0, 5.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
         Camera,
         CameraView::default(),
-        CameraController::default(),
+        FreeCameraController::default(),
         ActiveCamera
     ));
 

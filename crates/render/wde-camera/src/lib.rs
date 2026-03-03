@@ -61,7 +61,7 @@ use bevy::prelude::*;
 
 pub mod prelude {
     pub use crate::CameraPlugin;
-    pub use crate::components::{CameraController, CameraView, ActiveCamera, Camera};
+    pub use crate::components::{FreeCameraController, CameraView, ActiveCamera, Camera, ThirdPersonController};
     pub use crate::features::CameraFeatureRender;
 }
 

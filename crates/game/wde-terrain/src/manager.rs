@@ -8,7 +8,7 @@ use crate::utils::image_decoder::decode_png_as_channels;
 /// The size of the terrain in terms of number of tiles (e.g., 4 means the terrain is made up of a 4x4 grid of tiles)
 pub const TERRAIN_TILES_COUNT: usize = 8;
 /// The size of each terrain tile in world units
-pub const TILE_SIZE: [f32; 3] = [100.0, 20.0, 100.0];
+pub const TILE_SIZE: [f32; 3] = [500.0, 20.0, 500.0];
 
 /// The number of splat maps per tile (must be a multiple of 4, as each splat map can store 4 channels for texture blending)
 pub const SPLAT_MAP_COUNT: u32 = 4;
