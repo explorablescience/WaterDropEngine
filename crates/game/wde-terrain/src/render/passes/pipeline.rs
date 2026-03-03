@@ -2,7 +2,7 @@ use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
 use wde_camera::features::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
-use crate::render::{materials::TerrainMaterialArrays, passes::renderpass::TerrainRenderPass};
+use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer}, passes::tiles_extractor::GpuTerrainTiles};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
@@ -17,13 +17,13 @@ pub(crate) struct GpuTerrainRenderPipeline {
 impl RenderAsset for GpuTerrainRenderPipeline {
     type SourceAsset = TerrainRenderPipelineAsset;
     type Param = (
-        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<TerrainRenderPass>, SRes<TerrainMaterialArrays>
+        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<GpuTerrainTiles>, SRes<TerrainMaterialArrays>, SRes<TerrainBuffer>
     );
 
     fn prepare_asset(
             asset: Self::SourceAsset,
             (
-                assets_server, pipeline_manager, camera_feature, terrain, material_arrays
+                assets_server, pipeline_manager, camera_feature, terrain, material_arrays, terrain_buffer
             ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         // Get the terrain resource
@@ -51,8 +51,9 @@ impl RenderAsset for GpuTerrainRenderPipeline {
             frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
             bind_group_layouts: vec![
                 camera_feature.layout.clone(),
-                terrain_layout.clone(),
                 materials_layout.clone(),
+                terrain_buffer.layout.clone(),
+                terrain_layout.clone()
             ],
             depth: DepthStencilDescriptor {
                 enabled: true,

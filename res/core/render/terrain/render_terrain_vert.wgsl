@@ -16,25 +16,40 @@ struct Camera {
 }
 @group(0) @binding(0) var<uniform> in_camera: Camera;
 
-@group(1) @binding(0) var in_heightmap: texture_2d<f32>;
-@group(1) @binding(1) var in_heightmap_sampler: sampler;
-@group(1) @binding(2) var in_normalmap: texture_2d<f32>;
-@group(1) @binding(3) var in_normalmap_sampler: sampler;
-@group(1) @binding(4) var in_splatmap_1: texture_2d<f32>;
-@group(1) @binding(5) var in_splatmap_1_sampler: sampler;
+// Description of the terrain
+struct TerrainDescription {
+    tile_size: f32,
+    _padding: f32
+}
+@group(2) @binding(0) var<uniform> in_terrain_description: TerrainDescription;
+struct TerrainTile {
+    pos: vec2<f32>,
+    lod: f32,
+    _padding: f32
+}
+@group(2) @binding(1) var<storage, read> in_terrain_tiles: array<TerrainTile>;
+
+@group(3) @binding(0) var in_heightmap: texture_2d<f32>;
+@group(3) @binding(1) var in_heightmap_sampler: sampler;
+@group(3) @binding(2) var in_normalmap: texture_2d<f32>;
+@group(3) @binding(3) var in_normalmap_sampler: sampler;
+@group(3) @binding(4) var in_splatmap_1: texture_2d<f32>;
+@group(3) @binding(5) var in_splatmap_1_sampler: sampler;
 
 
 @vertex
 fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutput {
     var out: VertexOutput;
 
+    // Compute world position
+    let tile = in_terrain_tiles[instance];
+    let tile_offset = tile.pos * in_terrain_description.tile_size;
     let obj_to_world = mat4x4<f32>(
         vec4<f32>(1.0, 0.0, 0.0, 0.0),
         vec4<f32>(0.0, 1.0, 0.0, 0.0),
         vec4<f32>(0.0, 0.0, 1.0, 0.0),
-        vec4<f32>(0.0, 0.0, 0.0, 1.0)
+        vec4<f32>(tile_offset.x, 0.0, tile_offset.y, 1.0)
     );
-
     var world_pos = obj_to_world * vec4<f32>(model.position, 1.0);
 
     // Add some noise to the height based on the xz position
@@ -56,6 +71,7 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     let normal = normalize(vec3<f32>(heightL - heightR, 2.0 * delta * 1e-1, heightD - heightU));
     out.normal = normal;
 
+    // Pass the texture coordinates to the fragment shader
     out.tex_coord = model.tex_coord;
 
     return out;

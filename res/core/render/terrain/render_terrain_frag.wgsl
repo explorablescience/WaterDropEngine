@@ -4,22 +4,23 @@ struct VertexOutput {
     @location(1) tex_coord: vec2<f32>,
 };
 
-@group(1) @binding(0) var in_heightmap: texture_2d<f32>;
-@group(1) @binding(1) var in_heightmap_sampler: sampler;
-@group(1) @binding(2) var in_normalmap: texture_2d<f32>;
-@group(1) @binding(3) var in_normalmap_sampler: sampler;
-@group(1) @binding(4) var in_splatmap_1: texture_2d<f32>;
-@group(1) @binding(5) var in_splatmap_1_sampler: sampler;
-
 // Material texture arrays (group 2)
-@group(2) @binding(0) var material_albedo: texture_2d_array<f32>;
-@group(2) @binding(1) var material_albedo_sampler: sampler;
-@group(2) @binding(2) var material_normal: texture_2d_array<f32>;
-@group(2) @binding(3) var material_normal_sampler: sampler;
-@group(2) @binding(4) var material_roughness: texture_2d_array<f32>;
-@group(2) @binding(5) var material_roughness_sampler: sampler;
-@group(2) @binding(6) var material_ao: texture_2d_array<f32>;
-@group(2) @binding(7) var material_ao_sampler: sampler;
+@group(1) @binding(0) var material_albedo: texture_2d_array<f32>;
+@group(1) @binding(1) var material_albedo_sampler: sampler;
+@group(1) @binding(2) var material_normal: texture_2d_array<f32>;
+@group(1) @binding(3) var material_normal_sampler: sampler;
+@group(1) @binding(4) var material_roughness: texture_2d_array<f32>;
+@group(1) @binding(5) var material_roughness_sampler: sampler;
+@group(1) @binding(6) var material_ao: texture_2d_array<f32>;
+@group(1) @binding(7) var material_ao_sampler: sampler;
+
+// Terrain tile data
+@group(3) @binding(0) var in_heightmap: texture_2d<f32>;
+@group(3) @binding(1) var in_heightmap_sampler: sampler;
+@group(3) @binding(2) var in_normalmap: texture_2d<f32>;
+@group(3) @binding(3) var in_normalmap_sampler: sampler;
+@group(3) @binding(4) var in_splatmap_1: texture_2d<f32>;
+@group(3) @binding(5) var in_splatmap_1_sampler: sampler;
 
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {

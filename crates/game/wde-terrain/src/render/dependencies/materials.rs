@@ -126,7 +126,7 @@ fn load_material_textures(asset_server: Res<AssetServer>, mut materials: ResMut<
 fn extract_terrain_textures(
     terrain_materials_world: ExtractWorld<Res<TerrainMaterials>>,
     mut terrain_materials: ResMut<TerrainMaterials>,
-    terrain_materials_bg: Res<TerrainMaterialArrays>,
+    mut terrain_materials_bg: ResMut<TerrainMaterialArrays>,
 ) {
     // Check if bind group is already built or if all textures are loaded
     if terrain_materials_bg.bind_group.is_some() {
@@ -176,6 +176,10 @@ fn extract_terrain_textures(
     terrain_materials.normal_array = terrain_materials_world.normal_array.clone();
     terrain_materials.roughness_array = terrain_materials_world.roughness_array.clone();
     terrain_materials.ao_array = terrain_materials_world.ao_array.clone();
+
+    // Extract the material arrays bind group
+    terrain_materials_bg.bind_group_layout = terrain_materials_bg.bind_group_layout.clone();
+    terrain_materials_bg.bind_group = terrain_materials_bg.bind_group.clone();
 }
 
 
