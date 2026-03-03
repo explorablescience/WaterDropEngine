@@ -74,19 +74,22 @@ impl TerrainRenderer {
     }
 
     /// Extracts the dirty tiles from the main terrain
-    pub fn extract_dirty(mut renderer: Query<&mut TerrainRenderer>, terrain: Query<&Terrain>) {
+    pub fn extract_dirty(mut renderer: Query<&mut TerrainRenderer>, mut terrain: Query<&mut Terrain>) {
         let mut terrain_renderer = match renderer.iter_mut().next() {
             Some(terrain) => terrain,
             None => return,
         };
-        let terrain = match terrain.iter().next() {
+        let mut terrain = match terrain.iter_mut().next() {
             Some(terrain) => terrain,
             None => return,
         };
 
         // Extract the dirty tiles from the main terrain and move them to the renderer resource
-        for dirty_tile in &terrain.dirty {
-            terrain_renderer.dirty.push(Some(dirty_tile.clone()));
+        for dirty_tile in &terrain.dirty_render {
+            terrain_renderer.dirty.push(dirty_tile.clone());
         }
+
+        // Clear the dirty tiles list after processing
+        terrain.dirty_render.clear();
     }
 }

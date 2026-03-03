@@ -37,13 +37,14 @@ pub struct TerrainTile {
 #[derive(Component)]
 pub struct Terrain {
     /// Pointer from tile position (x, z) to the corresponding tile datas
-    pub pos_to_tile: HashMap<TilePos, usize>,
+    pub(crate) pos_to_tile: HashMap<TilePos, usize>,
     /// A list of terrain tiles that make up the entire terrain. This is the source of truth for the terrain data.
-    pub tiles: Vec<TerrainTile>,
+    pub(crate) tiles: Vec<TerrainTile>,
 
     /// List of tile maps that are dirty and need to be re-processed.
     /// Each entry should be processed before the next frame, as it is cleared at the end of each frame.
-    pub(crate) dirty: Vec<DirtyTile>
+    pub(crate) dirty_render: Vec<Option<DirtyTile>>,
+    pub(crate) dirty_physics: Vec<Option<DirtyTile>>,
 }
 impl Terrain {
     /// Initializes the terrain by loading the heightmaps and splat maps for each tile from the specified folder.
@@ -56,7 +57,8 @@ impl Terrain {
     pub fn load(path: &str) -> Self {
         let mut pos_to_tile = HashMap::new();
         let mut tiles = Vec::new();
-        let mut dirty = Vec::new();
+        let mut dirty_render = Vec::new();
+        let mut dirty_physics = Vec::new();
         for i in 0..TERRAIN_TILES_COUNT {
             for j in 0..TERRAIN_TILES_COUNT {
                 // Calculate the world position of the tile (centered around the origin)
@@ -130,9 +132,11 @@ impl Terrain {
                 }
 
                 // Add the tile to the list and mark it as dirty
-                dirty.push((pos, 0, 0, tile.heightmap.clone())); // Mark heightmap as dirty
+                dirty_render.push(Some((pos, 0, 0, tile.heightmap.clone()))); // Mark heightmap as dirty
+                dirty_physics.push(Some((pos, 0, 0, tile.heightmap.clone())));
                 for i in 0..SPLAT_MAP_COUNT / 4 {
-                    dirty.push((pos, 1, i, tile.splatmaps[i as usize].clone())); // Mark splat map as dirty
+                    dirty_render.push(Some((pos, 1, i, tile.splatmaps[i as usize].clone()))); // Mark splat map as dirty
+                    dirty_physics.push(Some((pos, 1, i, tile.splatmaps[i as usize].clone())));
                 }
                 tiles.push(tile);
                 pos_to_tile.insert(pos, tiles.len() - 1);
@@ -141,17 +145,88 @@ impl Terrain {
         Self {
             pos_to_tile,
             tiles,
-            dirty
+            dirty_render,
+            dirty_physics
         }
     }
 
-    /// Clears the dirty tiles list after they have been processed.
-    /// This is called at PostUpdate every frame.
-    pub fn clear_dirty(mut terrain: Query<&mut Terrain>) {
-        let mut terrain = match terrain.iter_mut().next() {
-            Some(terrain) => terrain,
-            None => return,
+    /// Gets the tile indices for a given world position.
+    /// 
+    /// # Arguments
+    /// * `world_pos` - The world position for which to get the tile indices
+    /// 
+    /// # Returns
+    /// An option containing the tile indices (x, z) if the position is within the terrain bounds
+    /// or None if the position is out of bounds.
+    pub fn get_tile_idx_for_world_pos(&self, world_pos: Vec3) -> Option<IVec2> {
+        let tile_x = (world_pos.x / TILE_SIZE[0]).round() as i32;
+        let tile_z = (world_pos.z / TILE_SIZE[2]).round() as i32;
+        let tile_pos = IVec2::new(tile_x, tile_z);
+        if self.pos_to_tile.contains_key(&tile_pos) {
+            Some(tile_pos)
+        } else {
+            None
+        }
+    }
+    
+    /// Gets the tile data for a given chunk position in world space
+    /// 
+    /// # Arguments
+    /// * `terrain` - A reference to the terrain resource containing all the terrain data
+    /// * `tile_pos` - The position of the tile in tile coordinates
+    /// 
+    /// # Returns
+    /// An option containing a reference to the tile data if the chunk is within the terrain bounds
+    pub fn get_tile_data_for_chunk(&self, tile_pos: IVec2, map_type: u32, splatmap_index: u32) -> Option<&TileData> {
+        let tile_idx = self.pos_to_tile.get(&tile_pos)?;
+        match map_type {
+            0 => Some(&self.tiles[*tile_idx].heightmap),
+            1 => {
+                if splatmap_index as usize >= self.tiles[*tile_idx].splatmaps.len() {
+                    None
+                } else {
+                    Some(&self.tiles[*tile_idx].splatmaps[splatmap_index as usize])
+                }
+            },
+            _ => None
+        }
+    }
+
+    /// Sets the tile data for a given chunk position in world space, and marks the tile as dirty for re-processing.
+    /// 
+    /// # Arguments
+    /// * `tile_pos` - The position of the tile in tile coordinates
+    /// * `map_type` - The type of map to set (0 for heightmap, 1 for splatmap)
+    /// * `splatmap_index` - The index of the splat map to set (only used if map_type is 1)
+    /// * `data` - The new tile data to set
+    pub fn set_tile_data_for_chunk(&mut self, tile_pos: IVec2, map_type: u32, splatmap_index: u32, data: TileData) {
+        // Add the new data to the tile
+        let tile_idx = match self.pos_to_tile.get(&tile_pos) {
+            Some(idx) => *idx,
+            None => {
+                warn!("Trying to set tile data for out of bounds tile at position ({}, {})", tile_pos.x, tile_pos.y);
+                return;
+            }
         };
-        terrain.dirty.clear();
+        let tile = &mut self.tiles[tile_idx];
+        match map_type {
+            0 => tile.heightmap = data.clone(),
+            1 => {
+                if splatmap_index as usize >= tile.splatmaps.len() {
+                    warn!("Trying to set splatmap data for non existing splatmap index {} on tile at position ({}, {})", splatmap_index, tile_pos.x, tile_pos.y);
+                    return;
+                } else {
+                    tile.splatmaps[splatmap_index as usize] = data.clone();
+                }
+            },
+            _ => {
+                warn!("Trying to set tile data with invalid map type {} for tile at position ({}, {})", map_type, tile_pos.x, tile_pos.y);
+                return;
+            }
+        };
+
+        // Set the tiles as dirty
+        self.dirty_render.push(Some((tile_pos, map_type, splatmap_index, data.clone())));
+        self.dirty_physics.push(Some((tile_pos, map_type, splatmap_index, data)));
     }
 }

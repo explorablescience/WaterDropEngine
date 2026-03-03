@@ -12,18 +12,18 @@ pub struct TerrainPhysics {
 }
 impl TerrainPhysics {
     /// Extracts the dirty tiles from the main terrain
-    pub fn extract_dirty(mut commands: Commands, mut renderer: Query<&mut TerrainPhysics>, terrain: Query<&Terrain>) {
+    pub fn extract_dirty(mut commands: Commands, mut renderer: Query<&mut TerrainPhysics>, mut terrain: Query<&mut Terrain>) {
         let mut terrain_renderer = match renderer.iter_mut().next() {
             Some(terrain) => terrain,
             None => return,
         };
-        let terrain = match terrain.iter().next() {
+        let mut terrain = match terrain.iter_mut().next() {
             Some(terrain) => terrain,
             None => return,
         };
 
         // Extract the dirty tiles from the main terrain and create the according colliders
-        for (tile_pos, tile_type, _, data) in &terrain.dirty {
+        for (tile_pos, tile_type, _, data) in terrain.dirty_physics.iter().flatten() {
             // Check if the tile is a heightmap
             if *tile_type != 0 {
                 continue;
@@ -43,5 +43,8 @@ impl TerrainPhysics {
                 terrain_renderer.pos_to_entity.insert(*tile_pos, entity);
             }
         }
+
+        // Clear the dirty tiles list after processing
+        terrain.dirty_physics.clear();
     }
 }

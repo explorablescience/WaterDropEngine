@@ -18,7 +18,7 @@
 
 use bevy::prelude::*;
 
-use crate::{manager::Terrain, physics::TerrainPhysicsPlugin, render::TerrainRenderPlugin};
+use crate::{physics::TerrainPhysicsPlugin, render::TerrainRenderPlugin};
 
 pub(crate) mod manager;
 pub(crate) mod render;
@@ -27,7 +27,7 @@ pub(crate) mod utils;
 
 pub mod prelude {
     pub use super::TerrainPlugin;
-    pub use crate::manager::Terrain;
+    pub use crate::manager::*;
     pub use crate::render::renderer::TerrainRenderer;
     pub use crate::physics::terrain_physics::TerrainPhysics;
 }
@@ -39,10 +39,6 @@ impl Plugin for TerrainPlugin {
         app
             .add_plugins(TerrainRenderPlugin)
             .add_plugins(TerrainPhysicsPlugin);
-
-        // Add the terrain system
-        app
-            .add_systems(PostUpdate, Terrain::clear_dirty);
     }
 }
 
