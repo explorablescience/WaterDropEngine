@@ -5,9 +5,9 @@ pub struct TestPlugin;
 impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(TerrainTerraformPlugin)
-            .add_systems(Startup, init_scene)
-            .add_systems(Update, edit_camera_params);
+            .add_plugins(TerrainEditorPlugin)
+            .add_systems(Startup, init_scene);
+            // .add_systems(Update, edit_camera_params);
     }
 }
 

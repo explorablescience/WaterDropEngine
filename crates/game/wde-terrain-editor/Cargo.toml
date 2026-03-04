@@ -1,8 +1,8 @@
 [package]
-name = "wde-terrain-terraform"
+name = "wde-terrain-editor"
 version = "0.1.0"
 edition = "2024"
-description = "The terrain terraforming module for WaterDrop Engine."
+description = "The terrain editing module for WaterDrop Engine."
 
 [profile.dev]
 opt-level = 0

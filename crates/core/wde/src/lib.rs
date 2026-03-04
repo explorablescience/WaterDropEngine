@@ -247,7 +247,7 @@ pub mod prelude {
     #[cfg(feature = "terrain")]
     pub use wde_terrain::prelude::*;
     #[cfg(feature = "terrain")]
-    pub use wde_terrain_terraform::prelude::*;
+    pub use wde_terrain_editor::prelude::*;
 }
 
 /// Rendering module.
