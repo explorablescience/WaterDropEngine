@@ -34,7 +34,7 @@ impl RenderAsset for GpuTerrainRenderPipeline {
         // Get the terrain resource
         let terrain_layout = match terrain_renderer.tiles.first() {
             Some(tile) => {
-                if let Some(layout) = &tile.bind_group_layout {
+                if let Some(layout) = &tile.render_bind_group_layout {
                     layout
                 } else {
                     return Err(PrepareAssetError::RetryNextUpdate(asset));

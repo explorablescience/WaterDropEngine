@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use wde_physics::prelude::*;
 use wde_camera::prelude::*;
 use wde_terrain::prelude::*;
@@ -35,10 +37,10 @@ pub struct PaintManager {
     // List of painting commands
     pub commands: Option<Vec<PaintCommand>>,
     // List of chunks ids that should be updated on next iteration
-    pub commands_chunks: Option<Vec<IVec2>>,
+    pub commands_chunks: Option<HashSet<IVec2>>,
 
     // List of commands and chunks that will be extracted on next extraction
-    pub to_extract: Option<(Vec<PaintCommand>, Vec<IVec2>)>
+    pub to_extract: Option<(Vec<PaintCommand>, HashSet<IVec2>)>
 }
 impl PaintManager {
     pub fn deactivate(&mut self) {
@@ -114,6 +116,11 @@ fn add_paint_command(
         let paint_pos = ray.point_at(toi);
 
         // Compute new position (interpolate)
+        let neighbors = [
+            IVec2::new(-1, -1), IVec2::new(0, -1), IVec2::new(1, -1),
+            IVec2::new(-1, 0), IVec2::new(0, 0), IVec2::new(1, 0),
+            IVec2::new(-1, 1), IVec2::new(0, 1), IVec2::new(1, 1),
+        ];
         if let Some(last_pos) = paint_manager.last_paint_position {
             let distance = last_pos.distance(paint_pos);
             let spacing = brush.radius * 0.5; // Space commands by half the brush radius
@@ -127,7 +134,9 @@ fn add_paint_command(
                 match terrain.get_tile_idx_for_world_pos(interp_pos) {
                     Some(pos) => {
                         paint_manager.commands.get_or_insert_with(Vec::new).push(brush.paint(interp_pos));
-                        paint_manager.commands_chunks.get_or_insert_with(Vec::new).push(pos);
+                        for neighbor in neighbors {
+                            paint_manager.commands_chunks.get_or_insert_with(HashSet::new).insert(pos + neighbor);
+                        }
                     },
                     None => continue
                 }
@@ -140,7 +149,9 @@ fn add_paint_command(
             None => return
         };
         paint_manager.commands.get_or_insert_with(Vec::new).push(brush.paint(paint_pos));
-        paint_manager.commands_chunks.get_or_insert_with(Vec::new).push(tile_pos);
+        for neighbor in neighbors {
+            paint_manager.commands_chunks.get_or_insert_with(HashSet::new).insert(tile_pos + neighbor);
+        }
         paint_manager.last_paint_position = Some(paint_pos);
     }
 

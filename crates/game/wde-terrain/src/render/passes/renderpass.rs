@@ -130,7 +130,7 @@ impl RenderPass for TerrainRenderPass {
                     render_pass.set_bind_group(2, terrain_description_bind_group);
 
                     for (i, tile) in terrain.tiles.iter().enumerate() {
-                        if let Some(bind_group) = &tile.bind_group {
+                        if let Some(bind_group) = &tile.render_bind_group {
                             // Set bind groups
                             render_pass.set_bind_group(3, bind_group);
 

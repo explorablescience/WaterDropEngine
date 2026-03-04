@@ -55,7 +55,7 @@
 
 use wde_logger::prelude::*;
 
-use crate::{buffer::Buffer, instance::RenderInstanceData, render_pipeline::ShaderStages, texture::Texture};
+use crate::{buffer::Buffer, instance::RenderInstanceData, render_pipeline::ShaderStages, texture::{Texture, TextureFormat}};
 
 /// The wgpu bind group layout builder.
 pub type WgpuBindGroup = wgpu::BindGroup;
@@ -118,6 +118,30 @@ impl BindGroupLayoutBuilder {
                 multisampled,
                 view_dimension: wgpu::TextureViewDimension::D2,
                 sample_type: wgpu::TextureSampleType::Float { filterable: !multisampled },
+            },
+            count: None
+        });
+
+        self
+    }
+
+    /// Add a storage texture view to the bind group.
+    /// This is used for textures that will be read and written to in a compute shader.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `binding` - The binding index of the texture.
+    /// * `format` - The format of the texture.
+    /// * `atomic` - Whether the texture will be used for atomic operations.
+    pub fn add_storage_texture_view(&mut self, binding: u32, format: TextureFormat) -> &mut Self {
+        // Create bind group layout
+        self.layout_entries.push(wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::StorageTexture {
+                access: wgpu::StorageTextureAccess::ReadWrite,
+                view_dimension: wgpu::TextureViewDimension::D2,
+                format
             },
             count: None
         });

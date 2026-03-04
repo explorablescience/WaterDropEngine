@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use crate::render::{dependencies::BuffersPlugin, passes::TerrainPassesPlugin, renderer::TerrainRenderer, renderer_gpu::TerrainRendererGPU};
 
 pub mod renderer;
-mod renderer_gpu;
+pub mod renderer_gpu;
 pub mod dependencies;
 mod passes;
 

@@ -30,6 +30,7 @@ pub mod prelude {
     pub use crate::manager::*;
     pub use crate::render::renderer::TerrainRenderer;
     pub use crate::physics::terrain_physics::TerrainPhysics;
+    pub use crate::render::renderer_gpu::TerrainRendererGPU;
 }
 
 pub struct TerrainPlugin;

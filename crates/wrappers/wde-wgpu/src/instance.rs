@@ -174,7 +174,8 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
     }
 
     // Set required features
-    let required_features = wgpu::Features::empty() | Features::PUSH_CONSTANTS;
+    let required_features = wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
+        | Features::PUSH_CONSTANTS;
         
     // Set limits
     let required_limits = Limits {

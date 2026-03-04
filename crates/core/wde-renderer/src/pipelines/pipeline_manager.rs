@@ -314,6 +314,9 @@ fn load_compute_pipelines(
         if let Some(compute_shader) = compute_shader {
             pipeline.set_shader(&compute_shader.content);
         }
+        for push_constant in descriptor.push_constants.iter() {
+            pipeline.add_push_constant(push_constant.offset, push_constant.size);
+        }
         pipeline.set_bind_groups(bind_group_layouts);
         match pipeline.init(&render_instance.0.read().unwrap()) {
             Ok(_) => (),
