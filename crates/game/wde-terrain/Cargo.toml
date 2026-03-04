@@ -26,4 +26,4 @@ wde-gizmos = { path = "../../render/wde-gizmos" }
 wde-physics = { path = "../../wrappers/wde-physics" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
-png = "0.18"
+png = { workspace = true }

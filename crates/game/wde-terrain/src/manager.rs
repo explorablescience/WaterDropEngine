@@ -36,10 +36,10 @@ pub struct TerrainTile {
 /// This is the source of truth for the terrain data, and is used by both the physics and rendering systems.
 #[derive(Component)]
 pub struct Terrain {
+    /// Path to the terrain
+    pub path: String,
     /// Pointer from tile position (x, z) to the corresponding tile datas
-    pub(crate) pos_to_tile: HashMap<TilePos, usize>,
-    /// A list of terrain tiles that make up the entire terrain. This is the source of truth for the terrain data.
-    pub(crate) tiles: Vec<TerrainTile>,
+    pub pos_to_tile: HashMap<TilePos, usize>,
 
     /// List of tile maps that are dirty and need to be re-processed.
     /// Each entry should be processed before the next frame, as it is cleared at the end of each frame.
@@ -123,8 +123,8 @@ impl Terrain {
             }
         }
         Self {
+            path: path.to_string(),
             pos_to_tile,
-            tiles,
             dirty_render,
             dirty_physics
         }
@@ -147,66 +147,5 @@ impl Terrain {
         } else {
             None
         }
-    }
-    
-    /// Gets the tile data for a given chunk position in world space
-    /// 
-    /// # Arguments
-    /// * `terrain` - A reference to the terrain resource containing all the terrain data
-    /// * `tile_pos` - The position of the tile in tile coordinates
-    /// 
-    /// # Returns
-    /// An option containing a reference to the tile data if the chunk is within the terrain bounds
-    pub fn get_tile_data_for_chunk(&self, tile_pos: IVec2, map_type: u32, splatmap_index: u32) -> Option<&TileData> {
-        let tile_idx = self.pos_to_tile.get(&tile_pos)?;
-        match map_type {
-            0 => Some(&self.tiles[*tile_idx].heightmap),
-            1 => {
-                if splatmap_index as usize >= self.tiles[*tile_idx].splatmaps.len() {
-                    None
-                } else {
-                    Some(&self.tiles[*tile_idx].splatmaps[splatmap_index as usize])
-                }
-            },
-            _ => None
-        }
-    }
-
-    /// Sets the tile data for a given chunk position in world space, and marks the tile as dirty for re-processing.
-    /// 
-    /// # Arguments
-    /// * `tile_pos` - The position of the tile in tile coordinates
-    /// * `map_type` - The type of map to set (0 for heightmap, 1 for splatmap)
-    /// * `splatmap_index` - The index of the splat map to set (only used if map_type is 1)
-    /// * `data` - The new tile data to set
-    pub fn set_tile_data_for_chunk(&mut self, tile_pos: IVec2, map_type: u32, splatmap_index: u32, data: TileData) {
-        // Add the new data to the tile
-        let tile_idx = match self.pos_to_tile.get(&tile_pos) {
-            Some(idx) => *idx,
-            None => {
-                warn!("Trying to set tile data for out of bounds tile at position ({}, {})", tile_pos.x, tile_pos.y);
-                return;
-            }
-        };
-        let tile = &mut self.tiles[tile_idx];
-        match map_type {
-            0 => tile.heightmap = data.clone(),
-            1 => {
-                if splatmap_index as usize >= tile.splatmaps.len() {
-                    warn!("Trying to set splatmap data for non existing splatmap index {} on tile at position ({}, {})", splatmap_index, tile_pos.x, tile_pos.y);
-                    return;
-                } else {
-                    tile.splatmaps[splatmap_index as usize] = data.clone();
-                }
-            },
-            _ => {
-                warn!("Trying to set tile data with invalid map type {} for tile at position ({}, {})", map_type, tile_pos.x, tile_pos.y);
-                return;
-            }
-        };
-
-        // Set the tiles as dirty
-        self.dirty_render.push(Some((tile_pos, map_type, splatmap_index, data.clone())));
-        self.dirty_physics.push(Some((tile_pos, map_type, splatmap_index, data)));
     }
 }

@@ -34,7 +34,7 @@ impl TerrainRenderer {
     /// # Returns
     /// A `TerrainRenderer` component containing the initialized terrain render tiles with their respective heightmap and splat map textures, as well as the mapping from tile positions to their data.
     pub fn new(asset_server: &AssetServer) -> Self {
-        let usages = TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING | TextureUsages::STORAGE_BINDING;
+        let usages = TextureUsages::COPY_SRC | TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING | TextureUsages::STORAGE_BINDING;
         let mut pos_to_tile = HashMap::new();
         let mut tiles = Vec::new();
         for i in 0..TERRAIN_TILES_COUNT {

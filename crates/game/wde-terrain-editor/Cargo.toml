@@ -28,3 +28,4 @@ wde-terrain = { path = "../wde-terrain" }
 wde-egui = { path = "../../wrappers/wde-egui" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
+png = { workspace = true }

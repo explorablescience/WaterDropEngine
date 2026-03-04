@@ -295,12 +295,20 @@ impl CommandBuffer {
         // Create texture copy
         let texture_copy = source.as_image_copy();
 
+        // Calculate bytes per row (must be a multiple of 256 for wgpu)
+        let bytes_per_pixel = match source.format() {
+            wgpu::TextureFormat::R8Unorm => 1,
+            wgpu::TextureFormat::Rgba8Unorm => 4,
+            _ => panic!("Unsupported texture format for copy"),
+        };
+        let bytes_per_row = (size.width * bytes_per_pixel).div_ceil(256) * 256; // Align to 256 bytes
+
         // Create buffer copy
         let buffer_copy = wgpu::TexelCopyBufferInfo {
             buffer: &destination.buffer,
             layout: wgpu::TexelCopyBufferLayout {
                 offset: 0,
-                bytes_per_row: Some(4 * 4 * size.width),
+                bytes_per_row: Some(bytes_per_row),
                 rows_per_image: None,
             }
         };

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{manager::{DirtyTile, SPLAT_MAP_COUNT, TilePos}, render::renderer::TerrainRenderer};
+use crate::{manager::{DirtyTile, SPLAT_MAP_COUNT, TilePos}, render::{extractor, renderer::TerrainRenderer}};
 
 /// Same as `TerrainRenderTile`, but with the texture handles replaced by their corresponding asset IDs. Only present on the GPU side.
 #[derive(Default, Clone)]
@@ -39,6 +39,9 @@ pub struct TerrainRendererGPU {
 impl TerrainRendererGPU {
     // Extract the dirty tiles from the main world and move them to the GPU renderer resource.
     pub fn extract_dirty(main_world: &mut World, render_world: &mut World) {
+        // Run extractor if needed
+        extractor::extract_dirty(main_world, render_world);
+
         // Get the terrain renderer resource and the GPU terrain tiles resource
         let mut terrain_renderer = match main_world.query::<&mut TerrainRenderer>().iter_mut(main_world).next() {
             Some(terrain) => terrain,
