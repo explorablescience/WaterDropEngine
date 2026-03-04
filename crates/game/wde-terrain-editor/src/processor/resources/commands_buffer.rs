@@ -5,7 +5,7 @@ use wde_renderer::prelude::*;
 use bevy::{asset::io::embedded::GetAssetServer, prelude::*};
 use wde_terrain::prelude::TilePos;
 
-use crate::{paint::brush::BrushType, processor::ExtractedPaintCommands};
+use crate::{paint::brush::PaintMode, processor::ExtractedPaintCommands};
 
 // The maximum number of commands that can be stored by render frame.
 const MAX_COMMANDS: usize = 1000;
@@ -26,8 +26,9 @@ pub struct CommandDescription {
     pub world_position: [f32; 2],
     pub radius: f32,
     pub strength: f32,
-    pub color: [f32; 3],
-    pub brush_type: f32
+    pub color: [f32; 4],
+    pub brush_type: f32,
+    pub _padding: [f32; 3]
 }
 
 #[derive(Resource)]
@@ -110,18 +111,28 @@ fn update_commands_buffer(
             radius: command.radius,
             strength: command.strength,
             color: command.color,
-            brush_type: match command.brush_type {
-                BrushType::Paint => 0.0
-            }
+            brush_type: match command.paint_mode {
+                PaintMode::Paint => 0.0,
+                PaintMode::Erase => 1.0,
+
+                PaintMode::Raise => 2.0,
+                PaintMode::Lower => 3.0,
+                PaintMode::Smooth => 4.0,
+                PaintMode::Flatten => 5.0,
+            },
+            _padding: [0.0; 3]
         }
     }).collect();
 
     // Update the buffer and clear the commands
     let render_instance = render_instance.0.read().unwrap();
     commands_bf.buffer.write(&render_instance, bytemuck::cast_slice(&data), 0);
-    extracted_commands.commands.clear();
 
     // Update the dirty chunks
     commands_buffer.dirty_chunks = extracted_commands.dirty_chunks.take().unwrap_or_default();
     commands_buffer.commands_count = data.len();
+
+    // Make sure to clear extracted commands
+    extracted_commands.commands.clear();
+    extracted_commands.dirty_chunks = None;
 }

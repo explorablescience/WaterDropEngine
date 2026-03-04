@@ -2,9 +2,17 @@ use bevy::prelude::*;
 
 /// List of all types of brushes that can be used for terrain editing
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
-pub enum BrushType {
+pub enum PaintMode {
+    // Painting modes (edit splatmaps)
     #[default]
-    Paint
+    Paint,
+    Erase,
+
+    // Non-painting modes (edit heightmap)
+    Raise,
+    Lower,
+    Smooth,
+    Flatten
 }
 
 /// The generic paint command generated from a brush.
@@ -13,36 +21,36 @@ pub struct PaintCommand {
     pub world_position: Vec3,
     pub radius: f32,
     pub strength: f32,
-    pub color: [f32; 3],
-    pub brush_type: BrushType
+    pub color: [f32; 4],
+    pub paint_mode: PaintMode
 }
 
 /// A general brush used to paint
 #[derive(Component)]
-pub struct PaintingBrush {
+pub struct PaintBrush {
     pub radius: f32,
     pub strength: f32,
-    pub color: [f32; 3],
-    pub brush_type: BrushType
+    pub color: [f32; 4],
+    pub paint_mode: PaintMode
 }
-impl Default for PaintingBrush {
+impl Default for PaintBrush {
     fn default() -> Self {
         Self {
             radius: 10.0,
             strength: 1.0,
-            color: [1.0, 0.0, 0.0],
-            brush_type: BrushType::Paint
+            color: [1.0, 0.0, 0.0, 1.0],
+            paint_mode: PaintMode::Paint
         }
     }
 }
-impl PaintingBrush {
+impl PaintBrush {
     pub fn paint(&self, world_position: Vec3) -> PaintCommand {
         PaintCommand {
             world_position,
             radius: self.radius,
             strength: self.strength,
             color: self.color,
-            brush_type: self.brush_type
+            paint_mode: self.paint_mode
         }
     }
 }

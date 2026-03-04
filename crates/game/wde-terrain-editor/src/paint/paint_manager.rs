@@ -5,7 +5,7 @@ use wde_camera::prelude::*;
 use wde_terrain::prelude::*;
 use bevy::{input::{ButtonState, mouse::MouseButtonInput}, prelude::*, window::PrimaryWindow};
 
-use crate::paint::brush::{PaintCommand, PaintingBrush};
+use crate::paint::brush::{PaintCommand, PaintBrush};
 
 // Number of commands after which we automatically flush
 const FLUSH_ON_N_COMMANDS: usize = 50;
@@ -19,7 +19,8 @@ impl Plugin for PaintManagerPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<PaintManager>()
-            .add_systems(Update, (add_paint_command, flush_commands).chain());
+            .add_systems(PreUpdate, flush_commands)
+            .add_systems(Update, add_paint_command.chain());
     }
 }
 
@@ -69,7 +70,7 @@ fn add_paint_command(
     camera_query: Query<(&Transform, &CameraView), With<Camera>>,
     mut mouse_input: MessageReader<MouseButtonInput>,
     mut paint_manager: ResMut<PaintManager>,
-    brush_query: Query<&PaintingBrush>,
+    brush_query: Query<&PaintBrush>,
     terrain: Query<&Terrain>,
     time: Res<Time>,
     mut last_update: Local<Option<f32>>,
@@ -185,4 +186,5 @@ fn flush_commands(mut paint_manager: ResMut<PaintManager>) {
 
     // Clear commands
     paint_manager.clear_commands();
+    paint_manager.should_flush = false;
 }

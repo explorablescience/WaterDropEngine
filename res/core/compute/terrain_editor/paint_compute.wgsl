@@ -11,8 +11,9 @@ struct Command {
     world_position: vec2<f32>,
     radius: f32,
     strength: f32,
-    color: vec3<f32>,
-    brush_type: f32
+    color: vec4<f32>,
+    brush_type: f32, // 0: Paint, 1: Erase, 2: Raise, 3: Lower, 4: Smooth, 5: Flatten
+    _padding: vec3<f32>
 }
 @group(0) @binding(0) var<storage, read> in_commands: array<Command>;
 
@@ -46,11 +47,47 @@ fn main(@builtin(global_invocation_id) global_invocation_id: vec3<u32>) {
     let command_world_pos = command.world_position;
     let distance = distance(world_pos, command_world_pos);
     if (distance < command.radius) {
-        // Apply the brush effect to the splatmap
-        let current_color = textureLoad(in_splatmap_1, vec2<i32>(idx));
-        let new_color = vec4<f32>(command.color, 0.0);
-        let color = mix(current_color, new_color, command.strength);
-        textureStore(in_splatmap_1, vec2<i32>(idx), color);
+        // PAINT BRUSHES
+        if (command.brush_type == 0.0) { // Paint
+            let current_color = textureLoad(in_splatmap_1, vec2<i32>(idx));
+            let color = mix(current_color, command.color, command.strength);
+            textureStore(in_splatmap_1, vec2<i32>(idx), color);
+        } else if (command.brush_type == 1.0) { // Erase
+            let color = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+            textureStore(in_splatmap_1, vec2<i32>(idx), color);
+        }
+
+        // HEIGHT BRUSHES
+        var strength = command.strength * 0.01;
+        let height_effect = (1.0 - (distance / command.radius)) * strength;
+        if (command.brush_type == 2.0) { // Raise
+            let current_height = textureLoad(in_heightmap, vec2<i32>(idx)).r;
+            let new_height = current_height + height_effect;
+            textureStore(in_heightmap, vec2<i32>(idx), vec4<f32>(new_height, 0.0, 0.0, 1.0));
+        } else if (command.brush_type == 3.0) { // Lower
+            let current_height = textureLoad(in_heightmap, vec2<i32>(idx)).r;
+            let new_height = current_height - height_effect;
+            textureStore(in_heightmap, vec2<i32>(idx), vec4<f32>(new_height, 0.0, 0.0, 1.0));
+        } else if (command.brush_type == 4.0) { // Smooth
+            let current_height = textureLoad(in_heightmap, vec2<i32>(idx)).r;
+            var sum = 0.0;
+            var count = 0.0;
+            for (var y: i32 = -1; y <= 1; y++) {
+                for (var x: i32 = -1; x <= 1; x++) {
+                    let neighbor_height = textureLoad(in_heightmap, vec2<i32>(idx) + vec2<i32>(x, y)).r;
+                    sum += neighbor_height;
+                    count += 1.0;
+                }
+            }
+            let average_height = sum / count;
+            let new_height = mix(current_height, average_height, height_effect);
+            textureStore(in_heightmap, vec2<i32>(idx), vec4<f32>(new_height, 0.0, 0.0, 1.0));
+        } else if (command.brush_type == 5.0) { // Flatten
+            let current_height = textureLoad(in_heightmap, vec2<i32>(idx)).r;
+            let target_height = command.world_position.y; // Use the y component of world position as target height
+            let new_height = mix(current_height, target_height, height_effect);
+            textureStore(in_heightmap, vec2<i32>(idx), vec4<f32>(new_height, 0.0, 0.0, 1.0));
+        }
     }
 }
 

@@ -34,7 +34,7 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 0).rgb * weights.r;
     albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 1).rgb * weights.g;
     albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 2).rgb * weights.b;
-    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 3).rgb * weights.a;
+    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 3).rgb * (1.0 - weights.a);
     
     // Simple lighting calculation
     let sun_dir = normalize(vec3<f32>(0.5, 1.0, 0.5));

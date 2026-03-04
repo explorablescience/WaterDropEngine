@@ -2,7 +2,7 @@ use wde_egui::prelude::*;
 use wde_terrain::prelude::*;
 use bevy::prelude::*;
 
-use crate::{paint::{brush::{BrushType, PaintingBrush}, paint_manager::{PaintManager, PaintManagerPlugin}}, processor::PaintProcessorPlugin};
+use crate::{paint::{brush::{PaintMode, PaintBrush}, paint_manager::{PaintManager, PaintManagerPlugin}}, processor::PaintProcessorPlugin};
 
 mod paint;
 mod processor;
@@ -31,13 +31,13 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 
     // Spawn a default brush for testing
-    commands.spawn(PaintingBrush::default());
+    commands.spawn(PaintBrush::default());
 }
 
 fn egui_paint_debug(
     ctx: Res<EguiContext>,
     mut paint_manager: ResMut<PaintManager>,
-    mut query: Query<&mut PaintingBrush>
+    mut query: Query<&mut PaintBrush>
 ) {
     egui::Window::new("Paint Debug")
         .default_pos([40.0, 20.0])
@@ -46,16 +46,21 @@ fn egui_paint_debug(
             if let Ok(mut brush) = query.single_mut() {
                 ui.add(egui::Slider::new(&mut brush.radius, 0.0..=100.0).text("Radius"));
                 ui.add(egui::Slider::new(&mut brush.strength, 0.0..=1.0).text("Strength"));
-                ui.horizontal(|ui| {
+                if brush.paint_mode == PaintMode::Paint || brush.paint_mode == PaintMode::Erase {
                     ui.label("Color:");
-                    ui.color_edit_button_rgb(&mut brush.color);
-                });
+                    ui.color_edit_button_rgba_unmultiplied(&mut brush.color);
+                }
                 ui.horizontal(|ui| {
                     ui.label("Type:");
                     egui::ComboBox::from_id_salt("brush_type")
-                        .selected_text(format!("{:?}", brush.brush_type))
+                        .selected_text(format!("{:?}", brush.paint_mode))
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut brush.brush_type, BrushType::Paint, "Paint");
+                            ui.selectable_value(&mut brush.paint_mode, PaintMode::Paint, "Paint");
+                            ui.selectable_value(&mut brush.paint_mode, PaintMode::Erase, "Erase");
+                            ui.selectable_value(&mut brush.paint_mode, PaintMode::Raise, "Raise");
+                            ui.selectable_value(&mut brush.paint_mode, PaintMode::Lower, "Lower");
+                            ui.selectable_value(&mut brush.paint_mode, PaintMode::Smooth, "Smooth");
+                            ui.selectable_value(&mut brush.paint_mode, PaintMode::Flatten, "Flatten");
                         });
                 });
             } else {
