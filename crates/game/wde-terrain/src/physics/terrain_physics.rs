@@ -29,8 +29,14 @@ impl TerrainPhysics {
                 continue;
             }
 
+            // Convert the tile data from bytes to f32 heights
+            let mut heights = vec![0.0; data.len()];
+            for idx in 0..data.len() {
+                heights[idx] = data[idx] as f32 / 255.0;
+            }
+
             // Create the heightfield collider for the tile
-            let collider = Collider::heightfield(data.clone(), TILE_SIZE);
+            let collider = Collider::heightfield(heights, TILE_SIZE);
 
             // Spawn or update the collider entity for the tile
             if let Some(entity) = terrain_renderer.pos_to_entity.get(tile_pos) {

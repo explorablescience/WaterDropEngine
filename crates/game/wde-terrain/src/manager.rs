@@ -21,8 +21,8 @@ pub const PHYSICS_TILE_SUBDIVISIONS: u32 = 256;
 
 // The structure describing the 2d position of a given terrain tile.
 pub type TilePos = IVec2;
-// The raw data of a terrain tile, containing the heightmap and splat maps as byte arrays.
-pub type TileData = Vec<f32>;
+// The raw data of a terrain tile, containing the heightmap and splat maps as byte arrays. This is the format used for storing as a texture.
+pub type TileData = Vec<u8>;
 // A dirty tile that needs to be re-processed, containing its position, the type of map that is dirty (0 for heightmap, 1 for splatmap), the index of the splat map if the map type is splatmap, and the new tile data.
 pub type DirtyTile = (TilePos, u32, u32, TileData);
 
@@ -92,43 +92,23 @@ impl Terrain {
                 };
 
                 // Load heightmap as R8 (1 channel)
-                let data_as_u8 = match decode_png_as_channels(&heightmap_path, 1, (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS)) {
+                tile.heightmap = match decode_png_as_channels(&heightmap_path, 1, (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS)) {
                     Ok(data) => data,
                     Err(e) => {
                         error!("Failed to decode heightmap for tile ({}, {}): {}", pos.x, pos.y, e);
                         continue;
                     }
                 };
-                let ss = PHYSICS_TILE_SUBDIVISIONS;
-                let mut heights = vec![0.0; ss as usize * ss as usize];
-                for i in 0..ss {
-                    for j in 0..ss {
-                        let idx = (i * ss + j) as usize;
-                        heights[idx] = data_as_u8[idx] as f32 / 255.0;
-                    }
-                }
-                tile.heightmap = heights;
 
                 // Load splat maps
                 for splatmap_path in splatmap_paths {
-                    let data_as_u8 = match decode_png_as_channels(&splatmap_path, 4, (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS)) {
+                    tile.splatmaps.push(match decode_png_as_channels(&splatmap_path, 4, (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS)) {
                         Ok(data) => data,
                         Err(e) => {
                             error!("Failed to decode splatmap for tile ({}, {}): {}", pos.x, pos.y, e);
                             continue;
                         }
-                    };
-                    let ss = PHYSICS_TILE_SUBDIVISIONS;
-                    let mut data_f32 = vec![0.0; ss as usize * ss as usize * 4];
-                    for i in 0..ss {
-                        for j in 0..ss {
-                            for k in 0..4 {
-                                let idx = ((i * ss + j) * 4 + k) as usize;
-                                data_f32[idx] = data_as_u8[idx] as f32 / 255.0;
-                            }
-                        }
-                    }
-                    tile.splatmaps.push(data_f32);
+                    });
                 }
 
                 // Add the tile to the list and mark it as dirty

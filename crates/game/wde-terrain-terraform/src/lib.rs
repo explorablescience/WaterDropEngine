@@ -96,7 +96,7 @@ fn terrain_terraforming_gui(ctx: Res<EguiContext>, mut terraforming_settings: Re
         .show(&ctx.0, |ui| {
             ui.checkbox(&mut terraforming_settings.is_drawing, "Enable Terraforming");
             ui.add(egui::Slider::new(&mut terraforming_settings.brush_size, 0.1..=100.0).text("Brush Size"));
-            ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.0001..=0.01).text("Brush Strength"));
+            ui.add(egui::Slider::new(&mut terraforming_settings.brush_strength, 0.0001..=0.5).text("Brush Strength"));
         });
 }
 
@@ -167,7 +167,7 @@ fn apply_brush(
             return;
         }
     };
-    let mut data = match terrain.get_tile_data_for_chunk(pos, 0, 0) {
+    let data_as_u8 = match terrain.get_tile_data_for_chunk(pos, 0, 0) {
         Some(data) => data.clone(),
         None => {
             warn!("No terrain data found for tile at position ({}, {})", pos.x, pos.y);
@@ -176,6 +176,7 @@ fn apply_brush(
     };
 
     // Apply the brush effect in a small radius around the world position
+    let mut data = data_as_u8.iter().map(|v| *v as f32 / 255.0).collect::<Vec<f32>>(); // Convert u8 data to f32 for processing
     let in_tile_pos = Vec2::new(
         (terraforming_settings.world_position.x - (pos.x as f32 * TILE_SIZE[0])) / TILE_SIZE[0] + 0.5,
         (terraforming_settings.world_position.z - (pos.y as f32 * TILE_SIZE[2])) / TILE_SIZE[2] + 0.5,
@@ -196,7 +197,8 @@ fn apply_brush(
     }
 
     // Write the modified data back to the terrain
-    terrain.set_tile_data_for_chunk(pos, 0, 0, data);
+    let new_data_as_u8 = data.iter().map(|v| (v.clamp(0.0, 1.0) * 255.0) as u8).collect::<Vec<u8>>(); // Convert modified f32 data back to u8
+    terrain.set_tile_data_for_chunk(pos, 0, 0, new_data_as_u8);
 }
 
 fn apply_paint(
@@ -225,7 +227,7 @@ fn apply_paint(
             return;
         }
     };
-    let mut data = match terrain.get_tile_data_for_chunk(pos, 1, 0) {
+    let data_as_u8 = match terrain.get_tile_data_for_chunk(pos, 1, 0) {
         Some(data) => data.clone(),
         None => {
             warn!("No terrain data found for tile at position ({}, {})", pos.x, pos.y);
@@ -234,6 +236,7 @@ fn apply_paint(
     };
 
     // Apply the brush effect in a small radius around the world position
+    let mut data = data_as_u8.iter().map(|v| *v as f32 / 255.0).collect::<Vec<f32>>(); // Convert u8 data to f32 for processing
     let in_tile_pos = Vec2::new(
         (painting_settings.world_position.x - (pos.x as f32 * TILE_SIZE[0])) / TILE_SIZE[0] + 0.5,
         (painting_settings.world_position.z - (pos.y as f32 * TILE_SIZE[2])) / TILE_SIZE[2] + 0.5,
@@ -253,9 +256,9 @@ fn apply_paint(
             }
         }
     }
+    let new_data_as_u8 = data.iter().map(|v| (v.clamp(0.0, 1.0) * 255.0) as u8).collect::<Vec<u8>>(); // Convert modified f32 data back to u8
 
     // Write the modified data back to the terrain
-    println!("Painting tile at position ({}, {}) with color ({}, {}, {}) and strength {}", pos.x, pos.y, painting_settings.paint_color[0], painting_settings.paint_color[1], painting_settings.paint_color[2], painting_settings.brush_strength);
-    terrain.set_tile_data_for_chunk(pos, 1, 0, data);
+    terrain.set_tile_data_for_chunk(pos, 1, 0, new_data_as_u8);
 
 }
