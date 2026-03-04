@@ -50,10 +50,11 @@ fn extract_paint_commands(
     paint_manager: ExtractWorld<Res<PaintManager>>,
     mut extracted_commands: ResMut<ExtractedPaintCommands>,
 ) {
-    extracted_commands.commands.extend(paint_manager.commands.clone().unwrap_or_default());
-    if let Some(ref mut dirty_chunks) = extracted_commands.dirty_chunks {
-        dirty_chunks.extend(paint_manager.commands_chunks.clone().unwrap_or_default());
-    } else {
-        extracted_commands.dirty_chunks = Some(paint_manager.commands_chunks.clone().unwrap_or_default());
+    // Check if there are commands to extract
+    if paint_manager.to_extract.is_none() {
+        return;
     }
+    let (commands, chunks) = paint_manager.to_extract.clone().unwrap();
+    extracted_commands.commands.extend(commands);
+    extracted_commands.dirty_chunks.get_or_insert_with(HashSet::new).extend(chunks);
 }

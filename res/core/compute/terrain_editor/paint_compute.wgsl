@@ -46,12 +46,10 @@ fn main(@builtin(global_invocation_id) global_invocation_id: vec3<u32>) {
     let command_world_pos = command.world_position;
     let distance = distance(world_pos, command_world_pos);
     if (distance < command.radius) {
-        var strength = command.strength;
-
         // Apply the brush effect to the splatmap
         let current_color = textureLoad(in_splatmap_1, vec2<i32>(idx));
         let new_color = vec4<f32>(command.color, 0.0);
-        let color = mix(current_color, new_color, strength / 5.0);
+        let color = mix(current_color, new_color, command.strength);
         textureStore(in_splatmap_1, vec2<i32>(idx), color);
     }
 }

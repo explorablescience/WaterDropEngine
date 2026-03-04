@@ -18,12 +18,22 @@ pub struct PaintCommand {
 }
 
 /// A general brush used to paint
-#[derive(Component, Default)]
+#[derive(Component)]
 pub struct PaintingBrush {
     pub radius: f32,
     pub strength: f32,
     pub color: [f32; 3],
     pub brush_type: BrushType
+}
+impl Default for PaintingBrush {
+    fn default() -> Self {
+        Self {
+            radius: 10.0,
+            strength: 1.0,
+            color: [1.0, 0.0, 0.0],
+            brush_type: BrushType::Paint
+        }
+    }
 }
 impl PaintingBrush {
     pub fn paint(&self, world_position: Vec3) -> PaintCommand {

@@ -8,7 +8,11 @@ use bevy::{input::{ButtonState, mouse::MouseButtonInput}, prelude::*, window::Pr
 use crate::paint::brush::{PaintCommand, PaintingBrush};
 
 // Number of commands after which we automatically flush
-const FLUSH_ON_N_COMMANDS: usize = 100;
+const FLUSH_ON_N_COMMANDS: usize = 50;
+// Maximum time (in seconds) before we automatically flush commands
+const MAX_T_BEFORE_FLUSH: f32 = 0.05;
+// Minimum time (in seconds) between two commands to avoid adding too many commands per second
+const MIN_DT_BETWEEN_COMMANDS: f32 = 0.01;
 
 pub struct PaintManagerPlugin;
 impl Plugin for PaintManagerPlugin {
@@ -68,7 +72,8 @@ fn add_paint_command(
     brush_query: Query<&PaintingBrush>,
     terrain: Query<&Terrain>,
     time: Res<Time>,
-    mut last_update: Local<Option<f32>>
+    mut last_update: Local<Option<f32>>,
+    mut last_flush: Local<Option<f32>>,
 ) {
     // Check if active
     if !paint_manager.active {
@@ -90,7 +95,7 @@ fn add_paint_command(
     }
 
     // Check timer to avoid adding too many commands per second
-    if last_update.is_some_and(|t| time.elapsed_secs() - t < 0.1) {
+    if last_update.is_some_and(|t| time.elapsed_secs() - t < MIN_DT_BETWEEN_COMMANDS) {
         return;
     }
     *last_update = Some(time.elapsed_secs());
@@ -125,8 +130,8 @@ fn add_paint_command(
             let distance = last_pos.distance(paint_pos);
             let spacing = brush.radius * 0.5; // Space commands by half the brush radius
             let mut steps = (distance / spacing).ceil() as u32;
-            if steps > 10 {
-                steps = 10; // Cap the number of interpolation steps to avoid too many commands
+            if steps > 20 {
+                steps = 20; // Cap the number of interpolation steps to avoid too many commands
             }
             for i in 1..=steps {
                 let t = i as f32 / steps as f32;
@@ -156,8 +161,10 @@ fn add_paint_command(
     }
 
     // If more than x commands, flush to avoid memory issues
-    if paint_manager.commands.as_ref().is_some_and(|c| c.len() > FLUSH_ON_N_COMMANDS) {
+    if paint_manager.commands.as_ref().is_some_and(|c| c.len() > FLUSH_ON_N_COMMANDS)
+        || (last_flush.is_none_or(|t| time.elapsed_secs() - t > MAX_T_BEFORE_FLUSH && paint_manager.commands.is_some())) {
         paint_manager.should_flush = true;
+        *last_flush = Some(time.elapsed_secs());
     }
 }
 
