@@ -9,7 +9,7 @@ use crate::error::GltfError;
 use crate::material::GltfMaterial;
 use crate::model::{GltfModel};
 
-/// A dataset representing mesh's data (indices, vertices) and its material ID.
+/// A dataset representing mesh's data (indices, vertices), material ID.
 type MeshDataSet = (Vec<u32>, Vec<Vertex>, usize);
 
 /// Result type for form_models function
@@ -119,6 +119,29 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
             }
             trace!("Loaded {} vertices for {}", vertices.len(), primitive.name);
             
+            // Apply node transform to vertices
+            let transform_quat = Quat::from_array(primitive.rotation);
+            let scale_vec = Vec3::from(primitive.scale);
+            let translation_vec = Vec3::from(primitive.translation);
+            for vertex in &mut vertices {
+                // Transform position: translate -> rotate -> scale
+                let pos = Vec3::from(vertex.position);
+                let transformed_pos = transform_quat * (pos * scale_vec) + translation_vec;
+                vertex.position = transformed_pos.into();
+                
+                // Transform normal: only rotate (scale is removed by normalization)
+                let normal = Vec3::from(vertex.normal);
+                let transformed_normal = (transform_quat * normal).normalize();
+                vertex.normal = transformed_normal.into();
+                
+                // Transform tangent: only rotate the xyz components
+                let tangent = Vec3::from([vertex.tangent[0], vertex.tangent[1], vertex.tangent[2]]);
+                let transformed_tangent = (transform_quat * tangent).normalize();
+                vertex.tangent[0] = transformed_tangent.x;
+                vertex.tangent[1] = transformed_tangent.y;
+                vertex.tangent[2] = transformed_tangent.z;
+            }
+            
             // Compute bounding box: try to use accessor min/max, otherwise compute from vertices
             let mut bb_min = None;
             let mut bb_max = None;
@@ -127,8 +150,13 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                     if let (Some(min), Some(max)) = (&accessor_data.min, &accessor_data.max)
                         && min.len() >= 3 && max.len() >= 3
                     {
-                        bb_min = Some(Vec3::new(min[0], min[1], min[2]));
-                        bb_max = Some(Vec3::new(max[0], max[1], max[2]));
+                        // Transform the bounding box min/max
+                        let min_vec = Vec3::new(min[0], min[1], min[2]);
+                        let max_vec = Vec3::new(max[0], max[1], max[2]);
+                        let transformed_min = transform_quat * (min_vec * scale_vec) + translation_vec;
+                        let transformed_max = transform_quat * (max_vec * scale_vec) + translation_vec;
+                        bb_min = Some(transformed_min.min(transformed_max));
+                        bb_max = Some(transformed_min.max(transformed_max));
                     }
                     break;
                 }
@@ -150,7 +178,11 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
             };
             
             let material_id = primitive.material_id.unwrap_or(0); // Default to first material if none assigned
-            meshes_data.push((indices.unwrap_or(Vec::new()), vertices, material_id as usize));
+            meshes_data.push((
+                indices.unwrap_or(Vec::new()),
+                vertices,
+                material_id as usize,
+            ));
             bounding_boxes.push((final_min, final_max));
 
             // Store material pointer

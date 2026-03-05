@@ -45,6 +45,7 @@ pub use error::GltfError;
 /// # Fields
 /// - `path`: The path to the glTF file.
 /// - `models`: The list of parsed glTF models. Each model is represented by a mesh and its associated material.
+///   Node transforms are baked directly into the mesh vertices.
 /// 
 /// # Example
 /// ```rust,no_run
@@ -57,6 +58,8 @@ pub struct GltfAsset {
     /// The path to the glTF file.
     pub path: String,
     /// The list of parsed glTF models. Each model is represented by a mesh and its associated material.
+    /// Node transforms are baked directly into the mesh vertices.
+    /// Format: (mesh_handle, material_handle)
     pub models: Vec<(Handle<MeshAsset>, Handle<PbrMaterialAsset>)>,
 }
 

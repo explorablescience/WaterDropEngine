@@ -53,7 +53,13 @@ pub struct MeshPrimitive {
     /// Map of attribute name to its accessor data
     pub vertex_attributes: Vec<(String, AccessorData)>,
     /// Material index of the primitive
-    pub material_id: Option<u32>
+    pub material_id: Option<u32>,
+    /// Node translation [x, y, z]
+    pub translation: [f32; 3],
+    /// Node rotation as quaternion [x, y, z, w]
+    pub rotation: [f32; 4],
+    /// Node scale [x, y, z]
+    pub scale: [f32; 3],
 }
 
 /// Representation of a glTF accessor for accessing buffer data.

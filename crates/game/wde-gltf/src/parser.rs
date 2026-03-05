@@ -252,12 +252,50 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                 }
             }
 
+            // Extract node transform
+            let translation = node.get("translation")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    [
+                        arr.get(0).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                    ]
+                })
+                .unwrap_or([0.0, 0.0, 0.0]);
+            
+            let rotation = node.get("rotation")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    [
+                        arr.get(0).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        arr.get(3).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                    ]
+                })
+                .unwrap_or([0.0, 0.0, 0.0, 1.0]);
+            
+            let scale = node.get("scale")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    [
+                        arr.get(0).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                        arr.get(1).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                    ]
+                })
+                .unwrap_or([1.0, 1.0, 1.0]);
+
             // Build MeshPrimitive
             let mesh_primitive = MeshPrimitive {
                 name: format!("{}_primitive_{}", name, i),
                 vertex_indexed: vertex_indexed_accessor,
                 vertex_attributes,
-                material_id: material_index.map(|idx| idx as u32)
+                material_id: material_index.map(|idx| idx as u32),
+                translation,
+                rotation,
+                scale,
             };
             mesh_primitives.push(mesh_primitive);
         }
