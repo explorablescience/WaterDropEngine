@@ -25,7 +25,7 @@ wde-pbr = { path = "../../render/wde-pbr" }
 wde-gizmos = { path = "../../render/wde-gizmos" }
 wde-physics = { path = "../../wrappers/wde-physics" }
 wde-terrain = { path = "../wde-terrain" }
-wde-egui = { path = "../../wrappers/wde-egui" }
+wde-editor = { path = "../../core/wde-editor" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 png = { workspace = true }

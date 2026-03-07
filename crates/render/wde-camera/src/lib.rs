@@ -67,6 +67,8 @@ pub mod prelude {
 
 pub mod components;
 pub mod features;
+#[cfg(debug_assertions)]
+mod editor;
 
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
@@ -74,6 +76,9 @@ impl Plugin for CameraPlugin {
         app
             .add_plugins(RenderComponentsPlugin)
             .add_plugins(RenderFeaturesPlugin);
+
+        #[cfg(debug_assertions)]
+        app.add_plugins(editor::CameraPropertiesEditor);
     }
 }
 

@@ -171,16 +171,15 @@ impl Plugin for CustomWdePlugins {
             .add_plugins(wde_logger::LogPlugin::default().auto_level())
             .add_plugins(wde_renderer::RenderPlugin)
             .add_plugins(wde_camera::CameraPlugin)
-            .add_plugins(wde_physics::PhysicsPlugin);
+            .add_plugins(wde_physics::PhysicsPlugin)
+            .add_plugins(wde_terrain::TerrainPlugin);
 
         #[cfg(feature = "gizmos")]
         app.add_plugins(wde_gizmos::GizmosPlugin);
         #[cfg(feature = "pbr")]
         app.add_plugins(wde_pbr::PbrPlugin);
-        #[cfg(feature = "egui")]
-        app.add_plugins(wde_egui::EguiPlugin);
-        #[cfg(feature = "terrain")]
-        app.add_plugins(wde_terrain::TerrainPlugin);
+        #[cfg(feature = "editor")]
+        app.add_plugins(wde_editor::EditorPlugin);
     }
 }
 
@@ -233,6 +232,8 @@ pub mod prelude {
     pub use wde_camera::prelude::*;
     pub use wde_physics::prelude::*;
     pub use wde_gltf::prelude::*;
+    pub use wde_terrain::prelude::*;
+    pub use wde_terrain_editor::prelude::*;
 
     // Optional feature modules
     #[cfg(feature = "gizmos")]
@@ -241,13 +242,8 @@ pub mod prelude {
     #[cfg(feature = "pbr")]
     pub use wde_pbr::prelude::*;
 
-    #[cfg(feature = "egui")]
-    pub use wde_egui::prelude::*;
-
-    #[cfg(feature = "terrain")]
-    pub use wde_terrain::prelude::*;
-    #[cfg(feature = "terrain")]
-    pub use wde_terrain_editor::prelude::*;
+    #[cfg(feature = "editor")]
+    pub use wde_editor::prelude::*;
 }
 
 /// Rendering module.
