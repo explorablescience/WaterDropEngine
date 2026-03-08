@@ -23,8 +23,8 @@ wde-renderer = { path = "../wde-renderer" }
 wde-camera = { path = "../../render/wde-camera" }
 wde-physics = { path = "../../wrappers/wde-physics" }
 wde-gltf = { path = "../../game/wde-gltf" }
-wde-terrain = { path = "../../game/wde-terrain" }
-wde-terrain-editor = { path = "../../game/wde-terrain-editor" }
+wde-terrain = { path = "../../terrain/wde-terrain" }
+wde-terrain-editor = { path = "../../terrain/wde-terrain-editor" }
 wde-gizmos = { path = "../../render/wde-gizmos", optional = true }
 wde-pbr = { path = "../../render/wde-pbr", optional = true }
 wde-editor = { path = "../wde-editor", optional = true }
