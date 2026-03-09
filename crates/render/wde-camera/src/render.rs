@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::components::{ActiveCamera, CameraUniform, CameraView};
+use crate::camera::{ActiveCamera, CameraUniform, CameraView};
 
 /// Struct to hold the camera uniform layout description.
 #[derive(Resource)]
@@ -79,6 +79,7 @@ fn build_bind_group(
 }
 
 // Extract the texture handle every frame
+#[allow(clippy::type_complexity)]
 fn extract(
     (cameras, mut camera_uniform): (
         ExtractWorld<Query<(&Transform, &CameraView), With<ActiveCamera>>>, ResMut<CameraUniform>

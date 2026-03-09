@@ -1,11 +1,10 @@
+use wde_camera::camera::CameraView;
 use wde_logger::prelude::*;
 use bevy::{
     input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
     prelude::*,
 };
 use std::f32::consts::*;
-
-use super::CameraView;
 
 pub(crate) struct ThirdPersonControllerPlugin;
 impl Plugin for ThirdPersonControllerPlugin {
@@ -75,7 +74,7 @@ impl Default for ThirdPersonController {
             max_pitch: PI / 2.0 - 0.1, // Nearly vertical
             target: Vec3::ZERO,
             velocity: Vec3::ZERO,
-            edge_scroll_enabled: true,
+            edge_scroll_enabled: !cfg!(debug_assertions),
             edge_scroll_distance: 50.0,
             edge_scroll_speed: 200.0,
         }

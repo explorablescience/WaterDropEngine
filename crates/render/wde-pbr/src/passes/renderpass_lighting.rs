@@ -1,6 +1,6 @@
 use wde_logger::prelude::*;
 use bevy::prelude::*;
-use wde_camera::features::CameraFeatureRender;
+use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::{logic::{lights::LightsFeatureBuffer, textures::PbrDeferredTexturesLayout}, passes::pipeline_lighting::GpuPbrLightingRenderPipeline};

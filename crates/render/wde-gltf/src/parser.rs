@@ -257,7 +257,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                 .and_then(|v| v.as_array())
                 .map(|arr| {
                     [
-                        arr.get(0).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                         arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                         arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                     ]
@@ -268,7 +268,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                 .and_then(|v| v.as_array())
                 .map(|arr| {
                     [
-                        arr.get(0).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                         arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                         arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                         arr.get(3).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
@@ -280,7 +280,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                 .and_then(|v| v.as_array())
                 .map(|arr| {
                     [
-                        arr.get(0).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                        arr.first().and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
                         arr.get(1).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
                         arr.get(2).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
                     ]

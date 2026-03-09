@@ -1,5 +1,5 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_camera::features::CameraFeatureRender;
+use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::logic::{lights::LightsFeatureBuffer, textures::PbrDeferredTexturesLayout};

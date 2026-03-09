@@ -171,8 +171,11 @@ impl Plugin for CustomWdePlugins {
             .add_plugins(wde_logger::LogPlugin::default().auto_level())
             .add_plugins(wde_renderer::RenderPlugin)
             .add_plugins(wde_camera::CameraPlugin)
+            .add_plugins(wde_camera_controller::CameraControllerPlugin)
             .add_plugins(wde_physics::PhysicsPlugin)
-            .add_plugins(wde_terrain::TerrainPlugin);
+            .add_plugins(wde_terrain::TerrainPlugin)
+            .add_plugins(wde_terrain_editor::TerrainEditorPlugin)
+            .add_plugins(wde_terrain_navigation::TerrainNavigationPlugin);
 
         #[cfg(feature = "gizmos")]
         app.add_plugins(wde_gizmos::GizmosPlugin);
@@ -230,10 +233,12 @@ pub mod prelude {
     pub use wde_logger::prelude::*;
     pub use wde_renderer::prelude::*;
     pub use wde_camera::prelude::*;
+    pub use wde_camera_controller::prelude::*;
     pub use wde_physics::prelude::*;
     pub use wde_gltf::prelude::*;
     pub use wde_terrain::prelude::*;
     pub use wde_terrain_editor::prelude::*;
+    pub use wde_terrain_navigation::prelude::*;
 
     // Optional feature modules
     #[cfg(feature = "gizmos")]

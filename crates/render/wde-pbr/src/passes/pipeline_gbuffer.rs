@@ -1,5 +1,5 @@
 use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
-use wde_camera::features::CameraFeatureRender;
+use wde_camera::prelude::*;
 use wde_renderer::{MSAA_SAMPLE_COUNT, pipelines::PushConstantDescriptor, prelude::*, ssbos::ssbo_mesh::SsboMesh};
 
 use crate::{assets::PbrMaterialAsset, logic::{ssbo::PbrSsbo, textures::PbrDeferredTextures}, passes::PushConstants};

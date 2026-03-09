@@ -1,7 +1,7 @@
 use wde_logger::prelude::*;
 
 use bevy::prelude::*;
-use wde_camera::features::CameraFeatureRender;
+use wde_camera::prelude::*;
 use wde_renderer::{prelude::*, ssbos::ssbo_mesh::SsboMesh};
 
 use crate::{assets::PbrMaterialAsset, logic::{batches::Batches, ssbo::PbrSsbo, textures::PbrDeferredTextures}, prelude::{DirtyTransforms, ModelUuidToTransformUuidRender, PbrModelRegistry}};

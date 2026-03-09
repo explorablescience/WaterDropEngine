@@ -54,28 +54,26 @@
 //!   `ActiveCamera` so the uniform still updates.
 //! - Use the camera uniforms directly in WGSL (`world_to_ndc`, `ndc_to_world`, `position`)
 //!   when writing pipelines in `wde-renderer`.
-
-#![allow(clippy::type_complexity)]
-use crate::{components::RenderComponentsPlugin, features::RenderFeaturesPlugin};
 use bevy::prelude::*;
+
+use crate::render::CameraFeature;
 
 pub mod prelude {
     pub use crate::CameraPlugin;
-    pub use crate::components::{FreeCameraController, CameraView, ActiveCamera, Camera, ThirdPersonController};
-    pub use crate::features::CameraFeatureRender;
+    pub use crate::camera::{CameraView, ActiveCamera, Camera};
+    pub use crate::render::CameraFeatureRender;
 }
 
-pub mod components;
-pub mod features;
+pub mod camera;
+pub mod render;
+
 #[cfg(debug_assertions)]
 mod editor;
 
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(RenderComponentsPlugin)
-            .add_plugins(RenderFeaturesPlugin);
+        app.add_plugins(CameraFeature);
 
         #[cfg(debug_assertions)]
         app.add_plugins(editor::CameraPropertiesEditor);

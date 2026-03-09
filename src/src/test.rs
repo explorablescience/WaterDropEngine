@@ -5,7 +5,6 @@ pub struct TestPlugin;
 impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(TerrainEditorPlugin)
             .add_systems(Startup, init_scene);
     }
 }

@@ -21,10 +21,12 @@ debug = false
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-renderer = { path = "../wde-renderer" }
 wde-camera = { path = "../../render/wde-camera" }
+wde-camera-controller = { path = "../../render/wde-camera-controller" }
+wde-gltf = { path = "../../render/wde-gltf" }
 wde-physics = { path = "../../wrappers/wde-physics" }
-wde-gltf = { path = "../../game/wde-gltf" }
 wde-terrain = { path = "../../terrain/wde-terrain" }
 wde-terrain-editor = { path = "../../terrain/wde-terrain-editor" }
+wde-terrain-navigation = { path = "../../terrain/wde-terrain-navigation" }
 wde-gizmos = { path = "../../render/wde-gizmos", optional = true }
 wde-pbr = { path = "../../render/wde-pbr", optional = true }
 wde-editor = { path = "../wde-editor", optional = true }

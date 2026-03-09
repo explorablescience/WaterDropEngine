@@ -1,7 +1,7 @@
 use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
-use wde_camera::features::CameraFeatureRender;
+use wde_camera::prelude::*;
 
 use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::pipeline::GpuTerrainRenderPipeline, renderer_gpu::TerrainRendererGPU};
 

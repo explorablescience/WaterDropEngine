@@ -7,14 +7,12 @@ impl Plugin for CameraPropertiesEditor {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Startup, init_ui)
-            .add_systems(Update, edit_view_params)
-            .add_systems(Update, edit_controller_params);
+            .add_systems(Update, edit_view_params);
     }
 }
 
 fn init_ui(mut ui_menu: ResMut<UIMenu>) {
     ui_menu.push("Camera/View");
-    ui_menu.push("Camera/Controller");
 }
 
 fn edit_view_params(ctx: Res<UIContext>, mut camera_query: Query<&mut CameraView, With<ActiveCamera>>, ui_menu: Res<UIMenu>) {
@@ -32,40 +30,6 @@ fn edit_view_params(ctx: Res<UIContext>, mut camera_query: Query<&mut CameraView
                 ui.add(Slider::new(&mut view.fov, 1.0..=179.0).text("FOV").suffix("°"));
                 ui.add(Slider::new(&mut view.znear, 0.01..=10.0).text("Near Plane").suffix(" units"));
                 ui.add(Slider::new(&mut view.zfar, 10.0..=10000.0).text("Far Plane").suffix(" units"));
-            });
-    }
-}
-
-fn edit_controller_params(ctx: Res<UIContext>, mut camera_query: Query<&mut ThirdPersonController, With<ActiveCamera>>, ui_menu: Res<UIMenu>) {
-    if let Ok(mut controller) = camera_query.single_mut() {
-        // Check if the menu item was clicked
-        if !ui_menu.is_clicked("Camera/Controller") {
-            return;
-        }
-
-        // Draw UI
-        UIWindow::new("Camera Controller Properties")
-            .resizable(false)
-            .default_pos([100.0, 10.0])
-            .show(&ctx.0, |ui| {
-                ui.add(Slider::new(&mut controller.sensitivity, 0.001..=1.0).text("Sensitivity"));
-                ui.add(Slider::new(&mut controller.friction, 0.0..=1.0).text("Friction"));
-                ui.add(Slider::new(&mut controller.min_move_speed, 0.1..=5000.0).text("Min Move Speed"));
-                ui.add(Slider::new(&mut controller.max_move_speed, 0.1..=5000.0).text("Max Move Speed"));
-                ui.add(Slider::new(&mut controller.run_speed_multiplier, 1.0..=10.0).text("Run Speed Multiplier"));
-                ui.add(Slider::new(&mut controller.zoom_speed, 0.1..=100.0).text("Zoom Speed"));
-                ui.add(Slider::new(&mut controller.distance, 1.0..=1000.0).text("Distance"));
-                ui.add(Slider::new(&mut controller.min_distance, 0.1..=1000.0).text("Min Distance"));
-                ui.add(Slider::new(&mut controller.max_distance, 1.0..=1000.0).text("Max Distance"));
-                ui.add(Slider::new(&mut controller.min_pitch, 0.0..=std::f32::consts::FRAC_PI_2).text("Min Pitch"));
-                ui.add(Slider::new(&mut controller.max_pitch, 0.0..=std::f32::consts::FRAC_PI_2).text("Max Pitch"));
-                ui.add(Slider::new(&mut controller.edge_scroll_distance, 0.0..=200.0).text("Edge Scroll Distance"));
-                ui.add(Slider::new(&mut controller.edge_scroll_speed, 0.0..=1000.0).text("Edge Scroll Speed"));
-
-                // Reset button
-                if ui.button("Reset").clicked() {
-                    *controller = ThirdPersonController::default();
-                }
             });
     }
 }

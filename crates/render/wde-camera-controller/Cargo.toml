@@ -1,0 +1,25 @@
+[package]
+name = "wde-camera-controller"
+version = "0.1.0"
+edition = "2024"
+description = "Camera controller module for WaterDropEngine"
+
+[profile.dev]
+opt-level = 0
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+incremental = false
+debug = false
+
+[dependencies]
+wde-camera = { path = "../wde-camera" }
+wde-logger = { path = "../../wrappers/wde-logger" }
+wde-editor = { path = "../../core/wde-editor" }
+bevy = { workspace = true }
+bytemuck = { workspace = true }
