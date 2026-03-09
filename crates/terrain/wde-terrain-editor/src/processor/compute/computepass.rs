@@ -51,8 +51,8 @@ pub fn apply_paint_compute(
                 // Raw number of workgroups to dispatch
                 const MAX_PER_DISPATCH: u32 = 65535; // Max workgroups per dispatch for most GPUs
                 let count_raw = commands_buffer.commands_count as u32
-                    * RENDER_TILE_SUBDIVISIONS
-                    * RENDER_TILE_SUBDIVISIONS
+                    * CHUNK_RENDER_SUBDIVISIONS
+                    * CHUNK_RENDER_SUBDIVISIONS
                     / 64; // workgroup size
                 let it = ops::ceil(count_raw as f32 / MAX_PER_DISPATCH as f32);
                 let last_it_count = count_raw % MAX_PER_DISPATCH;
@@ -77,8 +77,8 @@ pub fn apply_paint_compute(
                         // Set push constants
                         let push_constants = TileInfo {
                             tile_idx: [tile.position.x as f32, tile.position.y as f32],
-                            tile_size: [TILE_SIZE[0], TILE_SIZE[2]],
-                            tile_subdivisions: RENDER_TILE_SUBDIVISIONS as f32
+                            tile_size: [CHUNK_SIZE[0], CHUNK_SIZE[2]],
+                            tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32
                         };
                         compute_pass.set_push_constants(bytemuck::cast_slice(&[push_constants]));
 

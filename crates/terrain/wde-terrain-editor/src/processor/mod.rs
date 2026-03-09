@@ -13,7 +13,7 @@ mod compute;
 #[derive(Resource, Default)]
 pub struct ExtractedPaintCommands {
     pub commands: Vec<PaintCommand>,
-    pub dirty_chunks: Option<HashSet<TilePos>>
+    pub dirty_chunks: Option<HashSet<ChunkPos>>
 }
 
 pub struct PaintProcessorPlugin;

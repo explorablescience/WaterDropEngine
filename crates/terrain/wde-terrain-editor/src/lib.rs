@@ -44,7 +44,7 @@ struct SaveManager {
     // True if we are currently saving the terrain
     saving: bool,
     // List of tiles to save, with their position and map type (0 for heightmap, 1 for splatmap)
-    tiles_to_save: Vec<(TilePos, u32, u32)>
+    tiles_to_save: Vec<(ChunkPos, u32, u32)>
 }
 
 fn save_extracted_tiles(
@@ -73,13 +73,13 @@ fn save_extracted_tiles(
         match map_type {
             0 => {
                 let path = format!("{}/heightmap_{}_{}.png", full_path, pos.x, pos.y);
-                if let Err(e) = save_png_from_channels(&path, data, 1, (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS)) {
+                if let Err(e) = save_png_from_channels(&path, data, 1, (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)) {
                     error!("Failed to save heightmap for tile ({}, {}): {}", pos.x, pos.y, e);
                 }
             },
             1 => {
                 let path = format!("{}/splatmap_{}_{}-{}.png", full_path, pos.x, pos.y, splat_map_index);
-                if let Err(e) = save_png_from_channels(&path, data, 4, (RENDER_TILE_SUBDIVISIONS, RENDER_TILE_SUBDIVISIONS)) {
+                if let Err(e) = save_png_from_channels(&path, data, 4, (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)) {
                     error!("Failed to save splatmap for tile ({}, {}): {}", pos.x, pos.y, e);
                 }
             },

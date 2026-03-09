@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 use bevy::{asset::io::embedded::GetAssetServer, prelude::*};
-use wde_terrain::prelude::TilePos;
+use wde_terrain::prelude::ChunkPos;
 
 use crate::{paint::brush::PaintMode, processor::ExtractedPaintCommands};
 
@@ -35,7 +35,7 @@ pub struct CommandDescription {
 pub struct CommandsBuffer {
     pub commands_buffer: Handle<Buffer>,
     pub commands_count: usize,
-    pub dirty_chunks: HashSet<TilePos>,
+    pub dirty_chunks: HashSet<ChunkPos>,
 
     pub layout: BindGroupLayout,
     pub layout_built: WgpuBindGroupLayout,

@@ -1,12 +1,12 @@
 use wde_renderer::prelude::*;
 use bevy::prelude::*;
 
-use crate::{manager::{DirtyTile, RENDER_TILE_SUBDIVISIONS, TilePos}, prelude::TerrainRendererGPU};
+use crate::{manager::{TerrainDirtyTile, CHUNK_RENDER_SUBDIVISIONS, ChunkPos}, prelude::TerrainRendererGPU};
 
 /// Type of the message sent from the render world to the main world when a tile is extracted from the GPU.
 #[derive(Message)]
 pub struct ExtractedTileMessage {
-    pub pos: TilePos,
+    pub pos: ChunkPos,
     pub map_type: u32, // 0 for heightmap, 1 for splatmap
     pub splat_map_index: u32, // only relevant if map_type is 1, should be between 0 and SPLAT_MAP_COUNT/4 - 1
     pub data: Vec<u8>
@@ -38,9 +38,9 @@ pub struct StaggingBuffers {
 pub struct TerrainExtractor {
     /// Liste of tiles that needs to be extracted from the gpu.
     /// First the tile position, then 0 for heightmap, 1 for splatmap, and then the index of the splatmap (0 to SPLAT_MAP_COUNT/4 - 1)
-    tiles_to_extract: Vec<Option<(TilePos, u32, u32)>>,
+    tiles_to_extract: Vec<Option<(ChunkPos, u32, u32)>>,
     /// List of tiles that were extracted from the gpu and are ready to be sent to the main world
-    extracted_tiles: Vec<Option<DirtyTile>>
+    extracted_tiles: Vec<Option<TerrainDirtyTile>>
 }
 impl TerrainExtractor {
     /// Queues a tile for extraction from the GPU.
@@ -50,7 +50,7 @@ impl TerrainExtractor {
     /// * `tile_pos` - The position of the tile to extract (x, z)
     /// * `map_type` - The type of map to extract (0 for heightmap, 1 for splatmap)
     /// * `splat_map_index` - The index of the splat map to extract (only relevant if map_type is 1, should be between 0 and SPLAT_MAP_COUNT/4 - 1)
-    pub fn queue_tile_extraction(&mut self, tile_pos: TilePos, map_type: u32, splat_map_index: u32) {
+    pub fn queue_tile_extraction(&mut self, tile_pos: ChunkPos, map_type: u32, splat_map_index: u32) {
         self.tiles_to_extract.push(Some((tile_pos, map_type, splat_map_index)));
     }
 }
@@ -62,13 +62,13 @@ fn init_stagging_buffers(asset_server: Res<AssetServer>, mut buffers: ResMut<Sta
 
     let stagging_heightmap = asset_server.add(Buffer {
         label: "stagging_heightmap".to_string(),
-        size: (RENDER_TILE_SUBDIVISIONS as usize * RENDER_TILE_SUBDIVISIONS as usize) * std::mem::size_of::<u8>(),
+        size: (CHUNK_RENDER_SUBDIVISIONS as usize * CHUNK_RENDER_SUBDIVISIONS as usize) * std::mem::size_of::<u8>(),
         usage,
         content: None
     });
     let stagging_splatmap = asset_server.add(Buffer {
         label: "stagging_splatmap".to_string(),
-        size: (RENDER_TILE_SUBDIVISIONS as usize * RENDER_TILE_SUBDIVISIONS as usize) * std::mem::size_of::<[u8; 4]>(), // RGBA8Unorm
+        size: (CHUNK_RENDER_SUBDIVISIONS as usize * CHUNK_RENDER_SUBDIVISIONS as usize) * std::mem::size_of::<[u8; 4]>(), // RGBA8Unorm
         usage,
         content: None
     });

@@ -1,7 +1,7 @@
 use wde_renderer::prelude::*;
 use bevy::{asset::io::embedded::GetAssetServer, prelude::*};
 
-use crate::{manager::{RENDER_TILE_SUBDIVISIONS, TILE_SIZE}, render::renderer_gpu::TerrainRendererGPU};
+use crate::{manager::{CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE}, render::renderer_gpu::TerrainRendererGPU};
 
 // The maximum number of terrain tiles that can be rendered
 const MAX_TERRAIN_TILES: usize = 1000;
@@ -50,8 +50,8 @@ impl FromWorld for TerrainBuffer {
                 size: std::mem::size_of::<TerrainDescription>(),
                 usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
                 content: Some(bytemuck::cast_slice(&[TerrainDescription {
-                    tile_size: TILE_SIZE,
-                    tile_subdivisions: RENDER_TILE_SUBDIVISIONS as f32,
+                    tile_size: CHUNK_SIZE,
+                    tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
                 }]).into()),
             });
         let tiles_buffer = world

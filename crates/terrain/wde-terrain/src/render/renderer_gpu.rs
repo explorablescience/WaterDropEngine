@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{manager::{DirtyTile, SPLAT_MAP_COUNT, TilePos}, render::{extractor, renderer::TerrainRenderer}};
+use crate::{manager::{TerrainDirtyTile, SPLAT_MAP_COUNT, ChunkPos}, render::{extractor, renderer::TerrainRenderer}};
 
 /// Same as `TerrainRenderTile`, but with the texture handles replaced by their corresponding asset IDs. Only present on the GPU side.
 #[derive(Default, Clone)]
 pub struct TerrainRenderTileGPU {
     /// The position of the tile in world space (x, z)
-    pub position: TilePos,
+    pub position: ChunkPos,
 
     /// The heightmap and splat maps for this tile
     pub heightmap: AssetId<Texture>,
@@ -30,11 +30,11 @@ pub struct TerrainRendererGPU {
     /// True if the renderer has been initialized (i.e., the bind group of each tiles have been created and is ready for rendering)
     pub ready: bool,
     /// Mapping of the tile position (x, z) to its tile index in the tiles vector
-    pub pos_to_tile: HashMap<TilePos, usize>,
+    pub pos_to_tile: HashMap<ChunkPos, usize>,
     /// A list of terrain render tiles that make up the entire terrain.
     pub tiles: Vec<TerrainRenderTileGPU>,
     // List of tile maps that are dirty and need to be re-processed
-    pub dirty: Vec<Option<DirtyTile>>
+    pub dirty: Vec<Option<TerrainDirtyTile>>
 }
 impl TerrainRendererGPU {
     // Extract the dirty tiles from the main world and move them to the GPU renderer resource.
