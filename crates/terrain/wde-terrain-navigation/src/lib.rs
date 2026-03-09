@@ -7,7 +7,7 @@ pub mod prelude {
 
 pub struct TerrainNavigationPlugin;
 impl Plugin for TerrainNavigationPlugin {
-    fn build(&self, app: &mut App) {
+    fn build(&self, _app: &mut App) {
         // app.add_systems(Startup, setup);
     }
 }

@@ -174,6 +174,7 @@ impl Plugin for CustomWdePlugins {
             .add_plugins(wde_camera_controller::CameraControllerPlugin)
             .add_plugins(wde_physics::PhysicsPlugin)
             .add_plugins(wde_terrain::TerrainPlugin)
+            .add_plugins(wde_terrain_grid::TerrainGridPlugin)
             .add_plugins(wde_terrain_editor::TerrainEditorPlugin)
             .add_plugins(wde_terrain_navigation::TerrainNavigationPlugin);
 
@@ -237,6 +238,7 @@ pub mod prelude {
     pub use wde_physics::prelude::*;
     pub use wde_gltf::prelude::*;
     pub use wde_terrain::prelude::*;
+    pub use wde_terrain_grid::prelude::*;
     pub use wde_terrain_editor::prelude::*;
     pub use wde_terrain_navigation::prelude::*;
 

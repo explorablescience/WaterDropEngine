@@ -1,8 +1,8 @@
 [package]
-name = "wde-terrain-navigation"
+name = "wde-terrain-grid"
 version = "0.1.0"
 edition = "2024"
-description = "Navigation module for terrain in WaterDrop Engine."
+description = "The grid system for the terrain module."
 
 [profile.dev]
 opt-level = 0
