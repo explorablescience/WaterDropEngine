@@ -20,4 +20,5 @@ debug = false
 [dependencies]
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-terrain = { path = "../wde-terrain" }
+wde-gizmos = { path = "../../render/wde-gizmos" }
 bevy = { workspace = true }
