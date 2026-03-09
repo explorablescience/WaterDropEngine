@@ -21,4 +21,5 @@ debug = false
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-terrain = { path = "../wde-terrain" }
 wde-gizmos = { path = "../../render/wde-gizmos" }
+wde-renderer = { path = "../../core/wde-renderer" }
 bevy = { workspace = true }

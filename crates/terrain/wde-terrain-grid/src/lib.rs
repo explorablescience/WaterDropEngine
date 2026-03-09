@@ -25,8 +25,8 @@ fn init(mut commands: Commands, mut grid: ResMut<Grid>) {
     grid.init(terrain_size);
 
     // Add a dummy entity to test the grid system
-    let center = Vec3::new(250.0, 0.0, 250.0);
-    let size = Vec2::new(20.0, 20.0);
+    let center = Vec3::new(25.0, 0.0, 25.0);
+    let size = Vec2::new(2.0, 2.0);
     let rotation = GridEntityRotation::R0;
     let footprint = GridEntity { center, size, rotation };
     let entity = commands.spawn(footprint.clone()).id();

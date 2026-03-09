@@ -104,6 +104,11 @@ impl Grid {
     }
 
 
+    /// Gets an iterator over all chunks in the grid.
+    pub fn get_chunks(&self) -> impl Iterator<Item = (&GridChunkPos, &Chunk)> {
+        self.chunks.iter()
+    }
+
     /// Helper function to calculate the chunk position and local tile position based on the world position.
     /// 
     /// # Arguments
@@ -151,12 +156,12 @@ impl Grid {
 
 /// A terrain chunk that contains a list of terrain tiles.
 #[derive(Default)]
-struct Chunk {
+pub struct Chunk {
     /// The position of the chunk in the grid.
     pos: GridChunkPos,
     /// List of terrain tiles that belong to this chunk.
     /// The tile is None if it contains no data. If it is Some, the Entity should have a TerrainTileData component with the corresponding data.
-    tiles: Vec<Option<Entity>>
+    pub tiles: Vec<Option<Entity>>
 }
 impl Chunk {
     /// Creates a new terrain chunk with the specified position and an empty tile list.
@@ -178,7 +183,7 @@ impl Chunk {
     /// 
     /// # Returns
     /// An option containing the Entity of the tile if it exists, or None if the tile does not exist or is out of bounds.
-    fn get_local(&self, local_pos: GridLocalPos) -> Option<Entity> {
+    pub fn get_local(&self, local_pos: GridLocalPos) -> Option<Entity> {
         let (x, z, dir) = local_pos;
         let dir_offset = match dir {
             GridLocalDir::NorthEast => 0,
@@ -188,6 +193,11 @@ impl Chunk {
         };
         let idx = ((z * CHUNK_GRID_SUBDIVISIONS + x) * 4 + dir_offset) as usize;
         *self.tiles.get(idx)?
+    }
+
+    /// Gets a reference to the tiles vector in this chunk.
+    pub fn get_tiles(&self) -> &[Option<Entity>] {
+        &self.tiles
     }
 }
 
