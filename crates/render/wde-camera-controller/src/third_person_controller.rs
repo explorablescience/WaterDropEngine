@@ -60,23 +60,23 @@ impl Default for ThirdPersonController {
             key_down: KeyCode::KeyQ,
             key_run: KeyCode::ShiftLeft,
             mouse_key_rotate: MouseButton::Middle,
-            min_move_speed: 100.0,
-            max_move_speed: 600.0,
+            min_move_speed: 10.0,
+            max_move_speed: 60.0,
             run_speed_multiplier: 2.5,
-            zoom_speed: 25.0,
+            zoom_speed: 2.5,
             friction: 0.5,
             pitch: 0.9,
             yaw: 0.0,
-            distance: 300.0,
-            min_distance: 100.0,
-            max_distance: 600.0,
+            distance: 30.0,
+            min_distance: 10.0,
+            max_distance: 60.0,
             min_pitch: 0.1,            // Nearly horizontal
             max_pitch: PI / 2.0 - 0.1, // Nearly vertical
             target: Vec3::ZERO,
             velocity: Vec3::ZERO,
             edge_scroll_enabled: !cfg!(debug_assertions),
-            edge_scroll_distance: 50.0,
-            edge_scroll_speed: 200.0,
+            edge_scroll_distance: 5.0,
+            edge_scroll_speed: 20.0,
         }
     }
 }

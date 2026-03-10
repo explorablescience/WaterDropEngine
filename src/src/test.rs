@@ -22,7 +22,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Load a glTF model and spawn it in the scene
     let gltf_asset = GltfLoader::load("tests/models/houses/house_demo1.gltf", &asset_server).unwrap();
     let model = PbrModel(gltf_asset.models.clone());
-    commands.spawn((model.clone(), Transform::default().with_translation(Vec3::new(0.0, 0.01, 0.0)).with_scale(Vec3::ONE * 0.8)));
+    commands.spawn((model.clone(), Transform::default()));
 
     // Spawn the lights
     commands.spawn(PointLight {

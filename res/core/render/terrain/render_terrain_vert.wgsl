@@ -52,7 +52,7 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
 
     // Add some noise to the height based on the xz position
     let h = in_terrain_description.tile_size.y;
-    world_pos.y = textureSampleLevel(in_heightmap, in_heightmap_sampler, model.tex_coord, 0.0).r * h;
+    world_pos.y = textureSampleLevel(in_heightmap, in_heightmap_sampler, model.tex_coord, 0.0).r * h - 0.02;
 
     let view_pos4 = in_camera.world_to_view
         * world_pos;

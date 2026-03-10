@@ -8,12 +8,12 @@ use crate::utils::image_decoder::decode_png_as_channels;
 /// The size of the terrain in terms of number of chunks (e.g., 4 means the terrain is made up of a 4x4 grid of chunks)
 /// Here, a "chunk" refers to a section of the terrain that has its own heightmap and splat maps, and is rendered as a single unit.
 /// It is not necessarily the same as the grid cells using in the terrain.
-pub(crate) const RENDER_CHUNK_COUNT: usize = 8;
+pub const CHUNK_COUNT: u32 = 8;
 /// The number of splat maps per chunk (must be a multiple of 4, as each splat map can store 4 channels for texture blending)
-pub(crate) const SPLAT_MAP_COUNT: u32 = 4;
+pub const SPLAT_MAP_COUNT: u32 = 4;
 
 /// The size of each terrain chunk in world units.
-pub const CHUNK_SIZE: [f32; 3] = [500.0, 1000.0, 500.0];
+pub const CHUNK_SIZE: [f32; 3] = [32.0, 100.0, 32.0];
 /// The number of subdivisions per chunk in the rendering system (heightmap and splatmap resolution).
 /// This should match the width and height of the texture maps.
 pub const CHUNK_RENDER_SUBDIVISIONS: u32 = 256;
@@ -59,11 +59,11 @@ impl Terrain {
         let mut tiles = Vec::new();
         let mut dirty_render = Vec::new();
         let mut dirty_physics = Vec::new();
-        for i in 0..RENDER_CHUNK_COUNT {
-            for j in 0..RENDER_CHUNK_COUNT {
+        for i in 0..CHUNK_COUNT {
+            for j in 0..CHUNK_COUNT {
                 // Calculate the world position of the tile (centered around the origin)
-                let px = i as i32 - (RENDER_CHUNK_COUNT as i32) / 2;
-                let pz = j as i32 - (RENDER_CHUNK_COUNT as i32) / 2;
+                let px = i as i32 - (CHUNK_COUNT as i32) / 2;
+                let pz = j as i32 - (CHUNK_COUNT as i32) / 2;
                 let pos = IVec2::new(px, pz);
 
                 // Compute files_names

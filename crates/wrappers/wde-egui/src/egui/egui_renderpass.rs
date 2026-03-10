@@ -12,7 +12,7 @@ impl Plugin for EguiRenderPassPlugin {
     fn build(&self, app: &mut App) {
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass::<EguiRenderPass>(200);
+        render_graph.add_pass::<EguiRenderPass>(1001); // Add after main render pass
     }
 
     fn finish(&self, app: &mut App) {

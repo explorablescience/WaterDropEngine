@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::manager::{TerrainDirtyTile, SPLAT_MAP_COUNT, RENDER_CHUNK_COUNT, CHUNK_RENDER_SUBDIVISIONS, Terrain, ChunkPos};
+use crate::manager::{TerrainDirtyTile, SPLAT_MAP_COUNT, CHUNK_COUNT, CHUNK_RENDER_SUBDIVISIONS, Terrain, ChunkPos};
 
 /// Represents a single terrain tile, containing its position and the associated heightmap, normal map, and splat maps.
 #[derive(Default, Clone)]
@@ -37,8 +37,8 @@ impl TerrainRenderer {
         let usages = TextureUsages::COPY_SRC | TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING | TextureUsages::STORAGE_BINDING;
         let mut pos_to_tile = HashMap::new();
         let mut tiles = Vec::new();
-        for i in 0..RENDER_CHUNK_COUNT {
-            for j in 0..RENDER_CHUNK_COUNT {
+        for i in 0..CHUNK_COUNT {
+            for j in 0..CHUNK_COUNT {
                 // Create the empty heightmap and splatmap textures for the tile
                 let heightmap = asset_server.add(Texture {
                     label: format!("heightmap_{}_{}", i, j),
@@ -59,8 +59,8 @@ impl TerrainRenderer {
                 }
 
                 // Calculate the world position of the tile (centered around the origin)
-                let px = i as i32 - (RENDER_CHUNK_COUNT as i32 / 2);
-                let pz = j as i32 - (RENDER_CHUNK_COUNT as i32 / 2);
+                let px = i as i32 - (CHUNK_COUNT as i32 / 2);
+                let pz = j as i32 - (CHUNK_COUNT as i32 / 2);
                 let position = IVec2::new(px, pz);
 
                 // Create the tile and add it to the list

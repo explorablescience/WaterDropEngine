@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::manager::{CHUNK_SIZE, CHUNK_RENDER_SUBDIVISIONS};
+use crate::manager::{CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE};
 
 #[derive(Resource, Default)]
 pub(crate) struct TerrainRenderPassMesh {

@@ -22,4 +22,6 @@ wde-logger = { path = "../../wrappers/wde-logger" }
 wde-terrain = { path = "../wde-terrain" }
 wde-gizmos = { path = "../../render/wde-gizmos" }
 wde-renderer = { path = "../../core/wde-renderer" }
+wde-physics = { path = "../../wrappers/wde-physics" }
+wde-camera = { path = "../../render/wde-camera" }
 bevy = { workspace = true }
