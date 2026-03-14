@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use wde_gizmos::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::core::grid::{CHUNK_GRID_SUBDIVISIONS, GridChunkPos, GridLocalPos};
+use crate::core::grid::{CHUNK_GRID_SUBDIVISIONS, GridChunkPos, GridLocalPos, GridPos};
 
 /// Marker component for grid gizmo entities.
 #[derive(Component)]
@@ -16,7 +16,7 @@ pub struct GridGizmo;
 pub struct GridGizmoCache {
     // Entities for each chunk's gizmos (grid lines, diagonal lines, occupied tile outlines).
     pub chunk_entities: HashMap<GridChunkPos, Vec<Entity>>,
-    pub occupied_cell_entities: HashMap<(GridChunkPos, GridLocalPos), Entity>,
+    pub occupied_cell_entities: HashMap<GridPos, Entity>,
 
     // Meshes of each chunk
     pub chunk_grid_meshes: HashMap<GridChunkPos, Handle<MeshAsset>>,

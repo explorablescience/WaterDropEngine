@@ -7,8 +7,10 @@ pub const CHUNK_GRID_SUBDIVISIONS: u32 = CHUNK_SIZE as u32 / 2;
 
 /// The position of a chunk in the grid, represented as (x, z) coordinates.
 pub type GridChunkPos = IVec2;
-/// The local position of a tile within a chunk.
+/// The local position of a tile within a chunk (x, z coordinates and a direction).
 pub type GridLocalPos = (u32, u32, GridLocalDir);
+/// The full position in the grid
+pub type GridPos = (GridChunkPos, GridLocalPos);
 /// The local position of a tile within a square tile.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum GridLocalDir {
@@ -83,6 +85,22 @@ impl Chunk {
 
         (local_x.floor() as u32, local_y.floor() as u32, local_dir)
     }
+    /// Converts a local tile position within this chunk to a world position.
+    pub fn local_to_world(chunk_pos: GridChunkPos, local_pos: GridLocalPos) -> Vec2 {
+        let (local_x, local_y, local_dir) = local_pos;
+        let cell_size = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
+        let half_cell = cell_size * 0.5;
+        let half_chunk = CHUNK_SIZE * 0.5;
+        let mut world_x = chunk_pos.x as f32 * CHUNK_SIZE + local_x as f32 * cell_size + half_cell - half_chunk;
+        let mut world_y = chunk_pos.y as f32 * CHUNK_SIZE + local_y as f32 * cell_size + half_cell - half_chunk;
+        match local_dir {
+            GridLocalDir::North => world_y += half_cell,
+            GridLocalDir::South => world_y -= half_cell,
+            GridLocalDir::East => world_x += half_cell,
+            GridLocalDir::West => world_x -= half_cell,
+        }
+        Vec2::new(world_x, world_y)
+    }
 
     // Helper methods
     /// Gets a reference to the tiles vector in this chunk.
@@ -134,7 +152,7 @@ impl Grid {
     // Methods to convert between world positions and chunk/local positions
     /// Gets the nearest chunk and local tile position for a given world position.
     /// Note that this does not check if the chunk actually exists in the grid.
-    pub fn pos_to_chunk_and_local(world_pos: Vec2) -> (GridChunkPos, GridLocalPos) {
+    pub fn world_to_pos(world_pos: Vec2) -> GridPos {
         let chunk_pos = Self::pos_to_chunk(world_pos);
         let local_pos = Chunk::world_to_local(world_pos);
         (chunk_pos, local_pos)
@@ -148,8 +166,16 @@ impl Grid {
             (world_pos.y + half_chunk).div_euclid(CHUNK_SIZE) as i32,
         )
     }
+    /// Gets the world position for a given chunk and local tile position.
+    pub fn pos_to_world(chunk_pos: GridChunkPos, local_pos: GridLocalPos) -> Vec2 {
+        Chunk::local_to_world(chunk_pos, local_pos)
+    }
 
     // Helper methods
+    /// Gets the size of a single tile in world units.
+    pub fn tile_size() -> f32 {
+        CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32
+    }
     pub fn get_chunks(&self) -> impl Iterator<Item = (&GridChunkPos, &Chunk)> {
         self.chunks.iter()
     }

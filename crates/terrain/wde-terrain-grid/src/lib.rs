@@ -4,7 +4,7 @@ use wde_renderer::prelude::*;
 use wde_gizmos::prelude::*;
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::{core::{CorePlugin, grid::Grid, grid_entity::{GridEntity, GridEntityRotation}}, render::RenderPlugin};
+use crate::{core::{CorePlugin, grid::Grid, grid_entity::{GridEntity, GridRotation}}, render::RenderPlugin};
 
 mod core;
 mod render;
@@ -12,7 +12,7 @@ mod render;
 pub mod prelude {
     pub use super::TerrainGridPlugin;
     pub use super::core::grid::{Grid, GridLocalDir};
-    pub use super::core::grid_entity::{GridEntity, GridEntityRotation};
+    pub use super::core::grid_entity::{GridEntity, GridRotation};
 }
 
 pub struct TerrainGridPlugin;
@@ -36,22 +36,18 @@ pub struct GridTestEntity(Option<Entity>);
 fn init(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
-    mut grid: ResMut<Grid>,
     mut test_entity: ResMut<GridTestEntity>
 ) {
     // Add a dummy entity to test the grid system
-    let footprint = GridEntity {
-        center: Vec2::new(5.0, 5.0),
-        size: Vec2::new(2.0, 2.0),
-        rotation: GridEntityRotation::R0
-    };
+    let pos = Vec2::new(5.0, 5.0);
+    let footprint = GridEntity::new(pos, UVec2::new(2, 2), GridRotation::R0);
     let entity = commands.spawn((
-        Transform::from_xyz(footprint.center.x, 0.5, footprint.center.y),
-        Mesh(asset_server.add(CapsuleMesh::from("test_gizmo", CapsuleMeshConfig::default()))),
-        GizmoMaterial(asset_server.add(GizmoMaterialAsset {
-            color: [0.8, 0.2, 0.2, 1.0],
-            ..Default::default()
-        })),
+        Transform::from_xyz(pos.x, 0.5, pos.y),
+        // Mesh(asset_server.add(CapsuleMesh::from("test_gizmo", CapsuleMeshConfig::default()))),
+        // GizmoMaterial(asset_server.add(GizmoMaterialAsset {
+        //     color: [0.8, 0.2, 0.2, 1.0],
+        //     ..Default::default()
+        // })),
         footprint.clone()
     )).id();
     test_entity.0 = Some(entity);
@@ -114,23 +110,19 @@ fn show_footprint_at_mouse_pos(
     // Cast the ray in the physics world
     if let Some((_, toi)) = phworld.as_ref().cast_ray(&ray, &RayCastConfig::default()) {
         let hit_point = ray.point_at(toi);
+        let hit_point = Vec2::new(hit_point.x, hit_point.z);
 
         // Move the test entity to the hit point
-        commands.entity(entity).insert(Transform::from_xyz(hit_point.x, 0.5, hit_point.z));
+        commands.entity(entity).insert(Transform::from_xyz(hit_point.x, 0.5, hit_point.y));
+
+        // Clear the grid of any registered entities
+        grid.clear_all();
 
         // Update the grid with the new position of the entity
-        // let footprint = GridEntity {
-        //     center: Vec2::new(hit_point.x, hit_point.z),
-        //     size: Vec2::new(2.0, 2.0),
-        //     rotation: GridEntityRotation::R0
-        // };
-        let pos = Vec2::new(hit_point.x, hit_point.z);
-        grid.clear_all();
-        let (chunk_pos, local_pos) = Grid::pos_to_chunk_and_local(pos);
-        grid.set_entity_at(chunk_pos, local_pos, entity);
-        // let occupied_tiles = footprint.get_occupied_tiles();
-        // for (chunk_pos, local_pos) in occupied_tiles {
-        //     grid.set_entity_at_chunk_local(chunk_pos, local_pos, entity);
-        // }
+        let footprint = GridEntity::new(hit_point, UVec2::new(2, 3), GridRotation::R45);
+        let occupied_tiles = footprint.footprint();
+        for (chunk_pos, local_pos) in occupied_tiles {
+            grid.set_entity_at(*chunk_pos, *local_pos, entity);
+        }
     }
 }
