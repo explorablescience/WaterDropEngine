@@ -13,7 +13,8 @@ pub const CHUNK_COUNT: u32 = 8;
 pub const SPLAT_MAP_COUNT: u32 = 4;
 
 /// The size of each terrain chunk in world units.
-pub const CHUNK_SIZE: [f32; 3] = [32.0, 100.0, 32.0];
+pub const CHUNK_SIZE: f32 = 32.0;
+pub const CHUNK_HEIGHT: f32 = 100.0;
 /// The number of subdivisions per chunk in the rendering system (heightmap and splatmap resolution).
 /// This should match the width and height of the texture maps.
 pub const CHUNK_RENDER_SUBDIVISIONS: u32 = 256;
@@ -139,8 +140,8 @@ impl Terrain {
     /// An option containing the tile indices (x, z) if the position is within the terrain bounds
     /// or None if the position is out of bounds.
     pub fn get_tile_idx_for_world_pos(&self, world_pos: Vec3) -> Option<IVec2> {
-        let tile_x = (world_pos.x / CHUNK_SIZE[0]).round() as i32;
-        let tile_z = (world_pos.z / CHUNK_SIZE[2]).round() as i32;
+        let tile_x = (world_pos.x / CHUNK_SIZE).round() as i32;
+        let tile_z = (world_pos.z / CHUNK_SIZE).round() as i32;
         let tile_pos = IVec2::new(tile_x, tile_z);
         if self.pos_to_tile.contains_key(&tile_pos) {
             Some(tile_pos)

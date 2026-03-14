@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use wde_physics::prelude::*;
 use bevy::prelude::*;
 
-use crate::manager::{CHUNK_SIZE, Terrain, ChunkPos};
+use crate::manager::{CHUNK_HEIGHT, CHUNK_SIZE, ChunkPos, Terrain};
 
 #[derive(Component, Default)]
 pub struct TerrainPhysics {
@@ -36,14 +36,14 @@ impl TerrainPhysics {
             }
 
             // Create the heightfield collider for the tile
-            let collider = Collider::heightfield(heights, CHUNK_SIZE);
+            let collider = Collider::heightfield(heights, [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE]);
 
             // Spawn or update the collider entity for the tile
             if let Some(entity) = terrain_renderer.pos_to_entity.get(tile_pos) {
                 commands.entity(*entity).insert(collider);
             } else {
                 let entity = commands.spawn((
-                    Transform::from_xyz(tile_pos.x as f32 * CHUNK_SIZE[0], 0.0, tile_pos.y as f32 * CHUNK_SIZE[2]),
+                    Transform::from_xyz(tile_pos.x as f32 * CHUNK_SIZE, 0.0, tile_pos.y as f32 * CHUNK_SIZE),
                     collider
                 )).id();
                 terrain_renderer.pos_to_entity.insert(*tile_pos, entity);

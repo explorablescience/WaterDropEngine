@@ -57,10 +57,10 @@ fn init(
     test_entity.0 = Some(entity);
 
     // Set the entity in the grid based on its footprint
-    let occupied_tiles = footprint.get_occupied_tiles();
-    for (chunk_pos, local_pos) in occupied_tiles {
-        grid.set_entity_at_chunk_local(chunk_pos, local_pos, entity);
-    }
+    // let occupied_tiles = footprint.get_occupied_tiles();
+    // for (chunk_pos, local_pos) in occupied_tiles {
+    //     grid.set_entity_at_chunk_local(chunk_pos, local_pos, entity);
+    // }
 
 
     // // Add a dummy entity to test the grid system
@@ -119,15 +119,18 @@ fn show_footprint_at_mouse_pos(
         commands.entity(entity).insert(Transform::from_xyz(hit_point.x, 0.5, hit_point.z));
 
         // Update the grid with the new position of the entity
-        let footprint = GridEntity {
-            center: Vec2::new(hit_point.x, hit_point.z),
-            size: Vec2::new(2.0, 2.0),
-            rotation: GridEntityRotation::R0
-        };
-        grid.clear();
-        let occupied_tiles = footprint.get_occupied_tiles();
-        for (chunk_pos, local_pos) in occupied_tiles {
-            grid.set_entity_at_chunk_local(chunk_pos, local_pos, entity);
-        }
+        // let footprint = GridEntity {
+        //     center: Vec2::new(hit_point.x, hit_point.z),
+        //     size: Vec2::new(2.0, 2.0),
+        //     rotation: GridEntityRotation::R0
+        // };
+        let pos = Vec2::new(hit_point.x, hit_point.z);
+        grid.clear_all();
+        let (chunk_pos, local_pos) = Grid::pos_to_chunk_and_local(pos);
+        grid.set_entity_at(chunk_pos, local_pos, entity);
+        // let occupied_tiles = footprint.get_occupied_tiles();
+        // for (chunk_pos, local_pos) in occupied_tiles {
+        //     grid.set_entity_at_chunk_local(chunk_pos, local_pos, entity);
+        // }
     }
 }

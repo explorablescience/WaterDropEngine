@@ -24,8 +24,8 @@ pub fn render_grid_bare(
     let diagonal_material = cache.diagonal_material.clone().unwrap();
 
     // For each chunk, ensure we have gizmo entities created and updated based on the grid state
-    let cell_w = CHUNK_SIZE[0] / CHUNK_GRID_SUBDIVISIONS as f32;
-    let cell_d = CHUNK_SIZE[2] / CHUNK_GRID_SUBDIVISIONS as f32;
+    let cell_w = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
+    let cell_d = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
     for (&chunk_pos, _) in grid.get_chunks() {
         // Bare grid meshes are chunk-wide and spawned once per chunk.
         // Do not use `chunk_entities` here because occupied-cell rendering also writes into it.
@@ -34,8 +34,8 @@ pub fn render_grid_bare(
         {
             continue;
         }
-        let chunk_min_x = (chunk_pos.x as f32 * CHUNK_SIZE[0]) - (CHUNK_SIZE[0] * 0.5);
-        let chunk_min_z = (chunk_pos.y as f32 * CHUNK_SIZE[2]) - (CHUNK_SIZE[2] * 0.5);
+        let chunk_min_x = (chunk_pos.x as f32 * CHUNK_SIZE) - (CHUNK_SIZE * 0.5);
+        let chunk_min_z = (chunk_pos.y as f32 * CHUNK_SIZE) - (CHUNK_SIZE * 0.5);
         let mut bare_gizmo_entities = Vec::new();
 
         // Create grid lines mesh and entity
@@ -108,8 +108,8 @@ pub fn render_grid_occupied_cells(
     // Query material and mesh for occupied cell indicators
     let occupied_cell_material = cache.occupied_cell_material.clone().unwrap();
     let occupied_cell_mesh = cache.occupied_cell_mesh.clone().unwrap();
-    let cell_w = CHUNK_SIZE[0] / CHUNK_GRID_SUBDIVISIONS as f32;
-    let cell_d = CHUNK_SIZE[2] / CHUNK_GRID_SUBDIVISIONS as f32;
+    let cell_w = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
+    let cell_d = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
     let mut desired_tiles = HashSet::new();
 
     for (&chunk_pos, chunk_data) in grid.get_chunks() {
@@ -135,11 +135,11 @@ pub fn render_grid_occupied_cells(
                 }
 
                 let cell_pos = Vec3::new(
-                    (chunk_pos.x as f32 * CHUNK_SIZE[0]) + (local_x as f32 * cell_w) + (cell_w * 0.5)
-                        - (CHUNK_SIZE[0] * 0.5),
+                    (chunk_pos.x as f32 * CHUNK_SIZE) + (local_x as f32 * cell_w) + (cell_w * 0.5)
+                        - (CHUNK_SIZE * 0.5),
                     Y_GRID,
-                    (chunk_pos.y as f32 * CHUNK_SIZE[2]) + (local_z as f32 * cell_d) + (cell_d * 0.5)
-                        - (CHUNK_SIZE[2] * 0.5),
+                    (chunk_pos.y as f32 * CHUNK_SIZE) + (local_z as f32 * cell_d) + (cell_d * 0.5)
+                        - (CHUNK_SIZE * 0.5),
                 );
                 let occupied_entity = commands
                     .spawn((

@@ -77,7 +77,7 @@ pub fn apply_paint_compute(
                         // Set push constants
                         let push_constants = TileInfo {
                             tile_idx: [tile.position.x as f32, tile.position.y as f32],
-                            tile_size: [CHUNK_SIZE[0], CHUNK_SIZE[2]],
+                            tile_size: [CHUNK_SIZE, CHUNK_SIZE],
                             tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32
                         };
                         compute_pass.set_push_constants(bytemuck::cast_slice(&[push_constants]));

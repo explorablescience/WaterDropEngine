@@ -34,8 +34,8 @@ impl GridGizmoCache {
         if cache.line_material.is_some() {
             return;
         }
-        let cell_w = CHUNK_SIZE[0] / CHUNK_GRID_SUBDIVISIONS as f32;
-        let cell_d = CHUNK_SIZE[2] / CHUNK_GRID_SUBDIVISIONS as f32;
+        let cell_w = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
+        let cell_d = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
 
         // Initialize materials and meshes
         cache.line_material = Some(asset_server.add(GizmoMaterialAsset {

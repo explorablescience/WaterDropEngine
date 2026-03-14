@@ -14,14 +14,14 @@ impl TerrainRenderPassMesh {
 
         // Scale the plane to cover the entire terrain tile size
         for vertex in &mut mesh.vertices {
-            vertex.position[0] *= CHUNK_SIZE[0];
-            vertex.position[2] *= CHUNK_SIZE[2];
+            vertex.position[0] *= CHUNK_SIZE;
+            vertex.position[2] *= CHUNK_SIZE;
         }
 
         // Fix the UVs to cover the entire texture
         for vertex in &mut mesh.vertices {
-            vertex.uv[0] = vertex.position[0] / CHUNK_SIZE[0] + 0.5; // Map from [-TILE_SIZE/2, TILE_SIZE/2] to [0, 1]
-            vertex.uv[1] = vertex.position[2] / CHUNK_SIZE[2] + 0.5; // Map from [-TILE_SIZE/2, TILE_SIZE/2] to [0, 1]
+            vertex.uv[0] = vertex.position[0] / CHUNK_SIZE + 0.5; // Map from [-TILE_SIZE/2, TILE_SIZE/2] to [0, 1]
+            vertex.uv[1] = vertex.position[2] / CHUNK_SIZE + 0.5; // Map from [-TILE_SIZE/2, TILE_SIZE/2] to [0, 1]
         }
 
         render_pass.deferred_mesh = Some(assets_server.add(mesh));
