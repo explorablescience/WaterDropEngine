@@ -4,7 +4,7 @@ use wde_gizmos::prelude::*;
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::CHUNK_SIZE;
 
-use crate::{core::grid::{CHUNK_GRID_SUBDIVISIONS, Grid, GridLocalPos}, prelude::GridLocalDir, render::grid::cache::{GridGizmo, GridGizmoCache}};
+use crate::{core::grid::{CHUNK_GRID_SUBDIVISIONS, Grid, GridLocalPos}, editor::ui::PlacementUI, prelude::GridLocalDir, render::grid::cache::{GridGizmo, GridGizmoCache}};
 
 const Y_GRID: f32 = -0.01; // Slightly above terrain to prevent z-fighting
 
@@ -12,16 +12,22 @@ pub fn render_grid_bare(
     mut commands: Commands,
     grid: Res<Grid>,
     assets: Res<AssetServer>,
-    mut cache: ResMut<GridGizmoCache>
+    mut cache: ResMut<GridGizmoCache>,
+    placement_ui: Res<PlacementUI>
 ) {
     // Check if cache is initialized
     if cache.line_material.is_none() || cache.diagonal_material.is_none() {
         return;
     }
 
+    // Check if grid view is enabled in the UI
+    if !placement_ui.enabled || !placement_ui.view_grid || placement_ui.placement_show_entity {
+        return;
+    }
+
     // Query materials and meshes
     let line_material = cache.line_material.clone().unwrap();
-    let diagonal_material = cache.diagonal_material.clone().unwrap();
+    // let diagonal_material = cache.diagonal_material.clone().unwrap();
 
     // For each chunk, ensure we have gizmo entities created and updated based on the grid state
     let cell_w = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
@@ -63,28 +69,28 @@ pub fn render_grid_bare(
         bare_gizmo_entities.push(grid_entity);
 
         // Create diagonal lines mesh and entity
-        let diagonal_mesh = cache
-            .chunk_diagonal_meshes
-            .entry(chunk_pos)
-            .or_insert_with(|| {
-                assets.add(GridGizmoCache::create_diagonal_lines_mesh(
-                    chunk_pos,
-                    chunk_min_x,
-                    chunk_min_z,
-                    cell_w,
-                    cell_d,
-                ))
-            })
-            .clone();
-        let diagonal_entity = commands
-            .spawn((
-                Transform::from_xyz(0.0, Y_GRID, 0.0),
-                Mesh(diagonal_mesh),
-                GizmoMaterial(diagonal_material.clone()),
-                GridGizmo
-            ))
-            .id();
-        bare_gizmo_entities.push(diagonal_entity);
+        // let diagonal_mesh = cache
+        //     .chunk_diagonal_meshes
+        //     .entry(chunk_pos)
+        //     .or_insert_with(|| {
+        //         assets.add(GridGizmoCache::create_diagonal_lines_mesh(
+        //             chunk_pos,
+        //             chunk_min_x,
+        //             chunk_min_z,
+        //             cell_w,
+        //             cell_d,
+        //         ))
+        //     })
+        //     .clone();
+        // let diagonal_entity = commands
+        //     .spawn((
+        //         Transform::from_xyz(0.0, Y_GRID, 0.0),
+        //         Mesh(diagonal_mesh),
+        //         GizmoMaterial(diagonal_material.clone()),
+        //         GridGizmo
+        //     ))
+        //     .id();
+        // bare_gizmo_entities.push(diagonal_entity);
 
         // Add the bare grid entities without overwriting occupied-cell entities for the same chunk.
         cache
@@ -95,13 +101,29 @@ pub fn render_grid_bare(
     }
 }
 
+#[derive(Component)]
+pub struct RenderGridOccupiedCellsMarker;
+
 pub fn render_grid_occupied_cells(
     mut commands: Commands,
     grid: Res<Grid>,
-    mut cache: ResMut<GridGizmoCache>
+    mut cache: ResMut<GridGizmoCache>,
+    placement_ui: Res<PlacementUI>,
+    marker_query: Query<Entity, With<RenderGridOccupiedCellsMarker>>
 ) {
     // Check if cache is initialized
     if cache.occupied_cell_material.is_none() {
+        return;
+    }
+
+    // Check if grid view is enabled in the UI
+    if !placement_ui.enabled || !placement_ui.placement_show_entity {
+        if !cache.occupied_cell_entities.is_empty() {
+            for entity in marker_query.iter() {
+                commands.entity(entity).despawn();
+            }
+            cache.occupied_cell_entities.clear();
+        }
         return;
     }
 
@@ -157,6 +179,7 @@ pub fn render_grid_occupied_cells(
                         Mesh(occupied_cell_mesh.clone()),
                         GizmoMaterial(occupied_cell_material.clone()),
                         GridGizmo,
+                        RenderGridOccupiedCellsMarker
                     ))
                     .id();
 

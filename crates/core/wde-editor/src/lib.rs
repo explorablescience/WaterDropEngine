@@ -41,7 +41,7 @@ pub mod prelude {
     pub use wde_egui::prelude::EguiContext as UIContext;
 
     // Re-export editor UI types
-    pub use wde_egui::prelude::egui::{ComboBox, Slider, Checkbox, TextEdit, Button, Label, Separator, CollapsingHeader, ScrollArea, FontId, Color32, ColorImage};
+    pub use wde_egui::prelude::egui::{ComboBox, Slider, Checkbox, TextEdit, Button, Label, Separator, CollapsingHeader, ScrollArea, FontId, Color32, ColorImage, DragValue};
 
     // Re-export editor types
     pub use super::EditorPlugin;

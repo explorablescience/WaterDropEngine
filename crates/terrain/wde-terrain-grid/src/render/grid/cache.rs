@@ -121,46 +121,45 @@ impl GridGizmoCache {
         }
     }
 
-    pub fn create_diagonal_lines_mesh(
-        chunk_pos: GridChunkPos,
-        chunk_min_x: f32,
-        chunk_min_z: f32,
-        cell_w: f32,
-        cell_d: f32,
-    ) -> MeshAsset {
-        let mut vertices = Vec::new();
-        let mut indices = Vec::new();
+    // pub fn create_diagonal_lines_mesh(
+    //     chunk_pos: GridChunkPos,
+    //     chunk_min_x: f32,
+    //     chunk_min_z: f32,
+    //     cell_w: f32,
+    //     cell_d: f32,
+    // ) -> MeshAsset {
+    //     let mut vertices = Vec::new();
+    //     let mut indices = Vec::new();
 
-        for x_grid in 0..CHUNK_GRID_SUBDIVISIONS {
-            for z_grid in 0..CHUNK_GRID_SUBDIVISIONS {
-                let x0 = chunk_min_x + (x_grid as f32) * cell_w;
-                let z0 = chunk_min_z + (z_grid as f32) * cell_d;
-                let x1 = x0 + cell_w;
-                let z1 = z0 + cell_d;
+    //     for x_grid in 0..CHUNK_GRID_SUBDIVISIONS {
+    //         for z_grid in 0..CHUNK_GRID_SUBDIVISIONS {
+    //             let x0 = chunk_min_x + (x_grid as f32) * cell_w;
+    //             let z0 = chunk_min_z + (z_grid as f32) * cell_d;
+    //             let x1 = x0 + cell_w;
+    //             let z1 = z0 + cell_d;
 
-                let i0 = vertices.len() as u32;
-                vertices.push(line_vertex(x0, 0.0, z0));
-                vertices.push(line_vertex(x1, 0.0, z1));
-                indices.push(i0);
-                indices.push(i0 + 1);
+    //             let i0 = vertices.len() as u32;
+    //             vertices.push(line_vertex(x0, 0.0, z0));
+    //             vertices.push(line_vertex(x1, 0.0, z1));
+    //             indices.push(i0);
+    //             indices.push(i0 + 1);
 
-                let i1 = vertices.len() as u32;
-                vertices.push(line_vertex(x1, 0.0, z0));
-                vertices.push(line_vertex(x0, 0.0, z1));
-                indices.push(i1);
-                indices.push(i1 + 1);
-            }
-        }
+    //             let i1 = vertices.len() as u32;
+    //             vertices.push(line_vertex(x1, 0.0, z0));
+    //             vertices.push(line_vertex(x0, 0.0, z1));
+    //             indices.push(i1);
+    //             indices.push(i1 + 1);
+    //         }
+    //     }
 
-        MeshAsset {
-            label: format!("diag_chunk_{chunk_pos:?}"),
-            vertices,
-            indices,
-            bounding_box: chunk_bounds(chunk_min_x, chunk_min_z, cell_w, cell_d),
-            use_ssbo: false,
-        }
-    }
-
+    //     MeshAsset {
+    //         label: format!("diag_chunk_{chunk_pos:?}"),
+    //         vertices,
+    //         indices,
+    //         bounding_box: chunk_bounds(chunk_min_x, chunk_min_z, cell_w, cell_d),
+    //         use_ssbo: false,
+    //     }
+    // }
 }
 
 /// Helper function to create a line vertex with given position and default normal/uv/tangent.

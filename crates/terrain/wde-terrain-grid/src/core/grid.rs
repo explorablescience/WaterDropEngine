@@ -31,14 +31,15 @@ pub struct Chunk {
     /// The position of the chunk in the grid.
     pub pos: GridChunkPos,
     /// List of terrain tiles that belong to this chunk.
-    /// The tile is None if it contains no data. If it is Some, the Entity should have a TerrainTileData component with the corresponding data.
-    pub tiles: Vec<Option<Entity>>
+    pub tiles: Vec<Option<Entity>>,
+    /// Pointers from the entities to their position in the grid.
+    pub entity_to_tile: HashMap<Entity, Vec<GridLocalPos>>
 }
 impl Chunk {
     /// Creates a new terrain chunk with the specified position and an empty tile list.
     pub fn new(pos: GridChunkPos) -> Self {
         let tiles = vec![None; (CHUNK_GRID_SUBDIVISIONS * CHUNK_GRID_SUBDIVISIONS * 4) as usize];
-        Chunk { pos, tiles }
+        Chunk { pos, tiles, entity_to_tile: HashMap::new() }
     }
 
 
@@ -48,6 +49,7 @@ impl Chunk {
         let index = Self::local_pos_to_index(local_pos);
         if let Some(tile) = self.tiles.get_mut(index) {
             *tile = Some(entity);
+            self.entity_to_tile.entry(entity).or_default().push(local_pos);
         }
     }
     /// Gets the entity at the specified local tile position within this chunk, if it exists.
@@ -55,11 +57,15 @@ impl Chunk {
         let index = Self::local_pos_to_index(local_pos);
         self.tiles.get(index).and_then(|tile| *tile)
     }
-    /// Clears the entity at the specified local tile position within this chunk.
-    pub fn clear_entity_at(&mut self, local_pos: GridLocalPos) {
-        let index = Self::local_pos_to_index(local_pos);
-        if let Some(tile) = self.tiles.get_mut(index) {
-            *tile = None;
+    /// Removes the entity from all tiles it occupies in this chunk.
+    pub fn remove_entity(&mut self, entity: Entity) {
+        if let Some(local_positions) = self.entity_to_tile.remove(&entity) {
+            for local_pos in local_positions {
+                let index = Self::local_pos_to_index(local_pos);
+                if let Some(tile) = self.tiles.get_mut(index) && tile.as_ref() == Some(&entity) {
+                    *tile = None;
+                }
+            }
         }
     }
 
@@ -140,10 +146,10 @@ impl Grid {
     pub fn get_entity_at(&self, chunk_pos: GridChunkPos, local_pos: GridLocalPos) -> Option<Entity> {
         self.chunks.get(&chunk_pos).and_then(|chunk| chunk.get_entity_at(local_pos))
     }
-    /// Clears the entity at the specified chunk and local tile position in the grid.
-    pub fn clear_entity_at(&mut self, chunk_pos: GridChunkPos, local_pos: GridLocalPos) {
-        if let Some(chunk) = self.chunks.get_mut(&chunk_pos) {
-            chunk.clear_entity_at(local_pos);
+    /// Removes the entity from all tiles it occupies in the grid.
+    pub fn remove_entity(&mut self, entity: Entity) {
+        for chunk in self.chunks.values_mut() {
+            chunk.remove_entity(entity);
         }
     }
     /// Clears all entities.
