@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use wde_gizmos::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::core::grid::{CHUNK_GRID_SUBDIVISIONS, GridChunkPos, GridLocalPos, GridPos};
+use crate::core::grid::{CHUNK_GRID_SUBDIVISIONS, GridChunkPos, GridPos};
 
 /// Marker component for grid gizmo entities.
 #[derive(Component)]

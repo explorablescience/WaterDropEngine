@@ -1,24 +1,25 @@
 use bevy::prelude::*;
-use std::collections::HashSet;
 
-use crate::{core::grid::{GridPos, CHUNK_GRID_SUBDIVISIONS}, prelude::{Grid, GridLocalDir}};
+use crate::{core::grid::GridPos, prelude::{Grid, GridLocalDir}};
 
 /// Local rotation of an entity on the grid around its center, in 90 degree increments.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GridRotation {
     #[default]
     R0,
-    R45,
     R90,
-    R135,
     R180,
-    R225,
-    R270,
-    R315
+    R270
 }
 impl GridRotation {
-    fn is_rotated_45(&self) -> bool {
-        matches!(self, GridRotation::R45 | GridRotation::R135 | GridRotation::R225 | GridRotation::R315)
+    /// Gives the rotation resulting from the given rotation.
+    pub fn rotation(self) -> f32 {
+        match self {
+            GridRotation::R0 => 0.0,
+            GridRotation::R90 => std::f32::consts::FRAC_PI_2,
+            GridRotation::R180 => std::f32::consts::PI,
+            GridRotation::R270 => 3.0 * std::f32::consts::FRAC_PI_2
+        }
     }
 }
 
@@ -26,40 +27,37 @@ impl GridRotation {
 #[derive(Component, Clone, Debug)]
 pub struct GridEntity {
     center: Vec2,
+    bbox: (Vec2, Vec2), // (bottom left, top_right)
     footprint: Vec<GridPos>
 }
 impl GridEntity {
     pub fn new(center: Vec2, extent: UVec2, rotation: GridRotation) -> Self {
-        let (center, footprint) = match !rotation.is_rotated_45() {
-            true => compute_footprint_straight(center, extent, rotation),
-            false => compute_footprint_45(center, extent, rotation)
-        };
-        return GridEntity { center, footprint };
+        let (center, bbox, footprint) = compute_footprint(center, extent, rotation);
+        GridEntity { center, bbox, footprint }
     }
-
-
     /// Gets the center tile position of this entity.
     /// Note that this is not necessarily the center of the footprint, but the position used to place the entity on the grid.
     pub fn center(&self) -> Vec2 {
-        return self.center;
+        self.center
     }
-
-
+    /// Gets the bounding box of this entity in world coordinates (bottom left, top right).
+    pub fn bbox(&self) -> (Vec2, Vec2) {
+        self.bbox
+    }
     /// Gets the list of grid tiles that are occupied by this entity footprint.
     pub fn footprint(&self) -> &Vec<GridPos> {
-        return &self.footprint;
+        &self.footprint
     }
 }
 
 // For non-rotated entities, the footprint is a simple rectangle around the center
-fn compute_footprint_straight(center: Vec2, extent: UVec2, rotation: GridRotation) -> (Vec2, Vec<GridPos>) {
+fn compute_footprint(center: Vec2, extent: UVec2, rotation: GridRotation) -> (Vec2, (Vec2, Vec2), Vec<GridPos>) {
     let ts = Grid::tile_size();
 
     // Change extent if rotated
     let extent = match rotation {
         GridRotation::R0 | GridRotation::R180 => extent,
-        GridRotation::R90 | GridRotation::R270 => UVec2::new(extent.y, extent.x),
-        _ => unreachable!()
+        GridRotation::R90 | GridRotation::R270 => UVec2::new(extent.y, extent.x)
     };
 
     // Add an offset to start from the center of the object
@@ -80,70 +78,13 @@ fn compute_footprint_straight(center: Vec2, extent: UVec2, rotation: GridRotatio
     }
 
     // Compute bbox
-    let bottom_right_rel_pos = center - offset_to_center_object + Vec2::new(extent.x as f32, extent.y as f32) * ts;
-    let (bottom_right_chunk , bottom_right_local) = Grid::world_to_pos(bottom_right_rel_pos);
-    let bottom_right_pos = Grid::pos_to_world(bottom_right_chunk, bottom_right_local);
+    let bottom_left_pos = center - offset_to_center_object + Vec2::new(extent.x as f32 - 1.0, extent.y as f32 - 1.0) * ts;
+    let (bottom_chunk_pos, bottom_local_pos) = Grid::world_to_pos(bottom_left_pos);
+    let bottom_left_pos = Grid::pos_to_world_tile_center(bottom_chunk_pos, (bottom_local_pos.0, bottom_local_pos.1));
+    let top_right_pos = center - offset_to_center_object;
+    let (top_chunk_pos, top_local_pos) = Grid::world_to_pos(top_right_pos);
+    let top_right_pos = Grid::pos_to_world_tile_center(top_chunk_pos, (top_local_pos.0, top_local_pos.1));
+    let center = (bottom_left_pos + top_right_pos) / 2.0;
 
-    let center = bottom_right_pos;
-    (center, footprint)
-}
-
-// For entities rotated 45 degrees, the footprint is a diamond shape around the center
-fn compute_footprint_45(center: Vec2, extent: UVec2, rotation: GridRotation) -> (Vec2, Vec<GridPos>) {
-    let angle = match rotation {
-        GridRotation::R45 => std::f32::consts::FRAC_PI_4,
-        GridRotation::R135 => 3.0 * std::f32::consts::FRAC_PI_4,
-        GridRotation::R225 => 5.0 * std::f32::consts::FRAC_PI_4,
-        GridRotation::R315 => 7.0 * std::f32::consts::FRAC_PI_4,
-        _ => unreachable!(),
-    };
-
-    let tile_size = Grid::tile_size();
-    let half_extent = Vec2::new(extent.x as f32, extent.y as f32) * tile_size * 0.5;
-    let (sin_angle, cos_angle) = angle.sin_cos();
-
-    // Axis-aligned bounds of the rotated rectangle, expanded by one tile to cover border subtiles.
-    let aabb_half = Vec2::new(
-        cos_angle.abs() * half_extent.x + sin_angle.abs() * half_extent.y,
-        sin_angle.abs() * half_extent.x + cos_angle.abs() * half_extent.y,
-    ) + Vec2::splat(tile_size);
-
-    let min_chunk = Grid::pos_to_chunk(center - aabb_half);
-    let max_chunk = Grid::pos_to_chunk(center + aabb_half);
-
-    let mut footprint = Vec::new();
-    let mut visited = HashSet::new();
-    let dir_list = [GridLocalDir::North, GridLocalDir::East, GridLocalDir::West, GridLocalDir::South];
-    let epsilon = tile_size * 0.01;
-
-    for chunk_x in min_chunk.x..=max_chunk.x {
-        for chunk_y in min_chunk.y..=max_chunk.y {
-            let chunk_pos = IVec2::new(chunk_x, chunk_y);
-
-            for local_x in 0..CHUNK_GRID_SUBDIVISIONS {
-                for local_y in 0..CHUNK_GRID_SUBDIVISIONS {
-                    for dir in dir_list {
-                        let local_pos = (local_x, local_y, dir);
-                        let subtile_world = Grid::pos_to_world(chunk_pos, local_pos);
-
-                        // Convert to the rectangle local space by applying inverse rotation.
-                        let delta = subtile_world - center;
-                        let local = Vec2::new(
-                            delta.x * cos_angle + delta.y * sin_angle,
-                            -delta.x * sin_angle + delta.y * cos_angle,
-                        );
-
-                        if local.x.abs() <= half_extent.x + epsilon && local.y.abs() <= half_extent.y + epsilon {
-                            let grid_pos = (chunk_pos, local_pos);
-                            if visited.insert(grid_pos) {
-                                footprint.push(grid_pos);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    (center, footprint)
+    (center, (bottom_left_pos, top_right_pos), footprint)
 }

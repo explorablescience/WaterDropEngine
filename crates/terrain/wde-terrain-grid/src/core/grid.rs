@@ -91,24 +91,18 @@ impl Chunk {
     }
     /// Converts a local tile position to a world position. This will select the center of the subtile.
     pub fn local_to_world(chunk_pos: GridChunkPos, local_pos: GridLocalPos) -> Vec2 {
-        let cell_s = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
-        let cell_pos = chunk_pos.as_vec2() * CHUNK_SIZE + Vec2::new(local_pos.0 as f32, local_pos.1 as f32) * cell_s + cell_s / 2.0 - CHUNK_SIZE / 2.0;
-        let rot = match local_pos.2 {
-            GridLocalDir::North => 0.0,
-            GridLocalDir::South => std::f32::consts::PI,
-            GridLocalDir::West => -std::f32::consts::PI / 2.0,
-            GridLocalDir::East => std::f32::consts::PI / 2.0
-        };
+        let cell_pos = Self::local_to_world_tile_center(chunk_pos, (local_pos.0, local_pos.1));
         let tr = match local_pos.2 {
             GridLocalDir::North => Vec2::new(0.0, 1.0),
             GridLocalDir::South => Vec2::new(0.0, -1.0),
             GridLocalDir::West => Vec2::new(-1.0, 0.0),
             GridLocalDir::East => Vec2::new(1.0, 0.0)
-        } / 2.0;
-        Vec2::new(
-            crate::ops::cos(rot),
-            crate::ops::sin(rot)
-        ) * cell_s + cell_pos + tr
+        } * Grid::tile_size() / 4.0;
+        cell_pos + tr
+    }
+    /// Gets the center position of a tile.
+    pub fn local_to_world_tile_center(chunk_pos: GridChunkPos, local_pos: GridTileLocalPos) -> Vec2 {
+        chunk_pos.as_vec2() * CHUNK_SIZE + Vec2::new(local_pos.0 as f32, local_pos.1 as f32) * Grid::tile_size() +  Grid::tile_size() / 2.0 - CHUNK_SIZE / 2.0
     }
 
     // Helper methods
@@ -184,6 +178,10 @@ impl Grid {
     pub fn pos_to_world(chunk_pos: GridChunkPos, local_pos: GridLocalPos) -> Vec2 {
         Chunk::local_to_world(chunk_pos, local_pos)
     }
+    /// Gets the center world position for a given chunk and local tile position.
+    pub fn pos_to_world_tile_center(chunk_pos: GridChunkPos, local_pos: GridTileLocalPos) -> Vec2 {
+        Chunk::local_to_world_tile_center(chunk_pos, local_pos)
+    }
     /// Gets the world position of a tile center for a given chunk and tile position.
     pub fn tile_pos_to_world(chunk_pos: GridChunkPos, local_pos: GridTileLocalPos) -> Vec2 {
         let (local_x, local_y) = local_pos;
@@ -198,6 +196,7 @@ impl Grid {
 
     // Helper methods
     /// Gets the size of a single tile in world units.
+    #[inline]
     pub fn tile_size() -> f32 {
         CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32
     }
