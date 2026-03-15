@@ -25,14 +25,23 @@ impl GridRotation {
 /// Describes the area occupied by an entity on the grid.
 #[derive(Component, Clone, Debug)]
 pub struct GridEntity {
+    center: Vec2,
     footprint: Vec<GridPos>
 }
 impl GridEntity {
     pub fn new(center: Vec2, extent: UVec2, rotation: GridRotation) -> Self {
-        if !rotation.is_rotated_45() {
-            return GridEntity { footprint: compute_footprint_straight(center, extent, rotation) };
-        }
-        return GridEntity { footprint: compute_footprint_45(center, extent, rotation) };
+        let (center, footprint) = match !rotation.is_rotated_45() {
+            true => compute_footprint_straight(center, extent, rotation),
+            false => compute_footprint_45(center, extent, rotation)
+        };
+        return GridEntity { center, footprint };
+    }
+
+
+    /// Gets the center tile position of this entity.
+    /// Note that this is not necessarily the center of the footprint, but the position used to place the entity on the grid.
+    pub fn center(&self) -> Vec2 {
+        return self.center;
     }
 
 
@@ -43,40 +52,44 @@ impl GridEntity {
 }
 
 // For non-rotated entities, the footprint is a simple rectangle around the center
-fn compute_footprint_straight(center: Vec2, extent: UVec2, rotation: GridRotation) -> Vec<GridPos> {
+fn compute_footprint_straight(center: Vec2, extent: UVec2, rotation: GridRotation) -> (Vec2, Vec<GridPos>) {
+    let ts = Grid::tile_size();
+
     // Change extent if rotated
     let extent = match rotation {
         GridRotation::R0 | GridRotation::R180 => extent,
         GridRotation::R90 | GridRotation::R270 => UVec2::new(extent.y, extent.x),
-        _ => unreachable!() // We don't support non-90 degree rotations yet
+        _ => unreachable!()
     };
 
-    // Get chunk and local position of the center
-    let (chunk_center, local_center) = Grid::world_to_pos(center);
-    let chunk_center_world_space = Grid::pos_to_world(chunk_center, local_center)
-        - Vec2::new(Grid::tile_size() / 2.0 * (extent.x % 2 == 1) as i32 as f32, Grid::tile_size() / 2.0 * (extent.y % 2 == 1) as i32 as f32); // Convert from tile corner to tile center
-
     // Add an offset to start from the center of the object
-    let offset_to_center_object = Vec2::new(extent.x as f32, extent.y as f32) * Grid::tile_size() / 2.0 - Grid::tile_size() / 2.0;
+    let offset_to_center_object = Vec2::new(extent.x as f32, extent.y as f32) * ts / 2.0 - ts / 2.0;
 
     // Compute the footprint
     let mut footprint = Vec::new();
     let dir_list = [GridLocalDir::North, GridLocalDir::East, GridLocalDir::West, GridLocalDir::South];
     for x in 0..extent.x {
         for z in 0..extent.y {
-            let local_pos = chunk_center_world_space - offset_to_center_object + Vec2::new(x as f32, z as f32) * Grid::tile_size();
+            let local_pos = center - offset_to_center_object + Vec2::new(x as f32, z as f32) * ts;
             let (chunk_pos, local_pos) = Grid::world_to_pos(local_pos);
             for dir in dir_list {
-                footprint.push((chunk_pos, (local_pos.0, local_pos.1, dir)));
+                let local_pos_s = (local_pos.0, local_pos.1, dir);
+                footprint.push((chunk_pos, local_pos_s));
             }
         }
     }
-    
-    footprint
+
+    // Compute bbox
+    let bottom_right_rel_pos = center - offset_to_center_object + Vec2::new(extent.x as f32, extent.y as f32) * ts;
+    let (bottom_right_chunk , bottom_right_local) = Grid::world_to_pos(bottom_right_rel_pos);
+    let bottom_right_pos = Grid::pos_to_world(bottom_right_chunk, bottom_right_local);
+
+    let center = bottom_right_pos;
+    (center, footprint)
 }
 
 // For entities rotated 45 degrees, the footprint is a diamond shape around the center
-fn compute_footprint_45(center: Vec2, extent: UVec2, rotation: GridRotation) -> Vec<GridPos> {
+fn compute_footprint_45(center: Vec2, extent: UVec2, rotation: GridRotation) -> (Vec2, Vec<GridPos>) {
     let angle = match rotation {
         GridRotation::R45 => std::f32::consts::FRAC_PI_4,
         GridRotation::R135 => 3.0 * std::f32::consts::FRAC_PI_4,
@@ -84,10 +97,6 @@ fn compute_footprint_45(center: Vec2, extent: UVec2, rotation: GridRotation) -> 
         GridRotation::R315 => 7.0 * std::f32::consts::FRAC_PI_4,
         _ => unreachable!(),
     };
-
-    // Snap the center to the grid to keep a stable footprint while moving the entity.
-    let (chunk_center, local_center) = Grid::world_to_pos(center);
-    let center = Grid::pos_to_world(chunk_center, local_center);
 
     let tile_size = Grid::tile_size();
     let half_extent = Vec2::new(extent.x as f32, extent.y as f32) * tile_size * 0.5;
@@ -136,5 +145,5 @@ fn compute_footprint_45(center: Vec2, extent: UVec2, rotation: GridRotation) -> 
         }
     }
 
-    footprint
+    (center, footprint)
 }

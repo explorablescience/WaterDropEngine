@@ -2,16 +2,18 @@ use wde_physics::prelude::*;
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 use wde_gizmos::prelude::*;
+use wde_gltf::prelude::*;
+use wde_pbr::prelude::*;
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::{core::{CorePlugin, grid::Grid, grid_entity::{GridEntity, GridRotation}}, render::RenderPlugin};
+use crate::{core::{CorePlugin, grid::Grid, grid_entity::{GridEntity, GridRotation}}, prelude::GridLocalDir, render::RenderPlugin};
 
 mod core;
 mod render;
 
 pub mod prelude {
     pub use super::TerrainGridPlugin;
-    pub use super::core::grid::{Grid, GridLocalDir};
+    pub use super::core::grid::{Grid, GridLocalDir, GridTilePos};
     pub use super::core::grid_entity::{GridEntity, GridRotation};
 }
 
@@ -40,49 +42,20 @@ fn init(
 ) {
     // Add a dummy entity to test the grid system
     let pos = Vec2::new(5.0, 5.0);
-    let footprint = GridEntity::new(pos, UVec2::new(2, 2), GridRotation::R0);
+    // let footprint = GridEntity::new(pos, UVec2::new(2, 2), GridRotation::R0);
+    let gltf_asset = GltfLoader::load("tests/models/houses/house_demo1.gltf", &asset_server).unwrap();
+    let model = PbrModel(gltf_asset.models.clone());
     let entity = commands.spawn((
-        Transform::from_xyz(pos.x, 0.5, pos.y),
-        // Mesh(asset_server.add(CapsuleMesh::from("test_gizmo", CapsuleMeshConfig::default()))),
-        // GizmoMaterial(asset_server.add(GizmoMaterialAsset {
-        //     color: [0.8, 0.2, 0.2, 1.0],
-        //     ..Default::default()
-        // })),
-        footprint.clone()
+        Transform::IDENTITY,
+        Mesh(asset_server.add(CapsuleMesh::from("test_gizmo", CapsuleMeshConfig::default()))),
+        GizmoMaterial(asset_server.add(GizmoMaterialAsset {
+            color: [0.8, 0.2, 0.2, 1.0],
+            ..Default::default()
+        })),
+        // model.clone(),
+        // footprint.clone()
     )).id();
     test_entity.0 = Some(entity);
-
-    // Set the entity in the grid based on its footprint
-    // let occupied_tiles = footprint.get_occupied_tiles();
-    // for (chunk_pos, local_pos) in occupied_tiles {
-    //     grid.set_entity_at_chunk_local(chunk_pos, local_pos, entity);
-    // }
-
-
-    // // Add a dummy entity to test the grid system
-    // let footprint = GridEntity {
-    //     center: Vec2::new(10.0, 6.0),
-    //     size: Vec2::new(2.0, 4.0),
-    //     rotation: GridEntityRotation::R90
-    // };
-    // let entity = commands.spawn(footprint.clone()).id();
-    // let occupied_tiles = footprint.get_occupied_tiles();
-    // for (chunk_pos, local_pos) in occupied_tiles {
-    //     grid.set_entity_at_chunk_local(chunk_pos, local_pos, entity);
-    // }
-
-
-    // // Add a dummy entity to test the grid system
-    // let footprint = GridEntity {
-    //     center: Vec2::new(6.0, 10.0),
-    //     size: Vec2::new(2.0, 2.0),
-    //     rotation: GridEntityRotation::R45
-    // };
-    // let entity = commands.spawn(footprint.clone()).id();
-    // let occupied_tiles = footprint.get_occupied_tiles();
-    // for (chunk_pos, local_pos) in occupied_tiles {
-    //     grid.set_entity_at_chunk_local(chunk_pos, local_pos, entity);
-    // }
 }
 
 fn show_footprint_at_mouse_pos(
@@ -111,18 +84,25 @@ fn show_footprint_at_mouse_pos(
     if let Some((_, toi)) = phworld.as_ref().cast_ray(&ray, &RayCastConfig::default()) {
         let hit_point = ray.point_at(toi);
         let hit_point = Vec2::new(hit_point.x, hit_point.z);
-
-        // Move the test entity to the hit point
-        commands.entity(entity).insert(Transform::from_xyz(hit_point.x, 0.5, hit_point.y));
-
+        
         // Clear the grid of any registered entities
         grid.clear_all();
 
+        let (pos_chunk, pos_local) = Grid::world_to_pos(hit_point);
+        grid.set_entity_at(pos_chunk, pos_local, Entity::PLACEHOLDER);
+        let pos = Grid::pos_to_world(pos_chunk, pos_local);
+        commands.entity(entity).insert(Transform::from_xyz(pos.x, 0.5, pos.y));
+        
+        
         // Update the grid with the new position of the entity
-        let footprint = GridEntity::new(hit_point, UVec2::new(2, 3), GridRotation::R45);
-        let occupied_tiles = footprint.footprint();
-        for (chunk_pos, local_pos) in occupied_tiles {
-            grid.set_entity_at(*chunk_pos, *local_pos, entity);
-        }
+        // let grid_entity = GridEntity::new(hit_point, UVec2::new(4, 6), GridRotation::R0);
+        // commands.entity(entity).insert(
+        //     Transform::from_xyz(grid_entity.center().x, 0.0, grid_entity.center().y)
+        //         .with_scale(Vec3::new(2.0, 1.0, 3.0))
+        // );
+        // let occupied_tiles = grid_entity.footprint();
+        // for (chunk_pos, local_pos) in occupied_tiles {
+        //     grid.set_entity_at(*chunk_pos, *local_pos, entity);
+        // }
     }
 }

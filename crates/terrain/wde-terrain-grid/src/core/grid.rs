@@ -11,6 +11,10 @@ pub type GridChunkPos = IVec2;
 pub type GridLocalPos = (u32, u32, GridLocalDir);
 /// The full position in the grid
 pub type GridPos = (GridChunkPos, GridLocalPos);
+/// The local position of a tile within a chunk (x, z coordinates), without subtile direction.
+pub type GridTileLocalPos = (u32, u32);
+/// The tile position in the grid, without subtile direction.
+pub type GridTilePos = (GridChunkPos, GridTileLocalPos);
 /// The local position of a tile within a square tile.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum GridLocalDir {
@@ -85,21 +89,26 @@ impl Chunk {
 
         (local_x.floor() as u32, local_y.floor() as u32, local_dir)
     }
-    /// Converts a local tile position within this chunk to a world position.
+    /// Converts a local tile position to a world position. This will select the center of the subtile.
     pub fn local_to_world(chunk_pos: GridChunkPos, local_pos: GridLocalPos) -> Vec2 {
-        let (local_x, local_y, local_dir) = local_pos;
-        let cell_size = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
-        let half_cell = cell_size * 0.5;
-        let half_chunk = CHUNK_SIZE * 0.5;
-        let mut world_x = chunk_pos.x as f32 * CHUNK_SIZE + local_x as f32 * cell_size + half_cell - half_chunk;
-        let mut world_y = chunk_pos.y as f32 * CHUNK_SIZE + local_y as f32 * cell_size + half_cell - half_chunk;
-        match local_dir {
-            GridLocalDir::North => world_y += half_cell,
-            GridLocalDir::South => world_y -= half_cell,
-            GridLocalDir::East => world_x += half_cell,
-            GridLocalDir::West => world_x -= half_cell,
-        }
-        Vec2::new(world_x, world_y)
+        let cell_s = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
+        let cell_pos = chunk_pos.as_vec2() * CHUNK_SIZE + Vec2::new(local_pos.0 as f32, local_pos.1 as f32) * cell_s + cell_s / 2.0 - CHUNK_SIZE / 2.0;
+        let rot = match local_pos.2 {
+            GridLocalDir::North => 0.0,
+            GridLocalDir::South => std::f32::consts::PI,
+            GridLocalDir::West => -std::f32::consts::PI / 2.0,
+            GridLocalDir::East => std::f32::consts::PI / 2.0
+        };
+        let tr = match local_pos.2 {
+            GridLocalDir::North => Vec2::new(0.0, 1.0),
+            GridLocalDir::South => Vec2::new(0.0, -1.0),
+            GridLocalDir::West => Vec2::new(-1.0, 0.0),
+            GridLocalDir::East => Vec2::new(1.0, 0.0)
+        } / 2.0;
+        Vec2::new(
+            crate::ops::cos(rot),
+            crate::ops::sin(rot)
+        ) * cell_s + cell_pos + tr
     }
 
     // Helper methods
@@ -157,6 +166,11 @@ impl Grid {
         let local_pos = Chunk::world_to_local(world_pos);
         (chunk_pos, local_pos)
     }
+    /// Gets the nearest chunk and tile position (without subtile direction) for a given world position.
+    pub fn world_to_tile_pos(world_pos: Vec2) -> GridTilePos {
+        let (chunk_pos, local_pos) = Self::world_to_pos(world_pos);
+        (chunk_pos, (local_pos.0, local_pos.1))
+    }
     /// Gets the nearest chunk position for a given world position.
     /// Note that this does not check if the chunk actually exists in the grid.
     pub fn pos_to_chunk(world_pos: Vec2) -> GridChunkPos {
@@ -169,6 +183,17 @@ impl Grid {
     /// Gets the world position for a given chunk and local tile position.
     pub fn pos_to_world(chunk_pos: GridChunkPos, local_pos: GridLocalPos) -> Vec2 {
         Chunk::local_to_world(chunk_pos, local_pos)
+    }
+    /// Gets the world position of a tile center for a given chunk and tile position.
+    pub fn tile_pos_to_world(chunk_pos: GridChunkPos, local_pos: GridTileLocalPos) -> Vec2 {
+        let (local_x, local_y) = local_pos;
+        let cell_size = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
+        let half_cell = cell_size * 0.5;
+        let half_chunk = CHUNK_SIZE * 0.5;
+        Vec2::new(
+            chunk_pos.x as f32 * CHUNK_SIZE + local_x as f32 * cell_size + half_cell - half_chunk,
+            chunk_pos.y as f32 * CHUNK_SIZE + local_y as f32 * cell_size + half_cell - half_chunk,
+        )
     }
 
     // Helper methods
