@@ -48,7 +48,7 @@ impl RenderAsset for GpuCustomRenderPipeline {
             vert: Some(assets_server.load("examples/custom_forward_render/vert.wgsl")),
             frag: Some(assets_server.load("examples/custom_forward_render/frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
-            depth: DepthStencilDescriptor {
+            depth: DepthDescriptor {
                 enabled: true,
                 ..Default::default()
             },

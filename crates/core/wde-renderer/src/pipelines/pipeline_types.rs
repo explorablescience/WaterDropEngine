@@ -27,7 +27,7 @@
 //! ```
 
 use bevy::{asset::Handle, ecs::prelude::*};
-use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::{DepthStencilDescriptor, Face, ShaderStages, RenderTopology}, texture::TextureFormat};
+use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::{DepthDescriptor, Face, ShaderStages, RenderTopology}, texture::TextureFormat};
 
 use crate::assets::Shader;
 
@@ -53,7 +53,7 @@ pub struct RenderPipelineDescriptor {
     /// Fragment shader handle (WGSL) to compile.
     pub frag: Option<Handle<Shader>>,
     /// Depth/stencil state for the pipeline.
-    pub depth: DepthStencilDescriptor,
+    pub depth: DepthDescriptor,
     /// Render targets; `None` renders to the swapchain surface by default.
     pub render_targets: Option<Vec<TextureFormat>>,
     /// Bind group layouts describing all resource bindings.
@@ -75,7 +75,7 @@ impl Default for RenderPipelineDescriptor {
             label: "Render Pipeline",
             vert: None,
             frag: None,
-            depth: DepthStencilDescriptor::default(),
+            depth: DepthDescriptor::default(),
             render_targets: None,
             bind_group_layouts: vec![],
             push_constants: vec![],

@@ -60,7 +60,7 @@ impl RenderAsset for GpuTerrainRenderPipeline {
                 terrain_buffer.layout.clone(),
                 terrain_layout.clone()
             ],
-            depth: DepthStencilDescriptor {
+            depth: DepthDescriptor {
                 enabled: true,
                 ..Default::default()
             },

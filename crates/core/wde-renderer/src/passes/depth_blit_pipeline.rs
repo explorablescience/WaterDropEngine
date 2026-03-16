@@ -32,10 +32,11 @@ impl RenderAsset for GpuDepthBlitRenderPipeline {
             vert: Some(assets_server.load("core/render/depth_blit/vert.wgsl")),
             frag: Some(assets_server.load("core/render/depth_blit/frag.wgsl")),
             bind_group_layouts: vec![depth_msaa_layout.clone()],
-            depth: DepthStencilDescriptor {
+            depth: DepthDescriptor {
                 enabled: true,
                 write: true,
-                compare: CompareFunction::Always
+                compare: CompareFunction::Always,
+                ..Default::default()
             },
             render_targets: Some(vec![]),
             ..Default::default()

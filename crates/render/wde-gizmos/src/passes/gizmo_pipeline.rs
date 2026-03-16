@@ -49,7 +49,7 @@ impl RenderAsset for GpuGizmoRenderPipeline {
             vert: Some(assets_server.load("core/render/gizmo/vert.wgsl")),
             frag: Some(assets_server.load("core/render/gizmo/frag.wgsl")),
             bind_group_layouts: vec![camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
-            depth: DepthStencilDescriptor {
+            depth: DepthDescriptor {
                 enabled: true,
                 ..Default::default()
             },

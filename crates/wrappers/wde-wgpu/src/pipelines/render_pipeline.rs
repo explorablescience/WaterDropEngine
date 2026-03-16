@@ -15,22 +15,30 @@ pub type Face = wgpu::Face;
 /// Export compare function.
 pub type CompareFunction = wgpu::CompareFunction;
 
-/// Describes an optional depth/stencil attachment for a pipeline.
+/// Depth
+pub type StencilState = wgpu::StencilState;
+pub type StencilFaceState = wgpu::StencilFaceState;
+pub type StencilOperation = wgpu::StencilOperation;
+
+/// Describes an optional depth attachment for a pipeline.
 #[derive(Clone)]
-pub struct DepthStencilDescriptor {
-    /// Whether the pipeline should have a depth/stencil attachment.
+pub struct DepthDescriptor {
+    /// Whether the pipeline should have a depth attachment.
     pub enabled: bool,
     /// Whether the stencil attachment should be read-only.
     pub write: bool,
     /// The comparison function that the depth attachment will use.
-    pub compare: CompareFunction
+    pub compare: CompareFunction,
+    /// The stencil state for the depth attachment. If `None`, stencil testing is disabled.
+    pub stencil: StencilState,
 }
-impl Default for DepthStencilDescriptor {
+impl Default for DepthDescriptor {
     fn default() -> Self {
         Self {
             enabled: false,
             write: true,
-            compare: CompareFunction::Less
+            compare: CompareFunction::Less,
+            stencil: StencilState::default(),
         }
     }
 }
@@ -47,7 +55,7 @@ pub enum RenderTopology {
 
 // Render pipeline configuration
 struct RenderPipelineConfig {
-    depth: DepthStencilDescriptor,
+    depth: DepthDescriptor,
     render_targets: Vec<TextureFormat>,
     primitive_topology: wgpu::PrimitiveTopology,
     push_constants: Vec<wgpu::PushConstantRange>,
@@ -115,7 +123,7 @@ impl RenderPipeline {
             layout: None,
             is_initialized: false,
             config: RenderPipelineConfig {
-                depth: DepthStencilDescriptor::default(),
+                depth: DepthDescriptor::default(),
                 render_targets: Vec::from([SWAPCHAIN_FORMAT]),
                 primitive_topology: wgpu::PrimitiveTopology::TriangleList,
                 push_constants: Vec::new(),
@@ -161,7 +169,7 @@ impl RenderPipeline {
     }
 
     /// Set the configuration of the depth/stencil attachment.
-    pub fn set_depth(&mut self, depth: DepthStencilDescriptor) -> &mut Self {
+    pub fn set_depth(&mut self, depth: DepthDescriptor) -> &mut Self {
         self.config.depth = depth;
         self
     }
@@ -368,7 +376,7 @@ impl RenderPipeline {
                 },
                 depth_write_enabled: d.depth.write,
                 depth_compare: d.depth.compare,
-                stencil: wgpu::StencilState::default(),
+                stencil: d.depth.stencil.clone(),
                 bias: wgpu::DepthBiasState::default(),
             }) } else { None },
             multisample: wgpu::MultisampleState {

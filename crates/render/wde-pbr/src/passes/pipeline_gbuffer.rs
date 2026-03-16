@@ -65,7 +65,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
             vert: Some(assets_server.load("core/render/pbr/gbuffer_vert.wgsl")),
             frag: Some(assets_server.load("core/render/pbr/gbuffer_frag.wgsl")),
             bind_group_layouts: vec![mesh_ssbo_layout.clone(), camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
-            depth: DepthStencilDescriptor {
+            depth: DepthDescriptor {
                 enabled: true,
                 ..Default::default()
             },

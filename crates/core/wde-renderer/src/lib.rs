@@ -249,6 +249,7 @@ pub mod prelude {
     pub use crate::assets::{Material, MaterialBuilder, MaterialsPluginRegister, Texture, TextureLoaderSettings, Shader};
     pub use crate::passes::{render_graph::{RenderGraph, RenderPass}, depth_msaa::{DepthTextureMSAA}, depth::{DepthTexture}};
     pub use crate::utils::Color;
+    pub use wde_wgpu::render_pipeline::{StencilState, StencilFaceState, StencilOperation, CompareFunction};
 }
 
 
