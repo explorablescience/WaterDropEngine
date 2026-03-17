@@ -88,6 +88,7 @@ pub fn handle_placement_tool(
     mut local_rot: Local<GridRotation>,
     mouse_input: Res<ButtonInput<MouseButton>>
 ) {
+    
     // If placement entity should not be shown, remove the model from it if it exists and return early
     if !placement_ui.placement_show_entity && let Some(entity) = placement_ui.placement_entity && placement_ui.placement_entity_has_model {
         commands.entity(entity).remove::<PbrModel>();
