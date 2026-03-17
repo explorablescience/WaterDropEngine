@@ -26,10 +26,10 @@
 use bevy::prelude::*;
 use wde_egui::EguiPlugin;
 
-use crate::{ui_framedata::UIFrameDataPlugin, ui_menu::EditorUIMenu};
+use crate::{panels::PanelsPlugin, ui::EditorUIMenu};
 
-mod ui_menu;
-mod ui_framedata;
+mod ui;
+mod panels;
 
 pub mod prelude {
     pub mod ui {
@@ -45,7 +45,7 @@ pub mod prelude {
 
     // Re-export editor types
     pub use super::EditorPlugin;
-    pub use super::ui_menu::UIMenu;
+    pub use super::ui::UIMenu;
 }
 
 pub struct EditorPlugin;
@@ -54,6 +54,6 @@ impl Plugin for EditorPlugin {
         app
             .add_plugins(EguiPlugin)
             .add_plugins(EditorUIMenu)
-            .add_plugins(UIFrameDataPlugin);
+            .add_plugins(PanelsPlugin);
     }
 }

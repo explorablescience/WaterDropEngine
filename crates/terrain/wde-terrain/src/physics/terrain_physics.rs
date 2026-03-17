@@ -7,6 +7,8 @@ use crate::manager::{CHUNK_HEIGHT, CHUNK_SIZE, ChunkPos, Terrain};
 
 #[derive(Component, Default)]
 pub struct TerrainPhysics {
+    /// Super parent to all tile colliders, used for better organization in the scene hierarchy
+    pub parent: Option<Entity>,
     /// Pointer from tile position (x, z) to the corresponding tile entity
     pub pos_to_entity: HashMap<ChunkPos, Entity>
 }
@@ -21,6 +23,12 @@ impl TerrainPhysics {
             Some(terrain) => terrain,
             None => return,
         };
+
+        // Ensure the parent entity for the colliders exists
+        if terrain_renderer.parent.is_none() {
+            let parent_entity = commands.spawn(Name::new("Terrain Colliders")).id();
+            terrain_renderer.parent = Some(parent_entity);
+        }
 
         // Extract the dirty tiles from the main terrain and create the according colliders
         for (tile_pos, tile_type, _, data) in terrain.dirty_physics.iter().flatten() {
@@ -43,9 +51,11 @@ impl TerrainPhysics {
                 commands.entity(*entity).insert(collider);
             } else {
                 let entity = commands.spawn((
+                    Name::new(format!("Terrain TileCollider ({}, {})", tile_pos.x, tile_pos.y)),
                     Transform::from_xyz(tile_pos.x as f32 * CHUNK_SIZE, 0.0, tile_pos.y as f32 * CHUNK_SIZE),
                     collider
                 )).id();
+                commands.entity(entity).set_parent_in_place(terrain_renderer.parent.unwrap());
                 terrain_renderer.pos_to_entity.insert(*tile_pos, entity);
             }
         }

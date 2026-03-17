@@ -48,7 +48,10 @@ pub fn init_placement(mut commands: Commands, mut placement_ui: ResMut<Placement
     placement_ui.placement_entity_has_model = true;
 
     // Create an empty entity for placement preview
-    let entity = commands.spawn(Transform::IDENTITY).id();
+    let entity = commands.spawn((
+        Name::new("Terrain Placement Preview"),
+        Transform::IDENTITY
+    )).id();
     placement_ui.placement_entity = Some(entity);
 }
 

@@ -29,13 +29,17 @@ impl Plugin for TerrainEditorPlugin {
 fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Spawn a terrain
     commands.spawn((
+        Name::new("Terrain"),
         Terrain::load("tests/terrain"),
         TerrainRenderer::new(&asset_server),
         TerrainPhysics::default()
     ));
 
     // Spawn a default brush for testing
-    commands.spawn(PaintBrush::default());
+    commands.spawn((
+        Name::new("Terrain Default Brush"),
+        PaintBrush::default()
+    ));
 }
 
 

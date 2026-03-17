@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use wde_egui::prelude::*;
 
-const LONG_AVG_PERIOD_SECONDS: f64 = 10.0;
+const LONG_AVG_PERIOD_SECONDS: f64 = 5.0;
 
 #[derive(Resource, Default)]
 struct FrameDataAverages {
@@ -64,25 +64,17 @@ fn draw_framedata_overlay(
     let text_color = egui::Color32::from_gray(165);
     let shadow_color = egui::Color32::from_black_alpha(220);
     let mut lines = Vec::with_capacity(6);
-    lines.push(match fps {
-        Some(value) => format!("FPS: {value:.1}"),
-        None => "FPS: n/a".to_string(),
-    });
-    lines.push(match frame_ms {
-        Some(value) => format!("Frame Time: {value:.2} ms"),
-        None => "Frame Time: n/a".to_string(),
-    });
-    lines.push(match averages.fps_long_avg {
-        Some(value) => format!("FPS Avg (10s): {value:.1}"),
-        None => "FPS Avg (10s): n/a".to_string(),
-    });
-    lines.push(match averages.frame_ms_long_avg {
-        Some(value) => format!("Frame Avg (10s): {value:.2} ms"),
-        None => "Frame Avg (10s): n/a".to_string(),
-    });
     lines.push(match frame_count {
         Some(value) => format!("Frame Count: {:.0}", value),
         None => "Frame Count: n/a".to_string(),
+    });
+    lines.push(match (fps, averages.fps_long_avg) {
+        (Some(current), Some(long_avg)) => format!("FPS: {current:.1} (Avg: {long_avg:.1})"),
+        _ => "FPS: n/a".to_string(),
+    });
+    lines.push(match (frame_ms, averages.frame_ms_long_avg) {
+        (Some(current), Some(long_avg)) => format!("Frame Time: {current:.2} ms (Avg: {long_avg:.2} ms)"),
+        _ => "Frame Time: n/a".to_string(),
     });
 
     let text = lines.join("\n");
@@ -90,7 +82,7 @@ fn draw_framedata_overlay(
     let font = egui::FontId::monospace(12.0);
 
     // Position in the lower-left corner with some padding
-    let pos = [10.0, window.height() - 60.0 - font.size]; // 10px padding from bottom and left
+    let pos = [10.0, window.height() - 38.0 - font.size]; // 10px padding from bottom and left
 
     // Draw shadow for better contrast
     painter.text(
