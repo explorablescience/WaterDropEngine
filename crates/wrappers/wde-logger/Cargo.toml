@@ -28,7 +28,9 @@ tracing-error = { version = "0.2.0", optional = true }
 # See https://github.com/nagisa/rust_tracy_client
 tracing-tracy = { version = "0.11.4", optional = true }
 tracy-client = { version = "0.18.3", optional = true }
+puffin = { git = "https://github.com/explorablescience/puffin.git", rev = "56ece9e", optional = true }
 
 [features]
 default = []
 tracing = ["bevy/trace", "bevy/trace_tracy", "bevy/trace_tracy_memory", "tracing-tracy", "tracy-client", "tracing-error"]
+puffin = ["bevy/trace", "dep:puffin"]
