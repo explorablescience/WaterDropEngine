@@ -19,6 +19,10 @@ impl Plugin for TerrainPassesPlugin {
         app.get_sub_app_mut(RenderApp).unwrap()
             .init_resource::<TerrainRenderPass>();
 
+        // Add the extract system for the render pass
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .add_systems(Extract, TerrainRenderPass::extract);
+
         // Add the terrain render passes
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();

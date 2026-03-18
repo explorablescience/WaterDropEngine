@@ -5,30 +5,11 @@ use crate::core::SwapchainFrame;
 
 /// Core trait for all render passes in the render graph.
 ///
-/// A `RenderPass` has two phases:
-/// 1. **Extract** (`extract`): Runs in the main world context. Copy camera, mesh, material,
-///    and other relevant data from the main app into the render world.
-/// 2. **Render** (`render`): Runs in the render world. Issue GPU commands using the extracted data,
+/// A `RenderPass` has the (`render`) method. It runs in the render world. Issue GPU commands using the extracted data,
 ///    pull pipelines from the `PipelineManager`, use cached bind groups, and execute draw calls.
 ///
 /// Both phases can be no-ops; for example, a simple pass might only implement `render`.
 pub trait RenderPass: Send + Sync {
-    /// Extract data from the main world into the render world.
-    ///
-    /// Called once per frame during the extract schedule. You have mutable access to both
-    /// worlds but changes to `main_world` are not persisted (only the render world state matters).
-    ///
-    /// Use Bevy `SystemState` or direct world queries to pull data from main_world, then
-    /// insert resources or components into render_world.
-    ///
-    /// # Example
-    /// ```ignore
-    /// fn extract(&self, main_world: &mut World, render_world: &mut World) {
-    ///     let mut state = SystemState::<Query<(&Camera, &Transform)>>::new(main_world);
-    ///     let cameras = state.get(main_world);
-    ///     // ... copy camera data to render_world ...
-    /// }
-    /// ```
     fn extract(&self, _main_world: &mut World, _render_world: &mut World) {}
 
     /// Execute render commands for this pass.
@@ -78,10 +59,7 @@ impl RenderGraph {
         self.sorted_passes.sort();
     }
 
-    /// Extract phase: copy data from main world to render world.
-    /// (Internal; called automatically by the renderer.)
-    pub(crate) fn extract(&mut self, main_world: &mut World, render_world: &mut World) {
-        // Extract the passes
+    pub fn extract(&mut self, main_world: &mut World, render_world: &mut World) {
         for id in self.sorted_passes.iter() {
             let _span = debug_span!("render_pass_extract", pass_id = *id).entered();
             let pass = self.passes.get(id).unwrap();

@@ -21,6 +21,10 @@ impl Plugin for GizmoFeaturesPlugin {
             .init_asset::<GizmoRenderPipelineAsset>()
             .add_plugins(RenderAssetsPlugin::<GpuGizmoRenderPipeline>::default());
 
+        // Add the extract system for the render pass
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .add_systems(Extract, GizmoRenderPass::extract);
+
         // Always add the gizmo render pass (at the end)
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();

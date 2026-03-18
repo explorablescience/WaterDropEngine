@@ -175,6 +175,10 @@ impl Plugin for RendererPlugin {
         app.get_sub_app_mut(RenderApp).unwrap()
             .init_resource::<DepthBlitRenderPass>();
 
+        // Add the extract system for the depth blit pass
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .add_systems(Extract, DepthBlitRenderPass::extract);
+
         // Add the depth blit render pass (always at binding 100)
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();

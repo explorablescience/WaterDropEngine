@@ -16,22 +16,19 @@ pub(crate) struct PushConstants {
 }
 
 #[derive(Resource, Default)]
-pub struct PbrGBufferRenderPass;
-impl RenderPass for PbrGBufferRenderPass {
-    fn extract(&self, main_world: &mut World, render_world: &mut World) {
-        let _span = debug_span!("gbuffer_pbr_render_pass_extract").entered();
-
-        // Extract registry
-        if let Some(registry) = main_world.get_resource::<PbrModelRegistry>() {
-            render_world.insert_resource(ModelUuidToTransformUuidRender(registry.model_uuid_to_transform_id.clone()));
-        }
-
-        // Extract dirty transforms by taking ownership
-        if let Some(mut dirty_transforms) = main_world.get_resource_mut::<DirtyTransforms>() {
-            render_world.insert_resource(DirtyTransforms(dirty_transforms.0.take()));
-        }
+pub(crate) struct PbrGBufferRenderPass;
+impl PbrGBufferRenderPass {
+    pub fn extract(
+        pbr_model_registry: ExtractWorld<Res<PbrModelRegistry>>,
+        mut model_uuid_to_transform_id: ResMut<ModelUuidToTransformUuidRender>,
+        main_dirty_transforms: ExtractWorld<Res<DirtyTransforms>>,
+        mut render_dirty_transforms: ResMut<DirtyTransforms>
+    ) {
+        model_uuid_to_transform_id.0 = pbr_model_registry.model_uuid_to_transform_id.clone();
+        render_dirty_transforms.0 = main_dirty_transforms.0.clone();
     }
-    
+}
+impl RenderPass for PbrGBufferRenderPass {
     fn render(&self, render_world: &mut World) {
         let _span = debug_span!("gbuffer_pbr_render_pass").entered();
 

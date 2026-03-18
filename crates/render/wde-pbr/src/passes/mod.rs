@@ -22,6 +22,11 @@ impl Plugin for PbrFeaturesPlugin {
             .init_asset::<PbrLightingRenderPipelineAsset>()
             .add_plugins(RenderAssetsPlugin::<GpuPbrLightingRenderPipeline>::default());
 
+        // Add the extract systems for the render passes
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .add_systems(Extract, PbrGBufferRenderPass::extract)
+            .add_systems(Extract, PbrLightingRenderPassMesh::extract);
+
         // Init the render graph
         app
             .init_resource::<PbrLightingRenderPassMesh>()

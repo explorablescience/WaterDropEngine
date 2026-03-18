@@ -21,25 +21,26 @@ pub(crate) struct GizmoRenderPass {
     /// The render batches.
     pub batches: Vec<GizmoRenderBatch>,
 }
-impl RenderPass for GizmoRenderPass {
-    fn extract(&self, main_world: &mut World, render_world: &mut World) {
-        let _span = debug_span!("gizmo_render_pass_extract").entered();
-
+impl GizmoRenderPass {
+    pub fn extract(
+        main_entities: ExtractWorld<Query<(&Transform, &Mesh, &GizmoMaterial)>>,
+        gizmo_ssbo: Res<GizmoSsbo>,
+        mut gizmo_render_pass: ResMut<GizmoRenderPass>,
+        meshes: Res<RenderAssets<GpuMesh>>,
+        materials: Res<RenderAssets<GpuMaterial<GizmoMaterialAsset>>>,
+        buffers: Res<RenderAssets<GpuBuffer>>,
+        render_instance: Res<RenderInstance>,
+    ) {
         // Get the ssbo
-        let buffers = render_world.get_resource::<RenderAssets<GpuBuffer>>().unwrap();
-        let ssbo_bf = match buffers.get(&render_world.get_resource::<GizmoSsbo>().unwrap().buffer) {
+        let ssbo_bf = match buffers.get(&gizmo_ssbo.buffer) {
             Some(ssbo) => ssbo,
             None => return
         };
         
-        // If no entities, return
-        let mut entities = main_world.query::<(&Transform, &Mesh, &GizmoMaterial)>();
-        if entities.iter(main_world).count() == 0 {
-            // Clear the batches
-            render_world.insert_resource(GizmoRenderPass {
-                batches_order: Default::default(),
-                batches: Default::default()
-            });
+        // If no entities, clear the batches and return early
+        if main_entities.iter().count() == 0 {
+            gizmo_render_pass.batches_order.clear();
+            gizmo_render_pass.batches.clear();
             return
         }
 
@@ -49,7 +50,6 @@ impl RenderPass for GizmoRenderPass {
             batches: Default::default()
         };
         {
-            let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
             let render_instance = render_instance.0.read().unwrap();
             ssbo_bf.buffer.map_write(&render_instance, |mut view| {
                 let mut first = 0;
@@ -58,9 +58,7 @@ impl RenderPass for GizmoRenderPass {
                 let mut last_material: Option<Handle<GizmoMaterialAsset>> = None;
                 let data = view.as_mut_ptr() as *mut TransformUniform;
 
-                let meshes = render_world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
-                let materials = render_world.get_resource::<RenderAssets<GpuMaterial<GizmoMaterialAsset>>>().unwrap();
-                for (transform, mesh, material) in entities.iter(main_world) {
+                for (transform, mesh, material) in main_entities.iter() {
                     // Check if new element in same batch
                     let last_mesh_ref = last_mesh.as_ref();
                     let last_material_ref = last_material.as_ref();
@@ -143,7 +141,7 @@ impl RenderPass for GizmoRenderPass {
             });
 
             // Update the ssbo
-            let ssbo_gpu = match buffers.get(&render_world.get_resource::<GizmoSsbo>().unwrap().buffer_gpu) {
+            let ssbo_gpu = match buffers.get(&gizmo_ssbo.buffer_gpu) {
                 Some(ssbo) => ssbo,
                 None => return
             };
@@ -151,9 +149,10 @@ impl RenderPass for GizmoRenderPass {
         }
 
         // Update the passes
-        render_world.insert_resource(passes);
+        *gizmo_render_pass = passes;
     }
-
+}
+impl RenderPass for GizmoRenderPass {
     fn render(&self, render_world: &mut World) {
         // Return early if no batches
         if render_world.get_resource::<GizmoRenderPass>().unwrap().batches.is_empty() {

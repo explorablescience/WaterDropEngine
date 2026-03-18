@@ -10,6 +10,11 @@ use crate::egui::egui_context::EguiFrameData;
 pub(crate) struct EguiRenderPassPlugin;
 impl Plugin for EguiRenderPassPlugin {
     fn build(&self, app: &mut App) {
+        // Register the extract system
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .add_systems(Extract, EguiRenderPass::extract);
+
+        // Add the render pass to the render graph
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
         render_graph.add_pass::<EguiRenderPass>(1001); // Add after main render pass
@@ -39,15 +44,16 @@ impl EguiRenderPass {
             renderer: Some(Arc::new(RwLock::new(egui_rpass))),
         }
     }
-}
-impl RenderPass for EguiRenderPass {
-    fn extract(&self, main_world: &mut World, render_world: &mut World) {
-        let frame_data_main = main_world.resource::<EguiFrameData>();
-        let mut frame_data_render = render_world.resource_mut::<EguiFrameData>();
+
+    fn extract(
+        frame_data_main: ExtractWorld<Res<EguiFrameData>>,
+        mut frame_data_render: ResMut<EguiFrameData>,
+    ) {
         frame_data_render.paint_jobs = frame_data_main.paint_jobs.clone();
         frame_data_render.textures_delta = frame_data_main.textures_delta.clone();
     }
-
+}
+impl RenderPass for EguiRenderPass {
     fn render(&self, world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = world.get_resource::<RenderInstance>().unwrap();

@@ -31,21 +31,21 @@ impl PbrLightingRenderPassMesh {
         });
         render_pass.deferred_mesh = Some(deferred_mesh);
     }
+
+    pub fn extract(
+        pass_main: ExtractWorld<Res<PbrLightingRenderPassMesh>>,
+        mut pass_render: ResMut<PbrLightingRenderPassMesh>,
+    ) {
+        pass_render.deferred_mesh = None;
+        if let Some(ref mesh_cpu) = pass_main.deferred_mesh {
+            pass_render.deferred_mesh = Some(mesh_cpu.clone());
+        }
+    }
 }
 
 #[derive(Resource, Default)]
 pub struct PbrLightingRenderPass;
 impl RenderPass for PbrLightingRenderPass {
-    fn extract(&self, main_world: &mut World, render_world: &mut World) {
-        let _span = debug_span!("lighting_pbr_render_pass_extract").entered();
-        let mesh_cpu = main_world.get_resource::<PbrLightingRenderPassMesh>().unwrap();
-        let mut render_pass = render_world.get_resource_mut::<PbrLightingRenderPassMesh>().unwrap();
-        render_pass.deferred_mesh = None;
-        if let Some(ref mesh_cpu) = mesh_cpu.deferred_mesh {
-            render_pass.deferred_mesh = Some(mesh_cpu.clone());
-        }
-    }
-
     fn render(&self, world: &mut World) {
         let _span = debug_span!("lighting_pbr_render_pass_render").entered();
 

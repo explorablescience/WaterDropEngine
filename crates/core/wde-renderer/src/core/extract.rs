@@ -3,7 +3,7 @@
 use wde_logger::prelude::*;
 use bevy::prelude::*;
 
-use crate::passes::render_graph::RenderGraph;
+use crate::prelude::RenderGraph;
 
 use super::{EmptyWorld, Extract, MainWorld};
 

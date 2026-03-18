@@ -6,12 +6,20 @@ use wde_camera::prelude::*;
 use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::pipeline::GpuTerrainRenderPipeline, renderer_gpu::TerrainRendererGPU};
 
 #[derive(Resource, Default)]
-pub struct TerrainRenderPass;
-impl RenderPass for TerrainRenderPass {
-    fn extract(&self, main_world: &mut World, render_world: &mut World) {
+pub(crate) struct TerrainRenderPass;
+impl TerrainRenderPass {
+    pub fn extract(
+        // main_world: &mut World,
+        // render_world: &mut World,
+    ) {
         let _span = debug_span!("terrain_render_pass_extract").entered();
 
         // Extract the dirty terrain tiles
+        // TerrainRendererGPU::extract_dirty(main_world, render_world);
+    }
+}
+impl RenderPass for TerrainRenderPass {
+    fn extract(&self, main_world: &mut World, render_world: &mut World) {
         TerrainRendererGPU::extract_dirty(main_world, render_world);
     }
 

@@ -27,15 +27,15 @@ impl DepthBlitRenderPass {
         });
         render_pass.mesh = Some(mesh);
     }
+
+    pub fn extract(
+        pass_main: ExtractWorld<Res<DepthBlitRenderPass>>,
+        mut pass_render: ResMut<DepthBlitRenderPass>,
+    ) {
+        pass_render.mesh = pass_main.mesh.clone();
+    }
 }
 impl RenderPass for DepthBlitRenderPass {
-    fn extract(&self, main_world: &mut World, render_world: &mut World) {
-        if let Some(pass) = main_world.get_resource::<DepthBlitRenderPass>() {
-            let mut render_pass_res = render_world.get_resource_mut::<DepthBlitRenderPass>().unwrap();
-            render_pass_res.mesh = pass.mesh.clone();
-        }
-    }
-
     fn render(&self, render_world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
