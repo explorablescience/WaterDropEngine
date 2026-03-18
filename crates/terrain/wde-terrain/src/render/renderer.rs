@@ -86,6 +86,9 @@ impl TerrainRenderer {
             None => return,
         };
 
+        // Clear the dirty tiles list before processing
+        terrain_renderer.dirty.clear();
+
         // Extract the dirty tiles from the main terrain and move them to the renderer resource
         for dirty_tile in &terrain.dirty_render {
             terrain_renderer.dirty.push(dirty_tile.clone());

@@ -1,4 +1,4 @@
-use wde_renderer::prelude::*;
+use wde_renderer::{core::MainWorld, prelude::*};
 use bevy::prelude::*;
 
 use crate::{manager::{TerrainDirtyTile, CHUNK_RENDER_SUBDIVISIONS, ChunkPos}, prelude::TerrainRendererGPU};
@@ -24,6 +24,10 @@ impl Plugin for TerrainExtractorPlugin {
             .init_resource::<StaggingBuffers>()
             .add_systems(Extract, extract_staging_buffers)
             .add_systems(Render, extract_tiles_from_gpu.in_set(RenderSet::Render));
+
+        // Add the extract system
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .add_systems(Extract, extract_messages);
     }
 }
 
@@ -52,6 +56,11 @@ impl TerrainExtractor {
     /// * `splat_map_index` - The index of the splat map to extract (only relevant if map_type is 1, should be between 0 and SPLAT_MAP_COUNT/4 - 1)
     pub fn queue_tile_extraction(&mut self, tile_pos: ChunkPos, map_type: u32, splat_map_index: u32) {
         self.tiles_to_extract.push(Some((tile_pos, map_type, splat_map_index)));
+    }
+
+    /// Clears the list of tiles to extract. Should be called after processing the extracted tiles to avoid extracting the same tiles multiple times.
+    pub fn clear_tiles_to_extract(&mut self) {
+        self.tiles_to_extract.clear();
     }
 }
 
@@ -164,41 +173,24 @@ fn extract_staging_buffers(
     }
 }
 
-pub fn extract_dirty(main_world: &mut World, render_world: &mut World) {
-    extract_to_process(main_world, render_world);
-    extract_processed_tiles(main_world, render_world);
-}
-
-
-fn extract_to_process(main_world: &mut World, render_world: &mut World) {
+pub fn extract_dirty(
+    main_terrain_extractor: &TerrainExtractor,
+    render_terrain_extractor: &mut TerrainExtractor
+) {
     // Extract the tiles_to_extract from the main world and move them to the render world extractor resource
-    let mut terrain_extractor = match render_world.get_resource_mut::<TerrainExtractor>() {
-        Some(extractor) => extractor,
-        None => return,
-    };
-    let mut main_extractor = match main_world.get_resource_mut::<TerrainExtractor>() {
-        Some(extractor) => extractor,
-        None => return,
-    };
-    terrain_extractor.tiles_to_extract = main_extractor.tiles_to_extract.clone();
-    main_extractor.tiles_to_extract.clear();
+    render_terrain_extractor.tiles_to_extract = main_terrain_extractor.tiles_to_extract.clone();
 }
 
-fn extract_processed_tiles(main_world: &mut World, render_world: &mut World) {
-    // Get the extracted tiles from render world
-    let mut terrain_extractor = match render_world.get_resource_mut::<TerrainExtractor>() {
-        Some(extractor) => extractor,
-        None => return,
-    };
-    if terrain_extractor.extracted_tiles.is_empty() {
-        return;
-    }
-
+pub fn extract_messages(
+    mut render_terrain_extractor: ResMut<TerrainExtractor>,
+    mut main_world: ResMut<MainWorld>
+) {
     // Send events for each extracted tile to the main world
-    for (pos, map_type, splat_map_index, data) in terrain_extractor.extracted_tiles.clone().into_iter().flatten() {
+    for (pos, map_type, splat_map_index, data) in render_terrain_extractor.extracted_tiles.clone().into_iter().flatten() {
         main_world.write_message(ExtractedTileMessage { pos, map_type, splat_map_index, data });
     }
 
     // Clear the extracted tiles list after processing
-    terrain_extractor.extracted_tiles.clear();
+    render_terrain_extractor.extracted_tiles.clear();
 }
+

@@ -19,8 +19,10 @@ use crate::{passes::{render_graph::RenderGraph, RendererPlugin}, pipelines::Pipe
 
 
 /// Stores the main world for rendering as a resource.
+/// This resource is only available during the extract schedule and is used to move data from the main world to the render world.
+/// It is wrapped in a resource to avoid borrowing issues when extracting data from the main world.
 #[derive(Resource, Default)]
-pub(crate) struct MainWorld(World);
+pub struct MainWorld(World);
 
 impl Deref for MainWorld {
     type Target = World;

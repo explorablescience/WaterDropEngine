@@ -81,6 +81,10 @@ fn ui_save_terrain(
         return;
     }
 
+    // Clear the previous list of tiles to extract
+    extractor.clear_tiles_to_extract();
+    
+
     // Draw UI
     UIWindow::new("Save Terrain")
         .default_pos([40.0, 200.0])

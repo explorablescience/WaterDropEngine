@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{manager::{TerrainDirtyTile, SPLAT_MAP_COUNT, ChunkPos}, render::{extractor, renderer::TerrainRenderer}};
+use crate::{manager::{ChunkPos, SPLAT_MAP_COUNT, TerrainDirtyTile}, prelude::TerrainExtractor, render::{extractor, renderer::TerrainRenderer}};
 
 /// Same as `TerrainRenderTile`, but with the texture handles replaced by their corresponding asset IDs. Only present on the GPU side.
 #[derive(Default, Clone)]
@@ -38,18 +38,20 @@ pub struct TerrainRendererGPU {
 }
 impl TerrainRendererGPU {
     // Extract the dirty tiles from the main world and move them to the GPU renderer resource.
-    pub fn extract_dirty(main_world: &mut World, render_world: &mut World) {
+    pub fn extract_dirty(
+        main_terrain_extractor: &TerrainExtractor,
+        render_terrain_extractor: &mut TerrainExtractor,
+        terrain_renderer_query: Query<&TerrainRenderer>,
+        gpu_terrain_renderer: &mut TerrainRendererGPU,
+    ) {
         // Run extractor if needed
-        extractor::extract_dirty(main_world, render_world);
+        extractor::extract_dirty(main_terrain_extractor, render_terrain_extractor);
 
         // Get the terrain renderer resource and the GPU terrain tiles resource
-        let mut terrain_renderer = match main_world.query::<&mut TerrainRenderer>().iter_mut(main_world).next() {
+        let terrain_renderer = match terrain_renderer_query.iter().next() {
             Some(terrain) => terrain,
             None => return,
         };
-        let mut gpu_terrain_renderer = render_world
-            .get_resource_mut::<TerrainRendererGPU>()
-            .unwrap();
 
         // If it is the first time the terrain is ready, extract the tiles data from the main world and move them to the GPU renderer resource
         if gpu_terrain_renderer.tiles.is_empty() {
@@ -67,8 +69,8 @@ impl TerrainRendererGPU {
 
         // Extract the dirty tiles
         for i in 0..terrain_renderer.dirty.len() {
-            if let Some(dirty_tile) = terrain_renderer.dirty[i].take() {
-                gpu_terrain_renderer.dirty.push(Some(dirty_tile));
+            if let Some(dirty_tile) = &terrain_renderer.dirty[i] {
+                gpu_terrain_renderer.dirty.push(Some(dirty_tile.clone()));
             }
         }
     }

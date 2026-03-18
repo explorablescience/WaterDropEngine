@@ -7,8 +7,8 @@ mod renderpass_gbuffer;
 mod pipeline_lighting;
 mod renderpass_lighting;
 
-pub use renderpass_gbuffer::*;
-pub use renderpass_lighting::*;
+pub(crate) use renderpass_gbuffer::*;
+pub(crate) use renderpass_lighting::*;
 
 use crate::passes::{pipeline_gbuffer::{GpuPbrGBufferRenderPipeline, PbrGBufferRenderPipeline, PbrGBufferRenderPipelineAsset}, pipeline_lighting::{GpuPbrLightingRenderPipeline, PbrLightingRenderPipeline, PbrLightingRenderPipelineAsset}};
 

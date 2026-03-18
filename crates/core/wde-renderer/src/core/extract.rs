@@ -3,8 +3,6 @@
 use wde_logger::prelude::*;
 use bevy::prelude::*;
 
-use crate::prelude::RenderGraph;
-
 use super::{EmptyWorld, Extract, MainWorld};
 
 /// The extract system for the renderer.
@@ -19,22 +17,8 @@ pub(crate) fn main_extract(main_world: &mut World, render_world: &mut World) {
     let previous_main_world = std::mem::replace(main_world, empty_world.0);
     render_world.insert_resource(MainWorld(previous_main_world));
 
-    {
-        // Run the render graph extract
-        // We bypass the render graph system because we need to extract the render graph before running the extract schedule
-        render_world.resource_scope(|render_world, mut graph: Mut<RenderGraph>| {
-            let _graph_span = debug_span!("render_graph_extract").entered();
-            let main_world = &mut render_world.get_resource_mut::<MainWorld>().unwrap().0 as *mut World;
-            let main_world = unsafe { &mut *main_world };
-            graph.extract(main_world, render_world);
-        });
-
-        // Run the extract schedule
-        {
-            let _schedule_span = debug_span!("extract_schedule").entered();
-            render_world.run_schedule(Extract);
-        }
-    }
+    // Run the extract schedule
+    render_world.run_schedule(Extract);
     
     // Move the app world back
     let inserted_world = render_world.remove_resource::<MainWorld>().unwrap();

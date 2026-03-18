@@ -10,8 +10,6 @@ use crate::core::SwapchainFrame;
 ///
 /// Both phases can be no-ops; for example, a simple pass might only implement `render`.
 pub trait RenderPass: Send + Sync {
-    fn extract(&self, _main_world: &mut World, _render_world: &mut World) {}
-
     /// Execute render commands for this pass.
     ///
     /// Called once per frame in the render world after all extracts complete.
@@ -57,14 +55,6 @@ impl RenderGraph {
         // Sort the passes
         self.sorted_passes = self.passes.keys().copied().collect();
         self.sorted_passes.sort();
-    }
-
-    pub fn extract(&mut self, main_world: &mut World, render_world: &mut World) {
-        for id in self.sorted_passes.iter() {
-            let _span = debug_span!("render_pass_extract", pass_id = *id).entered();
-            let pass = self.passes.get(id).unwrap();
-            pass.extract(main_world, render_world);
-        }
     }
 
     /// Render phase: issue GPU commands for each pass.

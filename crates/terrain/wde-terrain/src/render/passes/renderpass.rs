@@ -3,26 +3,29 @@ use bevy::prelude::*;
 use wde_renderer::prelude::*;
 use wde_camera::prelude::*;
 
-use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::pipeline::GpuTerrainRenderPipeline, renderer_gpu::TerrainRendererGPU};
+use crate::{prelude::{TerrainExtractor, TerrainRenderer}, render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::pipeline::GpuTerrainRenderPipeline, renderer_gpu::TerrainRendererGPU}};
 
 #[derive(Resource, Default)]
 pub(crate) struct TerrainRenderPass;
 impl TerrainRenderPass {
     pub fn extract(
-        // main_world: &mut World,
-        // render_world: &mut World,
+        main_terrain_extractor: ExtractWorld<Res<TerrainExtractor>>,
+        mut render_terrain_extractor: ResMut<TerrainExtractor>,
+        terrain_renderer_query: ExtractWorld<Query<&TerrainRenderer>>,
+        mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>
     ) {
         let _span = debug_span!("terrain_render_pass_extract").entered();
 
         // Extract the dirty terrain tiles
-        // TerrainRendererGPU::extract_dirty(main_world, render_world);
+        TerrainRendererGPU::extract_dirty(
+            &main_terrain_extractor,
+            &mut render_terrain_extractor,
+            *terrain_renderer_query,
+            &mut gpu_terrain_renderer
+        );
     }
 }
 impl RenderPass for TerrainRenderPass {
-    fn extract(&self, main_world: &mut World, render_world: &mut World) {
-        TerrainRendererGPU::extract_dirty(main_world, render_world);
-    }
-
     fn render(&self, world: &mut World) {
         let _span = debug_span!("terrain_render_pass_render").entered();
 
