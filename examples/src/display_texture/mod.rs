@@ -22,6 +22,10 @@ impl Plugin for DisplayTextureComponentPlugin {
             .init_asset::<DisplayTexturePipelineAsset>()
             .add_plugins(RenderAssetsPlugin::<GpuDisplayTexturePipeline>::default());
 
+        // Add the extract system
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .add_systems(Extract, DisplayTexturePass::extract);
+
         // Add the render passes
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .init_resource::<RenderPassEntity>()

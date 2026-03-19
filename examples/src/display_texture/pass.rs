@@ -12,18 +12,18 @@ pub struct RenderPassEntity {
 
 #[derive(Resource, Default)]
 pub struct DisplayTexturePass;
-impl RenderPass for DisplayTexturePass {
-    fn extract(&self, main_world: &mut World, render_world: &mut World) {
-        // Extract the mesh and material handles
-        let entity = match main_world.query::<(Entity, &DisplayTextureMaterial, &Mesh)>().iter(main_world).next() {
-            Some((entity, material, mesh)) => (entity, material.0.clone(), mesh.0.clone()),
-            None => return
-        };
-        let mut render_pass_entity = render_world.get_resource_mut::<RenderPassEntity>().unwrap();
-        render_pass_entity.material = entity.1;
-        render_pass_entity.mesh = entity.2;
+impl DisplayTexturePass {
+    pub fn extract(
+        query: ExtractWorld<Query<(&DisplayTextureMaterial, &Mesh)>>,
+        mut render_pass_entity: ResMut<RenderPassEntity>,
+    ) {
+        if let Some((material, mesh)) = query.iter().next() {
+            render_pass_entity.material = material.0.clone();
+            render_pass_entity.mesh = mesh.0.clone();
+        }
     }
-
+}
+impl RenderPass for DisplayTexturePass {
     fn render(&self, world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = world.get_resource::<RenderInstance>().unwrap();
