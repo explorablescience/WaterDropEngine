@@ -18,6 +18,7 @@ incremental = false
 debug = false
 
 [dependencies]
+wde-renderer = { path = "../../core/wde-renderer" }
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-egui = { path = "../../wrappers/wde-egui" }
 bevy = { workspace = true }
