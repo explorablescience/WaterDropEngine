@@ -34,3 +34,4 @@ puffin = { git = "https://github.com/explorablescience/puffin.git", rev = "56ece
 default = []
 tracing = ["bevy/trace", "bevy/trace_tracy", "bevy/trace_tracy_memory", "tracing-tracy", "tracy-client", "tracing-error"]
 puffin = ["bevy/trace", "dep:puffin"]
+editor = []
