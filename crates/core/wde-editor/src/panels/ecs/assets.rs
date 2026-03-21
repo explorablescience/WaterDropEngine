@@ -41,7 +41,7 @@ fn collect_asset_paths(root: &Path, current: &Path, out: &mut Vec<String>) {
 
 pub fn draw_assets_panel(
 	ctx: Res<EguiContext>,
-	ui_menu: Res<UIMenu>,
+	mut ui_menu: ResMut<UIMenu>,
 	asset_server: Res<AssetServer>,
 	asset_catalog: Res<AssetCatalog>,
 ) {
@@ -63,8 +63,9 @@ pub fn draw_assets_panel(
 		.collect::<Vec<_>>();
 	rows.sort_by_key(|(_, path)| path.clone());
 
-	egui::Window::new("ECS - Loaded Assets")
-		.default_size([460.0, 440.0])
+	egui::Window::new("Assets")
+		.default_size([1100.0, 600.0])
+        .open(ui_menu.clicked_mut("Engine/Assets").unwrap_or(&mut false))
 		.show(&ctx.0, |ui| {
 			ui.label(format!("Total loaded assets: {}", rows.len()));
 			ui.label("Shows loaded file-backed assets under res/.");

@@ -9,7 +9,7 @@ pub struct SelectedEntity(Option<Entity>);
 
 pub fn draw_entities_panel(
 	ctx: Res<EguiContext>,
-	ui_menu: Res<UIMenu>,
+	mut ui_menu: ResMut<UIMenu>,
 	entities: Query<(Entity, Option<&Name>, Option<&ChildOf>)>,
 	mut selected: ResMut<SelectedEntity>,
 ) {
@@ -46,8 +46,9 @@ pub fn draw_entities_panel(
 	}
 
     // Draw the UI panel with a tree view of entities
-	egui::Window::new("ECS - Active Entities")
+	egui::Window::new("Entities")
 		.default_size([360.0, 440.0])
+        .open(ui_menu.clicked_mut("Engine/Entities").unwrap_or(&mut false))
 		.show(&ctx.0, |ui| {
 			ui.label(format!("Total active entities: {}", rows.len()));
 			if let Some(entity) = selected.0 {

@@ -49,13 +49,14 @@ fn init_ui(mut ui_menu: ResMut<UIMenu>) {
     ui_menu.push("Engine/Logs");
 }
 
-fn draw_logs_panel(ctx: Res<EguiContext>, ui_menu: Res<UIMenu>, mut filters: ResMut<LogFilters>) {
+fn draw_logs_panel(ctx: Res<EguiContext>, mut ui_menu: ResMut<UIMenu>, mut filters: ResMut<LogFilters>) {
     if !ui_menu.is_clicked("Engine/Logs") {
         return;
     }
 
     egui::Window::new("Logs")
         .default_size(egui::vec2(800.0, 400.0))
+        .open(ui_menu.clicked_mut("Engine/Logs").unwrap_or(&mut false))
         .show(&ctx.0, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Filter:");

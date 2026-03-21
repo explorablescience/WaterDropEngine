@@ -124,6 +124,14 @@ impl UIMenu {
     pub fn is_clicked(&self, path: &str) -> bool {
         self.clicked.get(path).cloned().unwrap_or(false)
     }
+    /// Returns a mutable reference to the clicked state of the menu item at the given path
+    pub fn clicked_mut(&mut self, path: &str) -> Option<&mut bool> {
+        if self.clicked.contains_key(path) {
+            self.clicked.get_mut(path)
+        } else {
+            None
+        }
+    }
 
 
     /// Draw the menu using egui
