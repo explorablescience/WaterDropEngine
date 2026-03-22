@@ -31,3 +31,7 @@ async-channel = "2.3"
 version = "0.25"
 default-features = false
 features = ["png", "jpeg"]
+
+[features]
+default = []
+editor = []
