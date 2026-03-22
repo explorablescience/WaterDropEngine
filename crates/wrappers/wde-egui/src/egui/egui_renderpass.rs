@@ -29,7 +29,7 @@ impl Plugin for EguiRenderPassPlugin {
 
 /// Resource to store egui render pass and renderer
 #[derive(Resource, Default)]
-pub(crate) struct EguiRenderPass {
+pub struct EguiRenderPass {
     pub renderer: Option<Arc<RwLock<Renderer>>>,
 }
 impl EguiRenderPass {

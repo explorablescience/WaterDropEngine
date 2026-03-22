@@ -2,11 +2,14 @@ use std::collections::{HashMap, hash_map::Entry};
 use bevy::prelude::*;
 use wde_egui::prelude::*;
 
+use crate::ui_textures::UITexturesPlugin;
+
 /// The editor plugin that manages the UI menu
 pub struct EditorUIMenu;
 impl Plugin for EditorUIMenu {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(UITexturesPlugin)
             .init_resource::<UIMenu>()
             .add_systems(Update, draw);
     }

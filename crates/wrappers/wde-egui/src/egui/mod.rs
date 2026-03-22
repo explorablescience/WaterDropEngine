@@ -9,7 +9,6 @@ use crate::egui::{egui_context::EguiContextPlugin, egui_inputs::EguiInputsPlugin
 pub struct EguiLogicPlugin;
 impl Plugin for EguiLogicPlugin {
     fn build(&self, app: &mut App) {
-
         // Add input and renderpass plugins
         app
             .add_plugins(EguiContextPlugin)

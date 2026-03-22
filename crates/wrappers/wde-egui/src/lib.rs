@@ -21,6 +21,7 @@
 pub mod prelude {
     pub use crate::EguiPlugin;
     pub use crate::egui::egui_context::EguiContext;
+    pub use crate::egui::egui_renderpass::EguiRenderPass;
     pub mod egui {
         pub use egui::*;
     }

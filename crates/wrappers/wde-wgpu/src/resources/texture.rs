@@ -315,6 +315,19 @@ impl Texture {
         command.submit(instance);
     }
 
+    /// Copy texture from a surface texture (e.g. swapchain frame).
+    /// It is assumed that the texture is the same size as the source texture.
+    /// Note that the input texture must have the COPY_SRC usage, and the output texture must have the COPY_DST usage.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `instance` - Game instance.
+    /// * `surface_texture` - Surface texture to copy from.
+    /// * `size` - Size of the texture.
+    pub fn copy_from_surface_texture(&self, instance: &RenderInstanceData<'_>, surface_texture: &SurfaceTexture, size: (u32, u32)) {
+        self.copy_from_texture(instance, &surface_texture.texture, size);
+    }
+
     /// Copy texture to texture at a given array layer.
     /// It is assumed that the texture is the same size as the source texture.
     /// Note that the input texture must have the COPY_SRC usage, and the output texture must have the COPY_DST usage.

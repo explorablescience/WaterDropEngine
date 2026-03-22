@@ -234,9 +234,15 @@ pub fn setup_surface(label: &str, size: (u32, u32), device: &Device, surface: &S
         .find(|f| f.is_srgb())
         .unwrap_or(surface_caps.formats[0]);
 
+    // Set texture usage
+    let mut usage = wgpu::TextureUsages::RENDER_ATTACHMENT;
+    if cfg!(debug_assertions) {
+        usage |= wgpu::TextureUsages::COPY_SRC;
+    }
+
     // Set surface configuration
     let surface_config = wgpu::SurfaceConfiguration {
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        usage,
         format: surface_format,
         width: size.0,
         height: size.1,

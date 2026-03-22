@@ -86,5 +86,12 @@ impl RenderGraph {
             }
         });
     }
+
+    pub fn get_pass(&self, id: &PassIndex) -> Option<&Box<dyn RenderPass>> {
+        self.passes.get(id)
+    }
+    pub fn get_sorted_passes(&self) -> &Vec<PassIndex> {
+        &self.sorted_passes
+    }
 }
 

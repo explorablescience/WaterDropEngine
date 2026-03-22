@@ -29,6 +29,7 @@ use wde_egui::EguiPlugin;
 use crate::{panels::PanelsPlugin, ui::EditorUIMenu};
 
 mod ui;
+mod ui_textures;
 mod panels;
 
 pub mod prelude {
@@ -46,6 +47,9 @@ pub mod prelude {
     // Re-export editor types
     pub use super::EditorPlugin;
     pub use super::ui::UIMenu;
+
+    // Re-export texture handling types
+    pub use super::ui_textures::{UITextureHandle, UITextures};
 }
 
 pub struct EditorPlugin;
