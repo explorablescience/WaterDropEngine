@@ -1,4 +1,17 @@
-
+//! This module defines the `UITextures` resource, which is used to manage textures that are registered for use in the UI.
+//! The `UITextures` resource allows textures to be registered in the main world, extracted to the render
+//! world, and then registered in the Egui renderer, with the corresponding Egui texture IDs stored in the resource for use in the UI.
+//! 
+//! # Example
+//! ```
+//! // In the main world, register a texture for use in the UI
+//! let texture_handle = ui_textures.register_texture(my_texture_handle);
+//!! // In the UI code, get the Egui texture ID for the registered texture
+//! if let Some(egui_texture_id) = ui_textures.get_texture_index(texture_handle.asset_id()) {
+//!     // Use the egui_texture_id to display the texture in the UI
+//!     ui.image(egui::load::SizedTexture::new(egui_texture_id, egui::vec2(100.0, 100.0)));
+//! }
+//! ```
 use std::collections::HashMap;
 
 use wde_egui::prelude::*;
@@ -39,7 +52,20 @@ impl From<UITextureHandle> for AssetId<Texture> {
     }
 }
 
-
+/// Resource that manages textures that are registered for use in the UI.
+/// 
+/// This resource allows textures to be registered in the main world, extracted to the render world, and then registered in the Egui renderer, with the corresponding Egui texture IDs stored in the resource for use in the UI.
+/// 
+/// # Example
+/// ```
+/// // In the main world, register a texture for use in the UI
+/// let texture_handle = ui_textures.register_texture(my_texture_handle);
+/// // In the UI code, get the Egui texture ID for the registered texture
+/// if let Some(egui_texture_id) = ui_textures.get_texture_index(texture_handle.asset_id()) {
+///     // Use the egui_texture_id to display the texture in the UI
+///     ui.image(egui::load::SizedTexture::new(egui_texture_id, egui::vec2(100.0, 100.0)));
+/// }
+/// ```
 #[derive(Resource)]
 pub struct UITextures {
     // List of textures that are registered - Only set after extraction
