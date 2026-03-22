@@ -16,6 +16,9 @@ pub type TextureUsages = wgpu::TextureUsages;
 /// Texture format.
 pub type TextureFormat = wgpu::TextureFormat;
 
+/// Texture filter mode.
+pub type FilterMode = wgpu::FilterMode;
+
 
 /// The swapchain texture format.
 pub const SWAPCHAIN_FORMAT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
