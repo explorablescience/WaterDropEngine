@@ -18,6 +18,9 @@ pub trait RenderPass: Send + Sync {
     ///
     /// This is where you issue actual draw calls (bind pipeline, bind groups, draw indexed, etc.).
     fn render(&self, _render_world: &mut World);
+    
+    /// Name of the pass, used for logging and debugging.
+    fn name(&self) -> &str;
 }
 
 /// Unique identifier for a render pass in the graph.
@@ -42,15 +45,18 @@ impl RenderGraph {
     /// # Arguments
     /// - `id`: Numeric identifier; controls execution order.
     pub fn add_pass<P: RenderPass + 'static + Default>(&mut self, id: u32) {
+        // Create pass
+        let pass = P::default();
+
         // Test if the pass already exists
         if self.passes.contains_key(&id) {
-            error!("The pass with id {} already exists in the render graph.", id);
+            error!("The pass with id {} (with name {}) already exists in the render graph.", id, pass.name());
             return;
         }
-        info!("Adding a new render pass with id {} to the render graph.", id);
+        info!("Adding the render pass {} at index {} to the render graph.", pass.name(), id);
 
         // Add the pass
-        self.passes.insert(id, Box::new(P::default()));
+        self.passes.insert(id, Box::new(pass));
 
         // Sort the passes
         self.sorted_passes = self.passes.keys().copied().collect();
@@ -74,8 +80,8 @@ impl RenderGraph {
         // Run the update methods for each pass
         render_world.resource_scope(|render_world, graph: Mut<RenderGraph>| {
             for id in graph.sorted_passes.iter() {
-                let _span = debug_span!("render_pass_render", pass_id = *id).entered();
                 let pass = graph.passes.get(id).unwrap();
+                let _span = debug_span!("render_pass_render", pass_id = *id, pass_name = pass.name()).entered();
                 pass.render(render_world);
             }
         });

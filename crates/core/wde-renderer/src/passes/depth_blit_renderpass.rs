@@ -121,4 +121,8 @@ impl RenderPass for DepthBlitRenderPass {
         // Submit the command buffer
         command_buffer.submit(&render_instance);
     }
+
+    fn name(&self) -> &str {
+        "Depth Blit"
+    }
 }

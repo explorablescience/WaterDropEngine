@@ -278,4 +278,8 @@ impl RenderPass for GizmoRenderPass {
         // Submit the command buffer
         command_buffer.submit(&render_instance);
     }
+
+    fn name(&self) -> &str {
+        "Gizmo"
+    }
 }

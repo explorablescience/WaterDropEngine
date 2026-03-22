@@ -201,4 +201,8 @@ impl RenderPass for PbrGBufferRenderPass {
         // Submit the command buffer
         command_buffer.submit(&render_instance);
     }
+
+    fn name(&self) -> &str {
+        "Pbr GBuffer"
+    }
 }
