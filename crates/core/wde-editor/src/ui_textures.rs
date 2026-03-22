@@ -11,10 +11,9 @@ pub type EguiTextureId = egui::TextureId;
 pub struct UITexturesPlugin;
 impl Plugin for UITexturesPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .insert_resource(UITextures { ui_handles: Some(vec![]), textures_to_extract: Some(vec![]), ui_handle_map: Some(HashMap::new()) });
+        app.init_resource::<UITextures>();
         app.get_sub_app_mut(RenderApp).unwrap()
-            .insert_resource(UITextures { ui_handles: Some(vec![]), textures_to_extract: None, ui_handle_map: Some(HashMap::new()) })
+            .init_resource::<UITextures>()
             .add_systems(Extract, extract)
             .add_systems(Render, update_images.in_set(RenderSet::Prepare));
     }
@@ -41,7 +40,7 @@ impl From<UITextureHandle> for AssetId<Texture> {
 }
 
 
-#[derive(Resource, Default)]
+#[derive(Resource)]
 pub struct UITextures {
     // List of textures that are registered - Only set after extraction
     ui_handles: Option<Vec<(UITextureHandle, EguiTextureId)>>,
@@ -49,6 +48,15 @@ pub struct UITextures {
     ui_handle_map: Option<HashMap<AssetId<Texture>, EguiTextureId>>,
     // List of textures that need to be registered in Egui, and then sent to the render thread
     textures_to_extract: Option<Vec<UITextureHandle>>
+}
+impl Default for UITextures {
+    fn default() -> Self {
+        Self {
+            ui_handles: Some(vec![]),
+            textures_to_extract: Some(vec![]),
+            ui_handle_map: Some(HashMap::new()),
+        }
+    }
 }
 impl UITextures {
     /// Register a texture to be used in the UI.
@@ -98,13 +106,12 @@ fn extract(
 ) {
     {
         // Extract textures from the main to the render world
-        let main_ui_textures = main_world.resource::<UITextures>();
-        render_ui_textures.textures_to_extract = main_ui_textures.textures_to_extract.clone();
-    }
-
-    {
-        // Clear the list of textures to extract in the main world, to avoid re-extracting them every frame
         let mut main_ui_textures = main_world.resource_mut::<UITextures>();
+        if let Some(textures_to_extract) = &main_ui_textures.textures_to_extract {
+            render_ui_textures.textures_to_extract.as_mut().unwrap().extend(textures_to_extract.iter().cloned());
+        }
+
+        // Clear these textures
         main_ui_textures.textures_to_extract.as_mut().unwrap().clear();
     }
 
@@ -122,17 +129,24 @@ fn update_images(
     mut ui_textures: ResMut<UITextures>,
     textures: Res<RenderAssets<GpuTexture>>
 ) {
-    let render_instance = render_instance.0.read().unwrap();
+    // Check if there are any textures to extract, and if the renderer is ready
+    if ui_textures.textures_to_extract.as_ref().unwrap().is_empty() || egui_render_pass.renderer.is_none() {
+        return;
+    }
+    let handles_to_extract = ui_textures.textures_to_extract.as_ref().unwrap();
+    let mut remaining_handles_to_extract = vec![];
     
     // Extract textures to update from the resource
+    let render_instance = render_instance.0.read().unwrap();
     let mut renderer = egui_render_pass.renderer.as_ref().unwrap().write().unwrap();
     let mut handles = vec![];
     let mut handles_hashmap = HashMap::new();
-    for handle in ui_textures.textures_to_extract.as_ref().unwrap() {
+    for handle in handles_to_extract.iter() {
         let texture = match textures.get(handle.asset_id()) {
             Some(texture) => texture,
             None => {
-                error!("Texture with asset ID {:?} not found in RenderAssets<GpuTexture>", handle.asset_id());
+                warn!("Texture with asset ID {:?} not found in RenderAssets<GpuTexture>", handle.asset_id());
+                remaining_handles_to_extract.push(handle.clone());
                 continue;
             }
         };
@@ -142,17 +156,10 @@ fn update_images(
         debug!("Registered UI texture with asset ID {:?} and Egui texture ID {:?}", handle.asset_id(), id);
     }
 
-    // Remove the handles that already exist in the UI textures resource, to force override
-    if let Some(existing_handles) = &ui_textures.ui_handles {
-        for (handle, id) in existing_handles {
-            if handles_hashmap.contains_key(&handle.asset_id()) {
-                debug!("Overriding existing UI texture with asset ID {:?} and Egui texture ID {:?}", handle.asset_id(), id);
-                renderer.free_texture(id);
-            }
-        }
-    }
-
     // Push the new handles
     ui_textures.ui_handles.as_mut().unwrap().extend(handles);
     ui_textures.ui_handle_map.as_mut().unwrap().extend(handles_hashmap);
+
+    // Clear the list of textures to extract, except for the ones that were not found
+    *ui_textures.textures_to_extract.as_mut().unwrap() = remaining_handles_to_extract;
 }

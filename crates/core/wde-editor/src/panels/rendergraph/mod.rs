@@ -84,18 +84,18 @@ fn resize(
     mut render_graph_ui_state: ResMut<RenderGraphUIState>,
 ) {
     for event in window_resized_events.read() {
-        // // Recreate the ghost swapchain texture with the new size
-        // let texture = asset_server.add(Texture {
-        //     label: "Swapchain Ghost Texture".to_string(),
-        //     size: (event.width, event.height),
-        //     format: SWAPCHAIN_FORMAT,
-        //     usages: TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
-        //     ..Default::default()
-        // });
-        // let ghost_swapchain_texture_handle = ui_textures.register_texture(texture);
+        // Recreate the ghost swapchain texture with the new size
+        let texture = asset_server.add(Texture {
+            label: "Swapchain Ghost Texture".to_string(),
+            size: (event.width, event.height),
+            format: SWAPCHAIN_FORMAT,
+            usages: TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
+            ..Default::default()
+        });
+        let ghost_swapchain_texture_handle = ui_textures.register_texture(texture);
 
-        // // Update the UI state resource with the new texture handle
-        // render_graph_ui_state.ghost_swapchain_texture_handle = Some(ghost_swapchain_texture_handle);
+        // Update the UI state resource with the new texture handle
+        render_graph_ui_state.ghost_swapchain_texture_handle = Some(ghost_swapchain_texture_handle);
     }
 }
 
