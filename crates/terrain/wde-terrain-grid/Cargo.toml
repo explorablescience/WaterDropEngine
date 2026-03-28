@@ -28,3 +28,4 @@ wde-gltf = { path = "../../render/wde-gltf" }
 wde-pbr = { path = "../../render/wde-pbr" }
 wde-editor = { path = "../../core/wde-editor" }
 bevy = { workspace = true }
+bytemuck = { workspace = true }

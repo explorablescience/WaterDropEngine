@@ -199,6 +199,13 @@ impl Grid {
             chunk_pos.y as f32 * CHUNK_SIZE + local_y as f32 * cell_size + half_cell - half_chunk,
         )
     }
+    /// Gets the center world position of a given chunk.
+    pub fn chunk_pos_to_world(chunk_pos: GridChunkPos) -> Vec2 {
+        Vec2::new(
+            chunk_pos.x as f32 * CHUNK_SIZE * 2.0,
+            chunk_pos.y as f32 * CHUNK_SIZE * 2.0,
+        )
+    }
 
     // Helper methods
     /// Gets the size of a single tile in world units.
