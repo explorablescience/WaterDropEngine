@@ -87,10 +87,19 @@ pub(crate) fn extract_surface_size(render_instance: ResMut<RenderInstance>, wind
         window.resolution.physical_width().max(1),
         window.resolution.physical_height().max(1),
     );
+
+    // Check if size different from old one
+    let mut render_instance = render_instance.0.write().unwrap();
+    let old_size = render_instance.surface_config.as_ref().unwrap();
+    if width == old_size.width && height == old_size.height {
+        return;
+    }
     
     // Update the surface configuration
     let mut render_instance = render_instance.0.write().unwrap();
     let surface_config = render_instance.surface_config.as_mut().unwrap();
     surface_config.width = width;
     surface_config.height = height;
+
+    instance::resize(&render_instance.device, render_instance.surface.as_ref().unwrap(), render_instance.surface_config.as_ref().unwrap());
 }
