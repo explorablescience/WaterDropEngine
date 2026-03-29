@@ -68,7 +68,7 @@ mod pipeline_manager;
 
 // Reexport types
 pub use wde_wgpu::bind_group::{WgpuBindGroupLayout, BindGroupBuilder, BindGroupLayout, WgpuBindGroup as BindGroup, BindGroupLayoutBuilder};
-pub use wde_wgpu::render_pipeline::{CompareFunction, Face, ShaderStages, RenderTopology, DepthDescriptor};
+pub use wde_wgpu::render_pipeline::{CompareFunction, Face, ShaderStages, RenderTopology, DepthDescriptor, BlendComponent, BlendFactor, BlendOperation, BlendState};
 pub use wde_wgpu::vertex::Vertex;
 
 pub use pipeline_types::*;

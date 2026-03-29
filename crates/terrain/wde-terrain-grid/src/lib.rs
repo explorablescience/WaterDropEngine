@@ -16,9 +16,9 @@ pub struct TerrainGridPlugin;
 impl Plugin for TerrainGridPlugin {
     fn build(&self, app: &mut App) {
         app
+            .add_plugins(EditorPlugin)
             .add_plugins(CorePlugin)
-            .add_plugins(RenderPlugin)
-            .add_plugins(EditorPlugin);
+            .add_plugins(RenderPlugin);
 
         app
             .init_resource::<Grid>();

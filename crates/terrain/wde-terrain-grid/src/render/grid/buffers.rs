@@ -2,13 +2,14 @@ use wde_renderer::prelude::*;
 use wde_terrain::prelude::*;
 use bevy::{asset::io::embedded::GetAssetServer, prelude::*};
 
-use crate::{core::grid::GridChunkPos, prelude::Grid};
+use crate::{core::grid::GridChunkPos, editor::PlacementUI, prelude::Grid};
 
 pub struct TerrainGridBufferPlugin;
 impl Plugin for TerrainGridBufferPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<TerrainGridBuffer>()
+            .add_systems(Render, update_render.in_set(RenderSet::Prepare))
             .add_systems(Render, build.in_set(RenderSet::BindGroups));
     }
 }
@@ -22,7 +23,26 @@ pub struct UGridDescription {
     pub minor_line_width:  f32,  // world units, e.g. 0.01
     pub major_color:       [f32; 4],
     pub minor_color:       [f32; 4],
+    pub fade_center:       [f32; 2],  // world position of the center point for fading
+    pub fade_start:        f32,       // world distance from center point to start fading
+    pub fade_end:          f32        // world distance from center point to end fading
 }
+impl Default for UGridDescription {
+    fn default() -> Self {
+        Self {
+            chunk_size: CHUNK_SIZE,
+            subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
+            major_line_width: 0.03,
+            minor_line_width: 0.01,
+            major_color: [0.3, 0.3, 0.3, 0.6],
+            minor_color: [0.2, 0.2, 0.2, 0.7],
+            fade_center: [0.0, 0.0],
+            fade_start: CHUNK_SIZE * 0.7 * (1.0 - 0.2),
+            fade_end: CHUNK_SIZE * 0.7 * (1.0 + 0.2)
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct UGridChunkPos {
@@ -56,15 +76,8 @@ impl FromWorld for TerrainGridBuffer {
             .add(Buffer {
                 label: "terrain-grid-description".to_string(),
                 size: std::mem::size_of::<UGridDescription>(),
-                usage: BufferUsage::UNIFORM,
-                content: Some(bytemuck::cast_slice(&[UGridDescription {
-                    chunk_size: CHUNK_SIZE,
-                    subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
-                    major_line_width: 0.05,
-                    minor_line_width: 0.01,
-                    major_color: [1.0, 1.0, 1.0, 1.0],
-                    minor_color: [0.5, 0.5, 0.5, 1.0],
-                }]).into()),
+                usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                content: Some(bytemuck::cast_slice(&[UGridDescription::default()]).into()),
             });
         let grid_chunk_pos = world
             .get_asset_server()
@@ -108,5 +121,21 @@ fn build(render_instance: Res<RenderInstance>, mut terrain_buffer: ResMut<Terrai
             BindGroupBuilder::buffer(1, &grid_chunk_pos_buffer.buffer)
         ]);
         terrain_buffer.bind_group = Some(bind_group);
+    }
+}
+
+fn update_render(
+    cursor_pos: Res<TerrainCursorPos>,
+    terrain_buffer: Res<TerrainGridBuffer>,
+    buffers: Res<RenderAssets<GpuBuffer>>,
+    render_instance: Res<RenderInstance>
+) {
+    if let Some(grid_desc_buffer) = buffers.get(&terrain_buffer.grid_desc_buffer) {
+        let grid_desc = UGridDescription {
+            fade_center: [cursor_pos.world_pos.x, cursor_pos.world_pos.z],
+            ..Default::default()
+        };
+        let render_instance = render_instance.0.read().unwrap();
+        grid_desc_buffer.buffer.write(&render_instance, bytemuck::cast_slice(&[grid_desc]), 0);
     }
 }

@@ -232,6 +232,7 @@ fn load_render_pipelines(
         if let Some(frag_shader) = frag_shader {
             pipeline.set_shader(&frag_shader.content, ShaderStages::FRAGMENT);
         }
+        pipeline.set_fragment_blend(descriptor.fragment_blend);
         pipeline.set_topology(descriptor.topology);
         pipeline.set_cull_mode(descriptor.cull_mode);
         pipeline.set_depth(descriptor.depth.clone());

@@ -31,6 +31,14 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
             label: "terrain-grid",
             vert: Some(assets_server.load("core/render/terrain/render_grid_vert.wgsl")),
             frag: Some(assets_server.load("core/render/terrain/render_grid_frag.wgsl")),
+            fragment_blend: Some(BlendState {
+                color: BlendComponent {
+                    src_factor: BlendFactor::SrcAlpha,
+                    dst_factor: BlendFactor::OneMinusSrcAlpha,
+                    operation: BlendOperation::Add
+                },
+                alpha: BlendComponent::OVER
+            }),
             bind_group_layouts: vec![
                 camera_feature.layout.clone(),
                 terrain_grid_buffer.layout.clone()

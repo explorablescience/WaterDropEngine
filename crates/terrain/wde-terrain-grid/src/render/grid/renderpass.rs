@@ -4,11 +4,12 @@ use wde_renderer::prelude::*;
 use wde_camera::prelude::*;
 use wde_terrain::prelude::CHUNK_COUNT;
 
-use crate::render::grid::{buffers::TerrainGridBuffer, pipeline::GpuTerrainGridRenderPipeline};
+use crate::{editor::PlacementUI, render::grid::{buffers::TerrainGridBuffer, pipeline::GpuTerrainGridRenderPipeline}};
 
 #[derive(Resource, Default)]
 pub(crate) struct TerrainGridRenderPass {
     mesh: Option<Handle<MeshAsset>>,
+    render_grid: bool
 }
 impl TerrainGridRenderPass {
     pub fn init(assets_server: Res<AssetServer>, mut render_pass: ResMut<TerrainGridRenderPass>) {
@@ -33,13 +34,19 @@ impl TerrainGridRenderPass {
 
     pub fn extract(
         pass_main: ExtractWorld<Res<TerrainGridRenderPass>>,
+        placement_ui: ExtractWorld<Res<PlacementUI>>,
         mut pass_render: ResMut<TerrainGridRenderPass>,
     ) {
         pass_render.mesh = pass_main.mesh.clone();
+        pass_render.render_grid = placement_ui.enabled;
     }
 }
 impl RenderPass for TerrainGridRenderPass {
     fn render(&self, world: &mut World) {
+        let terrain_grid_render_pass = world.get_resource::<TerrainGridRenderPass>().unwrap();
+        if !terrain_grid_render_pass.render_grid {
+            return;
+        }
         let _span = debug_span!("terrain_grid_render_pass").entered();
 
         // Get buffers
@@ -64,7 +71,7 @@ impl RenderPass for TerrainGridRenderPass {
 
         // Get the list of meshes
         let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
-        let mesh_handle = world.get_resource::<TerrainGridRenderPass>().unwrap().mesh.as_ref().unwrap();
+        let mesh_handle = terrain_grid_render_pass.mesh.as_ref().unwrap();
         let mesh = match meshes.get(mesh_handle) {
             Some(mesh) => mesh,
             None => return,

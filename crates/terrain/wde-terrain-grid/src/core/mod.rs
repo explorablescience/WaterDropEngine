@@ -4,7 +4,6 @@ use crate::core::grid::Grid;
 
 pub mod grid_entity;
 pub mod grid;
-pub mod listener;
 
 pub(crate) struct CorePlugin;
 impl Plugin for CorePlugin {

@@ -27,7 +27,7 @@
 //! ```
 
 use bevy::{asset::Handle, ecs::prelude::*};
-use wde_wgpu::{bind_group::BindGroupLayout, render_pipeline::{DepthDescriptor, Face, ShaderStages, RenderTopology}, texture::TextureFormat};
+use wde_wgpu::{bind_group::BindGroupLayout, pipelines::BlendState, render_pipeline::{DepthDescriptor, Face, RenderTopology, ShaderStages}, texture::TextureFormat};
 
 use crate::assets::Shader;
 
@@ -64,6 +64,8 @@ pub struct RenderPipelineDescriptor {
     pub topology: RenderTopology,
     /// Face culling mode (default: Back). `None` disables culling.
     pub cull_mode: Option<Face>,
+    /// Blend state for the fragment shader (default: None, i.e. no blending).
+    pub fragment_blend: Option<BlendState>,
     /// The sample count for multisampling (default: 1).
     pub sample_count: u32,
     /// Whether the pipeline should expect a vertex buffer.
@@ -81,6 +83,7 @@ impl Default for RenderPipelineDescriptor {
             push_constants: vec![],
             topology: RenderTopology::TriangleList,
             cull_mode: Some(Face::Back),
+            fragment_blend: Some(BlendState::REPLACE),
             sample_count: 1,
             vertex_buffer: true
         }

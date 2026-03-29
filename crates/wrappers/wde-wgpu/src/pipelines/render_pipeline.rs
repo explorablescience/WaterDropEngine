@@ -20,6 +20,12 @@ pub type StencilState = wgpu::StencilState;
 pub type StencilFaceState = wgpu::StencilFaceState;
 pub type StencilOperation = wgpu::StencilOperation;
 
+/// Blend state
+pub type BlendState = wgpu::BlendState;
+pub type BlendComponent = wgpu::BlendComponent;
+pub type BlendFactor = wgpu::BlendFactor;
+pub type BlendOperation = wgpu::BlendOperation;
+
 /// Describes an optional depth attachment for a pipeline.
 #[derive(Clone)]
 pub struct DepthDescriptor {
@@ -62,6 +68,7 @@ struct RenderPipelineConfig {
     bind_groups: Vec<wgpu::BindGroupLayout>,
     vertex_shader: String,
     fragment_shader: String,
+    fragment_blend: Option<BlendState>,
     cull_mode: Option<Face>,
     sample_count: u32,
     use_vertices_buffer: bool,
@@ -130,6 +137,7 @@ impl RenderPipeline {
                 bind_groups: Vec::new(),
                 vertex_shader: String::new(),
                 fragment_shader: String::new(),
+                fragment_blend: Some(wgpu::BlendState::REPLACE),
                 cull_mode: Some(Face::Back),
                 sample_count: 1,
                 use_vertices_buffer: true
@@ -221,6 +229,16 @@ impl RenderPipeline {
     /// * `use_buffer` - Whether to use a vertex buffer.
     pub fn set_use_vertices_buffer(&mut self, use_buffer: bool) -> &mut Self {
         self.config.use_vertices_buffer = use_buffer;
+        self
+    }
+
+    /// Set the blend state for the fragment shader.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `blend` - The blend state.
+    pub fn set_fragment_blend(&mut self, blend: Option<BlendState>) -> &mut Self {
+        self.config.fragment_blend = blend;
         self
     }
 
@@ -351,7 +369,7 @@ impl RenderPipeline {
                 entry_point: Some("main"),
                 targets: d.render_targets.iter().map(|format| Some(wgpu::ColorTargetState {
                     format: *format,
-                    blend: Some(wgpu::BlendState::REPLACE),
+                    blend: d.fragment_blend,
                     write_mask: wgpu::ColorWrites::ALL,
                 })).collect::<Vec<Option<wgpu::ColorTargetState>>>().as_slice(),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
