@@ -11,7 +11,7 @@
                     "--bin=wde-game",
                     "--package=wde-game",
                     "--target-dir=target",
-                    "--features=watch,tracing"
+                    "--features=x11,watch,tracing"
                 ],
                 "filter": {
                     "name": "wde-game",
@@ -34,7 +34,7 @@
                     "--bin=wde-game",
                     "--package=wde-game",
                     "--target-dir=target",
-                    "--features=watch"
+                    "--features=x11,watch"
                 ],
                 "filter": {
                     "name": "wde-game",
@@ -57,7 +57,7 @@
                     "--release",
                     "--bin=wde-game",
                     "--package=wde-game",
-                    "--target-dir=target"
+                    "--target-dir=x11,target"
                 ],
                 "filter": {
                     "name": "wde-game",
@@ -80,7 +80,7 @@
                     "--bin=wde-examples",
                     "--package=wde-examples",
                     "--target-dir=target",
-                    "--features=watch"
+                    "--features=x11,watch"
                 ],
                 "filter": {
                     "name": "wde-examples",
@@ -109,6 +109,53 @@
             },
             "args": [],
             "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release Game Wayland",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--release",
+                    "--bin=wde-game",
+                    "--package=wde-game",
+                    "--target-dir=target",
+                    "--features=wayland"
+                ],
+                "filter": {
+                    "name": "wde-game",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Release Game Windows",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--release",
+                    "--bin=wde-game",
+                    "--package=wde-game",
+                    "--target-dir=target"
+                ],
+                "filter": {
+                    "name": "wde-game",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
+            }
         }
     ]
 }

@@ -9,5 +9,5 @@ resolver = "2"
 [workspace.dependencies]
 serde = { version = "1.0" }
 bytemuck = { version = "1.24" }
-bevy = { version = "0.18", default-features = false, features = [ "multi_threaded", "bevy_winit", "x11" ]}
+bevy = { version = "0.18", default-features = false, features = [ "multi_threaded", "bevy_winit" ]}
 png = "0.18"

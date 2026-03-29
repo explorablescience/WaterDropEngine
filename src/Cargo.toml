@@ -25,3 +25,5 @@ fs_extra = "1.2"
 default = []
 watch = ["wde/watch"]
 tracing = ["wde/tracing"]
+x11 = ["bevy/x11"]
+wayland = ["bevy/wayland"]
