@@ -34,15 +34,15 @@ impl PbrDeferredTexturesLayout {
         };
 
         // Create the layouts
-        let deferred_layout = Self::layout();
-        let deferred_layout_resolved = BindGroupLayout::new("deferred-textures-resolved", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_view(   0, ShaderStages::FRAGMENT, false);
+        let deferred_layout = BindGroupLayout::new("deferred-textures-resolved", |builder: &mut BindGroupLayoutBuilder| {
+            builder.add_texture_view(   0, ShaderStages::FRAGMENT, true);
             builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   2, ShaderStages::FRAGMENT, false);
+            builder.add_texture_view(   2, ShaderStages::FRAGMENT, true);
             builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   4, ShaderStages::FRAGMENT, false);
+            builder.add_texture_view(   4, ShaderStages::FRAGMENT, true);
             builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
         });
+        let deferred_layout_resolved = Self::layout();
 
         // Build the layout
         let render_instance = render_instance.0.read().unwrap();
@@ -76,11 +76,11 @@ impl PbrDeferredTexturesLayout {
 
     pub fn layout() -> BindGroupLayout {
         BindGroupLayout::new("deferred-textures", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_view(   0, ShaderStages::FRAGMENT, true);
+            builder.add_texture_view(   0, ShaderStages::FRAGMENT, false);
             builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   2, ShaderStages::FRAGMENT, true);
+            builder.add_texture_view(   2, ShaderStages::FRAGMENT, false);
             builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   4, ShaderStages::FRAGMENT, true);
+            builder.add_texture_view(   4, ShaderStages::FRAGMENT, false);
             builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
         })
     }
