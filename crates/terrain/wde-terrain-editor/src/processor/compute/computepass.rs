@@ -41,7 +41,7 @@ pub fn apply_paint_compute(
             CachedPipelineStatus::OkCompute(pipeline),
             Some(commands_bind_group)
         ) = (
-            pipeline_manager.get_pipeline(pipeline.cached_pipeline_index),
+            pipeline_manager.get_pipeline(pipeline.0),
             &commands_buffer.bind_group
         ) {
             if compute_pass.set_pipeline(pipeline).is_ok() {

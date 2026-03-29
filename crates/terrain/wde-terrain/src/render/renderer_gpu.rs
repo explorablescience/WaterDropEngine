@@ -15,12 +15,8 @@ pub struct TerrainRenderTileGPU {
     pub heightmap: AssetId<Texture>,
     pub splatmaps: Vec<AssetId<Texture>>,
 
-    // The bind group for the different maps to render the tile and its layout
-    pub render_bind_group_layout: Option<BindGroupLayout>,
+    // The bind groups
     pub render_bind_group: Option<BindGroup>,
-
-    // The bind group for the different maps to run compute shaders on the tile and its layout
-    pub compute_bind_group_layout: Option<BindGroupLayout>,
     pub compute_bind_group: Option<BindGroup>
 }
 
@@ -59,9 +55,7 @@ impl TerrainRendererGPU {
                 position: tile.position,
                 heightmap: tile.heightmap.id(),
                 splatmaps: tile.splatmaps.iter().map(|splatmap| splatmap.id()).collect(),
-                render_bind_group_layout: None,
                 render_bind_group: None,
-                compute_bind_group_layout: None,
                 compute_bind_group: None
             }).collect();
             gpu_terrain_renderer.pos_to_tile = terrain_renderer.pos_to_tile.clone();
@@ -134,16 +128,7 @@ impl TerrainRendererGPU {
             };
 
             // Create the bind group layout for the render tile
-            let ss = ShaderStages::FRAGMENT | ShaderStages::VERTEX;
-            let render_bind_group_layout = BindGroupLayout::new(&format!("terrain-tile-{}-{}-render", tile.position.x, tile.position.y), |builder: &mut BindGroupLayoutBuilder| {
-                builder.add_texture_view(   0, ss, false);
-                builder.add_texture_sampler(1, ss);
-                for i in 0..SPLAT_MAP_COUNT / 4 {
-                    builder.add_texture_view(   2 + i * 2, ss, false);
-                    builder.add_texture_sampler(3 + i * 2, ss);
-                }
-            });
-            let render_bind_group_layout_built = BindGroupLayout::build(&render_bind_group_layout, &render_instance);
+            let render_bind_group_layout_built = BindGroupLayout::build(&Self::layout_render(), &render_instance);
             let render_bind_group = BindGroupBuilder::build(&format!("terrain-tile-{}-{}-render", tile.position.x, tile.position.y), &render_instance, &render_bind_group_layout_built, &{
                 let mut entries = vec![
                     BindGroupBuilder::texture_view(   0, &heightmap.texture),
@@ -155,17 +140,10 @@ impl TerrainRendererGPU {
                 }
                 entries
             });
-            tile.render_bind_group_layout = Some(render_bind_group_layout);
             tile.render_bind_group = Some(render_bind_group);
 
             // Create the bind group layout for the compute tile
-            let compute_bind_group_layout = BindGroupLayout::new(&format!("terrain-tile-{}-{}-compute", tile.position.x, tile.position.y), |builder: &mut BindGroupLayoutBuilder| {
-                builder.add_storage_texture_view(0, heightmap.texture.format);
-                for i in 0..SPLAT_MAP_COUNT / 4 {
-                    builder.add_storage_texture_view(1 + i, splatmaps[i as usize].texture.format);
-                }
-            });
-            let compute_bind_group_layout_built = BindGroupLayout::build(&compute_bind_group_layout, &render_instance);
+            let compute_bind_group_layout_built = BindGroupLayout::build(&Self::layout_compute(), &render_instance);
             let compute_bind_group = BindGroupBuilder::build(&format!("terrain-tile-{}-{}-compute", tile.position.x, tile.position.y), &render_instance, &compute_bind_group_layout_built, &{
                 let mut entries = vec![
                     BindGroupBuilder::texture_view(0, &heightmap.texture),
@@ -175,11 +153,31 @@ impl TerrainRendererGPU {
                 }
                 entries
             });
-            tile.compute_bind_group_layout = Some(compute_bind_group_layout);
             tile.compute_bind_group = Some(compute_bind_group);
         }
 
         // Check if all tiles are ready
         gpu_terrain_renderer.ready = gpu_terrain_renderer.tiles.iter().all(|tile| tile.render_bind_group.is_some());
+    }
+
+    pub fn layout_render() -> BindGroupLayout {
+        let ss = ShaderStages::FRAGMENT | ShaderStages::VERTEX;
+        BindGroupLayout::new("terrain-tile-render", |builder: &mut BindGroupLayoutBuilder| {
+            builder.add_texture_view(   0, ss, false);
+            builder.add_texture_sampler(1, ss);
+            for i in 0..SPLAT_MAP_COUNT / 4 {
+                builder.add_texture_view(   2 + i * 2, ss, false);
+                builder.add_texture_sampler(3 + i * 2, ss);
+            }
+        })
+    }
+
+    pub fn layout_compute() -> BindGroupLayout {
+        BindGroupLayout::new("terrain-tile-compute", |builder: &mut BindGroupLayoutBuilder| {
+            builder.add_storage_texture_view(0, TextureFormat::R8Unorm);
+            for i in 0..SPLAT_MAP_COUNT / 4 {
+                builder.add_storage_texture_view(1 + i, TextureFormat::Rgba8Unorm);
+            }
+        })
     }
 }

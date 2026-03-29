@@ -1,4 +1,4 @@
-use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
+use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
@@ -11,46 +11,23 @@ pub(crate) struct TerrainRenderPipelineAsset;
 #[allow(unused)]
 #[derive(Component)]
 pub(crate) struct TerrainRenderPipeline(pub Handle<TerrainRenderPipelineAsset>);
-pub(crate) struct GpuTerrainRenderPipeline {
-    pub cached_pipeline_index: CachedPipelineIndex
-}
+pub(crate) struct GpuTerrainRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuTerrainRenderPipeline {
     type SourceAsset = TerrainRenderPipelineAsset;
     type Param = (
-        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<TerrainRendererGPU>, SRes<TerrainMaterialArrays>, SRes<TerrainBuffer>
+        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<TerrainMaterialArrays>, SRes<TerrainBuffer>
     );
 
     fn prepare_asset(
             asset: Self::SourceAsset,
-            (
-                assets_server, pipeline_manager, camera_feature, terrain_renderer, material_arrays, terrain_buffer
-            ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
+            (assets_server, pipeline_manager, camera_feature, material_arrays, terrain_buffer): &mut SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        // Check if the terrain renderer is ready
-        if !terrain_renderer.ready {
-            return Err(PrepareAssetError::RetryNextUpdate(asset));
-        }
-
-        // Get the terrain resource
-        let terrain_layout = match terrain_renderer.tiles.first() {
-            Some(tile) => {
-                if let Some(layout) = &tile.render_bind_group_layout {
-                    layout
-                } else {
-                    return Err(PrepareAssetError::RetryNextUpdate(asset));
-                }
-            },
-            None => return Err(PrepareAssetError::RetryNextUpdate(asset)),
-        };
-
-        // Get the material arrays layout
         let materials_layout = match &material_arrays.bind_group_layout {
             Some(layout) => layout,
             None => return Err(PrepareAssetError::RetryNextUpdate(asset)),
         };
 
-        // Create the pipeline
-        let pipeline_desc = RenderPipelineDescriptor {
+        Ok(GpuTerrainRenderPipeline(pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
             label: "terrain",
             vert: Some(assets_server.load("core/render/terrain/render_terrain_vert.wgsl")),
             frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
@@ -58,19 +35,14 @@ impl RenderAsset for GpuTerrainRenderPipeline {
                 camera_feature.layout.clone(),
                 materials_layout.clone(),
                 terrain_buffer.layout.clone(),
-                terrain_layout.clone()
+                TerrainRendererGPU::layout_render()
             ],
             depth: DepthDescriptor {
                 enabled: true,
                 ..Default::default()
             },
             ..Default::default()
-        };
-        let cached_index = pipeline_manager.create_render_pipeline(pipeline_desc);
-
-        Ok(GpuTerrainRenderPipeline {
-            cached_pipeline_index: cached_index
-        })
+        })))
     }
 
     fn label(&self) -> &str {

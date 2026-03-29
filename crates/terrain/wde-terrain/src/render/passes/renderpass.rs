@@ -5,6 +5,23 @@ use wde_camera::prelude::*;
 
 use crate::{prelude::{TerrainExtractor, TerrainRenderer}, render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::pipeline::GpuTerrainRenderPipeline, renderer_gpu::TerrainRendererGPU}};
 
+#[derive(Clone, Default)]
+struct RenderPassDesc {
+    label: String,
+    attachments_colors: Option<()>, // If None, use swapchain texture
+    attachments_depth: Option<AssetId<Texture>>
+}
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+enum StageCommands {
+    Pipeline(Option<CachedPipelineIndex>),
+    BindGroup(u32, Option<BindGroup>), // index, bind group
+    Mesh(Option<AssetId<MeshAsset>>)
+}
+#[derive(Clone, Default)]
+struct SubPassDesc {
+    global: Vec<StageCommands>
+}
+
 #[derive(Resource, Default)]
 pub(crate) struct TerrainRenderPass;
 impl TerrainRenderPass {
@@ -27,140 +44,115 @@ impl TerrainRenderPass {
 }
 impl RenderPass for TerrainRenderPass {
     fn render(&self, world: &mut World) {
-        let _span = debug_span!("terrain_render_pass_render").entered();
-
-        // Get material arrays bind group
-        let material_arrays_bind_group = match world.get_resource::<TerrainMaterialArrays>() {
-            Some(arrays) => match &arrays.bind_group {
-                Some(bg) => bg,
-                None => {
-                    // Material arrays not ready yet
-                    return;
-                }
-            },
-            None => return,
+        let pass_desc = RenderPassDesc {
+            label: "terrain".to_string(),
+            attachments_colors: None,
+            attachments_depth: Some(world.get_resource::<DepthTexture>().unwrap().texture.id())
+        };
+        let sub_pass_desc = SubPassDesc {
+            global: vec![
+                StageCommands::Pipeline(Some(world.get_resource::<RenderAssets<GpuTerrainRenderPipeline>>().unwrap().iter().next().map(|(_, p)| p.0)).flatten()),
+                StageCommands::Mesh(world.get_resource::<TerrainRenderPassMesh>().unwrap().deferred_mesh.as_ref().map(|mesh| mesh.id())),
+                StageCommands::BindGroup(0, world.get_resource::<CameraFeatureRender>().unwrap().bind_group.clone()),
+                StageCommands::BindGroup(1, world.get_resource::<TerrainMaterialArrays>().unwrap().bind_group.clone()),
+                StageCommands::BindGroup(2, world.get_resource::<TerrainBuffer>().unwrap().bind_group.clone())
+            ]
         };
 
-        // Get the render instance and swapchain frame
+
+        let _span = debug_span!("render-pass-{}", pass_desc.label).entered();
+
+        // Query render instance
         let render_instance = world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.0.read().unwrap();
-        let swapchain_frame = world
-            .get_resource::<SwapchainFrame>()
-            .unwrap()
-            .data
-            .as_ref()
-            .unwrap();
 
-        // Check if deferred mesh is ready
-        let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
-        let deferred_mesh = match &world
-            .get_resource::<TerrainRenderPassMesh>()
-            .unwrap()
-            .deferred_mesh
-        {
-            Some(mesh) => match meshes.get(mesh) {
-                Some(mesh) => mesh,
-                None => return,
-            },
-            None => return,
-        };
-
-        // Check if depth texture is ready
+        // Get generic render assets handlers
         let textures = world.get_resource::<RenderAssets<GpuTexture>>().unwrap();
-        let depth_texture = match textures
-            .get(&world.get_resource::<DepthTexture>().unwrap().texture)
+        let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
+        let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
+
+        // Handle pass
+        let mut command_buffer = CommandBuffer::new(&render_instance, &pass_desc.label);
         {
-            Some(tex) => {
-                if render_instance.surface_config.as_ref().unwrap().width == tex.texture.size.0
-                    && render_instance.surface_config.as_ref().unwrap().height == tex.texture.size.1
-                {
-                    tex
-                } else {
-                    return;
+            let mut should_return = false;
+            let mut render_pass =
+                command_buffer.create_render_pass(&pass_desc.label, |builder: &mut RenderPassBuilder| {
+                    // Set color attachments
+                    if pass_desc.attachments_colors.is_none() {
+                        let swapchain_frame = world.get_resource::<SwapchainFrame>().unwrap().data.as_ref().unwrap();
+                        builder.add_color_attachment(RenderPassColorAttachment {
+                            texture: Some(&swapchain_frame.view),
+                            ..default()
+                        });
+                    } else { should_return = true; }
+
+                    // Set depth attachments
+                    if pass_desc.attachments_depth.is_some()
+                        && let Some(depth_texture) = textures.get(&world.get_resource::<DepthTexture>().unwrap().texture)
+                        && render_instance.surface_config.as_ref().unwrap().width == depth_texture.texture.size.0
+                        && render_instance.surface_config.as_ref().unwrap().height == depth_texture.texture.size.1
+                    {
+                        builder.set_depth_texture(RenderPassDepth {
+                            texture: Some(&depth_texture.texture.view),
+                            ..default()
+                        });
+                    } else { should_return = true; }
+                });
+            if should_return { return; }
+
+
+            // Issue global commands
+            for stage_command in &sub_pass_desc.global {
+                match stage_command {
+                    // Set pipeline
+                    StageCommands::Pipeline(pipeline) => {
+                        if let Some(pipeline) = pipeline
+                            && let CachedPipelineStatus::OkRender(pipeline) = pipeline_manager.get_pipeline(*pipeline)
+                        {
+                            if let Err(e) = render_pass.set_pipeline(pipeline) {
+                                error!("Failed to set pipeline: {:?}.", e);
+                                return;
+                            }
+                        } else { return }
+                    },
+                    // Set bind groups at given index
+                    StageCommands::BindGroup(index, bind_group) => {
+                        if let Some(bind_group) = bind_group {
+                            render_pass.set_bind_group(*index, bind_group);
+                        } else { return }
+                    },
+                    StageCommands::Mesh(mesh) => {
+                        if let Some(mesh) = mesh
+                            && let Some(mesh) = meshes.get(*mesh)
+                        {
+                            render_pass.set_vertex_buffer(0, mesh.vertex_buffer.as_ref().unwrap());
+                            render_pass.set_index_buffer(mesh.index_buffer.as_ref().unwrap());
+                        } else { return }
+                    }
                 }
             }
-            None => return,
-        };
 
-        // Check if pipeline is ready
-        let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
-        let pipeline = match world
-            .get_resource::<RenderAssets<GpuTerrainRenderPipeline>>()
-            .unwrap()
-            .iter()
-            .next()
-        {
-            Some((_, pipeline)) => pipeline,
-            None => return,
-        };
+            // Render other commands
+            if let Some(terrain) = &world.get_resource::<TerrainRendererGPU>() && terrain.ready {
+                for (i, tile) in terrain.tiles.iter().enumerate() {
+                    if let Some(bind_group) = &tile.render_bind_group {
+                        // Set bind groups
+                        render_pass.set_bind_group(3, bind_group);
 
-        // Create the render pass
-        let mut command_buffer = CommandBuffer::new(&render_instance, "terrain");
-        {
-            let mut render_pass =
-                command_buffer.create_render_pass("terrain", |builder: &mut RenderPassBuilder| {
-                    builder.set_depth_texture(RenderPassDepth {
-                        texture: Some(&depth_texture.texture.view),
-                        ..Default::default()
-                    });
-                    builder.add_color_attachment(RenderPassColorAttachment {
-                        texture: Some(&swapchain_frame.view),
-                        ..Default::default()
-                    });
-                });
-
-            // Render the meshes
-            if let (
-                CachedPipelineStatus::OkRender(pipeline),
-                Some(camera_bind_group),
-                Some(terrain_description_bind_group),
-                Some(terrain)
-            ) = (
-                pipeline_manager.get_pipeline(pipeline.cached_pipeline_index),
-                &world
-                    .get_resource::<CameraFeatureRender>()
-                    .unwrap()
-                    .bind_group,
-                &world.get_resource::<TerrainBuffer>().unwrap().bind_group,
-                &world.get_resource::<TerrainRendererGPU>()
-            ) {
-                // Check if terrain is ready
-                if !terrain.ready {
-                    return;
-                }
-
-                // Set the pipeline
-                if render_pass.set_pipeline(pipeline).is_ok() {
-                    // Get the mesh
-                    render_pass.set_vertex_buffer(0, deferred_mesh.vertex_buffer.as_ref().unwrap());
-                    render_pass.set_index_buffer(deferred_mesh.index_buffer.as_ref().unwrap());
-
-                    // Set the bind groups
-                    render_pass.set_bind_group(0, camera_bind_group);
-                    render_pass.set_bind_group(1, material_arrays_bind_group);
-                    render_pass.set_bind_group(2, terrain_description_bind_group);
-
-                    for (i, tile) in terrain.tiles.iter().enumerate() {
-                        if let Some(bind_group) = &tile.render_bind_group {
-                            // Set bind groups
-                            render_pass.set_bind_group(3, bind_group);
-
-                            // Draw the mesh
-                            match render_pass.draw_indexed(0..deferred_mesh.index_count, i as u32..i as u32 + 1) {
-                                Ok(_) => {}
-                                Err(e) => {
-                                    error!("Failed to draw: {:?}.", e);
-                                }
+                        // Draw the mesh
+                        let deferred_mesh = world.get_resource::<TerrainRenderPassMesh>().unwrap().deferred_mesh.as_ref().unwrap();
+                        let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
+                        let mesh = meshes.get(deferred_mesh).unwrap();
+                        match render_pass.draw_indexed(0..mesh.index_count, i as u32..i as u32 + 1) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                error!("Failed to draw: {:?}.", e);
                             }
                         }
                     }
-                } else {
-                    error!("Failed to set pipeline.");
                 }
             }
         }
-
-        // Submit the command buffer
         command_buffer.submit(&render_instance);
     }
 
