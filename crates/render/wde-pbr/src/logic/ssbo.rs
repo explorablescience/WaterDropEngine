@@ -47,7 +47,6 @@ impl Plugin for PbrSsboPlugin {
                 buffer_gpu,
                 instance_to_transform_buffer,
                 instance_to_transform_buffer_gpu,
-                bind_group_layout: None,
                 bind_group: None
             });
     }
@@ -68,7 +67,6 @@ pub struct PbrSsbo {
     pub instance_to_transform_buffer_gpu: Handle<Buffer>,
 
     // The bind group layout and bind group for the ssbo
-    pub bind_group_layout: Option<BindGroupLayout>,
     pub bind_group: Option<BindGroup>
 }
 impl PbrSsbo {
@@ -91,15 +89,7 @@ impl PbrSsbo {
         };
 
         // Create the ssbo layout
-        let ssbo_layout = BindGroupLayout::new("pbr-ssbo", |builder| {
-            builder.add_buffer(0,
-                ShaderStages::VERTEX,
-                BufferBindingType::Storage { read_only: true });
-            builder.add_buffer(1,
-                ShaderStages::VERTEX,
-                BufferBindingType::Storage { read_only: true });
-        });
-        let ssbo_layout_built = ssbo_layout.build(&render_instance.0.read().unwrap());
+        let ssbo_layout_built = PbrSsbo::get_layout().build(&render_instance.0.read().unwrap());
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
@@ -107,8 +97,18 @@ impl PbrSsbo {
             BindGroupBuilder::buffer(0, &buffer.buffer),
             BindGroupBuilder::buffer(1, &instance_to_transform_buffer.buffer)
         ]);
-        ssbo.bind_group_layout = Some(ssbo_layout);
         ssbo.bind_group = Some(bind_group);
+    }
+
+    pub fn get_layout() -> BindGroupLayout {
+        BindGroupLayout::new("pbr-ssbo", |builder| {
+            builder.add_buffer(0,
+                ShaderStages::VERTEX,
+                BufferBindingType::Storage { read_only: true });
+            builder.add_buffer(1,
+                ShaderStages::VERTEX,
+                BufferBindingType::Storage { read_only: true });
+        })
     }
 }
 

@@ -132,7 +132,7 @@ impl RenderPass for PbrGBufferRenderPass {
                 Some(ssbo_bind_group)
             ) = (
                 ssbo_mesh.bind_group.as_ref(),
-                pipeline_manager.get_pipeline(gbuffer_pipeline.cached_pipeline_index),
+                pipeline_manager.get_pipeline(gbuffer_pipeline.0),
                 &camera_layout.bind_group,
                 &ssbo.bind_group
             ) {

@@ -34,7 +34,9 @@ pub trait RenderAsset: Send + Sync + 'static + Sized {
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>>;
 
     /// Return the label of the asset.
-    fn label(&self) -> &str;
+    fn label(&self) -> &str {
+        std::any::type_name::<Self>()
+    }
 }
 
 

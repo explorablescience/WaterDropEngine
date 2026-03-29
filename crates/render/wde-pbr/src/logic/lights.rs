@@ -12,7 +12,6 @@ pub(crate) const MAX_LIGHTS: usize = 64;
 pub(crate) struct LightsFeatureBuffer {
     pub buffer_cpu: Handle<Buffer>,
     pub buffer_gpu: Handle<Buffer>,
-    pub bind_group_layout: Option<BindGroupLayout>,
     pub bind_group: Option<BindGroup>
 }
 impl LightsFeatureBuffer {
@@ -32,20 +31,22 @@ impl LightsFeatureBuffer {
         };
 
         // Create the bind group layout
-        let layout = BindGroupLayout::new("lights", |builder| {
-            builder.add_buffer(0,
-                ShaderStages::FRAGMENT,
-                BufferBindingType::Storage { read_only: true });
-        });
-        let layout_built = layout.build(&render_instance.0.read().unwrap());
+        let layout_built = Self::layout().build(&render_instance.0.read().unwrap());
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroupBuilder::build("lights", &render_instance, &layout_built, &vec![
             BindGroupBuilder::buffer(0, &buffer.buffer)
         ]);
-        lights_buffer.bind_group_layout = Some(layout);
         lights_buffer.bind_group = Some(bind_group);
+    }
+
+    pub fn layout() -> BindGroupLayout {
+        BindGroupLayout::new("lights", |builder| {
+            builder.add_buffer(0,
+                ShaderStages::FRAGMENT,
+                BufferBindingType::Storage { read_only: true });
+        })
     }
 }
 
@@ -78,7 +79,6 @@ impl Plugin for LightsFeature {
             .insert_resource(LightsFeatureBuffer {
                 buffer_cpu,
                 buffer_gpu,
-                bind_group_layout: None,
                 bind_group: None
             });
     }

@@ -88,7 +88,7 @@ impl RenderPass for PbrLightingRenderPass {
                 Some(deferred_bind_group_resolved),
                 Some(lights_bind_group)
             ) = (
-                pipeline_manager.get_pipeline(lighting_pipeline.cached_pipeline_index),
+                pipeline_manager.get_pipeline(lighting_pipeline.0),
                 &world.get_resource::<CameraFeatureRender>().unwrap().bind_group,
                 &world.get_resource::<PbrDeferredTexturesLayout>().unwrap().deferred_bind_group_resolved,
                 &world.get_resource::<LightsFeatureBuffer>().unwrap().bind_group

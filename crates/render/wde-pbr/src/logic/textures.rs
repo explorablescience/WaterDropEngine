@@ -33,15 +33,8 @@ impl PbrDeferredTexturesLayout {
             _ => return
         };
 
-        // Create the deferred layout
-        let deferred_layout = BindGroupLayout::new("deferred-textures", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_view(   0, ShaderStages::FRAGMENT, true);
-            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   2, ShaderStages::FRAGMENT, true);
-            builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   4, ShaderStages::FRAGMENT, true);
-            builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
-        });
+        // Create the layouts
+        let deferred_layout = Self::layout();
         let deferred_layout_resolved = BindGroupLayout::new("deferred-textures-resolved", |builder: &mut BindGroupLayoutBuilder| {
             builder.add_texture_view(   0, ShaderStages::FRAGMENT, false);
             builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
@@ -79,6 +72,17 @@ impl PbrDeferredTexturesLayout {
         textures_layout.deferred_bind_group = Some(deferred_bind_group);
         textures_layout.deferred_layout_resolved = Some(deferred_layout_resolved);
         textures_layout.deferred_bind_group_resolved = Some(deferred_bind_group_resolved);
+    }
+
+    pub fn layout() -> BindGroupLayout {
+        BindGroupLayout::new("deferred-textures", |builder: &mut BindGroupLayoutBuilder| {
+            builder.add_texture_view(   0, ShaderStages::FRAGMENT, true);
+            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
+            builder.add_texture_view(   2, ShaderStages::FRAGMENT, true);
+            builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
+            builder.add_texture_view(   4, ShaderStages::FRAGMENT, true);
+            builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
+        })
     }
 }
 

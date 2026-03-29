@@ -37,7 +37,6 @@ impl Plugin for SsboMeshPlugin {
                 index_buffer,
                 vertex_buffer_offset: 0,
                 index_buffer_offset: 0,
-                bind_group_layout: None,
                 bind_group: None
             });
     }
@@ -55,7 +54,6 @@ pub struct SsboMesh {
     pub index_buffer_offset: u32,
 
     // The bind group layout and bind group
-    pub bind_group_layout: Option<BindGroupLayout>,
     pub bind_group: Option<BindGroup>
 }
 impl SsboMesh {
@@ -75,15 +73,7 @@ impl SsboMesh {
         };
 
         // Create the ssbo layout
-        let ssbo_layout = BindGroupLayout::new("ssbo-mesh", |builder| {
-            builder.add_buffer(0,
-                ShaderStages::VERTEX,
-                BufferBindingType::Storage { read_only: true });
-            builder.add_buffer(1,
-                ShaderStages::VERTEX,
-                BufferBindingType::Storage { read_only: true });
-        });
-        let ssbo_layout_built = ssbo_layout.build(&render_instance.0.read().unwrap());
+        let ssbo_layout_built = SsboMesh::layout().build(&render_instance.0.read().unwrap());
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
@@ -91,7 +81,17 @@ impl SsboMesh {
             BindGroupBuilder::buffer(0, &vertex_buffer.buffer),
             BindGroupBuilder::buffer(1, &index_buffer.buffer)
         ]);
-        ssbo.bind_group_layout = Some(ssbo_layout);
         ssbo.bind_group = Some(bind_group);
+    }
+
+    pub fn layout() -> BindGroupLayout {
+        BindGroupLayout::new("ssbo-mesh", |builder| {
+            builder.add_buffer(0,
+                ShaderStages::VERTEX,
+                BufferBindingType::Storage { read_only: true });
+            builder.add_buffer(1,
+                ShaderStages::VERTEX,
+                BufferBindingType::Storage { read_only: true });
+        })
     }   
 }
