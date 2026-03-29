@@ -4,6 +4,7 @@
 //! It is responsible for creating and managing the window.
 
 use bevy::{a11y::AccessibilityPlugin, app::{PluginGroup, PluginGroupBuilder}, ecs::message::Message, prelude::{Event, MessageReader, MessageWriter, Query, ResMut}, utils::default, window::{PresentMode, Window, WindowPlugin, WindowResized, WindowTheme}, winit::WinitPlugin};
+use wde_wgpu::instance;
 
 use crate::core::RenderInstance;
 
@@ -96,7 +97,6 @@ pub(crate) fn extract_surface_size(render_instance: ResMut<RenderInstance>, wind
     }
     
     // Update the surface configuration
-    let mut render_instance = render_instance.0.write().unwrap();
     let surface_config = render_instance.surface_config.as_mut().unwrap();
     surface_config.width = width;
     surface_config.height = height;
