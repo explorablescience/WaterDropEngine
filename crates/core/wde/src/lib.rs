@@ -184,6 +184,9 @@ impl Plugin for CustomWdePlugins {
         app.add_plugins(wde_pbr::PbrPlugin);
         #[cfg(feature = "editor")]
         app.add_plugins(wde_editor::EditorPlugin);
+
+        // Always add the scene plugin last
+        app.add_plugins(wde_scene::ScenePlugin);
     }
 }
 
@@ -241,6 +244,7 @@ pub mod prelude {
     pub use wde_terrain_grid::prelude::*;
     pub use wde_terrain_editor::prelude::*;
     pub use wde_terrain_navigation::prelude::*;
+    pub use wde_scene::prelude::*;
 
     // Optional feature modules
     #[cfg(feature = "gizmos")]

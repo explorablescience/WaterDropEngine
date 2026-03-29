@@ -2,7 +2,7 @@ use wde_renderer::prelude::*;
 use wde_terrain::prelude::*;
 use bevy::{asset::io::embedded::GetAssetServer, prelude::*};
 
-use crate::{core::grid::GridChunkPos, editor::PlacementUI, prelude::Grid};
+use crate::{core::grid::GridChunkPos, prelude::Grid};
 
 pub struct TerrainGridBufferPlugin;
 impl Plugin for TerrainGridBufferPlugin {

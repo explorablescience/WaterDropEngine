@@ -1,13 +1,25 @@
 use wde_editor::prelude::*;
+use wde_pbr::prelude::*;
 use bevy::prelude::*;
 
-use crate::editor::{PlacementUI, PlacementTool};
+use crate::{core::placement_config::PlacementConfig, editor::{PlacementTool, PlacementUI}};
 
 pub fn init_ui(mut ui_menu: ResMut<UIMenu>) {
     ui_menu.push("Terrain/Placement");
 }
 
-pub fn show_ui(ctx: Res<UIContext>, mut ui_menu: ResMut<UIMenu>, mut placement_ui: ResMut<PlacementUI>) {
+pub fn show_ui(
+    mut commands: Commands,
+    ctx: Res<UIContext>,
+    mut ui_menu: ResMut<UIMenu>,
+    mut placement_ui: ResMut<PlacementUI>,
+    placement_config: Res<PlacementConfig>
+) {
+    // Set placement to none if tool deactivated
+    if !placement_ui.enabled {
+        reset_tool(&mut commands, placement_ui.selected_tools, &mut placement_ui);
+    }
+    
     if !ui_menu.is_clicked("Terrain/Placement") {
         return;
     }
@@ -16,15 +28,69 @@ pub fn show_ui(ctx: Res<UIContext>, mut ui_menu: ResMut<UIMenu>, mut placement_u
         .open(ui_menu.clicked_mut("Terrain/Placement").unwrap())
         .show(&ctx.0, |ui| {
             ui.checkbox(&mut placement_ui.enabled, "Enabled");
-            ui.separator();
-            ui.label("Selected Tool:");
+
+            // If not enabled, return early
+            if !placement_ui.enabled {
+                return;
+            }
+
+            ui.label("Tool:");
             ui.selectable_value(&mut placement_ui.selected_tools, PlacementTool::Place, "Place");
+
             ui.separator();
-            ui.checkbox(&mut placement_ui.placement_show_entity, "Show Placement Preview");
-            ui.label("Placement Extent:");
-            ui.horizontal(|ui| {
-                ui.add(DragValue::new(&mut placement_ui.placement_extent.x).range(1..=10).prefix("x: "));
-                ui.add(DragValue::new(&mut placement_ui.placement_extent.y).range(1..=10).prefix("y: "));
-            });
+
+            // Show placement entity UI
+            if placement_ui.selected_tools == PlacementTool::Place {
+                // Select entity to place
+                ui.label("Placement Entity:");
+                let old_label = placement_ui.placement_entry_label.clone();
+                ui.horizontal(|ui| {
+                    ui.selectable_value(&mut placement_ui.placement_entry_label, None, "None");
+                    for label in placement_config.labels.iter() {
+                        ui.selectable_value(&mut placement_ui.placement_entry_label, Some(label.clone()), label);
+                    }
+                });
+
+                // Update placement entry based on selected label
+                if old_label != placement_ui.placement_entry_label {
+                    if let Some(label) = &placement_ui.placement_entry_label {
+                        if let Some(entry) = placement_config.entries.iter().find(|e| &e.label == label) {
+                            placement_ui.placement_entry = Some(entry.clone());
+                            let entity = placement_ui.placement_entity.unwrap_or_else(|| commands.spawn_empty().id());
+                            placement_ui.placement_entity = Some(entity);
+                            commands.entity(entity).insert((
+                                Transform::default().with_translation(Vec3::new(10000.0, -10000.0, 10000.0)),
+                                PbrModel(entry.asset.models.clone())
+                            ));
+                        } else {
+                            reset_tool(&mut commands, placement_ui.selected_tools, &mut placement_ui);
+                        }
+                    } else {
+                        reset_tool(&mut commands, placement_ui.selected_tools, &mut placement_ui);
+                    }
+                }
+
+                // Display selected entity info
+                if let Some(entry) = &placement_ui.placement_entry {
+                    ui.label(format!("Selected Entity: {}", entry.label));
+                    ui.label(format!("Model: {}", entry.asset.path));
+                    ui.label(format!("Extent: {}x{}", entry.extent.x, entry.extent.y));
+                }
+            } else { reset_tool(&mut commands, placement_ui.selected_tools, &mut placement_ui); }
         });
+}
+
+fn reset_tool(
+    commands: &mut Commands,
+    tool: PlacementTool,
+    placement_ui: &mut PlacementUI
+) {
+    if tool == PlacementTool::Place {
+        placement_ui.placement_entry_label = None;
+        placement_ui.placement_entry = None;
+        if let Some(entity) = placement_ui.placement_entity {
+            commands.entity(entity).remove::<PbrModel>();
+            placement_ui.placement_entity = None;
+        }
+    }
 }

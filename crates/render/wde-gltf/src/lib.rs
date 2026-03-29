@@ -53,7 +53,7 @@ pub use error::GltfError;
 /// let entity = gltf_asset.spawn(commands, Transform::from_scale(Vec3::ONE * 10.0));
 /// ```
 /// This will spawn the model and return the parent entity ID.
-#[derive(Asset, TypePath)]
+#[derive(Asset, TypePath, Clone)]
 pub struct GltfAsset {
     /// The path to the glTF file.
     pub path: String,

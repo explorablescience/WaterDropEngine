@@ -28,6 +28,7 @@ wde-terrain = { path = "../../terrain/wde-terrain" }
 wde-terrain-grid = { path = "../../terrain/wde-terrain-grid" }
 wde-terrain-editor = { path = "../../terrain/wde-terrain-editor" }
 wde-terrain-navigation = { path = "../../terrain/wde-terrain-navigation" }
+wde-scene = { path = "../wde-scene" }
 wde-gizmos = { path = "../../render/wde-gizmos", optional = true }
 wde-pbr = { path = "../../render/wde-pbr", optional = true }
 wde-editor = { path = "../wde-editor", optional = true }

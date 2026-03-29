@@ -1,0 +1,20 @@
+{
+    "version": 1.0,
+    "type": "res/config",
+    "path": "core/config/placement.json",
+    "label": "Placement Grid Configuration",
+    "description": "Configuration of the placement of entities in the terrain grid.",
+    "data": {
+        "version": 1,
+        "entities" : [
+            {
+                "label": "House",
+                "model": "models/placement/house_demo1/house_demo1.gltf",
+                "extent": {
+                    "x": 2,
+                    "y": 2
+                }
+            }
+        ]
+    }
+}

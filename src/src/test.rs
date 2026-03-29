@@ -9,7 +9,7 @@ impl Plugin for TestPlugin {
     }
 }
 
-fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
+fn init_scene(mut commands: Commands) {
     // Main camera
     commands.spawn((
         Name::new("Main Camera"),
@@ -18,15 +18,6 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         CameraView::default(),
         ThirdPersonController::default(),
         ActiveCamera,
-    ));
-
-    // Load a glTF model and spawn it in the scene
-    let gltf_asset = GltfLoader::load("tests/models/houses/house_demo1.gltf", &asset_server).unwrap();
-    let model = PbrModel(gltf_asset.models.clone());
-    commands.spawn((
-        Name::new("Default House Model"),
-        model.clone(),
-        Transform::default()
     ));
 
     // Spawn the lights
