@@ -1,4 +1,3 @@
-use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
@@ -47,81 +46,22 @@ impl PbrLightingRenderPassMesh {
 pub struct PbrLightingRenderPass;
 impl RenderPass for PbrLightingRenderPass {
     fn render(&self, world: &mut World) {
-        let _span = debug_span!("lighting_pbr_render_pass_render").entered();
-
-        // Get the render instance and swapchain frame
-        let render_instance = world.get_resource::<RenderInstance>().unwrap();
-        let render_instance = render_instance.0.read().unwrap();
-        let swapchain_frame = world.get_resource::<SwapchainFrame>().unwrap().data.as_ref().unwrap();
-
-        // Check if mesh is ready
-        let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
-        let deferred_mesh = match &world.get_resource::<PbrLightingRenderPassMesh>().unwrap().deferred_mesh {
-            Some(mesh) => match meshes.get(mesh) {
-                Some(mesh) => mesh,
-                None => return
-            },
-            None => return
-        };
-
-        // Check if pipeline is ready
-        let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
-        let lighting_pipeline = match world.get_resource::<RenderAssets<GpuPbrLightingRenderPipeline>>().unwrap().iter().next() {
-            Some((_, pipeline)) => pipeline,
-            None => return
-        };
-
-        // Create the render pass
-        let mut command_buffer = CommandBuffer::new(&render_instance, "lighting-pbr");
-        {
-            let mut render_pass = command_buffer.create_render_pass("lighting-pbr", |builder: &mut RenderPassBuilder| {
-                builder.add_color_attachment(RenderPassColorAttachment {
-                    texture: Some(&swapchain_frame.view),
-                    ..Default::default()
-                });
-            });
-
-            // Render the mesh
-            if let (
-                CachedPipelineStatus::OkRender(pipeline),
-                Some(camera_bind_group),
-                Some(deferred_bind_group_resolved),
-                Some(lights_bind_group)
-            ) = (
-                pipeline_manager.get_pipeline(lighting_pipeline.0),
-                &world.get_resource::<CameraFeatureRender>().unwrap().bind_group,
-                &world.get_resource::<PbrDeferredTexturesLayout>().unwrap().deferred_bind_group_resolved,
-                &world.get_resource::<LightsFeatureBuffer>().unwrap().bind_group
-            ) {
-                // Set the pipeline
-                if render_pass.set_pipeline(pipeline).is_ok() {
-                    // Get the mesh
-                    render_pass.set_vertex_buffer(0, deferred_mesh.vertex_buffer.as_ref().unwrap());
-                    render_pass.set_index_buffer(deferred_mesh.index_buffer.as_ref().unwrap());
-
-                    // Set bind groups
-                    render_pass.set_bind_group(0, camera_bind_group);
-                    render_pass.set_bind_group(1, deferred_bind_group_resolved);
-                    render_pass.set_bind_group(2, lights_bind_group);
-                    
-                    // Draw the mesh
-                    match render_pass.draw_indexed(0..deferred_mesh.index_count, 0..1) {
-                        Ok(_) => {},
-                        Err(e) => {
-                            error!("Failed to draw: {:?}.", e);
-                        }
-                    };
-                } else {
-                    error!("Failed to set pipeline.");
-                }
-            }
-        }
-
-        // Submit the command buffer
-        command_buffer.submit(&render_instance);
+        let sub_pass_desc = SubPassDesc(vec![
+            SubPassCommand::Pipeline(Some(world.get_resource::<RenderAssets<GpuPbrLightingRenderPipeline>>().unwrap().iter().next().map(|(_, p)| p.0)).flatten()),
+            SubPassCommand::Mesh(world.get_resource::<PbrLightingRenderPassMesh>().unwrap().deferred_mesh.as_ref().map(|m| m.id())),
+            SubPassCommand::BindGroup(0, world.get_resource::<CameraFeatureRender>().unwrap().bind_group.clone()),
+            SubPassCommand::BindGroup(1, world.get_resource::<PbrDeferredTexturesLayout>().unwrap().deferred_bind_group_resolved.clone()),
+            SubPassCommand::BindGroup(2, world.get_resource::<LightsFeatureBuffer>().unwrap().bind_group.clone()),
+            SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
+                bind_group: None,
+                index_range: 0..6,
+                instance_range: 0..1
+            }])
+        ]);
+        self.process(world, &RenderPassDesc::default(), &sub_pass_desc);
     }
 
-    fn name(&self) -> &str {
-        "Pbr Lighting"
+    fn label(&self) -> &str {
+        "pbr-lighting"
     }
 }

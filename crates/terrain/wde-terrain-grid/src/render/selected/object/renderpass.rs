@@ -77,7 +77,7 @@ impl RenderPass for SelectedObjectRenderPass {
         command_buffer.submit(&render_instance);
     }
 
-    fn name(&self) -> &str {
+    fn label(&self) -> &str {
         "Terrain Grid Selected Object"
     }
 }

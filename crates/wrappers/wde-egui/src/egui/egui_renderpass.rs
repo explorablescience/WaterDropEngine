@@ -110,7 +110,7 @@ impl RenderPass for EguiRenderPass {
         command_buffer.submit(&render_instance);
     }
 
-    fn name(&self) -> &str {
+    fn label(&self) -> &str {
         "Egui"
     }
 }

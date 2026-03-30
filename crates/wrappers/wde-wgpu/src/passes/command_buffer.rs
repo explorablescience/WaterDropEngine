@@ -4,7 +4,7 @@ use wgpu::Texture;
 
 use crate::{buffer::Buffer, compute_pass::WComputePass, instance::RenderInstanceData, texture::TextureView};
 
-use super::render_pass::RenderPass;
+use super::render_pass::RenderPassInstance;
 
 /// Type of a color.
 pub type WgpuColor = wgpu::Color;
@@ -177,7 +177,7 @@ impl CommandBuffer {
     /// * `builder_func` - The function to build the render pass.
     pub fn create_render_pass<'pass>(
         &'pass mut self, label: &str, builder_func: impl FnOnce(&mut RenderPassBuilder<'pass>)
-    ) -> RenderPass<'pass> {
+    ) -> RenderPassInstance<'pass> {
         event!(Level::TRACE, "Creating a render pass {}.", label);
 
         // Run the builder function
@@ -216,7 +216,7 @@ impl CommandBuffer {
             occlusion_query_set: None,
         });
 
-        RenderPass::new(label, render_pass)
+        RenderPassInstance::new(label, render_pass)
     }
 
     /// Create a new compute pass.

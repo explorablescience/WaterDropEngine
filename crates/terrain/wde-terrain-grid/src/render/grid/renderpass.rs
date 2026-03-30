@@ -139,7 +139,7 @@ impl RenderPass for TerrainGridRenderPass {
         command_buffer.submit(&render_instance);
     }
 
-    fn name(&self) -> &str {
+    fn label(&self) -> &str {
         "Terrain Grid"
     }
 }

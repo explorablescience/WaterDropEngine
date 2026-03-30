@@ -43,7 +43,7 @@ impl Plugin for RenderGraphPanelPlugin {
         let mut names = vec![];
         for id in render_graph.get_sorted_passes() {
             let pass = render_graph.get_pass(id).unwrap();
-            names.push(format!("{}: {}", id, pass.name()));
+            names.push(format!("{}: {}", id, pass.label()));
         }
         app.world_mut().insert_resource(RenderGraphUIState {
             names,
@@ -181,7 +181,7 @@ fn render_custom_passes(world: &mut World) {
             let _span = debug_span!(
                 "ui_screenshot_render_pass_render",
                 pass_id = id,
-                pass_name = pass.name()
+                pass_name = pass.label()
             )
             .entered();
             pass.render(world);
@@ -190,7 +190,7 @@ fn render_custom_passes(world: &mut World) {
             let _span = debug_span!(
                 "ui_screenshot_render_pass_blit",
                 pass_id = id,
-                pass_name = pass.name()
+                pass_name = pass.label()
             )
             .entered();
             // Get swapchain frame and its ghost texture

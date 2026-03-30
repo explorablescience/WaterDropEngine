@@ -25,6 +25,7 @@ pub use wgpu::util::DrawIndexedIndirectArgs;
 ///     render_pipeline::RenderPipeline,
 /// };
 /// 
+/// let mut pass = RenderPassInstance::new("example", render_pass);
 /// pass
 ///     .set_pipeline(pipeline).unwrap()
 ///     .set_vertex_buffer(0, vbo)
@@ -35,7 +36,7 @@ pub use wgpu::util::DrawIndexedIndirectArgs;
 ///
 /// Supported operations include standard draws, indexed draws, and indirect versions of
 /// both. Errors are returned if mandatory state (pipeline, vertex/index buffers) is missing.
-pub struct RenderPass<'a> {
+pub struct RenderPassInstance<'a> {
     pub label: String,
     render_pass: wgpu::RenderPass<'a>,
     pipeline_set: bool,
@@ -43,15 +44,15 @@ pub struct RenderPass<'a> {
     index_buffer_set: bool,
 }
 
-impl std::fmt::Debug for RenderPass<'_> {
+impl std::fmt::Debug for RenderPassInstance<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("RenderPass")
+        f.debug_struct("RenderPassInstance")
             .field("label", &self.label)
             .finish()
     }
 }
 
-impl<'a> RenderPass<'a> {
+impl<'a> RenderPassInstance<'a> {
     /// Create a new render pass.
     /// 
     /// # Arguments
@@ -249,9 +250,9 @@ impl<'a> RenderPass<'a> {
 
     /// Forgets the lifetime of the render pass.
     /// This is used to return the inner `wgpu::RenderPass` when needed.
-    pub fn forget_lifetime(self) -> RenderPass<'static> {
+    pub fn forget_lifetime(self) -> RenderPassInstance<'static> {
         let render_pass = self.render_pass.forget_lifetime();
-        RenderPass {
+        RenderPassInstance {
             label: self.label,
             render_pass,
             pipeline_set: self.pipeline_set,
