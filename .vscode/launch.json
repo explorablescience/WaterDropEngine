@@ -27,6 +27,29 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Advanced Debug Game",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=wde-game",
+                    "--package=wde-game",
+                    "--target-dir=target",
+                    "--features=x11,watch,gpu-debug"
+                ],
+                "filter": {
+                    "name": "wde-game",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
+            }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug Game",
             "cargo": {
                 "args": [

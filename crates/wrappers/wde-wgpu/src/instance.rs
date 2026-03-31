@@ -1,6 +1,6 @@
 //! Device/queue/surface bootstrap utilities used across the renderer.
 
-use bevy::window::RawHandleWrapperHolder;
+use bevy::{tasks::block_on, window::RawHandleWrapperHolder};
 use wde_logger::prelude::*;
 use wgpu::{BackendOptions, Device, Features, Limits as WLimits, MemoryBudgetThresholds, PresentMode as WPresentMode, Surface, SurfaceConfiguration, SurfaceTexture};
 
@@ -117,14 +117,19 @@ pub struct RenderInstanceData<'a> {
 /// ```
 pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapperHolder>) -> RenderInstanceData<'static> {
     info!(label, "Creating render instance.");
-    let _trace = info_span!("new").entered();
+    let _trace = info_span!("wgpu-instance-create").entered();
 
     // Set flags
-    let flags = if cfg!(debug_assertions) {
-        wgpu::InstanceFlags::DEBUG | wgpu::InstanceFlags::VALIDATION
+    let mut flags = if cfg!(debug_assertions) {
+        wgpu::InstanceFlags::DEBUG
+            | wgpu::InstanceFlags::VALIDATION
+            | wgpu::InstanceFlags::VALIDATION_INDIRECT_CALL
     } else {
         wgpu::InstanceFlags::DISCARD_HAL_LABELS
     };
+    if cfg!(feature = "gpu-debug") {
+        flags |= wgpu::InstanceFlags::GPU_BASED_VALIDATION
+    }
 
     // Create wgpu instance
     debug!(label, "Creating wgpu instance.");
@@ -152,23 +157,26 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
 
     // Retrieve adapter
     let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions {
+        .enumerate_adapters(wgpu::Backends::all())
+        .into_iter()
+        .find(|a| a.get_info().backend == wgpu::Backend::Vulkan)
+        .or_else(|| block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::HighPerformance,
             compatible_surface: surface.as_ref(),
             ..Default::default()
-        })
-        .await
-        .unwrap_or_else(|e| panic!("Failed to create adapter for '{}' : {}", label, e));
+        })).ok())
+        .expect("Failed to find a suitable GPU adapter.");
 
     // Check adaptater infos
     let adapter_info = adapter.get_info();
-    info!("Using adapter named {} of {} type.", adapter_info.name, match adapter_info.device_type {
-        wgpu::DeviceType::DiscreteGpu => "Discrete GPU",
-        wgpu::DeviceType::IntegratedGpu => "Integrated GPU",
+    info!("Using {} adapter {}.", match adapter_info.device_type {
+        wgpu::DeviceType::DiscreteGpu => "discrete GPU",
+        wgpu::DeviceType::IntegratedGpu => "integrated GPU",
         wgpu::DeviceType::Cpu => "CPU",
-        wgpu::DeviceType::VirtualGpu => "Virtual GPU",
-        wgpu::DeviceType::Other => "Other",
-    });
+        wgpu::DeviceType::VirtualGpu => "virtual GPU",
+        wgpu::DeviceType::Other => "other",
+    }, adapter_info.name);
+    debug!("Adapter info: {:#?}", adapter_info);
     if adapter_info.device_type == wgpu::DeviceType::Cpu {
         warn!("The selected adapter is using a driver that only supports software rendering, this will be very slow.");
     }
@@ -185,7 +193,7 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
     };
 
     // Create device instance and queue
-    debug!(label, "Requesting device.");
+    trace!(label, "Requesting device.");
     let (device, queue) = adapter
         .request_device(
             &wgpu::DeviceDescriptor {
@@ -196,11 +204,24 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
             },
         )
         .await
-        .unwrap_or_else(|e| panic!("Failed to create device for '{}' : {}", label, e));
+        .unwrap_or_else(|e| panic!("Failed to create wgpu device: {:?}", e));
 
     // Log device infos
-    debug!("Configured wgpu adapter Limits: {:#?}", device.limits());
-    debug!("Configured wgpu adapter Features: {:#?}", device.features());
+    debug!("Configured wgpu adapter limits: {:#?}", device.limits());
+    debug!("Configured wgpu adapter features: {:#?}", device.features());
+
+    // Handle uncaught device errors
+    device.on_uncaptured_error(std::sync::Arc::new(|error| {
+        error!("Uncaptured wgpu error: {:?}", error);
+    }));
+
+    // Panic room
+    device.set_device_lost_callback(|reason, message| {
+        match reason {
+            wgpu::DeviceLostReason::Destroyed => error!("The GPU device was destroyed: {}", message),
+            wgpu::DeviceLostReason::Unknown => error!("The GPU device was lost for an unknown reason: {}", message),
+        }
+    });
 
     // Return instance
     RenderInstanceData {
@@ -229,6 +250,7 @@ pub fn setup_surface(label: &str, size: (u32, u32), device: &Device, surface: &S
 
     // Retrieve surface format (sRGB if possible)
     let surface_caps = surface.get_capabilities(adapter);
+    debug!("Surface capabilities: {:#?}", surface_caps);
     let surface_format = surface_caps.formats.iter()
         .copied()
         .find(|f| f.is_srgb())
@@ -294,7 +316,7 @@ pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfigurat
                 format: match surface_config.format {
                     wgpu::TextureFormat::Bgra8UnormSrgb => Some(wgpu::TextureFormat::Bgra8UnormSrgb),
                     wgpu::TextureFormat::Rgba8UnormSrgb => Some(wgpu::TextureFormat::Rgba8UnormSrgb),
-                    _ => panic!("Unsupported surface format.")
+                    _ => unreachable!("Unsupported swapchain format: {:?}", surface_config.format)
                 },
                 dimension: Some(wgpu::TextureViewDimension::D2),
                 aspect: wgpu::TextureAspect::All,
@@ -326,7 +348,7 @@ pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfigurat
         }
         // Other errors
         Err(e) => {
-            error!("Failed to acquire next swapchain texture: {:?}", e);
+            error!("Failed to acquire next swapchain texture: {:?}.", e);
             RenderEvent::None
         }
     }

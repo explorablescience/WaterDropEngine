@@ -25,3 +25,7 @@ futures-lite = "2.6"
 bevy = { workspace = true }
 serde = { workspace = true }
 bytemuck = { workspace = true}
+
+[features]
+default = []
+gpu-debug = []
