@@ -2,20 +2,6 @@
 name = "wde-terrain-grid"
 version = "0.1.0"
 edition = "2024"
-description = "The grid system for the terrain module."
-
-[profile.dev]
-opt-level = 0
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.release]
-lto = true
-opt-level = 3
-codegen-units = 1
-incremental = false
-debug = false
 
 [dependencies]
 wde-logger = { path = "../../wrappers/wde-logger" }

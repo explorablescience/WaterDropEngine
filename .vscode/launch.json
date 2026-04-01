@@ -8,13 +8,13 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=wde-game",
-                    "--package=wde-game",
+                    "--bin=waterdropengine",
+                    "--package=waterdropengine",
                     "--target-dir=target",
                     "--features=x11,watch,tracing"
                 ],
                 "filter": {
-                    "name": "wde-game",
+                    "name": "waterdropengine",
                     "kind": "bin"
                 }
             },
@@ -31,13 +31,13 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=wde-game",
-                    "--package=wde-game",
+                    "--bin=waterdropengine",
+                    "--package=waterdropengine",
                     "--target-dir=target",
                     "--features=x11,watch,gpu-debug"
                 ],
                 "filter": {
-                    "name": "wde-game",
+                    "name": "waterdropengine",
                     "kind": "bin"
                 }
             },
@@ -54,13 +54,13 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=wde-game",
-                    "--package=wde-game",
+                    "--bin=waterdropengine",
+                    "--package=waterdropengine",
                     "--target-dir=target",
                     "--features=x11,watch"
                 ],
                 "filter": {
-                    "name": "wde-game",
+                    "name": "waterdropengine",
                     "kind": "bin"
                 }
             },
@@ -78,12 +78,13 @@
                 "args": [
                     "build",
                     "--release",
-                    "--bin=wde-game",
-                    "--package=wde-game",
-                    "--target-dir=x11,target"
+                    "--bin=waterdropengine",
+                    "--package=waterdropengine",
+                    "--target-dir=target",
+                    "--features=x11"
                 ],
                 "filter": {
-                    "name": "wde-game",
+                    "name": "waterdropengine",
                     "kind": "bin"
                 }
             },
@@ -141,13 +142,13 @@
                 "args": [
                     "build",
                     "--release",
-                    "--bin=wde-game",
-                    "--package=wde-game",
+                    "--bin=waterdropengine",
+                    "--package=waterdropengine",
                     "--target-dir=target",
                     "--features=wayland"
                 ],
                 "filter": {
-                    "name": "wde-game",
+                    "name": "waterdropengine",
                     "kind": "bin"
                 }
             },
@@ -165,12 +166,12 @@
                 "args": [
                     "build",
                     "--release",
-                    "--bin=wde-game",
-                    "--package=wde-game",
+                    "--bin=waterdropengine",
+                    "--package=waterdropengine",
                     "--target-dir=target"
                 ],
                 "filter": {
-                    "name": "wde-game",
+                    "name": "waterdropengine",
                     "kind": "bin"
                 }
             },

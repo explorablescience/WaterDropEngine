@@ -2,20 +2,6 @@
 name = "wde-gltf"
 version = "0.1.0"
 edition = "2024"
-description = "The glTF module for WaterDrop Engine, providing glTF model loading and rendering support."
-
-[profile.dev]
-opt-level = 0
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.release]
-lto = true
-opt-level = 3
-codegen-units = 1
-incremental = false
-debug = false
 
 [dependencies]
 wde-renderer = { path = "../../core/wde-renderer" }

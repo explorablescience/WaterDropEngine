@@ -6,6 +6,19 @@ members = [
 ]
 resolver = "2"
 
+[profile.dev]
+opt-level = 0
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+lto = true
+opt-level = 3
+codegen-units = 1
+incremental = false
+debug = false
+
 [workspace.dependencies]
 serde = { version = "1.0" }
 bytemuck = { version = "1.24" }

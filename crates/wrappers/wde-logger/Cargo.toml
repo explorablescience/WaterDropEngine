@@ -1,25 +1,15 @@
 [package]
 name = "wde-logger"
 version = "0.1.0"
-authors = ["MecanicaScience"]
 edition = "2024"
-description = "A logging crate for WaterDropEngine"
-
-[profile.dev]
-opt-level = 0
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.release]
-lto = true
-opt-level = 3
-codegen-units = 1
-incremental = false
-debug = false
 
 [dependencies]
 bevy = { workspace = true }
+backtrace = "0.3"
+sysinfo = "0.38"
+uuid = { version = "1.23", features = ["v4"], default-features = false }
+toml = "1.1"
+serde = { workspace = true }
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-subscriber = { version = "0.3.20", features = ["registry", "env-filter"] }
 tracing-log = "0.2.0"
@@ -31,7 +21,7 @@ tracy-client = { version = "0.18.3", optional = true }
 puffin = { git = "https://github.com/explorablescience/puffin.git", rev = "56ece9e", optional = true }
 
 [features]
-default = []
-tracing = ["bevy/trace", "bevy/trace_tracy", "bevy/trace_tracy_memory", "tracing-tracy", "tracy-client", "tracing-error"]
+default = ["tracing/max_level_debug"]
+tracing = ["bevy/trace", "bevy/trace_tracy", "bevy/trace_tracy_memory", "tracing-tracy", "tracy-client", "dep:tracing-error"]
 puffin = ["bevy/trace", "dep:puffin"]
 editor = []

@@ -1,14 +1,16 @@
 [package]
-name = "wde-game"
+name = "waterdropengine"
 version = "0.1.0"
 edition = "2024"
+authors = ["ExplorableScience <explorablescience@gmail.com>"]
+homepage = "https://explorablescience.com"
 build = "build.rs"
 
 [dependencies]
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 
-[target.'cfg(debug_assertions)'.dependencies]
+[dev-dependencies]
 bevy = { workspace = true, features = [ "debug" ] }
 
 [dependencies.wde]
