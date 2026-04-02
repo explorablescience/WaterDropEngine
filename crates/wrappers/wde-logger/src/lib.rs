@@ -57,6 +57,11 @@ use tracing_subscriber::{
     registry::Registry,
 };
 
+// Store the guard for the non-blocking file appender to ensure logs are flushed on drop and to prevent it from being dropped while the subscriber is still active.
+#[allow(dead_code)]
+#[derive(Resource)]
+pub struct LoggerGuard(tracing_appender::non_blocking::WorkerGuard);
+
 #[cfg(feature = "puffin")]
 use crate::puffin_layer::PuffinLayer;
 
@@ -146,7 +151,8 @@ impl Plugin for LogPlugin {
         configure_panic_hook();
 
         // Build the tracing subscriber with the configured layers and filters
-        let subscriber = configure_subscriber(app, self.level, &self.filter, self.custom_layer, self.fmt_layer);
+        let (subscriber, _guard) = configure_subscriber(app, self.level, &self.filter, self.custom_layer, self.fmt_layer);
+        app.insert_resource(LoggerGuard(_guard));
 
         // Set the global logger and subscriber based on the different features enabled
         let logger_already_set = LogTracer::init().is_err();
@@ -154,6 +160,7 @@ impl Plugin for LogPlugin {
 
         // Initial log message
         info!("WaterDropEngine initializing.");
+        info!("Logs will be written to '{}'", std::env::temp_dir().join("waterdropengine").join("log.txt").display());
 
         // Log errors if we failed to set the global logger or subscriber, likely due to another logger/subscriber already being set.
         match (logger_already_set, subscriber_already_set) {
@@ -189,7 +196,7 @@ fn configure_panic_hook() {
     }));
 }
 
-fn configure_subscriber(app: &mut App, level: Level, filter: &str, custom_layer: fn(app: &mut App) -> Option<BoxedLayer>, fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>) -> impl tracing::Subscriber + Send + Sync {
+fn configure_subscriber(app: &mut App, level: Level, filter: &str, custom_layer: fn(app: &mut App) -> Option<BoxedLayer>, fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>) -> (impl tracing::Subscriber + Send + Sync, tracing_appender::non_blocking::WorkerGuard) {
     let subscriber = Registry::default();
 
     // Add optional layer provided by user
@@ -235,6 +242,26 @@ fn configure_subscriber(app: &mut App, level: Level, filter: &str, custom_layer:
     // Keep an in-memory ring buffer of recent logs for panic reports.
     let subscriber = subscriber.with(panic_report_layer::PanicReportLogLayer);
 
+    // Rename old log file
+    let path = std::env::temp_dir().join("waterdropengine");
+    let _ = std::fs::create_dir_all(&path);
+    let log_file = path.join("log.txt");
+    if log_file.exists() {
+        let archived_log_file = path.join("log-old.txt");
+        let _ = std::fs::rename(&log_file, &archived_log_file);
+    }
+
+    // Set up file appender layer with a non-blocking writer
+    let file_appender = tracing_appender::rolling::never(&path, "log.txt");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    let subscriber = subscriber.with(
+        tracing_subscriber::fmt::Layer::default()
+            .with_writer(non_blocking)
+            .with_ansi(false)
+            .with_filter(tracing_subscriber::filter::FilterFn::new(|meta| {
+                meta.fields().field("tracy.frame_mark").is_none()
+            })));
+
     // Register editor log layer
     #[cfg(feature = "editor")]
     let subscriber = subscriber.with(editor_layer::EditorLogLayer);
@@ -252,5 +279,5 @@ fn configure_subscriber(app: &mut App, level: Level, filter: &str, custom_layer:
     #[cfg(feature = "tracing")]
     let subscriber = subscriber.with(tracing_tracy::TracyLayer::default());
 
-    subscriber
+    (subscriber, _guard)
 }
