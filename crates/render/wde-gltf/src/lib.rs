@@ -88,7 +88,7 @@ impl GltfLoader {
         path: &str,
         asset_server: &AssetServer
     ) -> Result<GltfAsset, GltfError> {
-        info!("Loading glTF model from path '{}'.", path);
+        debug!("Loading glTF model {}.", path);
 
         // Parse the glTF file
         let model = parser::parse_gltf(path)?;

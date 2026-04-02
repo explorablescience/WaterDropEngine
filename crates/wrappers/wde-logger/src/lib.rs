@@ -5,7 +5,7 @@
 //!
 //! By default, the filter used is:
 //! ```text
-//! wgpu_hal=warn,wgpu_core=warn,naga=warn
+//! wgpu_hal=warn,wgpu_hal::vulkan::instance=error,wgpu_core=warn,naga=warn
 //! ```
 //! to ignore verbose logs from wgpu and naga.
 //!
@@ -80,7 +80,14 @@ type PreFmtSubscriber =
 pub type BoxedFmtLayer = Box<dyn Layer<PreFmtSubscriber> + Send + Sync + 'static>;
 
 /// The default [`LogPlugin`] [`EnvFilter`].
-pub const DEFAULT_FILTER: &str = concat!("wgpu_hal=warn,", "wgpu_core=warn,", "naga=warn,");
+pub const DEFAULT_FILTER: &str = concat!(
+    "wgpu_hal=warn,",
+    "wgpu_hal::vulkan::instance=error,",
+    "wgpu_core=warn,",
+    "naga=warn,",
+    "egui_wgpu=error,",
+    "winit=warn,",
+);
 
 /// Plugin that configures logging for WaterDropEngine applications.
 ///
@@ -159,8 +166,8 @@ impl Plugin for LogPlugin {
         let subscriber_already_set = tracing::subscriber::set_global_default(subscriber).is_err();
 
         // Initial log message
-        info!("WaterDropEngine initializing.");
-        info!("Logs will be written to '{}'", std::env::temp_dir().join("waterdropengine").join("log.txt").display());
+        info!("Starting WaterDropEngine.");
+        info!("Logs will be written to {}.", std::env::temp_dir().join("waterdropengine").join("log.txt").display());
 
         // Log errors if we failed to set the global logger or subscriber, likely due to another logger/subscriber already being set.
         match (logger_already_set, subscriber_already_set) {

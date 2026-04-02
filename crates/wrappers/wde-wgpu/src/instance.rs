@@ -316,6 +316,8 @@ pub fn get_current_texture(surface: &Surface, surface_config: &SurfaceConfigurat
                 format: match surface_config.format {
                     wgpu::TextureFormat::Bgra8UnormSrgb => Some(wgpu::TextureFormat::Bgra8UnormSrgb),
                     wgpu::TextureFormat::Rgba8UnormSrgb => Some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                    wgpu::TextureFormat::Bgra8Unorm => Some(wgpu::TextureFormat::Bgra8Unorm),
+                    wgpu::TextureFormat::Rgba8Unorm => Some(wgpu::TextureFormat::Rgba8Unorm),
                     _ => unreachable!("Unsupported swapchain format: {:?}", surface_config.format)
                 },
                 dimension: Some(wgpu::TextureViewDimension::D2),

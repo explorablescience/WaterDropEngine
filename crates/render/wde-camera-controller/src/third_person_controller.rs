@@ -98,7 +98,7 @@ fn update(
             // Initialize target from current camera position projected onto ground
             controller.target = Vec3::new(transform.translation.x, 0.0, transform.translation.z);
             controller.initialized = true;
-            info!("Third-person camera controller initialized.");
+            info!("Camera controller initialized.");
         }
         if !controller.enabled {
             mouse_events.clear();

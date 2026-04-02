@@ -273,7 +273,7 @@ fn prepare_assets<A: RenderAsset>(
             Some(asset) => asset.label(),
             None => "(asset not loaded)"
         };
-        debug!("Removing asset of type {} labeled {}.", std::any::type_name::<A::SourceAsset>(), label);
+        debug!("Removing asset {} of type {}.", label, std::any::type_name::<A::SourceAsset>());
         render_assets.remove(removed);
     }
 

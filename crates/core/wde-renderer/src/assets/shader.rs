@@ -52,7 +52,7 @@ impl AssetLoader for ShaderLoader {
         _settings: &Self::Settings,
         load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
-        debug!("Loading shader on the CPU from {}.", load_context.path());
+        debug!("Loading shader {}.", load_context.path());
 
         // Read the texture data
         let mut bytes = Vec::new();

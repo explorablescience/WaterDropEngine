@@ -95,7 +95,7 @@ impl AssetLoader for MeshLoader {
         settings: &Self::Settings,
         load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
-        info!("Loading mesh on the CPU from {}.", load_context.path());
+        info!("Loading mesh {}.", load_context.path());
 
         // Update the label from the path
         let label = if settings.label.is_empty() {
@@ -232,7 +232,7 @@ impl RenderAsset for GpuMesh {
             asset: Self::SourceAsset,
             (render_instance, ssbo_mesh, gpu_buffers): &mut SystemParamItem<Self::Param>,
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        debug!(asset.label, "Loading mesh on the GPU.");
+        trace!(asset.label, "Loading mesh on the GPU.");
 
         // Get the ssbo buffers
         let (ssbo_vertex_buffer, ssbo_index_buffer) = match (

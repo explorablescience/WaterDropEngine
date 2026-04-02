@@ -13,12 +13,10 @@ pub fn main() {
     let mut app = App::new();
 
     // Add default plugins
-    info!("Adding default plugins.");
     app
         .add_plugins(WdeDefaultPlugins)
         .add_plugins(TestPlugin);
 
     // Run the app
-    info!("Running game engine.");
     app.run();
 }

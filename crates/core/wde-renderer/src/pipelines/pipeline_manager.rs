@@ -252,7 +252,7 @@ fn load_render_pipelines(
                 continue;
             }
         }
-        debug!("Loaded pipeline with id {}", id);
+        debug!("Loaded pipeline {} with id {}", descriptor.label, id);
 
         // Add the pipeline to the loaded pipelines
         pipelines_loaded_indices.push((*id, pipeline));
@@ -301,8 +301,6 @@ fn load_compute_pipelines(
         }
         pipelines_loaded_desc.insert(*id, descriptor.clone());
         shaders_to_pipelines.entry(descriptor.comp.as_ref().unwrap().id()).or_default().push(*id);
-
-        debug!("Loading pipeline with id {}", id);
 
         // Build the layouts
         let mut bind_group_layouts = Vec::new();

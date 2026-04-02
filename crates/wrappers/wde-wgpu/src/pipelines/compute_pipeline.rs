@@ -150,6 +150,16 @@ impl ComputePipeline {
                 return Err(RenderError::ShaderCompilationError);
             }
         };
+        future::block_on(async {
+            let compil_info = shader_module.get_compilation_info().await;
+            for message in compil_info.messages {
+                match message.message_type {
+                    wgpu::CompilationMessageType::Error => error!(self.label, "Compute shader {} compilation error '{}' (at {:?}).", self.label, message.message, message.location),
+                    wgpu::CompilationMessageType::Warning => warn!(self.label, "Compute shader {} compilation warning '{}' (at {:?}).", self.label, message.message, message.location),
+                    wgpu::CompilationMessageType::Info => debug!(self.label, "Compute shader {} compilation info '{}' (at {:?}).", self.label, message.message, message.location),
+                }
+            }
+        });
 
         // Create pipeline layout
         trace!(self.label, "Creating compute pipeline instance.");

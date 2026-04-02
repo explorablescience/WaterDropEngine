@@ -268,7 +268,7 @@ impl RenderGraph {
             error!("The pass with id {} (with name {}) already exists in the render graph.", id, pass.label());
             return;
         }
-        info!("Adding the render pass {} at index {} to the render graph.", pass.label(), id);
+        debug!("Adding the render pass {} at index {} to the render graph.", pass.label(), id);
 
         // Add the pass
         self.passes.insert(id, Box::new(pass));

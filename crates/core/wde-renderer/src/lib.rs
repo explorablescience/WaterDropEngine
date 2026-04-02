@@ -264,7 +264,6 @@ pub mod utils;
 use core::RenderCorePlugin;
 
 use assets::AssetsPlugin;
-use wde_logger::prelude::*;
 use bevy::prelude::*;
 
 /** Multisample anti-aliasing sample count used throughout the renderer. */
@@ -281,9 +280,5 @@ impl Plugin for RenderPlugin {
 
         // Register the scene plugin
         app.add_plugins(AssetsPlugin);
-    }
-
-    fn finish(&self, _app: &mut App) {
-        info!("Render plugin initialized.");
     }
 }

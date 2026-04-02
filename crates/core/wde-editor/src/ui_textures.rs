@@ -171,7 +171,7 @@ fn update_images(
         let texture = match textures.get(handle.asset_id()) {
             Some(texture) => texture,
             None => {
-                warn!("Texture with asset ID {:?} not found in RenderAssets<GpuTexture>", handle.asset_id());
+                // Texture not found, skip it for now and try again next frame
                 remaining_handles_to_extract.push(handle.clone());
                 continue;
             }

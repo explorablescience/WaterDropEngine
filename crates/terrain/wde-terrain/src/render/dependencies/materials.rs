@@ -52,7 +52,7 @@ impl Plugin for TerrainMaterialsPlugin {
 /// Load individual material textures
 fn load_material_textures(asset_server: Res<AssetServer>, mut materials: ResMut<TerrainMaterials>) {
     // Load textures for each material and type
-    let usages = TextureUsages::COPY_SRC;
+    let usages = TextureUsages::COPY_SRC | TextureUsages::TEXTURE_BINDING;
     for material in MATERIALS {
         for (i, tex_type) in TEX_TYPES.iter().enumerate() {
             let path = format!(

@@ -48,6 +48,7 @@ pub fn main() {
     }
 
     // Run the app
-    info!("Running game engine.");
+    info!("Initialization complete.");
+    info!("Running WaterDropEngine.");
     app.run();
 }

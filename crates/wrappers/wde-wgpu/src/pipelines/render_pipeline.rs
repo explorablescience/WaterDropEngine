@@ -305,7 +305,17 @@ impl RenderPipeline {
                 return Err(RenderError::ShaderCompilationError);
             }
         };
-
+        future::block_on(async {
+            let compil_info = shader_module_vert.get_compilation_info().await;
+            for message in compil_info.messages {
+                match message.message_type {
+                    wgpu::CompilationMessageType::Error => error!(self.label, "Vertex shader {} compilation error '{}' (at {:?}).", self.label, message.message, message.location),
+                    wgpu::CompilationMessageType::Warning => warn!(self.label, "Vertex shader {} compilation warning '{}' (at {:?}).", self.label, message.message, message.location),
+                    wgpu::CompilationMessageType::Info => debug!(self.label, "Vertex shader {} compilation info '{}' (at {:?}).", self.label, message.message, message.location),
+                }
+            }
+        });
+        
         // Load fragment shader
         let shader_module_frag = match naga::front::wgsl::parse_str(&self.config.fragment_shader) {
             Ok(shader) => {
@@ -335,6 +345,16 @@ impl RenderPipeline {
                 return Err(RenderError::ShaderCompilationError);
             }
         };
+        future::block_on(async {
+            let compil_info = shader_module_frag.get_compilation_info().await;
+            for message in compil_info.messages {
+                match message.message_type {
+                    wgpu::CompilationMessageType::Error => error!(self.label, "Fragment shader {} compilation error '{}' (at {:?}).", self.label, message.message, message.location),
+                    wgpu::CompilationMessageType::Warning => warn!(self.label, "Fragment shader {} compilation warning '{}' (at {:?}).", self.label, message.message, message.location),
+                    wgpu::CompilationMessageType::Info => debug!(self.label, "Fragment shader {} compilation info '{}' (at {:?}).", self.label, message.message, message.location),
+                }
+            }
+        });
 
         // Create pipeline layout
         trace!(self.label, "Creating render pipeline instance.");

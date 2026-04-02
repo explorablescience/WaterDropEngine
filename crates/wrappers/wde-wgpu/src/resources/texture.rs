@@ -110,7 +110,7 @@ impl Texture {
     /// * `mip_level_count` - Number of mip levels. Default is 1 (no mipmaps). If set to 0, it will be auto-calculated based on the texture size.
     #[allow(clippy::too_many_arguments)]
     pub fn new(instance: &RenderInstanceData<'_>, label: &str, size: (u32, u32), format: TextureFormat, usage: TextureUsages, sample_count: u32, layer_count: u32, mip_level_count: u32) -> Self {
-        event!(Level::DEBUG, "Creating wgpu texture {}.", label);
+        event!(Level::TRACE, "Creating wgpu texture {}.", label);
         
         // Calculate max mip levels if requested
         let mip_level_count = if mip_level_count == 0 {
@@ -389,7 +389,7 @@ impl Texture {
             return;
         }
 
-        event!(Level::DEBUG, "Generating {} mip levels for texture {}.", self.mip_level_count, self.label);
+        event!(Level::TRACE, "Generating {} mip levels for texture {}.", self.mip_level_count, self.label);
 
         // Create the blit shader module
         let shader_source = r#"
@@ -563,6 +563,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
 
         command.submit(instance);
-        event!(Level::DEBUG, "Finished generating mipmaps for texture {}.", self.label);
+        event!(Level::TRACE, "Finished generating mipmaps for texture {}.", self.label);
     }
 }

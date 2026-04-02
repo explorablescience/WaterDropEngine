@@ -141,7 +141,7 @@ pub(crate) fn handle_changes(
             phworld.collider_to_entity.insert(col_handle, entity);
             phworld.entity_to_rigid_body.insert(entity, rb_handle);
             phworld.rigid_body_to_entity.insert(rb_handle, entity);
-            debug!("Added collider and rigidbody for entity {:?} with collider {:?} and rigidbody {:?} handles", entity, col_handle, rb_handle);
+            trace!("Added collider and rigidbody for entity {:?} with collider {:?} and rigidbody {:?} handles", entity, col_handle, rb_handle);
         }
     }
 
