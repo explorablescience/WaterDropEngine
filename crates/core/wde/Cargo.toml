@@ -22,6 +22,7 @@ bevy = { workspace = true }
 
 [features]
 default = ["pbr", "gizmos"]
+debug = ["bevy/debug"]
 gizmos = ["wde-gizmos"]
 pbr = ["wde-pbr"]
 watch = ["bevy/file_watcher"]

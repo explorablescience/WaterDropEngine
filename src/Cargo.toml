@@ -10,9 +10,6 @@ build = "build.rs"
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 
-[dev-dependencies]
-bevy = { workspace = true, features = [ "debug" ] }
-
 [dependencies.wde]
 path = "../crates/core/wde"
 features = [
@@ -25,6 +22,7 @@ fs_extra = "1.2"
 
 [features]
 default = []
+debug = ["wde/debug"]
 watch = ["wde/watch"]
 tracing = ["wde/tracing"]
 x11 = ["bevy/x11"]

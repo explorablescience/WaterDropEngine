@@ -11,7 +11,7 @@
                     "--bin=waterdropengine",
                     "--package=waterdropengine",
                     "--target-dir=target",
-                    "--features=x11,watch,tracing"
+                    "--features=x11,debug,watch,tracing"
                 ],
                 "filter": {
                     "name": "waterdropengine",
@@ -34,7 +34,7 @@
                     "--bin=waterdropengine",
                     "--package=waterdropengine",
                     "--target-dir=target",
-                    "--features=x11,watch,gpu-debug"
+                    "--features=x11,debug,watch,gpu-debug"
                 ],
                 "filter": {
                     "name": "waterdropengine",
@@ -57,7 +57,7 @@
                     "--bin=waterdropengine",
                     "--package=waterdropengine",
                     "--target-dir=target",
-                    "--features=x11,watch"
+                    "--features=x11,debug,watch"
                 ],
                 "filter": {
                     "name": "waterdropengine",
@@ -104,7 +104,7 @@
                     "--bin=wde-examples",
                     "--package=wde-examples",
                     "--target-dir=target",
-                    "--features=x11,watch"
+                    "--features=x11,debug,watch"
                 ],
                 "filter": {
                     "name": "wde-examples",
