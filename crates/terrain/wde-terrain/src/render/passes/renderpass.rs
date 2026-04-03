@@ -29,7 +29,7 @@ impl TerrainRenderPass {
 
 
 
-impl RenderPass for TerrainRenderPass {
+impl RenderPassOld for TerrainRenderPass {
     fn render(&self, world: &mut World) {
         // Get the mesh
         let deferred_mesh = world.get_resource::<TerrainRenderPassMesh>().unwrap().deferred_mesh.as_ref().unwrap();
@@ -61,7 +61,7 @@ impl RenderPass for TerrainRenderPass {
             }),
             ..default()
         };
-        let sub_pass_desc = SubPassDesc(vec![
+        let sub_pass_desc = RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(world.get_resource::<RenderAssets<GpuTerrainRenderPipeline>>().unwrap().iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::Mesh(world.get_resource::<TerrainRenderPassMesh>().unwrap().deferred_mesh.as_ref().map(|mesh| mesh.id())),
             SubPassCommand::BindGroup(0, world.get_resource::<CameraFeatureRender>().unwrap().bind_group.clone()),

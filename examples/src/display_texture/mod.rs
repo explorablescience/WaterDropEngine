@@ -30,7 +30,7 @@ impl Plugin for DisplayTextureComponentPlugin {
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .init_resource::<RenderPassEntity>()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass::<DisplayTexturePass>(2);
+        render_graph.add_pass_old::<DisplayTexturePass>(2);
 
         // Load the entity on startup
         app.add_systems(Startup, load_entity);

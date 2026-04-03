@@ -23,7 +23,7 @@ impl DisplayTexturePass {
         }
     }
 }
-impl RenderPass for DisplayTexturePass {
+impl RenderPassOld for DisplayTexturePass {
     fn render(&self, world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = world.get_resource::<RenderInstance>().unwrap();

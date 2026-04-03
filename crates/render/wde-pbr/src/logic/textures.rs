@@ -87,7 +87,7 @@ impl PbrDeferredTexturesLayout {
 }
 
 #[derive(Resource)]
-pub(crate) struct PbrDeferredTextures {
+pub struct PbrDeferredTextures {
     pub depth: Handle<Texture>,
     pub depth_resolved: Handle<Texture>,
     pub albedo: Handle<Texture>,

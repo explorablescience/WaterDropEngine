@@ -174,15 +174,15 @@ impl CommandBuffer {
     /// # Arguments
     /// 
     /// * `label` - The label of the render pass.
-    /// * `builder_func` - The function to build the render pass.
+    /// * `builder_func` - The function to build the render pass. This function should return `Ok(())` if the render pass was built successfully, and `Err(String)` otherwise. If the function returns `Err`, the render pass will not be created.
     pub fn create_render_pass<'pass>(
-        &'pass mut self, label: &str, builder_func: impl FnOnce(&mut RenderPassBuilder<'pass>)
-    ) -> RenderPassInstance<'pass> {
+        &'pass mut self, label: &str, builder_func: impl FnOnce(&mut RenderPassBuilder<'pass>) -> Result<(), String>
+    ) -> Result<RenderPassInstance<'pass>, String> {
         event!(Level::TRACE, "Creating a render pass {}.", label);
 
         // Run the builder function
         let mut builder = RenderPassBuilder::default();
-        builder_func(&mut builder);
+        builder_func(&mut builder)?;
 
         let mut depth_attachment = None;
         if let Some(depth_texture) = builder.depth.texture {
@@ -216,7 +216,7 @@ impl CommandBuffer {
             occlusion_query_set: None,
         });
 
-        RenderPassInstance::new(label, render_pass)
+        Ok(RenderPassInstance::new(label, render_pass))
     }
 
     /// Create a new compute pass.

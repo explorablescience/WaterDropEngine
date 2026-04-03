@@ -2,16 +2,16 @@ use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelud
 use wde_camera::prelude::*;
 use wde_renderer::{MSAA_SAMPLE_COUNT, pipelines::PushConstantDescriptor, prelude::*, ssbos::ssbo_mesh::SsboMesh};
 
-use crate::{assets::PbrMaterialAsset, logic::ssbo::PbrSsbo, passes::PushConstants};
+use crate::{assets::PbrMaterialAsset, logic::ssbo::PbrSsbo, passes::subpass_gbuffer_pbr::PushConstants};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
-pub(crate) struct PbrGBufferRenderPipelineAsset;
+pub struct PbrGBufferRenderPipelineAsset;
 
 #[allow(unused)]
 #[derive(Component)]
-pub(crate) struct PbrGBufferRenderPipeline(pub Handle<PbrGBufferRenderPipelineAsset>);
-pub(crate) struct GpuPbrGBufferRenderPipeline(pub CachedPipelineIndex);
+pub struct PbrGBufferRenderPipeline(pub Handle<PbrGBufferRenderPipelineAsset>);
+pub struct GpuPbrGBufferRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuPbrGBufferRenderPipeline {
     type SourceAsset = PbrGBufferRenderPipelineAsset;
     type Param = (SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<RenderAssets<GpuMaterial<PbrMaterialAsset>>>);

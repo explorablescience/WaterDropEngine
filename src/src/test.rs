@@ -9,7 +9,7 @@ impl Plugin for TestPlugin {
     }
 }
 
-fn init_scene(mut commands: Commands) {
+fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Main camera
     commands.spawn((
         Name::new("Main Camera"),
@@ -52,5 +52,12 @@ fn init_scene(mut commands: Commands) {
             intensity: 0.1,
             ..Default::default()
         }
+    ));
+
+    // Spawn a default gltf material
+    let model = GltfLoader::load("models/placement/house_demo1/house_demo1.gltf", &asset_server).unwrap();
+    commands.spawn((
+        Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(10.0)),
+        PbrModel(model.models)
     ));
 }

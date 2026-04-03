@@ -28,7 +28,7 @@ impl Plugin for GizmoFeaturesPlugin {
         // Always add the gizmo render pass (at the end)
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass::<GizmoRenderPass>(1000);
+        render_graph.add_pass_old::<GizmoRenderPass>(1000);
     }
 
     fn finish(&self, app: &mut App) {

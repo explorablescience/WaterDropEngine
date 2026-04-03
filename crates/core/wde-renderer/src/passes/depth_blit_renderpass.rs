@@ -35,7 +35,7 @@ impl DepthBlitRenderPass {
         pass_render.mesh = pass_main.mesh.clone();
     }
 }
-impl RenderPass for DepthBlitRenderPass {
+impl RenderPassOld for DepthBlitRenderPass {
     fn render(&self, render_world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = render_world.get_resource::<RenderInstance>().unwrap();
@@ -91,7 +91,8 @@ impl RenderPass for DepthBlitRenderPass {
                     load: LoadOp::Load,
                     ..Default::default()
                 });
-            });
+                Ok(())
+            }).unwrap();
 
             // Render the mesh
             let pipeline_manager = render_world.get_resource::<PipelineManager>().unwrap();

@@ -41,10 +41,10 @@ impl Plugin for RenderGraphPanelPlugin {
             .world()
             .resource::<RenderGraph>();
         let mut names = vec![];
-        for id in render_graph.get_sorted_passes() {
-            let pass = render_graph.get_pass(id).unwrap();
-            names.push(format!("{}: {}", id, pass.label()));
-        }
+        // for id in render_graph.get_sorted_passes_OLD() {
+        //     let pass = render_graph.get_pass_OLD(id).unwrap();
+        //     names.push(format!("{}: {}", id, pass.label()));
+        // }
         app.world_mut().insert_resource(RenderGraphUIState {
             names,
             ghost_swapchain_texture_handle: None,
@@ -173,49 +173,49 @@ fn render_custom_passes(world: &mut World) {
     }
 
     // Run the update methods for each pass
-    world.resource_scope(|world, graph: Mut<RenderGraph>| {
-        let sorted_passes = graph.get_sorted_passes();
-        for id in sorted_passes {
-            // Get the pass and render it
-            let pass = graph.get_pass(id).unwrap();
-            let _span = debug_span!(
-                "ui_screenshot_render_pass_render",
-                pass_id = id,
-                pass_name = pass.label()
-            )
-            .entered();
-            pass.render(world);
-            drop(_span);
+    // world.resource_scope(|world, graph: Mut<RenderGraph>| {
+    //     let sorted_passes = graph.get_sorted_passes_OLD();
+    //     for id in sorted_passes {
+    //         // Get the pass and render it
+    //         let pass = graph.get_pass_OLD(id).unwrap();
+    //         let _span = debug_span!(
+    //             "ui_screenshot_render_pass_render",
+    //             pass_id = id,
+    //             pass_name = pass.label()
+    //         )
+    //         .entered();
+    //         pass.render(world);
+    //         drop(_span);
 
-            let _span = debug_span!(
-                "ui_screenshot_render_pass_blit",
-                pass_id = id,
-                pass_name = pass.label()
-            )
-            .entered();
-            // Get swapchain frame and its ghost texture
-            let swapchain_frame = world.resource::<SwapchainFrame>().data.as_ref().unwrap();
-            let ghost_texture_handle = world
-                .resource::<RenderGraphUIState>()
-                .ghost_swapchain_texture_handle
-                .clone();
-            let ghost_texture = world
-                .resource::<RenderAssets<GpuTexture>>()
-                .get(ghost_texture_handle.unwrap())
-                .unwrap();
+    //         let _span = debug_span!(
+    //             "ui_screenshot_render_pass_blit",
+    //             pass_id = id,
+    //             pass_name = pass.label()
+    //         )
+    //         .entered();
+    //         // Get swapchain frame and its ghost texture
+    //         let swapchain_frame = world.resource::<SwapchainFrame>().data.as_ref().unwrap();
+    //         let ghost_texture_handle = world
+    //             .resource::<RenderGraphUIState>()
+    //             .ghost_swapchain_texture_handle
+    //             .clone();
+    //         let ghost_texture = world
+    //             .resource::<RenderAssets<GpuTexture>>()
+    //             .get(ghost_texture_handle.unwrap())
+    //             .unwrap();
 
-            // Blit the swapchain frame
-            let render_instance = world.resource::<RenderInstance>().0.read().unwrap();
-            let size = (
-                render_instance.surface_config.as_ref().unwrap().width,
-                render_instance.surface_config.as_ref().unwrap().height,
-            );
-            ghost_texture.texture.copy_from_surface_texture(
-                &render_instance,
-                &swapchain_frame.texture,
-                size,
-            );
-            drop(_span);
-        }
-    });
+    //         // Blit the swapchain frame
+    //         let render_instance = world.resource::<RenderInstance>().0.read().unwrap();
+    //         let size = (
+    //             render_instance.surface_config.as_ref().unwrap().width,
+    //             render_instance.surface_config.as_ref().unwrap().height,
+    //         );
+    //         ghost_texture.texture.copy_from_surface_texture(
+    //             &render_instance,
+    //             &swapchain_frame.texture,
+    //             size,
+    //         );
+    //         drop(_span);
+    //     }
+    // });
 }

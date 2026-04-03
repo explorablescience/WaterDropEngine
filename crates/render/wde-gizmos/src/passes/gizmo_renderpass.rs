@@ -152,7 +152,7 @@ impl GizmoRenderPass {
         *gizmo_render_pass = passes;
     }
 }
-impl RenderPass for GizmoRenderPass {
+impl RenderPassOld for GizmoRenderPass {
     fn render(&self, render_world: &mut World) {
         // Return early if no batches
         if render_world.get_resource::<GizmoRenderPass>().unwrap().batches.is_empty() {
@@ -199,7 +199,8 @@ impl RenderPass for GizmoRenderPass {
                     load: LoadOp::Load,
                     ..Default::default()
                 });
-            });
+                Ok(())
+            }).unwrap();
 
             // Render the mesh
             let pipeline_manager = render_world.get_resource::<PipelineManager>().unwrap();

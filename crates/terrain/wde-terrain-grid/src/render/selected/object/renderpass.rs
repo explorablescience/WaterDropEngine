@@ -7,7 +7,7 @@ use crate::render::selected::object::pipeline::GpuSelectedObjectRenderPipeline;
 
 #[derive(Resource, Default)]
 pub struct SelectedObjectRenderPass;
-impl RenderPass for SelectedObjectRenderPass {
+impl RenderPassOld for SelectedObjectRenderPass {
     fn render(&self, world: &mut World) {
         let _span = debug_span!("terrain_render_pass_render").entered();
 
@@ -42,7 +42,8 @@ impl RenderPass for SelectedObjectRenderPass {
                         texture: Some(&swapchain_frame.view),
                         ..Default::default()
                     });
-                });
+                    Ok(())
+                }).unwrap();
 
             // Render the meshes
             if let (

@@ -45,8 +45,16 @@ impl Plugin for BatchesPlugin {
 fn extract(
     raw_entities: ExtractWorld<Query<Entity, With<PbrModel>>>,
     model_registry: ExtractWorld<Res<PbrModelRegistry>>,
-    mut extracted_entities: ResMut<ExtractedEntities>
-) {
+    mut extracted_entities: ResMut<ExtractedEntities>,
+    pbr_model_registry: ExtractWorld<Res<PbrModelRegistry>>,
+    mut model_uuid_to_transform_id: ResMut<ModelUuidToTransformUuidRender>,
+    main_dirty_transforms: ExtractWorld<Res<DirtyTransforms>>,
+    mut render_dirty_transforms: ResMut<DirtyTransforms>
+) { 
+    // Extract the model UUIDs and their associated mesh and material weak references from the main world to the render world
+    model_uuid_to_transform_id.0 = pbr_model_registry.model_uuid_to_transform_id.clone();
+    render_dirty_transforms.0 = main_dirty_transforms.0.clone();
+
     // Extract every uuid from the entities
     let mut render_entities: Vec<(PbrModelElementUuid, (AssetId<MeshAsset>, AssetId<PbrMaterialAsset>), u32)> = Vec::new();
     for entity in raw_entities.iter() {

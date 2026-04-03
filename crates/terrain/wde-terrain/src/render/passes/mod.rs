@@ -26,7 +26,7 @@ impl Plugin for TerrainPassesPlugin {
         // Add the terrain render passes
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass::<TerrainRenderPass>(110);
+        render_graph.add_pass_old::<TerrainRenderPass>(110);
     }
 
     fn finish(&self, app: &mut App) {

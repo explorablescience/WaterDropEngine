@@ -17,7 +17,7 @@ impl Plugin for EguiRenderPassPlugin {
         // Add the render pass to the render graph
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass::<EguiRenderPass>(1001); // Add after main render pass
+        render_graph.add_pass_old::<EguiRenderPass>(1001); // Add after main render pass
     }
 
     fn finish(&self, app: &mut App) {
@@ -53,7 +53,7 @@ impl EguiRenderPass {
         frame_data_render.textures_delta = frame_data_main.textures_delta.clone();
     }
 }
-impl RenderPass for EguiRenderPass {
+impl RenderPassOld for EguiRenderPass {
     fn render(&self, world: &mut World) {
         // Get the render instance and swapchain frame
         let render_instance = world.get_resource::<RenderInstance>().unwrap();
@@ -92,8 +92,8 @@ impl RenderPass for EguiRenderPass {
                     texture: Some(&swapchain_frame.view),
                     load: LoadOp::Load,
                     ..Default::default()
-                });
-            }).forget_lifetime();
+                });Ok(())
+            }).unwrap().forget_lifetime();
 
             // Update egui textures
             for (id, image_delta) in &textures_delta.set {

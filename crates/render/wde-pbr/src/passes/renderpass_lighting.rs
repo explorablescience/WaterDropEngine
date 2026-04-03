@@ -1,8 +1,5 @@
-use bevy::prelude::*;
-use wde_camera::prelude::*;
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
-
-use crate::{logic::{lights::LightsFeatureBuffer, textures::PbrDeferredTexturesLayout}, passes::pipeline_lighting::GpuPbrLightingRenderPipeline};
 
 
 #[derive(Resource, Default)]
@@ -42,26 +39,14 @@ impl PbrLightingRenderPassMesh {
     }
 }
 
-#[derive(Resource, Default)]
 pub struct PbrLightingRenderPass;
 impl RenderPass for PbrLightingRenderPass {
-    fn render(&self, world: &mut World) {
-        let sub_pass_desc = SubPassDesc(vec![
-            SubPassCommand::Pipeline(Some(world.get_resource::<RenderAssets<GpuPbrLightingRenderPipeline>>().unwrap().iter().next().map(|(_, p)| p.0)).flatten()),
-            SubPassCommand::Mesh(world.get_resource::<PbrLightingRenderPassMesh>().unwrap().deferred_mesh.as_ref().map(|m| m.id())),
-            SubPassCommand::BindGroup(0, world.get_resource::<CameraFeatureRender>().unwrap().bind_group.clone()),
-            SubPassCommand::BindGroup(1, world.get_resource::<PbrDeferredTexturesLayout>().unwrap().deferred_bind_group_resolved.clone()),
-            SubPassCommand::BindGroup(2, world.get_resource::<LightsFeatureBuffer>().unwrap().bind_group.clone()),
-            SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
-                bind_group: None,
-                index_range: 0..6,
-                instance_range: 0..1
-            }])
-        ]);
-        self.process(world, &RenderPassDesc::default(), &sub_pass_desc);
+    type Params = ();
+
+    fn describe(_params: &SystemParamItem<Self::Params>) -> RenderPassDesc {
+        RenderPassDesc::default()
     }
 
-    fn label(&self) -> &str {
-        "pbr-lighting"
-    }
+    fn id() -> RenderPassId { 51 }
+    fn label() -> &'static str { "pbr-lighting" }
 }

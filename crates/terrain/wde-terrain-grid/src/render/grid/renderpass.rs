@@ -41,7 +41,7 @@ impl TerrainGridRenderPass {
         pass_render.render_grid = placement_ui.enabled;
     }
 }
-impl RenderPass for TerrainGridRenderPass {
+impl RenderPassOld for TerrainGridRenderPass {
     fn render(&self, world: &mut World) {
         let terrain_grid_render_pass = world.get_resource::<TerrainGridRenderPass>().unwrap();
         if !terrain_grid_render_pass.render_grid {
@@ -98,7 +98,8 @@ impl RenderPass for TerrainGridRenderPass {
                         texture: Some(&swapchain_frame.view),
                         ..Default::default()
                     });
-                });
+                    Ok(())
+                }).unwrap();
 
             // Render the meshes
             if let (

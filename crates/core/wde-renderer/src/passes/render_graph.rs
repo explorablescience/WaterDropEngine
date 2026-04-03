@@ -1,7 +1,9 @@
+use std::collections::HashMap;
 use std::ops::Range;
 
+use bevy::ecs::system::{ReadOnlySystemParam, SystemParamItem, SystemState};
 use wde_logger::prelude::*;
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::prelude::*;
 use wde_wgpu::pipelines::BindGroup;
 use crate::prelude::*;
 
@@ -84,229 +86,320 @@ pub enum SubPassCommand {
 /// A sub-pass is a sequence of commands executed within a render pass.
 /// For example, a GBuffer pass might have one sub-pass for rendering opaque objects and another for transparent objects.
 #[derive(Default)]
-pub struct SubPassDesc(pub Vec<SubPassCommand>);
+pub struct RenderSubPassDesc(pub Vec<SubPassCommand>);
 
 
-/// Core trait for all render passes in the render graph.
-///
-/// A `RenderPass` has the (`render`) method. It runs in the render world. Issue GPU commands using the extracted data,
-///    pull pipelines from the `PipelineManager`, use cached bind groups, and execute draw calls.
-///
-/// Both phases can be no-ops; for example, a simple pass might only implement `render`.
-pub trait RenderPass: Send + Sync {
-    /// Execute render commands for this pass.
-    ///
-    /// Called once per frame in the render world after all extracts complete.
-    /// Access pipelines via `PipelineManager`, bind groups from resources,
-    /// GPU meshes via `RenderAssets<GpuMesh>`, etc.
-    ///
-    /// This is where you issue actual draw calls (bind pipeline, bind groups, draw indexed, etc.).
+
+
+
+pub trait RenderPassOld: Send + Sync {
     fn render(&self, _render_world: &mut World);
-    
-    /// Name of the pass, used for logging and debugging.
     fn label(&self) -> &str;
+    fn process(&self, world: &World, pass_desc: &RenderPassDesc, sub_pass_desc: &RenderSubPassDesc) {}
+}
 
+/// Type alias for render pass IDs. These are numeric identifiers that control the execution order of passes in the render graph; lower IDs execute first.
+pub type RenderPassId = i32;
+/// Describes a render pass in the render graph, with its attachments, load ops, etc.
+/// This is returned by the `describe` method of the `RenderPass` trait, which is called in the render world before rendering to get the pass description and attachments.
+pub trait RenderPass {
+    type Params: ReadOnlySystemParam;
 
-    fn process(&self, world: &World, pass_desc: &RenderPassDesc, sub_pass_desc: &SubPassDesc) {
-        let label = self.label();
-        let _span = debug_span!("render-pass-{}", label).entered();
-
-        // Query render instance
-        let render_instance = world.get_resource::<RenderInstance>().unwrap();
-        let render_instance = render_instance.0.read().unwrap();
-
-        // Get generic render assets handlers
-        let textures = world.get_resource::<RenderAssets<GpuTexture>>().unwrap();
-        let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
-        let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
-
-        // Handle pass
-        let mut command_buffer = CommandBuffer::new(&render_instance, label);
-        {
-            let mut should_return = false;
-            let mut render_pass =
-                command_buffer.create_render_pass(label, |builder: &mut RenderPassBuilder| {
-                    // Set color attachments
-                    if pass_desc.attachments_colors.is_none() {
-                        let swapchain_frame = world.get_resource::<SwapchainFrame>().unwrap().data.as_ref().unwrap();
-                        builder.add_color_attachment(RenderPassColorAttachment {
-                            texture: Some(&swapchain_frame.view),
-                            ..default()
-                        });
-                    } else {
-                        for color_attachment_desc in pass_desc.attachments_colors.as_ref().unwrap().iter() {
-                            if let Some(texture) = textures.get(color_attachment_desc.texture)
-                                && render_instance.surface_config.as_ref().unwrap().width == texture.texture.size.0
-                                && render_instance.surface_config.as_ref().unwrap().height == texture.texture.size.1
-                            {
-                                let resolve_target = if let Some(resolve_target) = color_attachment_desc.resolve_target {
-                                    if let Some(resolve_target) = textures.get(resolve_target)
-                                        && render_instance.surface_config.as_ref().unwrap().width == resolve_target.texture.size.0
-                                        && render_instance.surface_config.as_ref().unwrap().height == resolve_target.texture.size.1 {
-                                        Some(resolve_target)
-                                    } else {
-                                        should_return = true;
-                                        return;
-                                    }
-                                } else { None };
-                                builder.add_color_attachment(RenderPassColorAttachment {
-                                    texture: Some(&texture.texture.view),
-                                    load: color_attachment_desc.load,
-                                    store: color_attachment_desc.store,
-                                    resolve_target: resolve_target.map(|tex| &tex.texture.view)
-                                });
-                            } else { should_return = true; }
-                        }
-                    }
-
-                    // Set depth attachments
-                    if pass_desc.attachments_depth.is_some() {
-                        if let Some(depth_texture) = textures.get(pass_desc.attachments_depth.as_ref().unwrap().texture.unwrap())
-                            && render_instance.surface_config.as_ref().unwrap().width == depth_texture.texture.size.0
-                            && render_instance.surface_config.as_ref().unwrap().height == depth_texture.texture.size.1 {
-                            builder.set_depth_texture(RenderPassDepth {
-                                texture: Some(&depth_texture.texture.view),
-                                load: pass_desc.attachments_depth.as_ref().unwrap().load,
-                                store: pass_desc.attachments_depth.as_ref().unwrap().store
-                            });
-                        } else { should_return = true; }
-                    }
-                });
-            if should_return {
-
-                return;
-            }
-
-            // Issue global commands
-            for stage_command in &sub_pass_desc.0 {
-                match stage_command {
-                    // Set pipeline
-                    SubPassCommand::Pipeline(pipeline) => {
-                        if let Some(pipeline) = pipeline
-                            && let CachedPipelineStatus::OkRender(pipeline) = pipeline_manager.get_pipeline(*pipeline)
-                        {
-                            if let Err(e) = render_pass.set_pipeline(pipeline) {
-                                error!("Failed to set pipeline: {:?}.", e);
-                                return;
-                            }
-                        } else { return }
-                    }
-
-                    // Set bind groups at given index
-                    SubPassCommand::BindGroup(index, bind_group) => {
-                        if let Some(bind_group) = bind_group {
-                            render_pass.set_bind_group(*index, bind_group);
-                        } else { return }
-                    }
-
-                    // Bind mesh vertex and index buffers
-                    SubPassCommand::Mesh(mesh) => {
-                        if let Some(mesh) = mesh
-                            && let Some(mesh) = meshes.get(*mesh)
-                        {
-                            render_pass.set_vertex_buffer(0, mesh.vertex_buffer.as_ref().unwrap());
-                            render_pass.set_index_buffer(mesh.index_buffer.as_ref().unwrap());
-                        } else { return }
-                    }
-
-                    // Issue draw calls
-                    SubPassCommand::DrawBatches(batches) => {
-                        for batch in batches {
-                            // Set bind group
-                            if let Some((index, bind_group)) = &batch.bind_group {
-                                render_pass.set_bind_group(*index, bind_group);
-                            }
-
-                            // Draw the mesh
-                            match render_pass.draw_indexed(batch.index_range.clone(), batch.instance_range.clone()) {
-                                Ok(_) => {}
-                                Err(e) => {
-                                    error!("Failed to draw: {:?}.", e);
-                                }
-                            }
-                        }
-                    }
-
-                    // Custom commands
-                    SubPassCommand::Custom(custom_fn) => {
-                        custom_fn(world, &mut render_pass);
-                    }
-                }
-            }
-        }
-        command_buffer.submit(&render_instance);
+    /// Describe the render pass (attachments, load ops, etc).
+    fn describe(params: &SystemParamItem<Self::Params>) -> RenderPassDesc;
+    /// Return the unique numeric ID of this render pass. Passes execute in order of their IDs (lower IDs execute first).
+    fn id() -> RenderPassId;
+    /// Return the (non-unique) label of the render pass, used for logging and debugging.
+    fn label() -> &'static str;
+}
+// Utility traits for the render graph implementation. Not meant to be used by users of the render graph.
+trait RenderPassNode: Send + Sync + 'static {
+    fn describe(&mut self, world: &mut World) -> RenderPassDesc;
+    fn label(&mut self) -> &'static str;
+}
+struct RenderPassHolder<P: RenderPass> {
+    _phantom: std::marker::PhantomData<P>,
+}
+impl<P> RenderPassNode for RenderPassHolder<P> where P: RenderPass + Send + Sync + 'static {
+    fn describe(&mut self, world: &mut World) -> RenderPassDesc {
+        let mut state: SystemState<P::Params> = SystemState::new(world);
+        let params = state.get(world);
+        P::describe(&params)
+    }
+    fn label(&mut self) -> &'static str {
+        P::label()
     }
 }
 
-/// Unique identifier for a render pass in the graph.
-pub type PassIndex = u32;
+/// Core trait for all render sub-passes in the render graph. A sub-pass is a sequence of commands executed within a render pass.
+/// For example, a GBuffer pass might have one sub-pass for rendering opaque objects and another for transparent objects.
+pub trait RenderSubPass {
+    type Params: ReadOnlySystemParam;
 
-/// Manages ordered execution of render passes.
-///
-/// Stores instances of all registered passes and calls their extract/render methods
-/// in numeric ID order each frame. Lower IDs run first, so dependencies can be expressed
-/// through ordering (e.g., gbuffer at ID 0, lighting at ID 10).
+    /// Describe the sub-pass commands to execute within the render pass.
+    fn describe(params: &SystemParamItem<Self::Params>) -> RenderSubPassDesc;
+    /// Return the (non-unique) label of this sub-pass, used for logging and debugging.
+    fn label() -> &'static str;
+}
+// Utility traits for the render graph implementation. Not meant to be used by users of the render graph.
+trait RenderSubPassNode: Send + Sync + 'static {
+    fn describe(&mut self, world: &mut World) -> RenderSubPassDesc;
+    fn label(&mut self) -> &'static str;
+}
+struct RenderSubPassHolder<SP: RenderSubPass> {
+    _phantom: std::marker::PhantomData<SP>,
+}
+impl<SP> RenderSubPassNode for RenderSubPassHolder<SP> where SP: RenderSubPass + Send + Sync + 'static {
+    fn describe(&mut self, world: &mut World) -> RenderSubPassDesc {
+        let mut state: SystemState<SP::Params> = SystemState::new(world);
+        let params = state.get(world);
+        SP::describe(&params)
+    }
+    fn label(&mut self) -> &'static str {
+        SP::label()
+    }
+}
+
+
+
+
 #[derive(Resource, Default)]
 pub struct RenderGraph {
-    passes: HashMap<PassIndex, Box<dyn RenderPass>>,
-    sorted_passes: Vec<PassIndex>,
+    // Raw storage of passes and subpasses
+    passes: Vec<Box<dyn RenderPassNode>>,
+    sub_passes: Vec<Box<dyn RenderSubPassNode>>,
+
+    // Ordering logic for the passes
+    sorted_ids: Vec<RenderPassId>, // pass indices in `passes`, sorted by their numeric IDs
+
+    // Indexing for execution
+    render_passes_by_id: HashMap<RenderPassId, usize>, // pass id -> pass index in `passes`
+    sub_passes_by_renderpass: HashMap<usize, Vec<usize>> // render pass index -> sub-pass indices
 }
 impl RenderGraph {
-    /// Register a new pass in the render graph.
-    ///
-    /// The pass runs in numeric ID order; lower IDs execute first.
-    /// If a pass with this ID already exists, logs an error and does nothing.
-    ///
-    /// # Arguments
-    /// - `id`: Numeric identifier; controls execution order.
-    pub fn add_pass<P: RenderPass + 'static + Default>(&mut self, id: u32) {
-        // Create pass
-        let pass = P::default();
+    /// Add a render pass to the graph. Passes execute in order of their IDs (lower IDs execute first).
+    /// The pass type must implement the `RenderPass` trait, which defines the pass's description and execution logic.
+    pub fn add_pass<P: RenderPass + Send + Sync + 'static>(&mut self) -> &mut Self {
+        let id = P::id();
 
-        // Test if the pass already exists
-        if self.passes.contains_key(&id) {
-            error!("The pass with id {} (with name {}) already exists in the render graph.", id, pass.label());
-            return;
-        }
-        debug!("Adding the render pass {} at index {} to the render graph.", pass.label(), id);
+        // Assert that the pass ID is unique
+        debug_assert!(!self.render_passes_by_id.contains_key(&id), "A render pass with ID {} already exists in the render graph.", id);
 
-        // Add the pass
-        self.passes.insert(id, Box::new(pass));
+        // Insert the new pass
+        self.passes.push(Box::new(RenderPassHolder { _phantom: std::marker::PhantomData::<P> }));
+        self.render_passes_by_id.insert(id, self.passes.len() - 1);
+        self.sorted_ids.push(id);
 
-        // Sort the passes
-        self.sorted_passes = self.passes.keys().copied().collect();
-        self.sorted_passes.sort();
+        // Sort the passes by ID
+        self.sorted_ids.sort();
+        self
     }
 
-    /// Render phase: issue GPU commands for each pass.
-    /// (Internal; called automatically by the renderer.)
-    pub(crate) fn render(render_world: &mut World) {
-        // Check if there is a swapchain frame
-        if !render_world.contains_resource::<SwapchainFrame>() {
-            warn!("No swapchain frame available, skipping render passes.");
-            return;
-        }
-        let swapchain_frame = render_world.resource::<SwapchainFrame>();
-        if swapchain_frame.data.is_none() {
-            warn!("No swapchain texture view available, skipping render passes.");
-            return;
-        }
+    /// Add a sub-pass to a render pass in the graph. The sub-pass will be executed in the order it was added within its parent render pass.
+    /// The sub-pass type must implement the `RenderSubPass` trait, which defines the sub-pass's commands and the render pass it belongs to.
+    pub fn add_sub_pass<SP: RenderSubPass + Send + Sync + 'static, P: RenderPass>(&mut self) -> &mut Self {
+        self.sub_passes.push(Box::new(RenderSubPassHolder { _phantom: std::marker::PhantomData::<SP> }));
+        self.sub_passes_by_renderpass.entry(
+            self.render_passes_by_id.get(&P::id()).copied().unwrap()
+        ).or_default().push(self.sub_passes.len() - 1);
+        self
+    }
 
-        // Run the update methods for each pass
-        render_world.resource_scope(|render_world, graph: Mut<RenderGraph>| {
-            for id in graph.sorted_passes.iter() {
-                let pass = graph.passes.get(id).unwrap();
-                let _span = debug_span!("render_pass_render", pass_id = *id, pass_name = pass.label()).entered();
-                pass.render(render_world);
-            }
+    
+    pub(crate) fn render(world: &mut World) {
+        world.resource_scope(|world, mut graph: Mut<RenderGraph>| {
+            render(&mut graph, world);
         });
     }
 
-    pub fn get_pass(&self, id: &PassIndex) -> Option<&dyn RenderPass> {
-        self.passes.get(id).map(|boxed| boxed.as_ref())
+
+    pub fn add_pass_old<P: RenderPassOld + 'static + Default>(&mut self, id: u32) {
     }
-    pub fn get_sorted_passes(&self) -> &Vec<PassIndex> {
-        &self.sorted_passes
+}
+
+
+fn render(graph: &mut RenderGraph, world: &mut World) {
+    trace!("Starting render graph execution with {} passes.", graph.passes.len());
+
+    // Create command buffer
+    let mut command_buffer = {
+        let render_instance = world.get_resource::<RenderInstance>().unwrap();
+        CommandBuffer::new(&render_instance.0.read().unwrap(), "render-graph")
+    };
+
+    // Execute passes in order of their IDs
+    for pass_id in &graph.sorted_ids {
+        // Get pass description
+        let pass_index = *graph.render_passes_by_id.get(pass_id).unwrap();
+        let pass = &mut graph.passes[pass_index];
+        let pass_label = pass.label();
+        let pass_desc = pass.describe(world);
+
+        // Precompute sub-pass descriptions before creating the render pass to avoid borrow conflicts with the world
+        let mut sub_passes = Vec::new();
+        if let Some(sub_pass_indices) = graph.sub_passes_by_renderpass.get(&pass_index) {
+            for sub_pass_index in sub_pass_indices {
+                let sub_pass = &mut graph.sub_passes[*sub_pass_index];
+                let sub_pass_label = sub_pass.label();
+                let sub_pass_desc = sub_pass.describe(world);
+                sub_passes.push((sub_pass_label, sub_pass_desc));
+            }
+        }
+
+        // Create the render pass from its description
+        trace!("Rendering render pass '{}'.", pass_label);
+        let _pass_span = debug_span!("render_pass", pass_id = *pass_id, pass_label).entered();
+        let mut render_pass = match create_render_pass(world, &mut command_buffer, pass_label, &pass_desc) {
+            Ok(pass) => pass,
+            Err(e) => {
+                debug!("Failed to create render pass: '{}'. Skipping this frame.", e);
+                continue;
+            }
+        };
+
+        // Execute sub-passes in order of addition
+        for (sub_pass_label, sub_pass_desc) in &sub_passes {
+            trace!("Rendering sub-pass '{}'.", sub_pass_label);
+            let _sub_pass_span = debug_span!("render_sub_pass", sub_pass_label = *sub_pass_label).entered();
+            render_sub_pass(world, &mut render_pass, sub_pass_desc);
+        }
+    }
+
+    // Submit commands
+    let render_instance = world.get_resource::<RenderInstance>().unwrap();
+    command_buffer.submit(&render_instance.0.read().unwrap());
+}
+
+fn create_render_pass<'p>(world: &'p World, command_buffer: &'p mut CommandBuffer, label: &str, pass_desc: &RenderPassDesc) -> Result<RenderPassInstance<'p>, String> {
+    // Get generic handlers
+    let render_instance    = world.get_resource::<RenderInstance>().unwrap();
+    let textures = world.get_resource::<RenderAssets<GpuTexture>>().unwrap();
+    let swapchain_frame    = world.get_resource::<SwapchainFrame>().unwrap();
+    let (surface_width, surface_height) = {
+        let render_instance = render_instance.0.read().unwrap();
+        let config = render_instance.surface_config.as_ref().unwrap();
+        (config.width, config.height)
+    };
+
+    // Create the render pass
+    command_buffer.create_render_pass(label, |builder: &mut RenderPassBuilder| -> Result<(), String> {
+        // Set color attachments
+        if pass_desc.attachments_colors.is_none() {
+            // Set swapchain as color attachment if no other color attachments are specified
+            let swapchain_frame = match swapchain_frame.data.as_ref() {
+                Some(frame) => frame,
+                None => return Err("No swapchain frame available".to_string())
+            };
+            builder.add_color_attachment(RenderPassColorAttachment {
+                texture: Some(&swapchain_frame.view),
+                ..default()
+            });
+        } else {
+            // Set specified color attachments
+            for color_attachment_desc in pass_desc.attachments_colors.as_ref().unwrap().iter() {
+                if let Some(texture) = textures.get(color_attachment_desc.texture) {
+                    if !(surface_width == texture.texture.size.0 && surface_height == texture.texture.size.1) {
+                        return Err(format!("Color attachment texture has invalid size: expected ({}, {}), got ({}, {})", surface_width, surface_height, texture.texture.size.0, texture.texture.size.1));
+                    }
+                    let resolve_target = if let Some(resolve_target) = color_attachment_desc.resolve_target {
+                        if let Some(resolve_target) = textures.get(resolve_target)
+                            && surface_width == resolve_target.texture.size.0 && surface_height == resolve_target.texture.size.1 {
+                            Some(resolve_target)
+                        } else {
+                            return Err("Invalid resolve target for color attachment".to_string());
+                        }
+                    } else { None };
+                    builder.add_color_attachment(RenderPassColorAttachment {
+                        texture: Some(&texture.texture.view),
+                        load: color_attachment_desc.load,
+                        store: color_attachment_desc.store,
+                        resolve_target: resolve_target.map(|tex| &tex.texture.view)
+                    });
+                } else {
+                    return Err("Invalid texture for color attachment".to_string());
+                }
+            }
+        }
+
+        // Set depth attachments
+        if pass_desc.attachments_depth.is_some() {
+            if let Some(depth_texture) = textures.get(pass_desc.attachments_depth.as_ref().unwrap().texture.unwrap()) {
+                if !(surface_width == depth_texture.texture.size.0 && surface_height == depth_texture.texture.size.1) {
+                    return Err(format!("Depth attachment texture has invalid size: expected ({}, {}), got ({}, {}).", surface_width, surface_height, depth_texture.texture.size.0, depth_texture.texture.size.1));
+                }
+                builder.set_depth_texture(RenderPassDepth {
+                    texture: Some(&depth_texture.texture.view),
+                    load: pass_desc.attachments_depth.as_ref().unwrap().load,
+                    store: pass_desc.attachments_depth.as_ref().unwrap().store
+                });
+            } else {
+                return Err("Invalid texture for depth attachment".to_string());
+            }
+        }
+        return Ok(());
+    })
+}
+
+fn render_sub_pass<'p>(world: &'p World, render_pass: &mut RenderPassInstance<'p>, sub_pass_desc: &'p RenderSubPassDesc) {
+    // Get generic handlers
+    let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
+    let meshes     = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
+
+    // Issue global commands
+    for stage_command in &sub_pass_desc.0 {
+        match stage_command {
+            // Set pipeline
+            SubPassCommand::Pipeline(pipeline) => {
+                if let Some(pipeline) = pipeline
+                    && let CachedPipelineStatus::OkRender(pipeline) = pipeline_manager.get_pipeline(*pipeline)
+                {
+                    if let Err(e) = render_pass.set_pipeline(pipeline) {
+                        error!("Failed to set pipeline: {:?}.", e);
+                        return;
+                    }
+                } else { return }
+            }
+
+            // Set bind groups at given index
+            SubPassCommand::BindGroup(index, bind_group) => {
+                if let Some(bind_group) = bind_group {
+                    render_pass.set_bind_group(*index, bind_group);
+                } else { return }
+            }
+
+            // Bind mesh vertex and index buffers
+            SubPassCommand::Mesh(mesh) => {
+                if let Some(mesh) = mesh
+                    && let Some(mesh) = meshes.get(*mesh)
+                {
+                    render_pass.set_vertex_buffer(0, mesh.vertex_buffer.as_ref().unwrap());
+                    render_pass.set_index_buffer(mesh.index_buffer.as_ref().unwrap());
+                } else { return }
+            }
+
+            // Issue draw calls
+            SubPassCommand::DrawBatches(batches) => {
+                for batch in batches {
+                    // Set bind group
+                    if let Some((index, bind_group)) = &batch.bind_group {
+                        render_pass.set_bind_group(*index, bind_group);
+                    }
+
+                    // Draw the mesh
+                    match render_pass.draw_indexed(batch.index_range.clone(), batch.instance_range.clone()) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("Failed to draw: {:?}.", e);
+                        }
+                    }
+                }
+            }
+
+            // Custom commands
+            SubPassCommand::Custom(custom_fn) => {
+                custom_fn(world, render_pass);
+            }
+        }
     }
 }
 
