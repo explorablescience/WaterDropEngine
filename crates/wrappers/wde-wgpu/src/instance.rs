@@ -212,7 +212,7 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
 
     // Handle uncaught device errors
     device.on_uncaptured_error(std::sync::Arc::new(|error| {
-        error!("Uncaptured wgpu error: {:?}", error);
+        error!("Uncaptured wgpu error: {:#?}", error);
     }));
 
     // Panic room
