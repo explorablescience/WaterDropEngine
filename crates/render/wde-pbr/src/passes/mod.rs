@@ -8,7 +8,7 @@ mod subpass;
 pub use core::opaque_gbuffer_renderpass::RenderPassOpaqueGBuffer;
 pub use core::opaque_lighting_renderpass::RenderPassOpaqueLighting;
 
-use core::{depth_blit::*};
+use core::{resolve::*};
 
 use crate::passes::{core::{transparent_renderpass::TransparentRenderPass}, subpass::{
     gbuffer_pipeline::*, gbuffer_subpass_pbr::SubRenderPassGbufferPbr, lighting_pipeline::*, lighting_subpass_pbr::SubRenderPassLightingPbr
