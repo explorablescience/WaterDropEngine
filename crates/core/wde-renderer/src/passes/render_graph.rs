@@ -68,6 +68,15 @@ pub struct DrawCommandsBatch {
     pub index_range: Range<u32>,
     pub instance_range: Range<u32>,
 }
+impl Default for DrawCommandsBatch {
+    fn default() -> Self {
+        Self {
+            bind_group: None,
+            index_range: 0..0,
+            instance_range: 0..1
+        }
+    }
+}
 
 /// Commands to execute in a render pass, in order. For example: set pipeline, set bind groups, draw calls, etc.
 pub enum SubPassCommand {
@@ -90,14 +99,6 @@ pub struct RenderSubPassDesc(pub Vec<SubPassCommand>);
 
 
 
-
-
-pub trait RenderPassOld: Send + Sync {
-    fn render(&self, _render_world: &mut World);
-    fn label(&self) -> &str;
-    fn process(&self, world: &World, pass_desc: &RenderPassDesc, sub_pass_desc: &RenderSubPassDesc) {}
-}
-
 /// Type alias for render pass IDs. These are numeric identifiers that control the execution order of passes in the render graph; lower IDs execute first.
 pub type RenderPassId = i32;
 /// Describes a render pass in the render graph, with its attachments, load ops, etc.
@@ -111,11 +112,16 @@ pub trait RenderPass {
     fn id() -> RenderPassId;
     /// Return the (non-unique) label of the render pass, used for logging and debugging.
     fn label() -> &'static str;
+
+    /// Custom rendering logic for this pass.
+    /// It returns None if the pass should be rendered with the default render graph execution flow, or Some(true or false) if the pass executed custom rendering logic and whether it was successful.
+    fn custom_render(_world: &mut World, _command_buffer: &mut CommandBuffer) -> Option<bool> { None }
 }
 // Utility traits for the render graph implementation. Not meant to be used by users of the render graph.
 trait RenderPassNode: Send + Sync + 'static {
     fn describe(&mut self, world: &mut World) -> RenderPassDesc;
     fn label(&mut self) -> &'static str;
+    fn custom_render(&mut self, world: &mut World, command_buffer: &mut CommandBuffer) -> Option<bool>;
 }
 struct RenderPassHolder<P: RenderPass> {
     _phantom: std::marker::PhantomData<P>,
@@ -128,6 +134,9 @@ impl<P> RenderPassNode for RenderPassHolder<P> where P: RenderPass + Send + Sync
     }
     fn label(&mut self) -> &'static str {
         P::label()
+    }
+    fn custom_render(&mut self, world: &mut World, command_buffer: &mut CommandBuffer) -> Option<bool> {
+        P::custom_render(world, command_buffer)
     }
 }
 
@@ -211,10 +220,6 @@ impl RenderGraph {
             render(&mut graph, world);
         });
     }
-
-
-    pub fn add_pass_old<P: RenderPassOld + 'static + Default>(&mut self, id: u32) {
-    }
 }
 
 
@@ -234,6 +239,15 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
         let pass = &mut graph.passes[pass_index];
         let pass_label = pass.label();
         let pass_desc = pass.describe(world);
+
+        // Try custom rendering logic for this pass
+        if let Some(custom_render_result) = pass.custom_render(world, &mut command_buffer) {
+            // If it was Some(true or false), it means the pass used custom rendering logic.
+            if !custom_render_result {
+                debug!("Custom rendering for pass '{}' could not be completed. Skipping this pass for this frame.", pass_label);
+            }
+            continue;
+        }
 
         // Precompute sub-pass descriptions before creating the render pass to avoid borrow conflicts with the world
         let mut sub_passes = Vec::new();
@@ -336,7 +350,7 @@ fn create_render_pass<'p>(world: &'p World, command_buffer: &'p mut CommandBuffe
                 return Err("Invalid texture for depth attachment".to_string());
             }
         }
-        return Ok(());
+        Ok(())
     })
 }
 

@@ -150,7 +150,7 @@ fn extract(
 }
 
 fn update_images(
-    egui_render_pass: ResMut<EguiRenderPass>,
+    egui_render_pass: ResMut<EguiRenderPassHolder>,
     render_instance: Res<RenderInstance>,
     mut ui_textures: ResMut<UITextures>,
     textures: Res<RenderAssets<GpuTexture>>

@@ -6,12 +6,12 @@ use crate::logic::{lights::LightsFeatureBuffer, textures::PbrDeferredTexturesLay
 
 
 #[derive(Default, Asset, Clone, TypePath)]
-pub(crate) struct PbrLightingRenderPipelineAsset;
+pub struct PbrLightingRenderPipelineAsset;
 
 #[allow(unused)]
 #[derive(Component)]
-pub(crate) struct PbrLightingRenderPipeline(pub Handle<PbrLightingRenderPipelineAsset>);
-pub(crate) struct GpuPbrLightingRenderPipeline(pub CachedPipelineIndex);
+pub struct PbrLightingRenderPipeline(pub Handle<PbrLightingRenderPipelineAsset>);
+pub struct GpuPbrLightingRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuPbrLightingRenderPipeline {
     type SourceAsset = PbrLightingRenderPipelineAsset;
     type Param = (SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>);

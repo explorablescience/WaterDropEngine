@@ -1,0 +1,20 @@
+use bevy::ecs::system::{SystemParamItem, lifetimeless::SRes};
+use wde_renderer::prelude::*;
+
+pub struct RenderPassTerrain;
+impl RenderPass for RenderPassTerrain {
+    type Params = SRes<DepthTexture>;
+
+    fn describe(depth_texture: &SystemParamItem<Self::Params>) -> RenderPassDesc {
+        RenderPassDesc {
+            attachments_depth: Some(RenderPassDescDepthAttachment {
+                texture: Some(depth_texture.texture.id()),
+                ..Default::default()
+            }),
+            ..Default::default()
+        }
+    }
+
+    fn id() -> RenderPassId { 110 }
+    fn label() -> &'static str { "terrain" }
+}

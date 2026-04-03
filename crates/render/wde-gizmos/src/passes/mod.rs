@@ -1,13 +1,16 @@
 use bevy::prelude::*;
 
 mod gizmo_pipeline;
-mod gizmo_renderpass;
+mod gizmo_pass;
+mod gizmo_subpass;
 mod gizmo_ssbo;
 
 use gizmo_pipeline::*;
-use gizmo_renderpass::*;
+use gizmo_subpass::*;
 use gizmo_ssbo::*;
 use wde_renderer::prelude::*;
+
+use crate::passes::gizmo_pass::GizmoRenderPass;
 
 pub(crate) struct GizmoFeaturesPlugin;
 impl Plugin for GizmoFeaturesPlugin {
@@ -23,18 +26,19 @@ impl Plugin for GizmoFeaturesPlugin {
 
         // Add the extract system for the render pass
         app.get_sub_app_mut(RenderApp).unwrap()
-            .add_systems(Extract, GizmoRenderPass::extract);
+            .add_systems(Extract, GizmoRenderSubPass::extract);
 
         // Always add the gizmo render pass (at the end)
-        let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
-            .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass_old::<GizmoRenderPass>(1000);
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .world_mut().get_resource_mut::<RenderGraph>().unwrap()
+            .add_pass::<GizmoRenderPass>()
+            .add_sub_pass::<GizmoRenderSubPass, GizmoRenderPass>();
     }
 
     fn finish(&self, app: &mut App) {
         // Create the render pass
         app.get_sub_app_mut(RenderApp).unwrap()
-            .insert_resource(GizmoRenderPass {
+            .insert_resource(GizmoRenderSubPass {
                 batches_order: Default::default(),
                 batches: Default::default()
             });

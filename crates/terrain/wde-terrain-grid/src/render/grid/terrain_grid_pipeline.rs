@@ -1,4 +1,4 @@
-use bevy::{ecs::system::lifetimeless::{SRes, SResMut}, prelude::*};
+use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
@@ -6,14 +6,12 @@ use crate::render::grid::buffers::TerrainGridBuffer;
 
 
 #[derive(Default, Asset, Clone, TypePath)]
-pub(crate) struct TerrainGridRenderPipelineAsset;
+pub struct TerrainGridRenderPipelineAsset;
 
 #[allow(unused)]
 #[derive(Component)]
-pub(crate) struct TerrainGridRenderPipeline(pub Handle<TerrainGridRenderPipelineAsset>);
-pub(crate) struct GpuTerrainGridRenderPipeline {
-    pub cached_pipeline_index: CachedPipelineIndex
-}
+pub struct TerrainGridRenderPipeline(pub Handle<TerrainGridRenderPipelineAsset>);
+pub struct GpuTerrainGridRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuTerrainGridRenderPipeline {
     type SourceAsset = TerrainGridRenderPipelineAsset;
     type Param = (
@@ -22,12 +20,9 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
 
     fn prepare_asset(
             _asset: Self::SourceAsset,
-            (
-                assets_server, pipeline_manager, camera_feature, terrain_grid_buffer
-            ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
+            (assets_server, pipeline_manager, camera_feature, terrain_grid_buffer): &mut SystemParamItem<Self::Param>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        // Create the pipeline
-        let pipeline_desc = RenderPipelineDescriptor {
+        Ok(GpuTerrainGridRenderPipeline(pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
             label: "terrain-grid",
             vert: Some(assets_server.load("core/render/terrain/render_grid_vert.wgsl")),
             frag: Some(assets_server.load("core/render/terrain/render_grid_frag.wgsl")),
@@ -48,12 +43,7 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
                 ..Default::default()
             },
             ..Default::default()
-        };
-        let cached_index = pipeline_manager.create_render_pipeline(pipeline_desc);
-
-        Ok(GpuTerrainGridRenderPipeline {
-            cached_pipeline_index: cached_index
-        })
+        })))
     }
 
     fn label(&self) -> &str {

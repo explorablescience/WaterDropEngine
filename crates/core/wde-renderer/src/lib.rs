@@ -247,7 +247,7 @@ pub mod prelude {
     pub use crate::components::TransformUniform;
     pub use crate::pipelines::*;
     pub use crate::assets::{Material, MaterialBuilder, MaterialsPluginRegister, Texture, TextureLoaderSettings, Shader};
-    pub use crate::passes::{render_graph::*, depth_msaa::{DepthTextureMSAA}, depth::{DepthTexture}};
+    pub use crate::passes::{render_graph::*, post_process_mesh::PostProcessingMesh, depth::{depth_texture_msaa::{DepthTextureMSAA}, depth_texture::{DepthTexture}}};
     pub use crate::utils::Color;
     pub use wde_wgpu::render_pipeline::{StencilState, StencilFaceState, StencilOperation, CompareFunction};
 }

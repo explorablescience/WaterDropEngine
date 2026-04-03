@@ -5,11 +5,11 @@ use wde_renderer::prelude::*;
 use crate::components::lights::*;
 
 /// Maximum number of lights.
-pub(crate) const MAX_LIGHTS: usize = 64;
+pub const MAX_LIGHTS: usize = 64;
 
 /// Struct to hold the light uniform layout description.
 #[derive(Resource)]
-pub(crate) struct LightsFeatureBuffer {
+pub struct LightsFeatureBuffer {
     pub buffer_cpu: Handle<Buffer>,
     pub buffer_gpu: Handle<Buffer>,
     pub bind_group: Option<BindGroup>

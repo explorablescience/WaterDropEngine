@@ -22,7 +22,7 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
         ])
     }
 
-    fn label() -> &'static str { "gbuffer-pbr-main" }
+    fn label() -> &'static str { "pbr-gbuffer-main" }
 }
 
 #[repr(C)]

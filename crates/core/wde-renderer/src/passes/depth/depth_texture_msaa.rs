@@ -19,8 +19,6 @@ use crate::{assets::{GpuTexture, RenderAssets, Texture}, core::{extract_macros::
 /// - **Binding 1**: Depth sampler (for filtered sampling)
 #[derive(Resource, Default)]
 pub struct DepthMSAATextureLayout {
-    /// Bind group layout describing depth bindings (if built).
-    pub layout: Option<BindGroupLayout>,
     /// Actual bind group with depth texture/sampler (if built).
     pub bind_group: Option<WgpuBindGroup>
 }
@@ -34,7 +32,7 @@ impl DepthMSAATextureLayout {
         depth_texture: Res<DepthTextureMSAA>, textures: Res<RenderAssets<GpuTexture>>
     ) {
         // Check if the bind group is already created
-        if textures_layout.bind_group.is_some() & textures_layout.layout.is_some() {
+        if textures_layout.bind_group.is_some() {
             return;
         }
 
@@ -44,15 +42,9 @@ impl DepthMSAATextureLayout {
             None => return
         };
 
-        // Create the layout
-        let layout = BindGroupLayout::new("depth-msaa-texture", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_view(   0, ShaderStages::FRAGMENT, true);
-            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-        });
-
         // Build the layout
         let render_instance = render_instance.0.read().unwrap();
-        let layout_built = BindGroupLayout::build(&layout, &render_instance);
+        let layout_built = BindGroupLayout::build(&Self::layout(), &render_instance);
 
         // Create the bind group
         let bind_group = BindGroupBuilder::build("depth-msaa-texture", &render_instance, &layout_built, &vec![
@@ -61,8 +53,14 @@ impl DepthMSAATextureLayout {
         ]);
 
         // Insert the resources
-        textures_layout.layout = Some(layout);
         textures_layout.bind_group = Some(bind_group);
+    }
+
+    pub fn layout() -> BindGroupLayout {
+        BindGroupLayout::new("depth-msaa-texture", |builder: &mut BindGroupLayoutBuilder| {
+            builder.add_texture_view(   0, ShaderStages::FRAGMENT, true);
+            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
+        })
     }
 }
 
@@ -136,7 +134,6 @@ impl DepthTextureMSAA {
     pub fn extract(mut commands: Commands, depth_texture : ExtractWorld<Res<DepthTextureMSAA>>, mut depth_texture_layout: ResMut<DepthMSAATextureLayout>) {
         // If the depth was resized, mark the bind group for rebuild
         if depth_texture.resized {
-            depth_texture_layout.layout = None;
             depth_texture_layout.bind_group = None;
         }
 

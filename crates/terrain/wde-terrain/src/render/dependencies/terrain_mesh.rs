@@ -4,7 +4,7 @@ use wde_renderer::prelude::*;
 use crate::manager::{CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE};
 
 #[derive(Resource, Default)]
-pub(crate) struct TerrainRenderPassMesh {
+pub struct TerrainRenderPassMesh {
     pub deferred_mesh: Option<Handle<MeshAsset>>,
 }
 impl TerrainRenderPassMesh {

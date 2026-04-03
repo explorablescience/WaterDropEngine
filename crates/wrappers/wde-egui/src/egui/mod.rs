@@ -1,10 +1,10 @@
 pub mod egui_context;
 pub mod egui_inputs;
-pub mod egui_renderpass;
+pub mod egui_pass;
 
 use bevy::prelude::*;
 
-use crate::egui::{egui_context::EguiContextPlugin, egui_inputs::EguiInputsPlugin, egui_renderpass::EguiRenderPassPlugin};
+use crate::egui::{egui_context::EguiContextPlugin, egui_inputs::EguiInputsPlugin, egui_pass::EguiRenderPassPlugin};
 
 pub struct EguiLogicPlugin;
 impl Plugin for EguiLogicPlugin {

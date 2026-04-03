@@ -2,10 +2,11 @@ use wde_renderer::prelude::*;
 
 use bevy::prelude::*;
 
-use crate::render::passes::{pipeline::{GpuTerrainRenderPipeline, TerrainRenderPipeline, TerrainRenderPipelineAsset}, renderpass::TerrainRenderPass};
+use crate::render::passes::{pipeline::{GpuTerrainRenderPipeline, TerrainRenderPipeline, TerrainRenderPipelineAsset}, renderpass_terrain::RenderPassTerrain, subpass_terrain_ground::SubRenderPassTerrainGround};
 
 mod pipeline;
-mod renderpass;
+mod renderpass_terrain;
+mod subpass_terrain_ground;
 
 pub(crate) struct TerrainPassesPlugin;
 impl Plugin for TerrainPassesPlugin {
@@ -15,18 +16,15 @@ impl Plugin for TerrainPassesPlugin {
             .init_asset::<TerrainRenderPipelineAsset>()
             .add_plugins(RenderAssetsPlugin::<GpuTerrainRenderPipeline>::default());
 
-        // Add the render pass
-        app.get_sub_app_mut(RenderApp).unwrap()
-            .init_resource::<TerrainRenderPass>();
-
         // Add the extract system for the render pass
         app.get_sub_app_mut(RenderApp).unwrap()
-            .add_systems(Extract, TerrainRenderPass::extract);
+            .add_systems(Extract, SubRenderPassTerrainGround::extract);
 
         // Add the terrain render passes
-        let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
-            .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass_old::<TerrainRenderPass>(110);
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .world_mut().get_resource_mut::<RenderGraph>().unwrap()
+            .add_pass::<RenderPassTerrain>()
+            .add_sub_pass::<SubRenderPassTerrainGround, RenderPassTerrain>();
     }
 
     fn finish(&self, app: &mut App) {

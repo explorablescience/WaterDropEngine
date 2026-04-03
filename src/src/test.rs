@@ -57,7 +57,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Spawn a default gltf material
     let model = GltfLoader::load("models/placement/house_demo1/house_demo1.gltf", &asset_server).unwrap();
     commands.spawn((
-        Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(10.0)),
+        Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(1.0)),
         PbrModel(model.models)
     ));
 }

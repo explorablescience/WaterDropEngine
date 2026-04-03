@@ -24,15 +24,6 @@ impl Plugin for PbrFeaturesPlugin {
             .init_asset::<PbrLightingRenderPipelineAsset>()
             .add_plugins(RenderAssetsPlugin::<GpuPbrLightingRenderPipeline>::default());
 
-        // Add the systems for the render passes
-        app
-            .init_resource::<PbrLightingRenderPassMesh>()
-            .add_systems(Startup, PbrLightingRenderPassMesh::init);
-        app.get_sub_app_mut(RenderApp).unwrap()
-            .init_resource::<PbrLightingRenderPassMesh>();
-        app.get_sub_app_mut(RenderApp).unwrap()
-            .add_systems(Extract, PbrLightingRenderPassMesh::extract);
-
         // Add the render graph nodes
         app.get_sub_app_mut(RenderApp).unwrap().world_mut()
             .get_resource_mut::<RenderGraph>().unwrap()

@@ -1,15 +1,11 @@
 use bevy::prelude::*;
 
-use crate::render::selected::SelectedObjectPlugin;
-
 pub mod grid;
-pub mod selected;
 
 pub(crate) struct RenderPlugin;
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_plugins(grid::TerrainGridPassesPlugin)
-            .add_plugins(SelectedObjectPlugin);
+            .add_plugins(grid::TerrainGridPassesPlugin);
     }
 }

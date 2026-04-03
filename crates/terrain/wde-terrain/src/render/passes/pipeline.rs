@@ -6,12 +6,12 @@ use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buf
 
 
 #[derive(Default, Asset, Clone, TypePath)]
-pub(crate) struct TerrainRenderPipelineAsset;
+pub struct TerrainRenderPipelineAsset;
 
 #[allow(unused)]
 #[derive(Component)]
-pub(crate) struct TerrainRenderPipeline(pub Handle<TerrainRenderPipelineAsset>);
-pub(crate) struct GpuTerrainRenderPipeline(pub CachedPipelineIndex);
+pub struct TerrainRenderPipeline(pub Handle<TerrainRenderPipelineAsset>);
+pub struct GpuTerrainRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuTerrainRenderPipeline {
     type SourceAsset = TerrainRenderPipelineAsset;
     type Param = (

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
 
 #[derive(Resource, Default)]
-pub(crate) struct PbrDeferredTexturesLayout {
+pub struct PbrDeferredTexturesLayout {
     pub deferred_layout: Option<BindGroupLayout>,
     pub deferred_bind_group: Option<BindGroup>,
     pub deferred_layout_resolved: Option<BindGroupLayout>,

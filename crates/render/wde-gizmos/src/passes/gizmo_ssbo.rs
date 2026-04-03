@@ -5,10 +5,9 @@ use wde_renderer::prelude::*;
 const MAX_ENTITY_COUNT: usize = 100_000;
 
 #[derive(Resource)]
-pub(crate) struct GizmoSsbo {
+pub struct GizmoSsbo {
     pub buffer: Handle<Buffer>,
     pub buffer_gpu: Handle<Buffer>,
-    pub bind_group_layout: Option<BindGroupLayout>,
     pub bind_group: Option<BindGroup>
 }
 impl GizmoSsbo {
@@ -25,20 +24,22 @@ impl GizmoSsbo {
         };
 
         // Create the ssbo layout
-        let ssbo_layout = BindGroupLayout::new("gizmo-ssbo", |builder| {
-            builder.add_buffer(0,
-                ShaderStages::VERTEX,
-                BufferBindingType::Storage { read_only: true });
-        });
-        let ssbo_layout_built = ssbo_layout.build(&render_instance.0.read().unwrap());
+        let ssbo_layout_built = Self::layout().build(&render_instance.0.read().unwrap());
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroupBuilder::build("gizmo-ssbo", &render_instance, &ssbo_layout_built, &vec![
             BindGroupBuilder::buffer(0, &buffer.buffer)
         ]);
-        ssbo.bind_group_layout = Some(ssbo_layout);
         ssbo.bind_group = Some(bind_group);
+    }
+
+    pub fn layout() -> BindGroupLayout {
+        BindGroupLayout::new("gizmo-ssbo", |builder| {
+            builder.add_buffer(0,
+                ShaderStages::VERTEX,
+                BufferBindingType::Storage { read_only: true });
+        })
     }
 }
 
@@ -67,7 +68,6 @@ impl Plugin for GizmoSsboPlugin {
             .world_mut().insert_resource(GizmoSsbo {
                 buffer,
                 buffer_gpu,
-                bind_group_layout: None,
                 bind_group: None
             });
     }
