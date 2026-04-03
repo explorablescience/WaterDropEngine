@@ -11,6 +11,7 @@ impl RenderPass for RenderPassResolve {
         RenderPassDesc {
             attachments_depth: Some(RenderPassDescDepthAttachment {
                 texture: Some(depth_texture.texture.id()),
+                load: LoadOp::Clear(1.0),
                 ..Default::default()
             }),
             ..Default::default()
