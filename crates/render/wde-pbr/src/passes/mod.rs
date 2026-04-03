@@ -7,12 +7,11 @@ mod subpass;
 
 pub use core::opaque_gbuffer_renderpass::RenderPassOpaqueGBuffer;
 pub use core::opaque_lighting_renderpass::RenderPassOpaqueLighting;
+pub use core::transparent_renderpass::RenderPassTransparent;
 
-use core::{resolve::*};
+use core::resolve::*;
 
-use crate::passes::{core::{transparent_renderpass::TransparentRenderPass}, subpass::{
-    gbuffer_pipeline::*, gbuffer_subpass_pbr::SubRenderPassGbufferPbr, lighting_pipeline::*, lighting_subpass_pbr::SubRenderPassLightingPbr
-}};
+use crate::passes::subpass::{gbuffer_pipeline::*, gbuffer_subpass_pbr::SubRenderPassGbufferPbr, lighting_pipeline::*, lighting_subpass_pbr::SubRenderPassLightingPbr};
 
 pub(crate) struct PbrFeaturesPlugin;
 impl Plugin for PbrFeaturesPlugin {
@@ -36,7 +35,7 @@ impl Plugin for PbrFeaturesPlugin {
             .add_sub_pass::<SubRenderPassGbufferPbr, RenderPassOpaqueGBuffer>()
             .add_pass::<RenderPassOpaqueLighting>()
             .add_sub_pass::<SubRenderPassLightingPbr, RenderPassOpaqueLighting>()
-            .add_pass::<TransparentRenderPass>()
+            .add_pass::<RenderPassTransparent>()
             .add_pass::<RenderPassResolve>()
             .add_sub_pass::<SubRenderPassResolve, RenderPassResolve>();
     }

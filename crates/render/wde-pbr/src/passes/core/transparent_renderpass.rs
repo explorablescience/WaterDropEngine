@@ -4,8 +4,8 @@ use wde_renderer::prelude::*;
 use crate::logic::render_texture::PbrRenderTexture;
 
 
-pub struct TransparentRenderPass;
-impl RenderPass for TransparentRenderPass {
+pub struct RenderPassTransparent;
+impl RenderPass for RenderPassTransparent {
     type Params = (SRes<DepthTextureMSAA>, SRes<PbrRenderTexture>);
 
     fn describe((depth_texture, render_texture): &SystemParamItem<Self::Params>) -> RenderPassDesc {

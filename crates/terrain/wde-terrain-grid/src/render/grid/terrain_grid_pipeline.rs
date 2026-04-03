@@ -1,6 +1,6 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_camera::prelude::*;
-use wde_renderer::prelude::*;
+use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
 
 use crate::render::grid::buffers::TerrainGridBuffer;
 
@@ -42,6 +42,7 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
                 enabled: true,
                 ..Default::default()
             },
+            sample_count: MSAA_SAMPLE_COUNT,
             ..Default::default()
         })))
     }
