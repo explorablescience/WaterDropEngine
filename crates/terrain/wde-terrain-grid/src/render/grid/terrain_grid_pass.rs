@@ -15,6 +15,6 @@ impl RenderPass for RenderPassTerrainGrid {
         }
     }
 
-    fn id() -> RenderPassId { 51 }
+    fn id() -> RenderPassId { 110 }
     fn label() -> &'static str { "terrain-grid" }
 }

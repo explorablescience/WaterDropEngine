@@ -15,6 +15,6 @@ impl RenderPass for GizmoRenderPass {
         }
     }
 
-    fn id() -> RenderPassId { 60 }
+    fn id() -> RenderPassId { 500 }
     fn label() -> &'static str { "gizmo" }
 }

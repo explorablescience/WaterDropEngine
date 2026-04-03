@@ -18,17 +18,17 @@ use crate::{assets::{GpuTexture, RenderAssets, Texture}, core::{extract_macros::
 /// - **Binding 0**: Depth texture view (read-only)
 /// - **Binding 1**: Depth sampler (for filtered sampling)
 #[derive(Resource, Default)]
-pub struct DepthMSAATextureLayout {
+pub struct DepthMSAATextureBindGroup {
     /// Actual bind group with depth texture/sampler (if built).
     pub bind_group: Option<WgpuBindGroup>
 }
-impl DepthMSAATextureLayout {
+impl DepthMSAATextureBindGroup {
     /// Build the depth bind group and layout (or skip if already built and valid).
     ///
     /// Called during the Render phase once GPU textures are ready.
     /// Rebuilds if depth was resized; otherwise reuses cached bind group.
     pub fn build_bind_group(
-        render_instance: Res<RenderInstance>, mut textures_layout: ResMut<DepthMSAATextureLayout>,
+        render_instance: Res<RenderInstance>, mut textures_layout: ResMut<DepthMSAATextureBindGroup>,
         depth_texture: Res<DepthTextureMSAA>, textures: Res<RenderAssets<GpuTexture>>
     ) {
         // Check if the bind group is already created
@@ -131,7 +131,7 @@ impl DepthTextureMSAA {
     ///
     /// Copies the texture handle and resized flag into the render world, and marks
     /// the depth bind group for regeneration if the texture was resized.
-    pub fn extract(mut commands: Commands, depth_texture : ExtractWorld<Res<DepthTextureMSAA>>, mut depth_texture_layout: ResMut<DepthMSAATextureLayout>) {
+    pub fn extract(mut commands: Commands, depth_texture : ExtractWorld<Res<DepthTextureMSAA>>, mut depth_texture_layout: ResMut<DepthMSAATextureBindGroup>) {
         // If the depth was resized, mark the bind group for rebuild
         if depth_texture.resized {
             depth_texture_layout.bind_group = None;

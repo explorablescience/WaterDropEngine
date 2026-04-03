@@ -1,6 +1,6 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
 use wde_renderer::prelude::*;
-use crate::logic::textures::PbrDeferredTextures;
+use crate::logic::deferred_textures::PbrDeferredTextures;
 
 
 pub struct RenderPassOpaqueGBuffer;
@@ -40,5 +40,5 @@ impl RenderPass for RenderPassOpaqueGBuffer {
     }
 
     fn id() -> RenderPassId { 10 }
-    fn label() -> &'static str { "pbr-gbuffer" }
+    fn label() -> &'static str { "opaque-pbr-gbuffer" }
 }

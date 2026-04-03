@@ -2,13 +2,13 @@ use wde_renderer::prelude::*;
 
 use bevy::prelude::*;
 
-use crate::logic::{batches::BatchesPlugin, lights::LightsFeature, ssbo::PbrSsboPlugin, textures::{PbrDeferredTextures, PbrDeferredTexturesLayout}};
+use crate::logic::{batches::BatchesPlugin, deferred_textures::{PbrDeferredTextures, PbrDeferredTexturesLayout}, lights::LightsFeature, render_texture::{PbrRenderTexture, PbrRenderTextureBindGroup}, ssbo::PbrSsboPlugin};
 
 pub mod ssbo;
-pub mod textures;
+pub mod render_texture;
+pub mod deferred_textures;
 pub mod batches;
 pub mod lights;
-
 
 pub(crate) struct PbrLogicPlugin;
 impl Plugin for PbrLogicPlugin {
@@ -18,6 +18,15 @@ impl Plugin for PbrLogicPlugin {
             .add_plugins(LightsFeature)
             .add_plugins(PbrSsboPlugin)
             .add_plugins(BatchesPlugin);
+
+        // Add the pbr render texture
+        app
+            .add_systems(Startup, PbrRenderTexture::create_texture)
+            .add_systems(Update, PbrRenderTexture::resize_texture);
+        app.get_sub_app_mut(RenderApp).unwrap()
+            .init_resource::<PbrRenderTextureBindGroup>()
+            .add_systems(Extract, PbrRenderTexture::extract_texture)
+            .add_systems(Render, PbrRenderTextureBindGroup::build_bind_group.in_set(RenderSet::BindGroups));
 
         // Add the pbr defered textures
         app

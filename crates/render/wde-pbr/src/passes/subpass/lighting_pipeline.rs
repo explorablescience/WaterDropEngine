@@ -1,8 +1,8 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_camera::prelude::*;
-use wde_renderer::prelude::*;
+use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
 
-use crate::logic::{lights::LightsFeatureBuffer, textures::PbrDeferredTexturesLayout};
+use crate::logic::{lights::LightsFeatureBuffer, deferred_textures::PbrDeferredTexturesLayout};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
@@ -33,6 +33,7 @@ impl RenderAsset for GpuPbrLightingRenderPipeline {
                 enabled: false,
                 ..default()
             },
+            sample_count: MSAA_SAMPLE_COUNT,
             ..default()
         })))
     }

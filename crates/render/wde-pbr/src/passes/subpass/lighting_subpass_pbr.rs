@@ -2,7 +2,7 @@ use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
 use wde_camera::render::CameraFeatureRender;
 use wde_renderer::prelude::*;
 
-use crate::{logic::{lights::LightsFeatureBuffer, textures::PbrDeferredTexturesLayout}, passes::subpass::lighting_pipeline::GpuPbrLightingRenderPipeline};
+use crate::{logic::{lights::LightsFeatureBuffer, deferred_textures::PbrDeferredTexturesLayout}, passes::subpass::lighting_pipeline::GpuPbrLightingRenderPipeline};
 
 
 pub struct SubRenderPassLightingPbr;

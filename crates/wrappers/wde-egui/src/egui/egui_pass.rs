@@ -117,6 +117,6 @@ impl RenderPass for EguiRenderPass {
         Some(true)
     }
 
-    fn id() -> RenderPassId { 100 }
+    fn id() -> RenderPassId { 1000 }
     fn label() -> &'static str { "egui" }
 }
