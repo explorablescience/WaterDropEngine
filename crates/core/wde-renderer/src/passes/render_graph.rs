@@ -208,9 +208,9 @@ impl RenderGraph {
     /// The sub-pass type must implement the `RenderSubPass` trait, which defines the sub-pass's commands and the render pass it belongs to.
     pub fn add_sub_pass<SP: RenderSubPass + Send + Sync + 'static, P: RenderPass>(&mut self) -> &mut Self {
         self.sub_passes.push(Box::new(RenderSubPassHolder { _phantom: std::marker::PhantomData::<SP> }));
-        self.sub_passes_by_renderpass.entry(
-            self.render_passes_by_id.get(&P::id()).copied().unwrap()
-        ).or_default().push(self.sub_passes.len() - 1);
+        let sub_pass_index = self.render_passes_by_id.get(&P::id()).copied();
+        debug_assert!(sub_pass_index.is_some(), "Cannot add sub-pass '{}' to render pass '{}': no render pass with ID {} found in the render graph.", SP::label(), P::label(), P::id());
+        self.sub_passes_by_renderpass.entry(sub_pass_index.unwrap()).or_default().push(self.sub_passes.len() - 1);
         self
     }
 

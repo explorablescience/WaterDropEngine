@@ -16,10 +16,10 @@ impl RenderSubPassTerrainGrid {
         let mesh: Handle<MeshAsset> = assets_server.add(MeshAsset {
             label: "terrain-grid-pass".to_string(),
             vertices: vec![
-                Vertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], ..Default::default() },
-                Vertex { position: [-1.0, -1.0, 0.0], uv: [0.0, 0.0], ..Default::default() },
-                Vertex { position: [1.0, -1.0, 0.0], uv: [1.0, 0.0], ..Default::default() },
-                Vertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], ..Default::default() },
+                Vertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], normal: [0.0, 0.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
+                Vertex { position: [-1.0, -1.0, 0.0], uv: [0.0, 0.0], normal: [0.0, 0.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
+                Vertex { position: [1.0, -1.0, 0.0], uv: [1.0, 0.0], normal: [0.0, 0.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
+                Vertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], normal: [0.0, 0.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
             ],
             indices: vec![0, 2, 1, 0, 3, 2],
             bounding_box: ModelBoundingBox {
@@ -46,6 +46,9 @@ impl RenderSubPass for RenderSubPassTerrainGrid {
     fn describe(
         (pipeline, subpass, camera_feature, grid_buffer): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
+        if !subpass.render_grid {
+            return RenderSubPassDesc::default();
+        }
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::Mesh(subpass.mesh.as_ref().map(|m| m.id())),

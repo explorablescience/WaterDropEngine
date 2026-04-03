@@ -1,6 +1,6 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_camera::prelude::*;
-use wde_renderer::prelude::*;
+use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
 
 use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer}, renderer_gpu::TerrainRendererGPU};
 
@@ -37,10 +37,16 @@ impl RenderAsset for GpuTerrainRenderPipeline {
                 terrain_buffer.layout.clone(),
                 TerrainRendererGPU::layout_render()
             ],
+            render_targets: Some(vec![
+                TextureFormat::R16Float,       // Depth
+                TextureFormat::Rgba8UnormSrgb, // Albedo
+                TextureFormat::Rgba16Float     // Normal
+            ]),
             depth: DepthDescriptor {
                 enabled: true,
                 ..Default::default()
             },
+            sample_count: MSAA_SAMPLE_COUNT,
             ..Default::default()
         })))
     }

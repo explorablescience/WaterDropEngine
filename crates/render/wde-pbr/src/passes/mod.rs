@@ -9,8 +9,8 @@ mod renderpass_lighting;
 mod subpass_gbuffer_pbr;
 mod subpass_lighting_pbr;
 
-use renderpass_gbuffer::*;
-use renderpass_lighting::*;
+pub use renderpass_gbuffer::RenderPassGBuffer;
+pub use renderpass_lighting::PbrLightingRenderPass;
 
 use crate::passes::{pipeline_gbuffer::{GpuPbrGBufferRenderPipeline, PbrGBufferRenderPipeline, PbrGBufferRenderPipelineAsset}, pipeline_lighting::{GpuPbrLightingRenderPipeline, PbrLightingRenderPipeline, PbrLightingRenderPipelineAsset}, subpass_gbuffer_pbr::SubRenderPassGbufferPbr, subpass_lighting_pbr::SubRenderPassLightingPbr};
 

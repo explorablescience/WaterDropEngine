@@ -103,6 +103,7 @@ pub mod prelude {
     pub use crate::PbrPlugin;
     pub use crate::assets::{PbrMaterial, PbrMaterialAsset};
     pub use crate::components::{lights::*, model::*};
+    pub use crate::passes::*;
 }
 
 pub mod assets;
