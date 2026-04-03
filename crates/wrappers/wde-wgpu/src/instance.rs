@@ -212,7 +212,11 @@ pub async fn create_instance(label: &str, primary_window: Option<&RawHandleWrapp
 
     // Handle uncaught device errors
     device.on_uncaptured_error(std::sync::Arc::new(|error| {
-        error!("Uncaptured wgpu error: {:#?}", error);
+        match error {
+            wgpu::Error::OutOfMemory { source } => error!("Out of memory error from wgpu: {:#?}", source),
+            wgpu::Error::Validation { description, source } => warn!("Uncaptured validation error from wgpu.\n{}\n{:#?}", description, source),
+            wgpu::Error::Internal { source, description } => error!("Internal error from wgpu: {}\n{:#?}", description, source)
+        }
     }));
 
     // Panic room
