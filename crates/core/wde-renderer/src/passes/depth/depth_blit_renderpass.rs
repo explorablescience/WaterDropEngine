@@ -17,6 +17,6 @@ impl RenderPass for RenderPassDepthBlit {
         }
     }
 
-    fn id() -> RenderPassId { 100 }
+    fn id() -> RenderPassId { 50 }
     fn label() -> &'static str { "depth-blit" }
 }

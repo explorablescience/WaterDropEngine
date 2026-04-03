@@ -3,8 +3,8 @@ use wde_renderer::prelude::*;
 use crate::logic::textures::PbrDeferredTextures;
 
 
-pub struct RenderPassGBuffer;
-impl RenderPass for RenderPassGBuffer {
+pub struct RenderPassOpaqueGBuffer;
+impl RenderPass for RenderPassOpaqueGBuffer {
     type Params = (SRes<PbrDeferredTextures>, SRes<DepthTextureMSAA>);
 
     fn describe(
@@ -39,6 +39,6 @@ impl RenderPass for RenderPassGBuffer {
         }
     }
 
-    fn id() -> RenderPassId { 50 }
+    fn id() -> RenderPassId { 10 }
     fn label() -> &'static str { "pbr-gbuffer" }
 }

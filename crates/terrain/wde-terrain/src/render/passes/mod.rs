@@ -31,7 +31,7 @@ impl Plugin for TerrainPassesPlugin {
         app.get_sub_app_mut(RenderApp).unwrap()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap()
             // .add_pass::<RenderPassTerrain>()
-            .add_sub_pass::<SubRenderPassTerrainGround, RenderPassGBuffer>();
+            .add_sub_pass::<SubRenderPassTerrainGround, RenderPassOpaqueGBuffer>();
     }
 }
 

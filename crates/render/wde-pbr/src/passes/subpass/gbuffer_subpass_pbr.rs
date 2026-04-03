@@ -3,7 +3,7 @@ use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
 use wde_camera::render::CameraFeatureRender;
 use wde_renderer::{prelude::*, ssbos::ssbo_mesh::SsboMesh};
 
-use crate::{assets::PbrMaterialAsset, logic::{batches::Batches, ssbo::PbrSsbo}, passes::pipeline_gbuffer::GpuPbrGBufferRenderPipeline};
+use crate::{assets::PbrMaterialAsset, logic::{batches::Batches, ssbo::PbrSsbo}, passes::subpass::gbuffer_pipeline::GpuPbrGBufferRenderPipeline};
 
 
 pub(crate) struct SubRenderPassGbufferPbr;
