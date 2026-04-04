@@ -3,12 +3,12 @@ use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
 use wde_camera::render::CameraFeatureRender;
 use wde_renderer::{prelude::*, ssbos::ssbo_mesh::SsboMesh};
 
-use crate::{assets::PbrMaterialAsset, logic::{batches::Batches, ssbo::PbrSsbo}, passes::subpass::gbuffer_pipeline::GpuPbrGBufferRenderPipeline};
+use crate::{assets::PbrMaterialAsset, logic::{batches::Batches, ssbo::SsboTransformPbr}, passes::subpass::gbuffer_pipeline::GpuPbrGBufferRenderPipeline};
 
 
 pub(crate) struct SubRenderPassGbufferPbr;
 impl RenderSubPass for SubRenderPassGbufferPbr {
-    type Params = (SRes<RenderAssets<GpuPbrGBufferRenderPipeline>>, SRes<SsboMesh>, SRes<CameraFeatureRender>, SRes<PbrSsbo>);
+    type Params = (SRes<RenderAssets<GpuPbrGBufferRenderPipeline>>, SRes<SsboMesh>, SRes<CameraFeatureRender>, SRes<SsboTransformPbr>);
 
     fn describe(
         (render_pipeline, ssbo_mesh, camera_feature, pbr_ssbo): &SystemParamItem<Self::Params>

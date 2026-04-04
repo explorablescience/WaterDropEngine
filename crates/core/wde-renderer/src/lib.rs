@@ -241,7 +241,7 @@
 #![allow(clippy::type_complexity)]
 
 pub mod prelude {
-    pub use crate::RenderPlugin;
+    pub use crate::{RenderPlugin, MSAA_SAMPLE_COUNT};
     pub use crate::assets::{*, meshes::*};
     pub use crate::core::{Extract, Render, RenderApp, RenderInstance, RenderSet, extract_macros::ExtractWorld, SwapchainFrame, window::SurfaceResized};
     pub use crate::components::TransformUniform;

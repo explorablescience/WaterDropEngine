@@ -42,7 +42,9 @@ impl Plugin for SsboMeshPlugin {
     }
 }
 
-
+/// Resource representing the SSBO mesh data, containing the vertex and index buffers, their offsets, and the bind group for rendering.
+/// It is filled by every GpuMesh if `use_ssbo` is set to true.
+/// The position of the vertex and index data in the buffers is then stored in the `GpuMesh` resource.
 #[derive(Resource, Default)]
 pub struct SsboMesh {
     // The ssbo buffers

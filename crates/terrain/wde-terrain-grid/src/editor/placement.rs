@@ -2,7 +2,7 @@ use wde_physics::prelude::*;
 use wde_camera::prelude::*;
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::{editor::PlacementUI, prelude::{Grid, GridEntity, GridRotation}};
+use crate::{editor::{PlacementTool, PlacementUI}, prelude::{Grid, GridEntity, GridRotation}};
 
 #[allow(clippy::too_many_arguments)]
 pub fn handle_placement_tool(
@@ -15,7 +15,7 @@ pub fn handle_placement_tool(
     mut local_rot: Local<GridRotation>,
     mouse_input: Res<ButtonInput<MouseButton>>
 ) {
-    if !placement_ui.enabled || placement_ui.placement_entity.is_none() {
+    if !placement_ui.enabled || placement_ui.placement_entity.is_none() || placement_ui.selected_tool != PlacementTool::Place {
         return;
     }
 
@@ -42,7 +42,7 @@ pub fn handle_placement_tool(
         let hit_point = ray.point_at(toi);
         let hit_point = Vec2::new(hit_point.x, hit_point.z);
         
-        // Clear the grid of any registered entities
+        // Clear the grid of placeholder entity (used to store the position of the entity being placed)
         grid.remove_entity(Entity::PLACEHOLDER);
         
         // Update the grid with the new position of the entity

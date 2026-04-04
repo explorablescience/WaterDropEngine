@@ -17,7 +17,8 @@ pub struct PbrModel(pub Vec<(Handle<MeshAsset>, Handle<PbrMaterialAsset>)>);
 #[derive(Resource, Default)]
 pub struct ModelUuidToTransformUuidRender(pub HashMap<PbrModelElementUuid, u32>);
 
-/// Resource to manage PBR render entities and their UUIDs
+/// Resource to manage PBR render entities and their UUIDs.
+/// This resource is used to keep track of the mapping between entities, their model element UUIDs, and the corresponding mesh and material handles. It also manages the mapping between model element UUIDs and their transform IDs in the SSBO.
 #[derive(Resource, Default, Clone)]
 pub struct PbrModelRegistry {
     /// Maps between entities and their model element UUIDs
@@ -38,7 +39,8 @@ impl PbrModelRegistry {
         uuid
     }
 
-    fn register_model(
+    /// Register a new entity with its mesh and material handles, and allocate a transform ID for it in the SSBO. Returns the generated UUID for the model element.
+    fn register_entity(
         &mut self,
         entity: Entity,
         mesh_handle: &Handle<MeshAsset>,
@@ -86,7 +88,8 @@ impl PbrSsboIdHandler {
     }
 }
 
-/// Resource to track dirty transforms that need to be updated in the SSBO
+/// Resource to track dirty transforms that need to be updated in the SSBO.
+/// This automatically updates every frame with the modified transforms of entities with a PbrModel component, and is used to update the SSBO `SsboTransformPbr` with the new transforms.
 #[derive(Resource, Default)]    
 pub struct DirtyTransforms(pub Option<Vec<(PbrModelElementUuid, TransformUniform)>>);
 
@@ -128,7 +131,7 @@ fn on_models_updates(
 
         // Register the new model elements
         for (mesh_handle, material_handle) in pbr_model.0.iter() {
-            let uuid = registry.register_model(entity, mesh_handle, material_handle, ssbo.allocate_transform_id());
+            let uuid = registry.register_entity(entity, mesh_handle, material_handle, ssbo.allocate_transform_id());
             new_dirty_transforms.push((uuid, TransformUniform::new(transform)));
         }
     }

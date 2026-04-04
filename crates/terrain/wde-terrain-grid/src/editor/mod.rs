@@ -10,11 +10,16 @@ pub enum PlacementTool {
     #[default]
     Place
 }
+impl PlacementTool {
+    pub fn iter() -> impl Iterator<Item = PlacementTool> {
+        [PlacementTool::Place].into_iter()
+    }
+}
 
 #[derive(Resource, Default)]
 pub struct PlacementUI {
     pub enabled: bool,
-    pub selected_tools: PlacementTool,
+    pub selected_tool: PlacementTool,
 
     pub placement_entry_label: Option<String>,
     pub placement_entry: Option<PlacementConfigEntry>,

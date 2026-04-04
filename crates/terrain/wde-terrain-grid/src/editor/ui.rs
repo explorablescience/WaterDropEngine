@@ -15,15 +15,17 @@ pub fn show_ui(
     mut placement_ui: ResMut<PlacementUI>,
     placement_config: Res<PlacementConfig>
 ) {
-    // Set placement to none if tool deactivated
+    // Reset tool if disabled
     if !placement_ui.enabled {
-        reset_tool(&mut commands, placement_ui.selected_tools, &mut placement_ui);
+        for tool in PlacementTool::iter() {
+            reset_tool(&mut commands, tool, &mut placement_ui);
+        }
     }
-    
+
+    // Show UI
     if !ui_menu.is_clicked("Terrain/Placement") {
         return;
     }
-
     UIWindow::new("Placement Debug")
         .open(ui_menu.clicked_mut("Terrain/Placement").unwrap())
         .show(&ctx.0, |ui| {
@@ -35,12 +37,12 @@ pub fn show_ui(
             }
 
             ui.label("Tool:");
-            ui.selectable_value(&mut placement_ui.selected_tools, PlacementTool::Place, "Place");
+            ui.selectable_value(&mut placement_ui.selected_tool, PlacementTool::Place, "Place");
 
             ui.separator();
 
             // Show placement entity UI
-            if placement_ui.selected_tools == PlacementTool::Place {
+            if placement_ui.selected_tool == PlacementTool::Place {
                 // Select entity to place
                 ui.label("Placement Entity:");
                 let old_label = placement_ui.placement_entry_label.clone();
@@ -63,10 +65,10 @@ pub fn show_ui(
                                 PbrModel(entry.asset.models.clone())
                             ));
                         } else {
-                            reset_tool(&mut commands, placement_ui.selected_tools, &mut placement_ui);
+                            reset_tool(&mut commands, placement_ui.selected_tool, &mut placement_ui);
                         }
                     } else {
-                        reset_tool(&mut commands, placement_ui.selected_tools, &mut placement_ui);
+                        reset_tool(&mut commands, placement_ui.selected_tool, &mut placement_ui);
                     }
                 }
 
@@ -76,7 +78,7 @@ pub fn show_ui(
                     ui.label(format!("Model: {}", entry.asset.path));
                     ui.label(format!("Extent: {}x{}", entry.extent.x, entry.extent.y));
                 }
-            } else { reset_tool(&mut commands, placement_ui.selected_tools, &mut placement_ui); }
+            } else { reset_tool(&mut commands, placement_ui.selected_tool, &mut placement_ui); }
         });
 }
 

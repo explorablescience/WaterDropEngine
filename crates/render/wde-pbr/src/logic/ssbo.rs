@@ -9,7 +9,7 @@ pub(crate) struct PbrSsboPlugin;
 impl Plugin for PbrSsboPlugin {
     fn build(&self, app: &mut App) {
         app.get_sub_app_mut(RenderApp).unwrap()
-            .add_systems(Render, PbrSsbo::build_bind_group.in_set(RenderSet::BindGroups));
+            .add_systems(Render, SsboTransformPbr::build_bind_group.in_set(RenderSet::BindGroups));
     }
 
     fn finish(&self, app: &mut App) {
@@ -42,7 +42,7 @@ impl Plugin for PbrSsboPlugin {
         });
 
         app.get_sub_app_mut(RenderApp).unwrap()
-            .world_mut().insert_resource(PbrSsbo {
+            .world_mut().insert_resource(SsboTransformPbr {
                 buffer_staging: buffer,
                 buffer_gpu,
                 instance_to_transform_buffer,
@@ -53,9 +53,11 @@ impl Plugin for PbrSsboPlugin {
 }
 
 
-/// Store the SSBO of all model transforms
+/// Store the SSBO of all model transforms of every entity with a PbrModel component.
+/// The correspondance between the transform in the SSBO and the entity is done in the `PbrModelRegistry` resource.
+/// The SSBO is updated every frame with the transforms of the entities that have a PbrModel component and that are marked as dirty in the `DirtyTransforms` resource (that is for each entity that has a modified Transform).
 #[derive(Resource)]
-pub struct PbrSsbo {
+pub struct SsboTransformPbr {
     /// The ssbo staging buffer used to update the gpu buffer
     pub buffer_staging: Handle<Buffer>,
     /// The ssbo gpu buffer where each transform is stored
@@ -69,8 +71,8 @@ pub struct PbrSsbo {
     // The bind group layout and bind group for the ssbo
     pub bind_group: Option<BindGroup>
 }
-impl PbrSsbo {
-    pub fn build_bind_group(buffers: Res<RenderAssets<GpuBuffer>>, mut ssbo: ResMut<PbrSsbo>, render_instance: Res<RenderInstance>) {
+impl SsboTransformPbr {
+    pub fn build_bind_group(buffers: Res<RenderAssets<GpuBuffer>>, mut ssbo: ResMut<SsboTransformPbr>, render_instance: Res<RenderInstance>) {
         // Check if the ssbo bind group is already created
         if ssbo.bind_group.is_some() {
             return;
@@ -89,7 +91,7 @@ impl PbrSsbo {
         };
 
         // Create the ssbo layout
-        let ssbo_layout_built = PbrSsbo::get_layout().build(&render_instance.0.read().unwrap());
+        let ssbo_layout_built = SsboTransformPbr::get_layout().build(&render_instance.0.read().unwrap());
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();

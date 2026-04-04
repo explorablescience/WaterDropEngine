@@ -2,7 +2,7 @@ use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelud
 use wde_camera::prelude::*;
 use wde_renderer::{MSAA_SAMPLE_COUNT, pipelines::PushConstantDescriptor, prelude::*, ssbos::ssbo_mesh::SsboMesh};
 
-use crate::{assets::PbrMaterialAsset, logic::ssbo::PbrSsbo, passes::subpass::gbuffer_subpass_pbr::PushConstants};
+use crate::{assets::PbrMaterialAsset, logic::ssbo::SsboTransformPbr, passes::subpass::gbuffer_subpass_pbr::PushConstants};
 
 
 #[derive(Default, Asset, Clone, TypePath)]
@@ -32,7 +32,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
             bind_group_layouts: vec![
                 SsboMesh::layout(),
                 camera_feature.layout.clone(),
-                PbrSsbo::get_layout(),
+                SsboTransformPbr::get_layout(),
                 material.bind_group_layout.clone()
             ],
             depth: DepthDescriptor {

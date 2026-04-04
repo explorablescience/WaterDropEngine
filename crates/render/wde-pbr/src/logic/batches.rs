@@ -2,7 +2,7 @@ use wde_renderer::prelude::*;
 use wde_logger::prelude::*;
 use bevy::prelude::*;
 
-use crate::{assets::PbrMaterialAsset, logic::ssbo::PbrSsbo, prelude::{DirtyTransforms, ModelUuidToTransformUuidRender, PbrModel, PbrModelElementUuid, PbrModelRegistry}};
+use crate::{assets::PbrMaterialAsset, logic::ssbo::SsboTransformPbr, prelude::{DirtyTransforms, ModelUuidToTransformUuidRender, PbrModel, PbrModelElementUuid, PbrModelRegistry}};
 
 type ModelMaterialPair = (AssetId<MeshAsset>, AssetId<PbrMaterialAsset>);
 
@@ -80,7 +80,7 @@ fn extract(
 
 fn update_ssbo_transforms(
     buffers: Res<RenderAssets<GpuBuffer>>,
-    ssbo: Res<PbrSsbo>,
+    ssbo: Res<SsboTransformPbr>,
     render_instance: Res<RenderInstance>,
     mut dirty_transforms: ResMut<DirtyTransforms>,
     registry: Res<ModelUuidToTransformUuidRender>
@@ -180,7 +180,7 @@ fn build_batches(
 
 fn set_batches_transforms(
     buffers: Res<RenderAssets<GpuBuffer>>,
-    ssbo: Res<PbrSsbo>,
+    ssbo: Res<SsboTransformPbr>,
     render_instance: Res<RenderInstance>,
     batches: Res<Batches>
 ) {

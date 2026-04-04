@@ -104,6 +104,7 @@ pub mod prelude {
     pub use crate::assets::{PbrMaterial, PbrMaterialAsset};
     pub use crate::components::{lights::*, model::*};
     pub use crate::passes::*;
+    pub use crate::logic::ssbo::SsboTransformPbr;
 }
 
 pub mod assets;
