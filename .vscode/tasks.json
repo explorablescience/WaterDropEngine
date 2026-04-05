@@ -1,0 +1,70 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "cargo: test",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "test",
+                "--workspace",
+                "--all-targets"
+            ],
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "cargo: clippy",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "clippy",
+                "--workspace",
+                "--all-targets",
+                "--",
+                "-D",
+                "warnings"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "cargo: clippy fix",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "clippy",
+                "--fix",
+                "--allow-dirty",
+                "--allow-staged",
+                "--workspace",
+                "--all-targets"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "cargo: rustfmt",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "cargo: rustfmt check",
+            "type": "shell",
+            "command": "cargo",
+            "args": [
+                "fmt",
+                "--all",
+                "--check"
+            ],
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}

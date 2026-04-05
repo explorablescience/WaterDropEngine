@@ -4,14 +4,14 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Trace Game",
+            "name": "Trace",
             "cargo": {
                 "args": [
                     "build",
                     "--bin=waterdropengine",
                     "--package=waterdropengine",
                     "--target-dir=target",
-                    "--features=x11,debug,watch,tracing"
+                    "--features=debug,watch,tracing"
                 ],
                 "filter": {
                     "name": "waterdropengine",
@@ -27,14 +27,14 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Advanced Debug Game",
+            "name": "Debug GPU",
             "cargo": {
                 "args": [
                     "build",
                     "--bin=waterdropengine",
                     "--package=waterdropengine",
                     "--target-dir=target",
-                    "--features=x11,debug,watch,gpu-debug"
+                    "--features=debug,watch,gpu-debug"
                 ],
                 "filter": {
                     "name": "waterdropengine",
@@ -50,14 +50,14 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug Game",
+            "name": "Debug",
             "cargo": {
                 "args": [
                     "build",
                     "--bin=waterdropengine",
                     "--package=waterdropengine",
                     "--target-dir=target",
-                    "--features=x11,debug,watch"
+                    "--features=debug,watch"
                 ],
                 "filter": {
                     "name": "waterdropengine",
@@ -73,95 +73,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Release Game",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--release",
-                    "--bin=waterdropengine",
-                    "--package=waterdropengine",
-                    "--target-dir=target",
-                    "--features=x11"
-                ],
-                "filter": {
-                    "name": "waterdropengine",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
-            }
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug Examples",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--bin=wde-examples",
-                    "--package=wde-examples",
-                    "--target-dir=target",
-                    "--features=x11,debug,watch"
-                ],
-                "filter": {
-                    "name": "wde-examples",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
-            }
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Generate Engine Doc",
-            "cargo": {
-                "args": [
-                    "doc",
-                    "--open",
-                    "--all-features",
-                    "--no-deps",
-                    // "--document-private-items",
-                    "--target-dir=target-doc"
-                ]
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Release Game Wayland",
-            "cargo": {
-                "args": [
-                    "build",
-                    "--release",
-                    "--bin=waterdropengine",
-                    "--package=waterdropengine",
-                    "--target-dir=target",
-                    "--features=wayland"
-                ],
-                "filter": {
-                    "name": "waterdropengine",
-                    "kind": "bin"
-                }
-            },
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "env": {
-                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
-            }
-        },
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Release Game Windows",
+            "name": "Release",
             "cargo": {
                 "args": [
                     "build",
@@ -180,6 +92,71 @@
             "env": {
                 "CARGO_MANIFEST_DIR": "${workspaceFolder}",
             }
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Examples",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=wde-examples",
+                    "--package=wde-examples",
+                    "--target-dir=target",
+                    "--features=debug,watch"
+                ],
+                "filter": {
+                    "name": "wde-examples",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "CARGO_MANIFEST_DIR": "${workspaceFolder}",
+            }
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Run Clippy",
+            "command": "cargo clippy --workspace --all-targets -- -D warnings",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Fix Clippy",
+            "command": "cargo clippy --fix --allow-dirty --allow-staged --workspace --all-targets",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Run Rustfmt",
+            "command": "cargo fmt --all",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Check Rustfmt",
+            "command": "cargo fmt --all --check",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Check Docs",
+            "command": "RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Run Tests",
+            "command": "cargo test --workspace --all-targets",
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

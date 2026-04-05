@@ -1,4 +1,4 @@
-name: Release Build for WaterDropEngine
+name: Release
 
 on:
   push:
@@ -23,10 +23,6 @@ jobs:
 
       - name: Install system dependencies
         uses: ./.github/actions/install-linux-deps
-        with:
-          wayland: "true"
-          xkb: "true"
-          x11: "true"
 
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
@@ -43,12 +39,13 @@ jobs:
         run: |
           mkdir -p dist
           cp target/x86_64-unknown-linux-gnu/release/waterdropengine dist/
+          cp -a res dist/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: waterdropengine-linux
-          path: dist/*
+          path: dist/**
           if-no-files-found: error
 
   build-windows:
@@ -74,10 +71,11 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
           Copy-Item target/x86_64-pc-windows-msvc/release/waterdropengine.exe dist/
+          Copy-Item -Recurse -Force res dist/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: waterdropengine-windows
-          path: dist/*
+          path: dist/**
           if-no-files-found: error

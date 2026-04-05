@@ -1,4 +1,4 @@
-name: CI of WaterDropEngine
+name: CI
 
 on:
   pull_request:
@@ -41,10 +41,6 @@ jobs:
 
       - name: Install system dependencies
         uses: ./.github/actions/install-linux-deps
-        with:
-          wayland: "true"
-          xkb: "true"
-          x11: "true"
 
       - name: Install Rust (stable + clippy)
         uses: dtolnay/rust-toolchain@stable
@@ -66,10 +62,6 @@ jobs:
 
       - name: Install system dependencies
         uses: ./.github/actions/install-linux-deps
-        with:
-          wayland: "true"
-          xkb: "true"
-          x11: "true"
 
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable

@@ -1,18 +1,10 @@
-# This action installs a few dependencies necessary to build WaterDropEngine on Linux.
-# It can be fine tuned to install just a specific set of dependencies.
+# This action installs dependencies necessary to compile WaterDropEngine on Linux.
+# It defaults to installing all compile-critical libraries.
 # ```
 # - uses: ./.github/actions/install-linux-deps
-#   with:
-#       wayland: "true"
-#       xkb: "true"
-#       x11: "true"
 # ```
-#
-# See the `inputs` section for all options and their defaults. Note that you must checkout the
-# repository before you can use this action.
-#
-# This action will only install dependencies when the current operating system is Linux. It will do
-# nothing on any other OS (macOS, Windows).
+# See the `inputs` section for all options and their defaults. Note that you must checkout the repository before you can use this action.
+# This action will only install dependencies when the current operating system is Linux. It will do nothing on any other OS (macOS, Windows).
 
 name: Install Linux dependencies
 description: Installs the dependencies necessary to build WaterDropEngine on Linux.
@@ -36,19 +28,11 @@ inputs:
   xkb:
     description: Install xkb (libxkbcommon-dev)
     required: false
-    default: "false"
+    default: "true"
   x11:
     description: Install X11 client headers (libx11-dev)
     required: false
-    default: "false"
-  x264:
-    description: Install x264 (libx264-dev)
-    required: false
-    default: "false"
-  fontconfig:
-    description: Install fontconfig (libfontconfig1-dev)
-    required: false
-    default: "false"
+    default: "true"
 runs:
   using: composite
   steps:
@@ -65,5 +49,3 @@ runs:
         ${{ fromJSON(inputs.wayland) && 'libwayland-dev' || '' }}
         ${{ fromJSON(inputs.xkb) && 'libxkbcommon-dev' || '' }}
         ${{ fromJSON(inputs.x11) && 'libx11-dev' || '' }}
-        ${{ fromJSON(inputs.x264) && 'libx264-164 libx264-dev' || '' }}
-        ${{ fromJSON(inputs.fontconfig) && 'libfontconfig1-dev' || '' }}

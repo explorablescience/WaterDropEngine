@@ -1,4 +1,4 @@
-name: Build WaterDropEngine docs and deploy them using Github Pages
+name: Build and deploy docs
 
 on:
   push:
@@ -28,10 +28,6 @@ jobs:
 
       - name: Install system dependencies
         uses: ./.github/actions/install-linux-deps
-        with:
-          wayland: "true"
-          xkb: "true"
-          x11: "true"
 
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
@@ -46,7 +42,7 @@ jobs:
         run: echo '<meta http-equiv="refresh" content="0; url=wde">' > target/doc/index.html
 
       - name: Upload pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: target/doc
 
