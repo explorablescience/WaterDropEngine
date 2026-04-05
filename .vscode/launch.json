@@ -96,7 +96,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Examples",
+            "name": "Run Examples",
             "cargo": {
                 "args": [
                     "build",
@@ -119,29 +119,15 @@
         {
             "type": "node-terminal",
             "request": "launch",
-            "name": "Run Clippy",
+            "name": "Check Clippy",
             "command": "cargo clippy --workspace --all-targets -- -D warnings",
             "cwd": "${workspaceFolder}"
         },
         {
             "type": "node-terminal",
             "request": "launch",
-            "name": "Fix Clippy",
-            "command": "cargo clippy --fix --allow-dirty --allow-staged --workspace --all-targets",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "node-terminal",
-            "request": "launch",
-            "name": "Run Rustfmt",
-            "command": "cargo fmt --all",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "node-terminal",
-            "request": "launch",
             "name": "Check Rustfmt",
-            "command": "cargo fmt --all --check",
+            "command": "cargo +nightly fmt --all --check",
             "cwd": "${workspaceFolder}"
         },
         {
@@ -157,6 +143,20 @@
             "name": "Run Tests",
             "command": "cargo test --workspace --all-targets",
             "cwd": "${workspaceFolder}"
-        }
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Fix Clippy",
+            "command": "cargo clippy --fix --allow-dirty --allow-staged --workspace --all-targets",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "node-terminal",
+            "request": "launch",
+            "name": "Fix Rustfmt",
+            "command": "cargo +nightly fmt --all",
+            "cwd": "${workspaceFolder}"
+        },
     ]
 }
