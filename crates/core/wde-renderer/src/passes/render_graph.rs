@@ -354,19 +354,9 @@ fn create_render_pass<'p>(
     // Create the render pass
     command_buffer.create_render_pass(label, |builder: &mut RenderPassBuilder| -> Result<(), String> {
         // Set color attachments
-        if pass_desc.attachments_colors.is_none() {
-            // Set swapchain as color attachment if no other color attachments are specified
-            let swapchain_frame = match swapchain_frame.data.as_ref() {
-                Some(frame) => frame,
-                None => return Err("No swapchain frame available".to_string())
-            };
-            builder.add_color_attachment(RenderPassColorAttachment {
-                texture: Some(&swapchain_frame.view),
-                ..default()
-            });
-        } else {
+        if let Some(attachments_color) = &pass_desc.attachments_colors {
             // Set specified color attachments
-            for color_attachment_desc in pass_desc.attachments_colors.as_ref().unwrap().iter() {
+            for color_attachment_desc in attachments_color.iter() {
                 if let Some(texture) = textures.get(color_attachment_desc.texture) {
                     if !(surface_width == texture.texture.size.0 && surface_height == texture.texture.size.1) {
                         return Err(format!("Color attachment texture has invalid size: expected ({}, {}), got ({}, {})", surface_width, surface_height, texture.texture.size.0, texture.texture.size.1));
@@ -389,19 +379,29 @@ fn create_render_pass<'p>(
                     return Err("Invalid texture for color attachment".to_string());
                 }
             }
+        } else {
+            // Set swapchain as color attachment if no other color attachments are specified
+            let swapchain_frame = match swapchain_frame.data.as_ref() {
+                Some(frame) => frame,
+                None => return Err("No swapchain frame available".to_string())
+            };
+            builder.add_color_attachment(RenderPassColorAttachment {
+                texture: Some(&swapchain_frame.view),
+                ..default()
+            });
         }
 
         // Set depth attachments
-        if pass_desc.attachments_depth.is_some() {
-            if let Some(depth_texture) = pass_desc.attachments_depth.as_ref().unwrap().texture
+        if let Some(depth_attachment) = pass_desc.attachments_depth.as_ref() {
+            if let Some(depth_texture) = depth_attachment.texture
                && let Some(depth_texture) = textures.get(depth_texture) {
                 if !(surface_width == depth_texture.texture.size.0 && surface_height == depth_texture.texture.size.1) {
                     return Err(format!("Depth attachment texture has invalid size: expected ({}, {}), got ({}, {}).", surface_width, surface_height, depth_texture.texture.size.0, depth_texture.texture.size.1));
                 }
                 builder.set_depth_texture(RenderPassDepth {
                     texture: Some(&depth_texture.texture.view),
-                    load: pass_desc.attachments_depth.as_ref().unwrap().load,
-                    store: pass_desc.attachments_depth.as_ref().unwrap().store
+                    load: depth_attachment.load,
+                    store: depth_attachment.store
                 });
             } else {
                 return Err("Invalid texture for depth attachment".to_string());
