@@ -1,12 +1,10 @@
-name: CI
+name: CI of WaterDropEngine
 
 on:
   pull_request:
   push:
     branches:
       - main
-      - master
-      - develop
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -21,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Rust (stable + rustfmt)
         uses: dtolnay/rust-toolchain@stable
@@ -39,18 +37,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            pkg-config \
-            libasound2-dev \
-            libudev-dev \
-            libxkbcommon-dev \
-            libwayland-dev \
-            libx11-dev
+        uses: ./.github/actions/install-linux-deps
+        with:
+          wayland: "true"
+          xkb: "true"
+          x11: "true"
 
       - name: Install Rust (stable + clippy)
         uses: dtolnay/rust-toolchain@stable
@@ -68,18 +62,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            pkg-config \
-            libasound2-dev \
-            libudev-dev \
-            libxkbcommon-dev \
-            libwayland-dev \
-            libx11-dev
+        uses: ./.github/actions/install-linux-deps
+        with:
+          wayland: "true"
+          xkb: "true"
+          x11: "true"
 
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable

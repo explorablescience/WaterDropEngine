@@ -1,0 +1,83 @@
+name: Release Build for WaterDropEngine
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-linux:
+    name: Build (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install system dependencies
+        uses: ./.github/actions/install-linux-deps
+        with:
+          wayland: "true"
+          xkb: "true"
+          x11: "true"
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --workspace --release --target x86_64-unknown-linux-gnu
+
+      - name: Package binary
+        run: |
+          mkdir -p dist
+          cp target/x86_64-unknown-linux-gnu/release/waterdropengine dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: waterdropengine-linux
+          path: dist/*
+          if-no-files-found: error
+
+  build-windows:
+    name: Build (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --workspace --release --target x86_64-pc-windows-msvc
+
+      - name: Package binary
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item target/x86_64-pc-windows-msvc/release/waterdropengine.exe dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: waterdropengine-windows
+          path: dist/*
+          if-no-files-found: error
