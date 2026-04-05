@@ -40,7 +40,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build release
-        run: cargo build --workspace --release --locked --target ${{ matrix.target }}
+        run: cargo build --workspace --release --target ${{ matrix.target }}
 
       - name: Package Linux binary
         if: runner.os == 'Linux'

@@ -34,7 +34,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build documentation
-        run: cargo doc --workspace --no-deps --locked
+        run: cargo doc --workspace --no-deps
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
