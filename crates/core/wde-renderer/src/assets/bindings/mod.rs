@@ -106,7 +106,7 @@
 //! ```
 //! 
 //! ## Custom pipeline and subpass
-//! See the documentation of [crate::pipelines] and [crate::passes] for more details on how to create custom render pipelines and subpasses that can use the material.
+//! See the documentation of [crate::passes] for more details on how to create custom render pipelines and subpasses that can use the material.
 //! 
 //! # Generic render bindings
 //! ## Main differences with materials

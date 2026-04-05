@@ -34,7 +34,7 @@
 //! ```
 //! 
 //! ## Render pipeline
-//! Then, as each sub-pass requires a render pipeline, you need to define a render pipeline asset that implements the [`RenderAsset`] trait, which describes how to prepare the pipeline from a source asset. For example:
+//! Then, as each sub-pass requires a render pipeline, you need to define a render pipeline asset that implements the [`crate::prelude::RenderAsset`] trait, which describes how to prepare the pipeline from a source asset. For example:
 //! ```rust
 //! #[derive(TypePath, Default, Clone)]
 //! pub struct DemoRenderPipeline(pub CachedPipelineIndex);

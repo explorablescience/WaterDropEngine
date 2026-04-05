@@ -15,7 +15,7 @@
 //!   compile WGSL source, build pipeline layouts (bind groups + push constants), and expose
 //!   `is_initialized` + getters for the underlying `wgpu` objects.
 //! - **Pass orchestration**: [`command_buffer::CommandBuffer`] records GPU work. It spawns
-//!   [`render_pass::RenderPass`] and [`compute_pass::WComputePass`] with guard rails that
+//!   [`render_pass::RenderPassInstance`] and [`compute_pass::WComputePass`] with guard rails that
 //!   check for missing pipelines/buffers before issuing draws or dispatches.
 //! - **Bind groups**: [`bind_group`] helps assemble layouts and bind groups that match WGSL
 //!   declarations.
@@ -95,7 +95,7 @@
 //! - Minimal WGSL shaders live in `res/` (see `res/examples` for full scenes).
 //! - Bind group helpers sit in [`bind_group`]; pair them with pipeline layouts for material
 //!   or compute resource binding.
-//! - For GPU-driven draws, see indirect helpers on [`render_pass::RenderPass`].
+//! - For GPU-driven draws, see indirect helpers on [`render_pass::RenderPassInstance`].
 //! - The examples under `res/examples` show complete scenes; start with `display_texture` for
 //!   a minimal textured quad.
 pub mod instance;
