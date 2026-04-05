@@ -67,7 +67,6 @@
 //!
 //! - [`render`]: Core rendering functionality and custom render passes
 //! - [`camera`]: Camera components and systems
-//! - [`scene`]: Scene management and entity organization
 //! - [`gizmos`]: Debug visualization and gizmo rendering (requires `gizmos` feature)
 //! - [`pbr`]: Physically-based rendering materials (requires `pbr` feature)
 //!

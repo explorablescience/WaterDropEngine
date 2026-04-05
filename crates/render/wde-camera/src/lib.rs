@@ -3,13 +3,6 @@
 //! active-camera tag, and the render-side bind group/buffer that shaders consume.
 //!
 //! # Architecture
-//! - **Components**: [`components::CameraView`] stores fov/near/far; [`components::Camera`]
-//!   tags an entity as a camera; [`components::ActiveCamera`] marks the one to render; and
-//!   [`components::CameraController`] implements a FPS-style mover.
-//! - **Controller system**: The controller system polls keyboard/mouse,
-//!   updates yaw/pitch, velocity, and writes back the entity `Transform`.
-//! - **Render feature**: [`features::CameraFeatureRender`] allocates a uniform buffer +
-//!   bind group (layout at binding 0) with world→NDC, NDC→world, and camera position.
 //! - **Plugin wiring**: [`CameraPlugin`] registers the components for reflection, installs the
 //!   controller system, extracts the active camera every frame, and keeps the GPU buffer fresh.
 //!
@@ -44,10 +37,6 @@
 //! - Tune `CameraController` keys/speeds/sensitivity per scene; yaw/pitch are persisted.
 //! - When resizing the window, the feature recomputes aspect ratio automatically from `Window`.
 //! - The camera bind group sits at index 0 in render pipelines; reuse it across passes.
-//!
-//! # Modules
-//! - [`components`]: camera tags, projection data, controller system, GPU uniform packing.
-//! - [`features`]: render-side extraction, bind group layout, and buffer upload schedule.
 //!
 //! # Examples and further reading
 //! - For custom movement, swap out `CameraController` but keep `Camera`, `CameraView`, and

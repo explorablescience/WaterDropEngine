@@ -3,7 +3,7 @@
 //! (G-buffer + lighting).
 //!
 //! # Architecture
-//! - **Assets**: [`assets::Material3dAsset`] stores albedo/specular colors and optional textures;
+//! - **Assets**: [`Material3d`] stores albedo/specular colors and optional textures;
 //!   the material builder emits a uniform (flags, albedo, specular) plus optional sampled textures.
 //! - **Components**: [`components::lights`] defines [`components::lights::DirectionalLight`], [`components::lights::PointLight`],
 //!   [`components::lights::SpotLight`] with attenuation helpers and defaults.
@@ -86,8 +86,6 @@
 //! # Modules
 //! - [`assets`]: PBR material asset, GPU packing, and registration.
 //! - [`components`]: light components and CPU→GPU storage layout.
-//! - [`features`]: light extraction and bind group construction.
-//! - [`passes`]: SSBOs, deferred targets, pipelines, and G-buffer/lighting render passes.
 //!
 //! # Examples and further reading
 //! - Extend `Material3dAsset` with metallic/roughness maps by adding extra bindings in
