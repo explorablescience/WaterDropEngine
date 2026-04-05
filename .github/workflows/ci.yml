@@ -21,8 +21,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Install Rust (stable + rustfmt)
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust (nightly + rustfmt)
+        uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
 
@@ -30,7 +30,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
-        run: cargo fmt --all --check
+        run: cargo +nightly fmt --all --check
 
   clippy:
     name: Clippy
