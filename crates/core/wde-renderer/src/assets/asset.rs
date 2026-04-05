@@ -1,3 +1,5 @@
+use wde_logger::prelude::*;
+
 use bevy::{
     app::{App, Plugin},
     ecs::{
@@ -8,7 +10,6 @@ use bevy::{
     prelude::*
 };
 use thiserror::Error;
-use wde_logger::prelude::*;
 
 use crate::core::{Extract, MainWorld, Render, RenderApp, RenderSet};
 

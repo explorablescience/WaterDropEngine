@@ -1,9 +1,10 @@
+use wde_logger::prelude::*;
+
 use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
     prelude::*
 };
 use wde_camera::render::CameraFeatureRender;
-use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::{

@@ -1,5 +1,6 @@
 //! Camera controller based on bevy's first person camera controller.
 //! @see <https://github.com/bevyengine/bevy/blob/8de15ae71a23ce2eb272a7036b4ae82649f09634/examples/helpers/camera_controller.rs>
+use wde_logger::prelude::*;
 
 use bevy::{
     input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
@@ -7,7 +8,6 @@ use bevy::{
 };
 use std::f32::consts::*;
 use wde_camera::camera::CameraView;
-use wde_logger::prelude::*;
 
 /// Based on Valorant's default sensitivity, not entirely sure why it is exactly 1.0 / 180.0,
 /// but I'm guessing it is a misunderstanding between degrees/radians and then sticking with

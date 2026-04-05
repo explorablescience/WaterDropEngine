@@ -1,11 +1,11 @@
-use std::io::{Error, ErrorKind};
+use wde_logger::prelude::*;
 
 use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
     prelude::*
 };
+use std::io::{Error, ErrorKind};
 use thiserror::Error;
-use wde_logger::prelude::*;
 
 /// Stores a shader source as UTF-8 text. File should have a `.wgsl` extension.
 /// Most of the time, the user does not need to load shaders directly, as they can be embedded in materials and pipelines.

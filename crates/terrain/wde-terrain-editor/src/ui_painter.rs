@@ -1,6 +1,7 @@
+use wde_logger::prelude::*;
+
 use bevy::prelude::*;
 use wde_editor::prelude::*;
-use wde_logger::prelude::*;
 use wde_terrain::prelude::*;
 
 use crate::{

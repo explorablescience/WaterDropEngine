@@ -1,10 +1,11 @@
+use wde_logger::prelude::*;
+
 use crate::{
     prelude::*,
     ui_textures::{UITextureHandle, UITextures}
 };
 use bevy::prelude::*;
 use wde_egui::prelude::*;
-use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 
 #[derive(Resource, Default)]

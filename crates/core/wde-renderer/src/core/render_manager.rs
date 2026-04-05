@@ -1,14 +1,13 @@
 //! Rendering system for the WDE renderer. Handle the initialization and presentation of the wgpu renderer.
+use wde_logger::prelude::*;
 
 use bevy::prelude::*;
 use bevy::window::{PresentMode, PrimaryWindow, RawHandleWrapperHolder};
-use wde_logger::prelude::*;
 use wde_wgpu::instance::{self, PresentMode as WPresentMode, RenderEvent, setup_surface};
 
 use crate::core::RenderInstance;
 
 use super::SwapchainFrame;
-
 use super::{EmptyWorld, extract_macros::ExtractWorld};
 
 /// Initialize the main world empty resource.

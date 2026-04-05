@@ -1,4 +1,4 @@
-use std::io::{Error, ErrorKind};
+use wde_logger::prelude::*;
 
 use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
@@ -7,8 +7,8 @@ use bevy::{
 };
 use image::GenericImageView;
 use serde::{Deserialize, Serialize};
+use std::io::{Error, ErrorKind};
 use thiserror::Error;
-use wde_logger::prelude::*;
 
 use crate::core::RenderInstance;
 

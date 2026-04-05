@@ -12,11 +12,12 @@
 //!     ui.image(egui::load::SizedTexture::new(egui_texture_id, egui::vec2(100.0, 100.0)));
 //! }
 //! ```
-use std::collections::HashMap;
+
+use wde_logger::prelude::*;
 
 use bevy::prelude::*;
+use std::collections::HashMap;
 use wde_egui::prelude::*;
-use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 
 pub type EguiTextureId = egui::TextureId;

@@ -1,7 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufReader, Error}
-};
+use wde_logger::prelude::*;
 
 use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
@@ -12,9 +9,12 @@ use bevy::{
     prelude::*
 };
 use serde::{Deserialize, Serialize};
+use std::{
+    fs::File,
+    io::{BufReader, Error}
+};
 use thiserror::Error;
 use tobj::LoadError;
-use wde_logger::prelude::*;
 use wde_wgpu::{
     buffer::{Buffer, BufferUsage},
     vertex::Vertex

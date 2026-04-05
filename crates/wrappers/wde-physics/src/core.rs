@@ -2,11 +2,11 @@
 //!
 //! This module contains the main physics world resource and systems for managing
 //! colliders, rigid bodies, and spatial queries.
+use wde_logger::prelude::*;
 
 use bevy::prelude::*;
 use rapier3d::prelude::*;
 use std::{collections::HashMap, sync::RwLock};
-use wde_logger::prelude::*;
 
 use crate::{
     colliders::Collider,

@@ -1,7 +1,7 @@
-use std::collections::HashSet;
+use wde_logger::prelude::*;
 
 use bevy::{asset::io::embedded::GetAssetServer, prelude::*};
-use wde_logger::prelude::*;
+use std::collections::HashSet;
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::ChunkPos;
 

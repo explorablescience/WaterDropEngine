@@ -19,9 +19,9 @@
 //! }
 //! ```
 #![allow(clippy::too_many_arguments)]
+use wde_logger::prelude::*;
 
 use bevy::prelude::*;
-use wde_logger::prelude::*;
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 

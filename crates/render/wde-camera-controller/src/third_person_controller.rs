@@ -1,10 +1,11 @@
+use wde_logger::prelude::*;
+
 use bevy::{
     input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
     prelude::*
 };
 use std::f32::consts::*;
 use wde_camera::camera::CameraView;
-use wde_logger::prelude::*;
 
 pub(crate) struct ThirdPersonControllerPlugin;
 impl Plugin for ThirdPersonControllerPlugin {

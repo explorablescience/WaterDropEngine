@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use wde_logger::prelude::*;
 
 use crate::{
     assets::bindings::{
@@ -14,7 +14,7 @@ use bevy::{
     },
     prelude::*
 };
-use wde_logger::prelude::*;
+use std::collections::HashMap;
 
 // Reexport wgpu types
 pub use wde_wgpu::bind_group::{

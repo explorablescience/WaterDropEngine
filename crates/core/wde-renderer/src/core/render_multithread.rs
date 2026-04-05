@@ -1,5 +1,6 @@
 //! This module contains the [`PipelinedRenderingPlugin`] which moves rendering into a different thread.
 //! From the bevy source code, this is a modified version of the `bevy::render::pipeline::PipelinedRenderingPlugin`.
+use wde_logger::prelude::*;
 
 use async_channel::{Receiver, Sender};
 use bevy::{
@@ -8,7 +9,6 @@ use bevy::{
     prelude::*,
     tasks::ComputeTaskPool
 };
-use wde_logger::prelude::*;
 
 use super::RenderApp;
 

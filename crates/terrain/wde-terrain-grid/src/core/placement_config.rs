@@ -1,6 +1,7 @@
+use wde_logger::prelude::*;
+
 use bevy::prelude::*;
 use wde_gltf::prelude::*;
-use wde_logger::prelude::*;
 use wde_scene::prelude::*;
 
 const PLACEMENT_CONFIG_VERSION: u32 = 1;

@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use wde_logger::prelude::*;
 
 use bevy::prelude::*;
-use wde_logger::prelude::*;
+use std::collections::HashMap;
 
 use crate::utils::image_decoder::decode_png_as_channels;
 
