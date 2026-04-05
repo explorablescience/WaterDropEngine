@@ -38,7 +38,7 @@ impl RenderSubPass for SubRenderPassTerrainGround {
         SRes<TerrainRenderPassMesh>,
         SRes<RenderAssets<GpuMesh>>,
         SRes<RenderAssets<GpuTerrainRenderPipeline>>,
-        SRes<CameraFeatureRender>,
+        SBinding<CameraRender>,
         SRes<TerrainMaterialArrays>,
         SRes<TerrainBuffer>,
         SRes<TerrainRendererGPU>
@@ -49,7 +49,7 @@ impl RenderSubPass for SubRenderPassTerrainGround {
             terrain_render_pass_mesh,
             meshes,
             pipeline,
-            camera_feature_render,
+            camera,
             terrain_material_arrays,
             terrain_buffer,
             terrain_renderer
@@ -88,7 +88,7 @@ impl RenderSubPass for SubRenderPassTerrainGround {
                     .as_ref()
                     .map(|mesh| mesh.id())
             ),
-            SubPassCommand::BindGroup(0, camera_feature_render.bind_group.clone()),
+            SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, camera)| camera.bind_group.clone())),
             SubPassCommand::BindGroup(1, terrain_material_arrays.bind_group.clone()),
             SubPassCommand::BindGroup(2, terrain_buffer.bind_group.clone()),
             SubPassCommand::DrawBatches(batches),

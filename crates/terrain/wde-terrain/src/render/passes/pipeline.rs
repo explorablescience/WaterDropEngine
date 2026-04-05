@@ -25,18 +25,18 @@ impl RenderAsset for GpuTerrainRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SRes<CameraFeatureRender>,
+        SBinding<CameraRender>,
         SRes<TerrainMaterialArrays>,
         SRes<TerrainBuffer>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera_feature, material_arrays, terrain_buffer): &mut SystemParamItem<Self::Params>
+        (assets_server, pipeline_manager, camera, material_arrays, terrain_buffer): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        let materials_layout = match &material_arrays.bind_group_layout {
-            Some(layout) => layout,
-            None => return Err(PrepareAssetError::RetryNextUpdate(asset))
+        let (camera, materials_layout) = match (camera.iter().next(), &material_arrays.bind_group_layout) {
+            (Some((_, camera)), Some(layout)) => (camera, layout),
+            _ => return Err(PrepareAssetError::RetryNextUpdate(asset))
         };
 
         Ok(GpuTerrainRenderPipeline(
@@ -45,7 +45,7 @@ impl RenderAsset for GpuTerrainRenderPipeline {
                 vert: Some(assets_server.load("core/render/terrain/render_terrain_vert.wgsl")),
                 frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
                 bind_group_layouts: vec![
-                    camera_feature.layout.clone(),
+                    camera.layout.clone(),
                     materials_layout.clone(),
                     terrain_buffer.layout.clone(),
                     TerrainRendererGPU::layout_render(),

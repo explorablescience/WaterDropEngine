@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_camera::camera::ActiveCamera;
+use wde_camera::prelude::*;
 use wde_editor::prelude::*;
 
 use crate::prelude::ThirdPersonController;

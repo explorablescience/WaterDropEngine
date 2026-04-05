@@ -5,7 +5,7 @@ use bevy::{
     prelude::*
 };
 use std::f32::consts::*;
-use wde_camera::camera::CameraView;
+use wde_camera::prelude::*;
 
 pub(crate) struct ThirdPersonControllerPlugin;
 impl Plugin for ThirdPersonControllerPlugin {

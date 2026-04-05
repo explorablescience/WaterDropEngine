@@ -2,7 +2,7 @@ use crate::prelude::*;
 use bevy::prelude::*;
 use wde_editor::prelude::*;
 
-pub struct CameraPropertiesEditor;
+pub(crate) struct CameraPropertiesEditor;
 impl Plugin for CameraPropertiesEditor {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, init_ui)

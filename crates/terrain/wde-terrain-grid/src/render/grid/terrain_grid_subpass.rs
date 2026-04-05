@@ -72,12 +72,12 @@ impl RenderSubPass for RenderSubPassTerrainGrid {
     type Params = (
         SRes<RenderAssets<GpuTerrainGridRenderPipeline>>,
         SRes<RenderSubPassTerrainGrid>,
-        SRes<CameraFeatureRender>,
+        SBinding<CameraRender>,
         SRes<TerrainGridBuffer>
     );
 
     fn describe(
-        (pipeline, subpass, camera_feature, grid_buffer): &SystemParamItem<Self::Params>
+        (pipeline, subpass, camera, grid_buffer): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         if !subpass.render_grid {
             return RenderSubPassDesc::default();
@@ -85,7 +85,7 @@ impl RenderSubPass for RenderSubPassTerrainGrid {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::Mesh(subpass.mesh.as_ref().map(|m| m.id())),
-            SubPassCommand::BindGroup(0, camera_feature.bind_group.clone()),
+            SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
             SubPassCommand::BindGroup(1, grid_buffer.bind_group.clone()),
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
                 index_range: 0..6,

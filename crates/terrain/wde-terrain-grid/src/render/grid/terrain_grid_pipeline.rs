@@ -22,14 +22,19 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SRes<CameraFeatureRender>,
+        SBinding<CameraRender>,
         SRes<TerrainGridBuffer>
     );
 
     fn prepare(
         _asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera_feature, terrain_grid_buffer): &mut SystemParamItem<Self::Params>
+        (assets_server, pipeline_manager, camera, terrain_grid_buffer): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        let camera = match camera.iter().next() {
+            Some((_, camera)) => camera,
+            None => return Err(PrepareAssetError::RetryNextUpdate(_asset))
+        };
+
         Ok(GpuTerrainGridRenderPipeline(
             pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
                 label: "terrain-grid",
@@ -44,7 +49,7 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
                     alpha: BlendComponent::OVER
                 }),
                 bind_group_layouts: vec![
-                    camera_feature.layout.clone(),
+                    camera.layout.clone(),
                     terrain_grid_buffer.layout.clone(),
                 ],
                 depth: DepthDescriptor {

@@ -4,8 +4,8 @@ use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
     prelude::*
 };
-use wde_camera::render::CameraFeatureRender;
 use wde_renderer::prelude::*;
+use wde_camera::prelude::*;
 
 use crate::{
     assets::PbrMaterial,
@@ -17,13 +17,13 @@ pub(crate) struct SubRenderPassGbufferPbr;
 impl RenderSubPass for SubRenderPassGbufferPbr {
     type Params = (
         SRes<RenderAssets<GpuPbrGBufferRenderPipeline>>,
-        SRes<CameraFeatureRender>,
+        SBinding<CameraRender>,
         SRes<SsboTransformPbr>,
         SRes<RenderAssets<GpuRenderBinding<SsboMesh>>>
     );
 
     fn describe(
-        (render_pipeline, camera_feature, pbr_ssbo, ssbo_mesh): &SystemParamItem<Self::Params>
+        (render_pipeline, camera, pbr_ssbo, ssbo_mesh): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(
@@ -36,7 +36,7 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
                     .next()
                     .map(|(_, mesh)| mesh.bind_group.clone())
             ),
-            SubPassCommand::BindGroup(1, camera_feature.bind_group.clone()),
+            SubPassCommand::BindGroup(1, camera.iter().next().map(|(_, camera)| camera.bind_group.clone())),
             SubPassCommand::BindGroup(2, pbr_ssbo.bind_group.clone()),
             SubPassCommand::Custom(draw_custom),
         ])

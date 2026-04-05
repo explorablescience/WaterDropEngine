@@ -25,17 +25,17 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SRes<CameraFeatureRender>,
+        SBinding<CameraRender>,
         SBinding<SsboMesh>,
         SMaterial<PbrMaterial>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera_feature, ssbo_mesh, pbr_materials): &mut SystemParamItem<Self::Params>
+        (assets_server, pipeline_manager, camera, ssbo_mesh, pbr_materials): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        let (ssbo_mesh, material) = match (ssbo_mesh.iter().next(), pbr_materials.iter().next()) {
-            (Some((_, mesh)), Some((_, material))) => (mesh, material),
+        let (ssbo_mesh, camera, material) = match (ssbo_mesh.iter().next(), camera.iter().next(), pbr_materials.iter().next()) {
+            (Some((_, mesh)), Some((_, camera)), Some((_, material))) => (mesh, camera, material),
             _ => return Err(PrepareAssetError::RetryNextUpdate(asset))
         };
 
@@ -46,7 +46,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
                 frag: Some(assets_server.load("core/render/pbr/gbuffer_frag.wgsl")),
                 bind_group_layouts: vec![
                     ssbo_mesh.layout.clone(),
-                    camera_feature.layout.clone(),
+                    camera.layout.clone(),
                     SsboTransformPbr::get_layout(),
                     material.layout.clone(),
                 ],

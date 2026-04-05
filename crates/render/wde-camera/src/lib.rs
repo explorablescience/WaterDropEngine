@@ -1,60 +1,36 @@
-//! WaterDropEngine's `wde-camera` crate provides the camera ECS pieces that feed render-time
-//! matrices into `wde-renderer`. It bundles first-person controls, projection defaults, an
-//! active-camera tag, and the render-side bind group/buffer that shaders consume.
+//! Camera plugin for WaterDropEngine.
+//! 
+//! This plugin provides a camera component and a camera view component, as well as a system to extract the active camera and update the camera uniform each frame.
 //!
-//! # Architecture
-//! - **Plugin wiring**: [`CameraPlugin`] registers the components for reflection, installs the
-//!   controller system, extracts the active camera every frame, and keeps the GPU buffer fresh.
-//!
-//! # Quickstart (FPS camera)
-//! ```rust,no_run
-//! use bevy::prelude::*;
-//! use wde_renderer::prelude::*;
-//! use wde_camera::prelude::*;
-//!
-//! fn main() {
-//!     App::new()
-//!         .add_plugins(DefaultPlugins)
-//!         .add_plugins(RenderPlugin)   // from wde-renderer
-//!         .add_plugins(CameraPlugin)
-//!         .add_systems(Startup, spawn_camera)
-//!         .run();
-//! }
-//!
+//! # Example
+//! To spawn a camera, add a [`crate::prelude::Camera`] component, a [`crate::prelude::CameraView`] component. If you want the camera to be active, add the [`crate::prelude::ActiveCamera`] component as well. For example:
+//! ```rust
 //! fn spawn_camera(mut commands: Commands) {
 //!     commands.spawn((
-//!         Camera,
-//!         CameraView::default(),   // 60° fov, 0.1..1000 z range
-//!         CameraController::default(), // WASD + mouse look
-//!         ActiveCamera,
 //!         Transform::from_xyz(0.0, 2.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
+//!         Camera,
+//!         CameraView::default(),
+//!         ActiveCamera
 //!     ));
 //! }
 //! ```
-//!
-//! # Core usage patterns
-//! - Keep exactly one `ActiveCamera` in the main world; the render feature reads it each frame.
-//! - Tune `CameraController` keys/speeds/sensitivity per scene; yaw/pitch are persisted.
-//! - When resizing the window, the feature recomputes aspect ratio automatically from `Window`.
-//! - The camera bind group sits at index 0 in render pipelines; reuse it across passes.
-//!
-//! # Examples and further reading
-//! - For custom movement, swap out `CameraController` but keep `Camera`, `CameraView`, and
-//!   `ActiveCamera` so the uniform still updates.
-//! - Use the camera uniforms directly in WGSL (`world_to_ndc`, `ndc_to_world`, `position`)
-//!   when writing pipelines in `wde-renderer`.
+//! 
+//! The camera uniform will then be automatically updated each frame with the active camera's transform and view parameters.
+//! To consumes the camera uniform in a shader, you can use the [`crate::camera::CameraRender`] render binding.
+//! It is accessible by the resource `Res<RenderAssets<GpuRenderBinding<CameraRender>>>` in render systems, or `SBindings<CameraRender>` in shader code.
+//! See [`wde_renderer::prelude::GpuRenderBinding`] for more details on how to use render bindings in shaders.
 use bevy::prelude::*;
 
-use crate::render::CameraFeature;
+use crate::camera::CameraFeature;
 
+#[doc(hidden)]
 pub mod prelude {
-    pub use crate::CameraPlugin;
-    pub use crate::camera::{ActiveCamera, Camera, CameraView};
-    pub use crate::render::CameraFeatureRender;
+    pub use crate::camera::{ActiveCamera, Camera, CameraRender};
+    pub use crate::view::CameraView;
 }
 
-pub mod camera;
-pub mod render;
+mod view;
+mod camera;
 
 #[cfg(debug_assertions)]
 mod editor;

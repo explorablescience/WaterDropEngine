@@ -7,7 +7,7 @@ use bevy::{
     prelude::*
 };
 use std::f32::consts::*;
-use wde_camera::camera::CameraView;
+use wde_camera::prelude::*;
 
 /// Based on Valorant's default sensitivity, not entirely sure why it is exactly 1.0 / 180.0,
 /// but I'm guessing it is a misunderstanding between degrees/radians and then sticking with
