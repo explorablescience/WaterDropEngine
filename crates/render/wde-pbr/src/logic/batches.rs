@@ -2,9 +2,9 @@ use wde_renderer::prelude::*;
 use wde_logger::prelude::*;
 use bevy::prelude::*;
 
-use crate::{assets::PbrMaterialAsset, logic::ssbo::SsboTransformPbr, prelude::{DirtyTransforms, ModelUuidToTransformUuidRender, PbrModel, PbrModelElementUuid, PbrModelRegistry}};
+use crate::{assets::PbrMaterial, logic::ssbo::SsboTransformPbr, prelude::{DirtyTransforms, ModelUuidToTransformUuidRender, PbrModel, PbrModelElementUuid, PbrModelRegistry}};
 
-type ModelMaterialPair = (AssetId<MeshAsset>, AssetId<PbrMaterialAsset>);
+type ModelMaterialPair = (AssetId<Mesh>, AssetId<PbrMaterial>);
 
 /// List of extracted render entities (UUIDs, mesh and material weak references, transform ID in SSBO)
 #[derive(Resource, Default)]
@@ -22,8 +22,8 @@ pub struct Batches {
 /// A single render batch
 #[derive(Debug, Default)]
 pub struct Batch {
-    pub mesh_id: AssetId<MeshAsset>,
-    pub material_id: AssetId<PbrMaterialAsset>,
+    pub mesh_id: AssetId<Mesh>,
+    pub material_id: AssetId<PbrMaterial>,
     pub first_instance: u32,
     pub instance_count: u32
 }
@@ -56,7 +56,7 @@ fn extract(
     render_dirty_transforms.0 = main_dirty_transforms.0.clone();
 
     // Extract every uuid from the entities
-    let mut render_entities: Vec<(PbrModelElementUuid, (AssetId<MeshAsset>, AssetId<PbrMaterialAsset>), u32)> = Vec::new();
+    let mut render_entities: Vec<(PbrModelElementUuid, (AssetId<Mesh>, AssetId<PbrMaterial>), u32)> = Vec::new();
     for entity in raw_entities.iter() {
         if let Some(uuid_list) = model_registry.entity_to_model_uuids.get(&entity) {
             for uuid in uuid_list.iter() {
@@ -147,8 +147,8 @@ fn build_batches(
     let _batch_span = debug_span!("build_batches_create").entered();
     let mut render_batches: Vec<Batch> = Vec::new();
     let mut transform_ids: Vec<u32> = Vec::new();
-    let mut current_mesh_id: Option<AssetId<MeshAsset>> = None;
-    let mut current_material_id: Option<AssetId<PbrMaterialAsset>> = None;
+    let mut current_mesh_id: Option<AssetId<Mesh>> = None;
+    let mut current_material_id: Option<AssetId<PbrMaterial>> = None;
     for (_, (mesh_id, material_id), transform_id) in entities.iter() {
         // Add it to the corresponding batch
         if current_mesh_id == Some(*mesh_id) && current_material_id == Some(*material_id) {

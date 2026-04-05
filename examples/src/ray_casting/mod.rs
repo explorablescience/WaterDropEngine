@@ -17,7 +17,7 @@ struct CubeEntity(Entity);
 #[derive(Resource)]
 struct GroundEntity(Entity);
 
-fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmaterials: ResMut<Assets<PbrMaterialAsset>>, mut gizmomaterials: ResMut<Assets<GizmoMaterialAsset>>, mut meshes: ResMut<Assets<MeshAsset>>) {
+fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut Material3ds: ResMut<Assets<PbrMaterial>>, mut gizmomaterials: ResMut<Assets<GizmoMaterialAsset>>, mut meshes: ResMut<Assets<Mesh>>) {
     // Main camera
     commands.spawn((
         Transform::from_xyz(5.0, 5.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -30,8 +30,8 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmat
     // Spawn a cube centered at the origin
     let cube_entity = commands.spawn((
         Transform::from_xyz(0.0, 0.0, 0.0).with_scale(Vec3::ONE * 0.1),
-        Mesh(asset_server.load("models/container.obj")),
-        PbrMaterial(pbrmaterials.add(PbrMaterialAsset {
+        Mesh3d(asset_server.load("models/container.obj")),
+        Material3d(Material3ds.add(PbrMaterial {
             label: "red".to_string(),
             albedo: (1.0, 0.0, 0.0, 1.0),
             metallic: 0.5,
@@ -43,7 +43,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut pbrmat
     // Create the ground
     let ground = commands.spawn((
         Transform::from_xyz(0.0, -1.0, 0.0).with_scale(Vec3::ONE * 100.0),
-        Mesh(meshes.add(PlaneMesh::from("ground", 100, Vec3::Y))),
+        Mesh3d(meshes.add(PlaneMesh::from("ground", 100, Vec3::Y))),
         GizmoMaterial(gizmomaterials.add(GizmoMaterialAsset {
             label: "grid".to_string(),
             color: [0.8, 0.8, 0.8, 1.0],

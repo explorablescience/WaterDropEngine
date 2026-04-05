@@ -12,13 +12,13 @@ pub struct GpuDisplayTexturePipeline {
 }
 impl RenderAsset for GpuDisplayTexturePipeline {
     type SourceAsset = DisplayTexturePipelineAsset;
-    type Param = (
+    type Params = (
         SRes<AssetServer>, SResMut<PipelineManager>
     );
 
-    fn prepare_asset(
+    fn prepare(
             _asset: Self::SourceAsset,
-            (assets_server, pipeline_manager): &mut SystemParamItem<Self::Param>
+            (assets_server, pipeline_manager): &mut SystemParamItem<Self::Params>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         // Create the layout
         let layout = BindGroupLayout::new("display-texture", |builder| {

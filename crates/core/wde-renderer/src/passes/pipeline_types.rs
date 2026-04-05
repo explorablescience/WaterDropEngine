@@ -1,31 +1,3 @@
-//! Descriptors for render and compute pipelines consumed by the pipeline manager.
-//!
-//! These are lightweight, CPU-side structs that mirror `wde-wgpu` pipeline
-//! construction parameters, keeping the renderer crate decoupled from the exact
-//! pipeline creation calls.
-//!
-//! ## Example: forward render pipeline descriptor
-//! ```rust
-//! use bevy::prelude::*;
-//! use wde_renderer::pipelines::{RenderPipelineDescriptor, PushConstantDescriptor, RenderTopology, Face};
-//! use wde_renderer::pipelines::{BindGroupLayout};
-//! use wde_renderer::assets::Shader;
-//!
-//! fn build_descriptor(vert: Handle<Shader>, frag: Handle<Shader>, layouts: Vec<BindGroupLayout>) -> RenderPipelineDescriptor {
-//!     RenderPipelineDescriptor {
-//!         label: "forward-pipeline",
-//!         vert: Some(vert),
-//!         frag: Some(frag),
-//!         render_targets: None, // default swapchain
-//!         bind_group_layouts: layouts,
-//!         push_constants: vec![PushConstantDescriptor { stages: ShaderStages::VERTEX, offset: 0, size: 16 }],
-//!         topology: RenderTopology::TriangleList,
-//!         cull_mode: Some(Face::Back),
-//!         ..Default::default()
-//!     }
-//! }
-//! ```
-
 use bevy::{asset::Handle, ecs::prelude::*};
 use wde_wgpu::{bind_group::BindGroupLayout, pipelines::BlendState, render_pipeline::{DepthDescriptor, Face, RenderTopology, ShaderStages}, texture::TextureFormat};
 
@@ -43,23 +15,23 @@ pub struct PushConstantDescriptor {
     pub size: u32,
 }
 
+/// Describes a render pipeline, including its shaders, resources and states.
 #[derive(Resource, Clone)]
-/// Describes a render pipeline.
 pub struct RenderPipelineDescriptor {
-    /// Debug label forwarded to the GPU pipeline (default: "Render Pipeline").
     pub label: &'static str,
-    /// Vertex shader handle (WGSL) to compile.
     pub vert: Option<Handle<Shader>>,
-    /// Fragment shader handle (WGSL) to compile.
     pub frag: Option<Handle<Shader>>,
+
     /// Depth/stencil state for the pipeline.
     pub depth: DepthDescriptor,
-    /// Render targets; `None` renders to the swapchain surface by default.
+    /// Formats of the render targets this pipeline will render to. If `None`, the pipeline will render to the swapchain format.
     pub render_targets: Option<Vec<TextureFormat>>,
+
     /// Bind group layouts describing all resource bindings.
     pub bind_group_layouts: Vec<BindGroupLayout>,
     /// Push constant ranges exposed to shaders.
     pub push_constants: Vec<PushConstantDescriptor>,
+
     /// Primitive topology (default: TriangleList).
     pub topology: RenderTopology,
     /// Face culling mode (default: Back). `None` disables culling.
@@ -68,13 +40,13 @@ pub struct RenderPipelineDescriptor {
     pub fragment_blend: Option<BlendState>,
     /// The sample count for multisampling (default: 1).
     pub sample_count: u32,
-    /// Whether the pipeline should expect a vertex buffer.
+    /// Whether the pipeline should expect a vertex buffer. Useful for pipelines that render fullscreen quads without vertex buffers (default: true).
     pub vertex_buffer: bool
 }
 impl Default for RenderPipelineDescriptor {
     fn default() -> Self {
         Self {
-            label: "Render Pipeline",
+            label: "Unknown Render Pipeline",
             vert: None,
             frag: None,
             depth: DepthDescriptor::default(),
@@ -90,14 +62,12 @@ impl Default for RenderPipelineDescriptor {
     }
 }
 
-
+/// Describes a compute pipeline, including its shader and resources.
 #[derive(Resource, Clone)]
-/// Describes a compute pipeline.
 pub struct ComputePipelineDescriptor {
-    /// Debug label forwarded to the GPU pipeline (default: "Compute Pipeline").
     pub label: &'static str,
-    /// Compute shader handle (WGSL) to compile.
     pub comp: Option<Handle<Shader>>,
+    
     /// Bind group layouts describing all resource bindings.
     pub bind_group_layouts: Vec<BindGroupLayout>,
     /// Push constant ranges exposed to the compute shader.
@@ -106,7 +76,7 @@ pub struct ComputePipelineDescriptor {
 impl Default for ComputePipelineDescriptor {
     fn default() -> Self {
         Self {
-            label: "Compute Pipeline",
+            label: "Unknown Compute Pipeline",
             comp: None,
             bind_group_layouts: vec![],
             push_constants: vec![]

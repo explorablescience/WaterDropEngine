@@ -4,6 +4,7 @@ use crate::{components::lights::*, prelude::PbrModelRegistryPlugin};
 
 pub mod lights;
 pub mod model;
+pub mod color;
 
 pub(crate) struct PbrComponentsPlugin;
 impl Plugin for PbrComponentsPlugin {

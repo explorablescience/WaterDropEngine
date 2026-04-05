@@ -1,7 +1,7 @@
 use bevy::math::Vec3;
 use wde_wgpu::vertex::Vertex;
 
-use crate::assets::{MeshAsset, ModelBoundingBox};
+use crate::assets::{Mesh, MeshBbox};
 
 pub struct PlaneMesh;
 impl PlaneMesh {
@@ -18,7 +18,7 @@ impl PlaneMesh {
     /// # Returns
     /// 
     /// The plane mesh.
-    pub fn from(label: &str, subdivisions: u32, normal: Vec3) -> MeshAsset {
+    pub fn from(label: &str, subdivisions: u32, normal: Vec3) -> Mesh {
         let subdivisions = subdivisions.max(1);
         let half_size = [0.5, 0.5];
 
@@ -81,16 +81,16 @@ impl PlaneMesh {
         }
 
         // Create bounding box
-        let bounding_box = ModelBoundingBox {
+        let bounding_box = MeshBbox {
             min: min_bounds,
             max: max_bounds,
         };
 
-        MeshAsset {
+        Mesh {
             label: label.to_string(),
             vertices,
             indices,
-            bounding_box,
+            bbox: bounding_box,
             use_ssbo: false,
         }
     }

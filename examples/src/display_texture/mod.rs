@@ -14,7 +14,7 @@ pub struct DisplayTextureComponentPlugin;
 impl Plugin for DisplayTextureComponentPlugin {
     fn build(&self, app: &mut App) {
         // Register the material
-        app.add_plugins(MaterialsPluginRegister::<DisplayTextureMaterialAsset>::default());
+        // app.add_plugins(MaterialsPluginRegister::<DisplayTextureMaterialAsset>::default());
         app.register_type::<DisplayTextureMaterial>();
 
         // Add the pipeline asset
@@ -30,7 +30,7 @@ impl Plugin for DisplayTextureComponentPlugin {
         let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .init_resource::<RenderPassEntity>()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
-        render_graph.add_pass_old::<DisplayTexturePass>(2);
+        // render_graph.add_pass_old::<DisplayTexturePass>(2);
 
         // Load the entity on startup
         app.add_systems(Startup, load_entity);
@@ -57,7 +57,7 @@ pub fn load_entity(mut commands: Commands, server: Res<AssetServer>) {
     });
 
     // Create the mesh
-    let mesh: Handle<MeshAsset> = server.add(MeshAsset {
+    let mesh: Handle<Mesh> = server.add(Mesh {
         label: "texture-display-pass".to_string(),
         vertices: vec![
             Vertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], ..Default::default() },
@@ -66,7 +66,7 @@ pub fn load_entity(mut commands: Commands, server: Res<AssetServer>) {
             Vertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], ..Default::default() },
         ],
         indices: vec![0, 1, 2, 0, 2, 3],
-        bounding_box: ModelBoundingBox {
+        bbox: MeshBbox {
             min: Vec3::new(-1.0, -1.0, 0.0),
             max: Vec3::new(1.0, 1.0, 0.0),
         },
@@ -76,6 +76,6 @@ pub fn load_entity(mut commands: Commands, server: Res<AssetServer>) {
     // Create the entity
     commands.spawn((
         DisplayTextureMaterial(material),
-        Mesh(mesh)
+        Mesh3d(mesh)
     ));
 }

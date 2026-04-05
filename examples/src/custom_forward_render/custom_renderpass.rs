@@ -4,7 +4,7 @@ use wde::prelude::*;
 use super::{CustomMaterial, CustomMaterialAsset, CustomSsbo, GpuCustomRenderPipeline};
 
 pub struct CustomRenderBatch {
-    mesh: Handle<MeshAsset>,
+    mesh: Handle<Mesh>,
     material: Handle<CustomMaterialAsset>,
     first: usize,
     count: usize,
@@ -19,8 +19,8 @@ impl CustomRenderPass {
     /// Create the batches with the correct mesh and material.
     pub fn create_batches(
         mut pass: ResMut<CustomRenderPass>, render_instance: Res<RenderInstance>,
-        entities: ExtractWorld<Query<(&Transform, &Mesh, &CustomMaterial)>>,
-        meshes: Res<RenderAssets<GpuMesh>>, materials: Res<RenderAssets<GpuMaterial<CustomMaterialAsset>>>,
+        entities: ExtractWorld<Query<(&Transform, &Mesh3d, &CustomMaterial)>>,
+        meshes: Res<RenderAssets<GpuMesh>>, materials: Res<RenderAssets<GpuRenderBinding<CustomMaterialAsset>>>,
         buffers: Res<RenderAssets<GpuBuffer>>, ssbo: Res<CustomSsbo>
     ) {
         // Clear the batches of the previous frame
@@ -42,7 +42,7 @@ impl CustomRenderPass {
         ssbo_bf.buffer.map_write(&render_instance, |mut view| {
             let mut first = 0;
             let mut count = 1;
-            let mut last_mesh: Option<Handle<MeshAsset>> = None;
+            let mut last_mesh: Option<Handle<Mesh>> = None;
             let mut last_material: Option<Handle<CustomMaterialAsset>> = None;
             let data = view.as_mut_ptr() as *mut TransformUniform;
 
@@ -134,10 +134,10 @@ impl CustomRenderPass {
         ),
         (camera_layout, ssbo) : (Res<CameraFeatureRender>, Res<CustomSsbo>),
         (meshes, textures, materials): (
-            Res<RenderAssets<GpuMesh>>, Res<RenderAssets<GpuTexture>>, Res<RenderAssets<GpuMaterial<CustomMaterialAsset>>>
+            Res<RenderAssets<GpuMesh>>, Res<RenderAssets<GpuTexture>>, Res<RenderAssets<GpuRenderBinding<CustomMaterialAsset>>>
         ),
         (mesh_pipeline, render_mesh_pass, depth_texture): (
-            Res<RenderAssets<GpuCustomRenderPipeline>>, Res<CustomRenderPass>, Res<DepthTextureMSAA>
+            Res<RenderAssets<GpuCustomRenderPipeline>>, Res<CustomRenderPass>, Res<DepthTexture>
         )
     ) {
         // Get the render instance and swapchain frame

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
+use wde_renderer::prelude::*;
 
 #[derive(Resource, Default)]
 pub struct PbrRenderTextureBindGroup {
@@ -24,13 +24,13 @@ impl PbrRenderTextureBindGroup {
 
         // Build the layout
         let render_instance = render_instance.0.read().unwrap();
-        let layout_built = BindGroupLayout::build(&Self::layout(), &render_instance);
+        let layout_built = BindGroupLayout::build(&Self::layout(), &render_instance).unwrap();
 
         // Create the bind group
         let bind_group = BindGroupBuilder::build("pbr-render-texture", &render_instance, &layout_built, &vec![
             BindGroupBuilder::texture_view(   0, &render_texture.texture),
             BindGroupBuilder::texture_sampler(1, &render_texture.texture)
-        ]);
+        ]).unwrap();
 
         // Insert the resources
         tex_bind_group.bind_group = Some(bind_group);

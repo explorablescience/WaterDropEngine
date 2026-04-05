@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use egui::Context;
-use wde_renderer::core::RenderApp;
+use wde_renderer::prelude::*;
 
 /// Resource to store the egui context
 #[derive(Resource)]

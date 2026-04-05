@@ -1,46 +1,25 @@
-//! CPU-side shader asset and Bevy loader used by the renderer.
-//!
-//! Shaders are stored as plain WGSL text. They are fed to the render assets
-//! pipeline, which lets pipeline builders pull the source directly. The loader
-//! mirrors `wde-wgpu` expectations: UTF-8 text, `.wgsl` extension, and a clear
-//! debug label.
-//!
-//! ## Example: load a WGSL shader
-//! ```rust
-//! use bevy::prelude::*;
-//! use wde_renderer::assets::Shader;
-//!
-//! fn load_shaders(assets: Res<AssetServer>) {
-//!     // Load and hot-reload from assets/shaders/my_shader.wgsl
-//!     let shader: Handle<Shader> = assets.load("shaders/my_shader.wgsl");
-//!     // Pass handle into a pipeline descriptor or material.
-//! }
-//! ```
+use std::io::{Error, ErrorKind};
 
 use wde_logger::prelude::*;
 use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, prelude::*};
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Asset, TypePath, Clone)]
+/// Stores a shader source as UTF-8 text. File should have a `.wgsl` extension.
+/// Most of the time, the user does not need to load shaders directly, as they can be embedded in materials and pipelines.
+/// Note: the shader will only be compiled on the GPU when used in a pipeline, so this is just a container for the source code.
+#[derive(Asset, TypePath, Clone, Debug)]
 pub struct Shader {
     /// WGSL source contents as UTF-8 text.
     pub content: String
 }
 
-#[derive(Default, TypePath)]
-pub struct ShaderLoader;
-
-#[derive(Serialize, Deserialize, Default)]
-pub struct ShaderLoaderSettings {
-}
-
 #[derive(Debug, Error)]
-pub enum ShaderLoaderError {
+pub(crate) enum ShaderLoaderError {
     #[error("Could not load shader: {0}")]
     Io(#[from] std::io::Error),
 }
-
+#[derive(Default, TypePath)]
+pub(crate) struct ShaderLoader;
 impl AssetLoader for ShaderLoader {
     type Asset = Shader;
     type Settings = ();
@@ -61,16 +40,11 @@ impl AssetLoader for ShaderLoader {
         // Read the content
         let content = match String::from_utf8(bytes) {
             Ok(content) => content,
-            Err(_) => return Err(ShaderLoaderError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, "Could not convert shader to string"))),
+            Err(_) => return Err(ShaderLoaderError::Io(Error::new(ErrorKind::InvalidData, "Could not convert shader to string."))),
         };
-
-        Ok(Shader {
-            content
-        })
+        Ok(Shader { content })
     }
 
-    fn extensions(&self) -> &[&str] {
-        &["wgsl"]
-    }
+    fn extensions(&self) -> &[&str] { &["wgsl"] }
 }
 

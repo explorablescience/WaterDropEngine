@@ -1,5 +1,5 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
-use wde_renderer::{passes::render_graph::DrawCommandsBatch, prelude::*};
+use wde_renderer::prelude::*;
 use wde_camera::prelude::*;
 
 use crate::{prelude::{TerrainExtractor, TerrainRenderer}, render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::pipeline::GpuTerrainRenderPipeline, renderer_gpu::TerrainRendererGPU}};

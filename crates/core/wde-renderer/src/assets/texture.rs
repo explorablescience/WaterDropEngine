@@ -1,9 +1,4 @@
-//! CPU and GPU texture assets plus the Bevy loader wiring used by the renderer.
-//!
-//! The CPU-side [`Texture`] mirrors `wde-wgpu` conventions: explicit labels for
-//! debugging, explicit format/usage flags, and an optional pixel payload. The
-//! loader reads image files into that buffer, while [`GpuTexture`] turns the
-//! asset into a GPU texture inside the render sub-app.
+use std::io::{Error, ErrorKind};
 
 use wde_logger::prelude::*;
 use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimeless::SRes, prelude::*};
@@ -13,34 +8,39 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::RenderInstance;
 
-use super::render_assets::{PrepareAssetError, RenderAsset};
+use super::asset::{PrepareAssetError, RenderAsset};
 
 // Reexport structs
 pub use wde_wgpu::texture::{TextureFormat, TextureUsages, SWAPCHAIN_FORMAT, DEPTH_FORMAT, FilterMode};
 
-#[derive(Asset, TypePath, Clone)]
+/// Stores a CPU texture with raw pixel data and metadata for GPU allocation.
+/// If loaded from a file, the texture should have a `.png` or `.jpg` extension.
+/// This texture will be uploaded to the GPU, represented by a [`GpuTexture`] asset.
+#[derive(Asset, TypePath, Clone, Debug)]
 pub struct Texture {
-    /// Human readable identifier applied to the GPU resource label.
     pub label: String,
     /// Width and height in pixels of the CPU buffer.
     pub size: (u32, u32),
-    /// GPU texture format requested when allocating the resource.
+
+    /// GPU texture format requested when allocating the resource. Defaults to `Rgba8Unorm`.
     pub format: TextureFormat,
-    /// GPU usage flags (sampling, storage, copy, etc.).
+    /// GPU usage flags (sampling, storage, copy, etc.). Defaults to `TEXTURE_BINDING` (sampled texture).
     pub usages: TextureUsages,
-    /// Sample count for the texture (1 for no MSAA, etc.).
+
+    /// Sample count for the texture (1 for no MSAA, etc.). Defaults to 1.
     pub sample_count: u32,
-    /// Number of layers for array textures (1 for non-arrays, etc.).
+    /// Number of layers for array textures (1 for non-arrays, etc.). Defaults to 1.
     pub layer_count: u32,
-    /// Number of mip levels (1 = no mipmaps, 0 = auto-calculate max levels).
+    /// Number of mip levels (1 = no mipmaps, 0 = auto-calculate max levels). Defaults to 1.
     pub mip_level_count: u32,
-    /// Raw pixel payload matching `format`; empty means allocate-only.
+
+    /// Raw pixel data for the texture, in the format specified by `format`. Defaults to empty.
     pub data: Vec<u8>
 }
 impl Default for Texture {
     fn default() -> Self {
         Texture {
-            label: "Texture".to_string(),
+            label: "Unknown Texture".to_string(),
             size: (1, 1),
             format: TextureFormat::Rgba8Unorm,
             usages: TextureUsages::TEXTURE_BINDING,
@@ -52,24 +52,56 @@ impl Default for Texture {
     }
 }
 
-#[derive(Default, TypePath)]
-/// Bevy asset loader that decodes images and fills a CPU-side [`Texture`].
-pub struct TextureLoader;
-
-#[derive(Serialize, Deserialize)]
-pub struct TextureLoaderSettings {
-    /// Label propagated to the CPU and GPU resource.
+/// Represents a GPU texture resource allocated from a CPU [`Texture`] asset.
+pub struct GpuTexture {
+    /// Human readable identifier applied to the GPU resource label. This is not necessarily unique.
     pub label: String,
-    /// Requested GPU format (defaults to `Rgba8Unorm`).
-    pub format: TextureFormat,
-    /// Usage flags applied when creating the GPU texture (defaults to `TEXTURE_BINDING`).
-    pub usages: TextureUsages
+    /// Handle to the GPU texture allocated via `wde-wgpu`.
+    pub texture: wde_wgpu::texture::Texture
+}
+impl RenderAsset for GpuTexture {
+    type SourceAsset = Texture;
+    type Params = SRes<RenderInstance>;
+
+    fn prepare(
+        asset: Self::SourceAsset,
+        render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Params>,
+    ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        trace!(asset.label, "Preparing GPU texture asset.");
+
+        let render_instance = render_instance.0.as_ref().read().unwrap();
+
+        // Create the texture with mip levels
+        let texture = wde_wgpu::texture::Texture::new(
+            &render_instance, &asset.label, (asset.size.0, asset.size.1),
+            asset.format, asset.usages, asset.sample_count, asset.layer_count, asset.mip_level_count
+        );
+
+        // Copy the texture data
+        if !asset.data.is_empty() {
+            texture.copy_from_buffer(&render_instance, asset.format, &asset.data);
+        }
+        Ok(GpuTexture { label: asset.label, texture })
+    }
+
+    fn label(&self) -> &str { &self.label }
 }
 
+
+/// Settings for loading a texture asset while creating a [`Texture`].
+#[derive(Serialize, Deserialize)]
+pub struct TextureLoaderSettings {
+    /// Human readable identifier applied to the GPU resource label. This is not necessarily unique.
+    pub label: String,
+    /// GPU texture format requested when allocating the resource. Defaults to `Rgba8Unorm`.
+    pub format: TextureFormat,
+    /// GPU usage flags (sampling, storage, copy, etc.). Defaults to `TEXTURE_BINDING` (sampled texture).
+    pub usages: TextureUsages
+}
 impl Default for TextureLoaderSettings {
     fn default() -> Self {
         Self {
-            label: "texture".to_string(),
+            label: "Unknown Texture".to_string(),
             format: TextureFormat::Rgba8Unorm,
             usages: TextureUsages::TEXTURE_BINDING
         }
@@ -77,11 +109,12 @@ impl Default for TextureLoaderSettings {
 }
 
 #[derive(Debug, Error)]
-pub enum TextureLoaderError {
+pub(crate) enum TextureLoaderError {
     #[error("Could not load texture: {0}")]
     Io(#[from] std::io::Error),
 }
-
+#[derive(Default, TypePath)]
+pub(crate) struct TextureLoader;
 impl AssetLoader for TextureLoader {
     type Asset = Texture;
     type Settings = TextureLoaderSettings;
@@ -104,7 +137,7 @@ impl AssetLoader for TextureLoader {
             Ok(image) => image,
             Err(err) => {
                 error!("Could not load texture: {}", err);
-                return Err(TextureLoaderError::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, err)));
+                return Err(TextureLoaderError::Io(Error::new(ErrorKind::InvalidData, err)));
             }
         };
         let size = image.dimensions();
@@ -130,55 +163,11 @@ impl AssetLoader for TextureLoader {
         })
     }
 
-    fn extensions(&self) -> &[&str] {
-        &["png", "jpg"]
-    }
-}
-
-
-
-pub struct GpuTexture {
-    /// Copy of the CPU label applied to the GPU handle.
-    pub label: String,
-    /// GPU texture handle allocated through `wde-wgpu`.
-    pub texture: wde_wgpu::texture::Texture
-}
-impl RenderAsset for GpuTexture {
-    type SourceAsset = Texture;
-    type Param = SRes<RenderInstance>;
-
-    fn prepare_asset(
-            asset: Self::SourceAsset,
-            render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Param>,
-        ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        trace!("Uploading texture '{}' to the GPU.", asset.label);
-
-        let render_instance = render_instance.0.as_ref().read().unwrap();
-
-        // Create the texture with mip levels
-        let texture = wde_wgpu::texture::Texture::new(
-            &render_instance, &asset.label, (asset.size.0, asset.size.1),
-            asset.format, asset.usages, asset.sample_count, asset.layer_count, asset.mip_level_count
-        );
-
-        // Copy the texture data
-        if !asset.data.is_empty() {
-            texture.copy_from_buffer(&render_instance, asset.format, &asset.data);
-        }
-
-        Ok(GpuTexture { label: asset.label, texture })
-    }
-
-    fn label(&self) -> &str {
-        &self.label
-    }
+    fn extensions(&self) -> &[&str] { &["png", "jpg"] }
 }
 
 
 /// Get the properties of a texture format.
-/// 
-/// # Returns
-/// 
 /// - `None` if the format is not supported.
 /// - `Some` with the properties of the format:
 ///    - `bits`: Can be 8 bits, 16 bits or 32 bits.

@@ -53,9 +53,10 @@
 //! - The order of `set_bind_groups` on pipelines must match the order of layouts you provide
 //!   here.
 
+use futures_lite::future;
 use wde_logger::prelude::*;
 
-use crate::{buffer::Buffer, instance::RenderInstanceData, render_pipeline::ShaderStages, texture::{Texture, TextureFormat}};
+use crate::{buffer::Buffer, instance::{RenderError, RenderInstanceData}, render_pipeline::ShaderStages, texture::{Texture, TextureFormat}};
 
 /// The wgpu bind group layout builder.
 pub type WgpuBindGroup = wgpu::BindGroup;
@@ -264,16 +265,37 @@ impl BindGroupLayout {
     /// # Arguments
     /// 
     /// * `instance` - The render instance data.
-    pub fn build(&self, instance: &RenderInstanceData) -> WgpuBindGroupLayout {
+    pub fn build(&self, instance: &RenderInstanceData) -> Result<WgpuBindGroupLayout, RenderError> {
         event!(Level::TRACE, "Creating bind group layout: {}.", self.label);
 
+        // Add validation to intercept potential errors in bind group layout creation
+        instance.device.push_error_scope(wgpu::ErrorFilter::Validation);
+
         // Create bind group layout
-        instance.device.create_bind_group_layout(
+        let layout = instance.device.create_bind_group_layout(
             &wgpu::BindGroupLayoutDescriptor {
-                label: Some(format!("{}-bg-layout", self.label).as_str()),
+                label: Some(format!("{}-bind-group-layout", self.label).as_str()),
                 entries: &self.builder.layout_entries,
             }
-        )
+        );
+
+        // Check for errors
+        let mut res = Ok(layout);
+        future::block_on(async {
+            let error = instance.device.pop_error_scope().await;
+            match error {
+                Some(wgpu::Error::Validation { source, description }) => {
+                    error!(self.label, "Failed to create bind group layout with source error: {:#?}. Description: {}.", source, description);
+                    res = Err(RenderError::CannotCreateBindGroupLayout);
+                },
+                Some(e) => {
+                    error!(self.label, "Failed to create bind group layout with unexpected error: {:#?}.", e);
+                    res = Err(RenderError::CannotCreateBindGroupLayout);
+                },
+                None => (),
+            }
+        });
+        res
     }
 }
 
@@ -288,17 +310,38 @@ impl BindGroupBuilder {
     /// * `instance` - The render instance data.
     /// * `layout` - The bind group layout.
     /// * `entries` - The bind group entries.
-    pub fn build(label: &str, instance: &RenderInstanceData, layout: &wgpu::BindGroupLayout, entries: &Vec<wgpu::BindGroupEntry>) -> wgpu::BindGroup {
+    pub fn build(label: &str, instance: &RenderInstanceData, layout: &wgpu::BindGroupLayout, entries: &Vec<wgpu::BindGroupEntry>) -> Result<wgpu::BindGroup, RenderError> {
         event!(Level::TRACE, "Creating bind group: {}.", label);
 
+        // Add validation to intercept potential errors in bind group creation
+        instance.device.push_error_scope(wgpu::ErrorFilter::Validation);
+
         // Create bind group
-        instance.device.create_bind_group(
+        let bind_group =instance.device.create_bind_group(
             &wgpu::BindGroupDescriptor {
-                label: Some(format!("{}-bg", label).as_str()),
+                label: Some(format!("{}-bind-group", label).as_str()),
                 layout,
                 entries
             }
-        )
+        );
+
+        // Check for errors
+        let mut res = Ok(bind_group);
+        future::block_on(async {
+            let error = instance.device.pop_error_scope().await;
+            match error {
+                Some(wgpu::Error::Validation { source, description }) => {
+                    error!(label, "Failed to create bind group with source error: {:#?}. Description: {}.", source, description);
+                    res = Err(RenderError::CannotCreateBindGroup);
+                },
+                Some(e) => {
+                    error!(label, "Failed to create bind group with unexpected error: {:#?}.", e);
+                    res = Err(RenderError::CannotCreateBindGroup);
+                },
+                None => (),
+            }
+        });
+        res
     }
 
     /// Add a buffer to the bind group.

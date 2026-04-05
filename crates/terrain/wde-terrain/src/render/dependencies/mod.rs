@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_renderer::core::{Extract, RenderApp};
+use wde_renderer::prelude::*;
 
 use crate::render::dependencies::{materials::{TerrainMaterialArrays, TerrainMaterialsPlugin}, terrain_buffer::TerrainBufferPlugin, terrain_mesh::TerrainRenderPassMesh};
 

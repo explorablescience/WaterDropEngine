@@ -60,7 +60,7 @@ pub struct GltfAsset {
     /// The list of parsed glTF models. Each model is represented by a mesh and its associated material.
     /// Node transforms are baked directly into the mesh vertices.
     /// Format: (mesh_handle, material_handle)
-    pub models: Vec<(Handle<MeshAsset>, Handle<PbrMaterialAsset>)>,
+    pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>,
 }
 
 /// Manager to load glTF models into the Bevy world.

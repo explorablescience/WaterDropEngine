@@ -1,5 +1,4 @@
 //! Window plugin and related components
-//! 
 //! This module contains the window plugin and related components.
 //! It is responsible for creating and managing the window.
 
@@ -11,6 +10,7 @@ use crate::core::RenderInstance;
 use super::extract_macros::ExtractWorld;
 
 /// An event that is sent when the surface is resized.
+/// This event is sent with the new width and height of the surface. It is used to update the surface configuration and resize the swap chain.
 #[derive(Debug, Event, Message)]
 pub struct SurfaceResized {
     pub width: u32,
@@ -18,7 +18,6 @@ pub struct SurfaceResized {
 }
 
 pub(crate) struct WindowPlugins;
-
 impl PluginGroup for WindowPlugins {
     fn build(self) -> PluginGroupBuilder {
         let mut group = PluginGroupBuilder::start::<Self>();
@@ -73,7 +72,6 @@ pub(crate) fn send_surface_resized(
         }
     }
 }
-
 
 /// Extract the window size from the primary window and update the surface configuration.
 pub(crate) fn extract_surface_size(render_instance: ResMut<RenderInstance>, windows: ExtractWorld<Query<&Window>>) {

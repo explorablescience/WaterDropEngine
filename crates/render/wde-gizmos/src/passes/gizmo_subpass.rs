@@ -8,7 +8,7 @@ use super::{GizmoSsbo, GpuGizmoRenderPipeline};
 
 pub struct GizmoRenderBatch {
     #[allow(dead_code)]
-    mesh: Handle<MeshAsset>,
+    mesh: Handle<Mesh>,
     material: Handle<GizmoMaterialAsset>,
     first: usize,
     count: usize,
@@ -17,13 +17,13 @@ pub struct GizmoRenderBatch {
 #[derive(Resource, Default)]
 pub struct GizmoRenderSubPass {
     /// The order of the batches: (mesh, material) -> [batch index].
-    pub batches_order: HashMap<(AssetId<MeshAsset>, AssetId<GizmoMaterialAsset>), Vec<usize>>,
+    pub batches_order: HashMap<(AssetId<Mesh>, AssetId<GizmoMaterialAsset>), Vec<usize>>,
     /// The render batches.
     pub batches: Vec<GizmoRenderBatch>,
 }
 impl GizmoRenderSubPass {
     pub fn extract(
-        main_entities: ExtractWorld<Query<(&Transform, &Mesh, &GizmoMaterial)>>,
+        main_entities: ExtractWorld<Query<(&Transform, &Mesh3d, &GizmoMaterial)>>,
         gizmo_ssbo: Res<GizmoSsbo>,
         mut gizmo_render_pass: ResMut<GizmoRenderSubPass>,
         meshes: Res<RenderAssets<GpuMesh>>,
@@ -54,7 +54,7 @@ impl GizmoRenderSubPass {
             ssbo_bf.buffer.map_write(&render_instance, |mut view| {
                 let mut first = 0;
                 let mut count = 1;
-                let mut last_mesh: Option<Handle<MeshAsset>> = None;
+                let mut last_mesh: Option<Handle<Mesh>> = None;
                 let mut last_material: Option<Handle<GizmoMaterialAsset>> = None;
                 let data = view.as_mut_ptr() as *mut TransformUniform;
 
@@ -155,7 +155,7 @@ impl GizmoRenderSubPass {
 impl RenderSubPass for GizmoRenderSubPass {
     type Params = (
         SRes<RenderAssets<GpuGizmoRenderPipeline>>, SRes<CameraFeatureRender>, SRes<GizmoSsbo>,
-        SRes<RenderAssets<GpuMaterial<GizmoMaterialAsset>>>, SRes<GizmoRenderSubPass>
+        SMaterial<GizmoMaterialAsset>, SRes<GizmoRenderSubPass>
     );
 
     fn describe(

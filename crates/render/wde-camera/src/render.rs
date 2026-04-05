@@ -20,7 +20,7 @@ impl FromWorld for CameraFeatureRender {
                 0, ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                 BufferBindingType::Uniform);
         });
-        let layout_built = layout.build(&render_instance.0.read().unwrap());
+        let layout_built = layout.build(&render_instance.0.read().unwrap()).unwrap();
         
         CameraFeatureRender { layout, layout_built, bind_group: None }
     }
@@ -73,7 +73,7 @@ fn build_bind_group(
         let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroupBuilder::build("camera", &render_instance, &camera_feature_render.layout_built, &vec![
             BindGroupBuilder::buffer(0, &camera_buffer.buffer)
-        ]);
+        ]).unwrap();
         camera_feature_render.bind_group = Some(bind_group);
     }
 }

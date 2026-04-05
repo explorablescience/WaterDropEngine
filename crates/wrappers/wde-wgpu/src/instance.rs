@@ -47,6 +47,10 @@ pub enum RenderError {
     ShaderCompilationError,
     /// Missing a bind group required by the shader.
     MissingBindGroup,
+    /// Cannot create bind group layout.
+    CannotCreateBindGroupLayout,
+    /// Cannot create bind group.
+    CannotCreateBindGroup,
 }
 
 /// Swapchain image plus an already-created view.

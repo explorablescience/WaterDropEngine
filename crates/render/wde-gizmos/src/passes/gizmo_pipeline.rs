@@ -15,11 +15,11 @@ pub struct GizmoRenderPipeline(pub Handle<GizmoRenderPipelineAsset>);
 pub struct GpuGizmoRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuGizmoRenderPipeline {
     type SourceAsset = GizmoRenderPipelineAsset;
-    type Param = (SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<RenderAssets<GpuMaterial<GizmoMaterialAsset>>>);
+    type Params = (SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SMaterial<GizmoMaterialAsset>);
 
-    fn prepare_asset(
+    fn prepare(
             asset: Self::SourceAsset,
-            (assets_server, pipeline_manager, camera_feature, materials): &mut SystemParamItem<Self::Param>
+            (assets_server, pipeline_manager, camera_feature, materials): &mut SystemParamItem<Self::Params>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         let material = match materials.iter().next() {
             Some((_, material)) => material,
@@ -33,7 +33,7 @@ impl RenderAsset for GpuGizmoRenderPipeline {
             bind_group_layouts: vec![
                 camera_feature.layout.clone(),
                 GizmoSsbo::layout(),
-                material.bind_group_layout.clone()
+                material.layout.clone()
             ],
             depth: DepthDescriptor {
                 enabled: true,

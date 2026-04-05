@@ -32,7 +32,7 @@ impl Plugin for ScenePlugin {
     }
 }
 
-fn init_demo_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<PbrMaterialAsset>>) {
+fn init_demo_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<Material3dAsset>>) {
     // Main camera
     commands.spawn((
         Transform::from_xyz(5.0, 5.0, 3.0).looking_at(Vec3::ZERO, Vec3::Y),
@@ -45,7 +45,7 @@ fn init_demo_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut m
         ActiveCamera
     ));
 
-    let blue = materials.add(PbrMaterialAsset {
+    let blue = materials.add(Material3dAsset {
         label: "blue".to_string(),
         albedo: (0.0, 0.0, 1.0, 1.0),
         specular: 0.5,
@@ -59,7 +59,7 @@ fn init_demo_scene(mut commands: Commands, asset_server: Res<AssetServer>, mut m
     commands.spawn((
         Transform::from_xyz(0.0, 0.0, 0.0),
         Mesh(cube.clone()),
-        PbrMaterial(blue.clone())
+        Material3d(blue.clone())
     ));
 
     // Spawn the lights

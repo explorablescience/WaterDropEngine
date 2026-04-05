@@ -1,33 +1,28 @@
-use bevy::prelude::*;
-use wde_renderer::prelude::*;
+// use bevy::prelude::*;
+// use wde_renderer::prelude::*;
 
-#[derive(Component, Reflect)]
-pub struct GhostMaterial(pub Handle<GhostMaterialAsset>);
+// #[repr(C)]
+// #[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+// struct GhostMaterialUniform {
+//     pub albedo: [f32; 4]
+// }
 
-#[derive(Asset, Clone, TypePath)]
-pub struct GhostMaterialAsset {
-    pub albedo: (f32, f32, f32, f32)
-}
+// #[derive(Asset, Clone, TypePath)]
+// pub struct GhostMaterial {
+//     pub albedo: (f32, f32, f32, f32)
+// }
+// impl Material for GhostMaterial {
+//     fn describe(&self, builder: &mut MaterialBuilder) {
+//         // Create the uniform buffer
+//         let uniform = GhostMaterialUniform {
+//             albedo: [self.albedo.0, self.albedo.1, self.albedo.2, self.albedo.3]
+//         };
 
-#[repr(C)]
-#[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub(crate) struct GhostMaterialUniform {
-    pub albedo: [f32; 4]
-}
-impl Material for GhostMaterialAsset {
-    fn describe(&self, builder: &mut MaterialBuilder) {
-        // Create the uniform buffer
-        let uniform = GhostMaterialUniform {
-            albedo: [self.albedo.0, self.albedo.1, self.albedo.2, self.albedo.3]
-        };
+//         // Build the material
+//         builder.add_buffer(
+//             0, ShaderStages::FRAGMENT, BufferBindingType::Uniform,
+//             size_of::<GhostMaterialUniform>(), Some(bytemuck::cast_slice(&[uniform]).to_vec()));
+//     }
 
-        // Build the material
-        builder.add_buffer(
-            0, ShaderStages::FRAGMENT, BufferBindingType::Uniform,
-            size_of::<GhostMaterialUniform>(), Some(bytemuck::cast_slice(&[uniform]).to_vec()));
-    }
-
-    fn label(&self) -> String {
-        "ghost-material".to_string()
-    }
-}
+//     fn label(&self) -> &str { "ghost-material" }
+// }

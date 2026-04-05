@@ -18,17 +18,17 @@ pub struct GpuCustomRenderPipeline {
 }
 impl RenderAsset for GpuCustomRenderPipeline {
     type SourceAsset = CustomRenderPipelineAsset;
-    type Param = (
+    type Params = (
         SRes<AssetServer>, SResMut<PipelineManager>,
-        SRes<CameraFeatureRender>, SRes<RenderAssets<GpuMaterial<CustomMaterialAsset>>>, SRes<CustomSsbo>
+        SRes<CameraFeatureRender>, SMaterial<CustomMaterialAsset>, SRes<CustomSsbo>
     );
 
-    fn prepare_asset(
+    fn prepare(
             asset: Self::SourceAsset,
             (
                 assets_server, pipeline_manager,
                 camera_feature, materials, ssbo
-            ): &mut bevy::ecs::system::SystemParamItem<Self::Param>
+            ): &mut bevy::ecs::system::SystemParamItem<Self::Params>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         // Get the ssbo layout
         let ssbo_layout = match &ssbo.bind_group_layout {
@@ -47,7 +47,7 @@ impl RenderAsset for GpuCustomRenderPipeline {
             label: "custom",
             vert: Some(assets_server.load("examples/custom_forward_render/vert.wgsl")),
             frag: Some(assets_server.load("examples/custom_forward_render/frag.wgsl")),
-            bind_group_layouts: vec![camera_feature.layout.clone(), ssbo_layout.clone(), material.bind_group_layout.clone()],
+            bind_group_layouts: vec![camera_feature.layout.clone(), ssbo_layout.clone(), material.layout.clone()],
             depth: DepthDescriptor {
                 enabled: true,
                 ..Default::default()

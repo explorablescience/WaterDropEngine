@@ -27,7 +27,7 @@ pub fn load_models(
     trace!("Loading {} models into Bevy world", raw_meshes.len());
 
     // Construct materials
-    let materials_handles: Vec<Handle<PbrMaterialAsset>> = raw_materials
+    let materials_handles: Vec<Handle<PbrMaterial>> = raw_materials
         .iter()
         .map(|material| material.to_pbr(asset_server))
         .collect();
@@ -37,11 +37,11 @@ pub fn load_models(
     for (i, (indices_data, vertices, material_id)) in raw_meshes.iter().enumerate() {
         let label = format!("gltf_mesh_{}", i);
         let (bb_min, bb_max) = bounding_boxes[i];
-        let mesh_asset = MeshAsset {
+        let mesh_asset = Mesh {
             label: label.clone(),
             vertices: vertices.clone(),
             indices: indices_data.clone(),
-            bounding_box: ModelBoundingBox {
+            bbox: MeshBbox {
                 min: bb_min,
                 max: bb_max,
             },

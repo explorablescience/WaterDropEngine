@@ -91,14 +91,14 @@ impl SsboTransformPbr {
         };
 
         // Create the ssbo layout
-        let ssbo_layout_built = SsboTransformPbr::get_layout().build(&render_instance.0.read().unwrap());
+        let ssbo_layout_built = SsboTransformPbr::get_layout().build(&render_instance.0.read().unwrap()).unwrap();
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroupBuilder::build("pbr-ssbo", &render_instance, &ssbo_layout_built, &vec![
             BindGroupBuilder::buffer(0, &buffer.buffer),
             BindGroupBuilder::buffer(1, &instance_to_transform_buffer.buffer)
-        ]);
+        ]).unwrap();
         ssbo.bind_group = Some(bind_group);
     }
 

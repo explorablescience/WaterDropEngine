@@ -1,6 +1,6 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_camera::prelude::*;
-use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
+use wde_renderer::prelude::*;
 
 use crate::logic::{lights::LightsFeatureBuffer, deferred_textures::PbrDeferredTexturesLayout};
 
@@ -14,11 +14,11 @@ pub struct PbrLightingRenderPipeline(pub Handle<PbrLightingRenderPipelineAsset>)
 pub struct GpuPbrLightingRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuPbrLightingRenderPipeline {
     type SourceAsset = PbrLightingRenderPipelineAsset;
-    type Param = (SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>);
+    type Params = (SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>);
 
-    fn prepare_asset(
+    fn prepare(
             _asset: Self::SourceAsset,
-            (assets_server, pipeline_manager, camera_feature): &mut SystemParamItem<Self::Param>
+            (assets_server, pipeline_manager, camera_feature): &mut SystemParamItem<Self::Params>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(GpuPbrLightingRenderPipeline(pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
             label: "lighting-pbr",

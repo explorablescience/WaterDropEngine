@@ -127,7 +127,7 @@
                     "--open",
                     "--all-features",
                     "--no-deps",
-                    "--document-private-items",
+                    // "--document-private-items",
                     "--target-dir=target-doc"
                 ]
             },

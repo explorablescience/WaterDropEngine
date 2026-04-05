@@ -255,7 +255,7 @@ fn build_material_arrays(
     });
 
     // Create the bind group
-    let bind_group = BindGroupBuilder::build("terrain_material_arrays", &render_instance, &BindGroupLayout::build(&bind_group_layout, &render_instance), &vec![
+    let bind_group = BindGroupBuilder::build("terrain_material_arrays", &render_instance, &BindGroupLayout::build(&bind_group_layout, &render_instance).unwrap(), &vec![
         BindGroupBuilder::texture_view(0, &albedo_array.texture),
         BindGroupBuilder::texture_sampler(1, &albedo_array.texture),
         BindGroupBuilder::texture_view(2, &normal_array.texture),
@@ -264,7 +264,7 @@ fn build_material_arrays(
         BindGroupBuilder::texture_sampler(5, &roughness_array.texture),
         BindGroupBuilder::texture_view(6, &ao_array.texture),
         BindGroupBuilder::texture_sampler(7, &ao_array.texture),
-    ]);
+    ]).unwrap();
 
     material_arrays.bind_group = Some(bind_group);
     material_arrays.bind_group_layout = Some(bind_group_layout);

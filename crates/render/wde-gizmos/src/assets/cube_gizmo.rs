@@ -14,7 +14,7 @@ impl CubeGizmoMesh {
     /// # Returns
     /// 
     /// The cube gizmo mesh.
-    pub fn from(label: &str, scale: Vec3) -> MeshAsset {
+    pub fn from(label: &str, scale: Vec3) -> Mesh {
         let half_scale = scale / 2.0;
 
         // Create vertices
@@ -57,16 +57,16 @@ impl CubeGizmoMesh {
         ];
 
         // Create bounding box
-        let bounding_box = ModelBoundingBox {
+        let bounding_box = MeshBbox {
             min: -half_scale,
             max:  half_scale,
         };
 
-        MeshAsset {
+        Mesh {
             label: label.to_string(),
             vertices,
             indices,
-            bounding_box,
+            bbox: bounding_box,
             use_ssbo: false,
         }
     }

@@ -98,7 +98,7 @@ impl FromWorld for TerrainGridBuffer {
                 BufferBindingType::Storage { read_only: true });
         });
         let render_instance = world.get_resource::<RenderInstance>().unwrap();
-        let layout_built = layout.build(&render_instance.0.read().unwrap());
+        let layout_built = layout.build(&render_instance.0.read().unwrap()).unwrap();
         
         Self { grid_desc_buffer: grid_desc, grid_chunk_pos_buffer: grid_chunk_pos, layout, layout_built, bind_group: None }
     }
@@ -119,7 +119,7 @@ fn build(render_instance: Res<RenderInstance>, mut terrain_buffer: ResMut<Terrai
         let bind_group = BindGroupBuilder::build("terrain-grid", &render_instance, &terrain_buffer.layout_built, &vec![
             BindGroupBuilder::buffer(0, &grid_desc_buffer.buffer),
             BindGroupBuilder::buffer(1, &grid_chunk_pos_buffer.buffer)
-        ]);
+        ]).unwrap();
         terrain_buffer.bind_group = Some(bind_group);
     }
 }

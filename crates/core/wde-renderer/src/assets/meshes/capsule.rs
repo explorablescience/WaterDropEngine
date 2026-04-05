@@ -1,7 +1,7 @@
 use bevy::math::Vec3;
 use wde_wgpu::vertex::Vertex;
 
-use crate::assets::{MeshAsset, ModelBoundingBox};
+use crate::assets::{Mesh, MeshBbox};
 
 pub struct CapsuleMeshConfig {
     pub radius: f32,
@@ -33,7 +33,7 @@ impl CapsuleMesh {
     /// # Returns
     /// 
     /// The capsule mesh.
-    pub fn from(label: &str, config: CapsuleMeshConfig) -> MeshAsset {
+    pub fn from(label: &str, config: CapsuleMeshConfig) -> Mesh {
         let (radius, height, segments, rings) = (config.radius, config.height, config.segments, config.rings);
         
         let segments = segments.max(3);
@@ -183,16 +183,16 @@ impl CapsuleMesh {
         
         // Create bounding box
         let half_height = height / 2.0;
-        let bounding_box = ModelBoundingBox {
+        let bounding_box = MeshBbox {
             min: Vec3::new(-radius, -half_height, -radius),
             max: Vec3::new(radius, half_height, radius),
         };
 
-        MeshAsset {
+        Mesh {
             label: label.to_string(),
             vertices,
             indices,
-            bounding_box,
+            bbox: bounding_box,
             use_ssbo: false,
         }
     }

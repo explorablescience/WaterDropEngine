@@ -24,13 +24,13 @@ impl GizmoSsbo {
         };
 
         // Create the ssbo layout
-        let ssbo_layout_built = Self::layout().build(&render_instance.0.read().unwrap());
+        let ssbo_layout_built = Self::layout().build(&render_instance.0.read().unwrap()).unwrap();
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroupBuilder::build("gizmo-ssbo", &render_instance, &ssbo_layout_built, &vec![
             BindGroupBuilder::buffer(0, &buffer.buffer)
-        ]);
+        ]).unwrap();
         ssbo.bind_group = Some(bind_group);
     }
 

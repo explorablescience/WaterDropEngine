@@ -6,7 +6,7 @@ use crate::logic::render_texture::PbrRenderTexture;
 
 pub struct RenderPassTransparent;
 impl RenderPass for RenderPassTransparent {
-    type Params = (SRes<DepthTextureMSAA>, SRes<PbrRenderTexture>);
+    type Params = (SBinding<DepthTexture>, SRes<PbrRenderTexture>);
 
     fn describe((depth_texture, render_texture): &SystemParamItem<Self::Params>) -> RenderPassDesc {
         RenderPassDesc {
@@ -17,7 +17,7 @@ impl RenderPass for RenderPassTransparent {
                 },
             ]),
             attachments_depth: Some(RenderPassDescDepthAttachment {
-                texture: Some(depth_texture.texture.id()),
+                texture: depth_texture.iter().next().and_then(|(_, t)| t.get_texture(0)),
                 ..default()
             })
         }

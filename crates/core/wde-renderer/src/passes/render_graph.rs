@@ -7,9 +7,10 @@ use bevy::prelude::*;
 use wde_wgpu::pipelines::BindGroup;
 use crate::prelude::*;
 
-use crate::{assets::{MeshAsset, Texture}, core::SwapchainFrame, prelude::CachedPipelineIndex};
+use crate::{assets::{Mesh, Texture}, core::SwapchainFrame};
 
 pub use wde_wgpu::render_pass::RenderPassInstance;
+pub use wde_wgpu::command_buffer::*;
 
 /// Color attachment description for a render pass.
 /// If `texture` is None, the pass will render to the swapchain texture.
@@ -33,7 +34,6 @@ impl Default for RenderPassDescColorAttachment {
         }
     }
 }
-
 /// Depth attachment description for a render pass.
 pub struct RenderPassDescDepthAttachment {
     /// The texture to use as depth buffer.
@@ -52,7 +52,6 @@ impl Default for RenderPassDescDepthAttachment {
         }
     }
 }
-
 /// Descibes a render pass and its execution logic.
 #[derive(Default)]
 pub struct RenderPassDesc {
@@ -77,7 +76,6 @@ impl Default for DrawCommandsBatch {
         }
     }
 }
-
 /// Commands to execute in a render pass, in order. For example: set pipeline, set bind groups, draw calls, etc.
 pub enum SubPassCommand {
     /// Set the pipeline for subsequent draw calls.
@@ -85,13 +83,12 @@ pub enum SubPassCommand {
     /// Set a bind group at the given index for subsequent draw calls.
     BindGroup(u32, Option<BindGroup>),
     /// Set the vertex and index buffers for subsequent draw calls.
-    Mesh(Option<AssetId<MeshAsset>>),
+    Mesh(Option<AssetId<Mesh>>),
     /// Issue draw calls with the given index and instance ranges, using the currently set pipeline and bind groups.
     DrawBatches(Vec<DrawCommandsBatch>),
     /// Execute a custom function that has access to the render world and the render pass instance. This can be used for custom rendering logic that doesn't fit into the other command types. This function should be written as `fn _name_(world: &World, render_pass: &mut RenderPassInstance) { ... }`.
     Custom(for<'pass> fn(&'pass World, &mut RenderPassInstance<'pass>))
 }
-
 /// A sub-pass is a sequence of commands executed within a render pass.
 /// For example, a GBuffer pass might have one sub-pass for rendering opaque objects and another for transparent objects.
 #[derive(Default)]
@@ -103,6 +100,7 @@ pub struct RenderSubPassDesc(pub Vec<SubPassCommand>);
 pub type RenderPassId = i32;
 /// Describes a render pass in the render graph, with its attachments, load ops, etc.
 /// This is returned by the `describe` method of the `RenderPass` trait, which is called in the render world before rendering to get the pass description and attachments.
+/// See [crate::passes] for more details and examples.
 pub trait RenderPass {
     type Params: ReadOnlySystemParam;
 
@@ -114,7 +112,12 @@ pub trait RenderPass {
     fn label() -> &'static str;
 
     /// Custom rendering logic for this pass.
-    /// It returns None if the pass should be rendered with the default render graph execution flow, or Some(true or false) if the pass executed custom rendering logic and whether it was successful.
+    /// This can be used for passes that require custom rendering logic that doesn't fit into the default render graph execution flow.
+    /// 
+    /// Notes:
+    /// - Returns None by default, meaning the pass will be rendered with the default render graph execution flow.
+    /// - If it returns Some(true), it means the pass executed custom rendering logic and should be considered successfully rendered for this frame.
+    /// - The provided command buffer is already begun and will be submitted at the end of the render graph execution, so the custom rendering logic can simply record commands to it.
     fn custom_render(_world: &mut World, _command_buffer: &mut CommandBuffer) -> Option<bool> { None }
 }
 // Utility traits for the render graph implementation. Not meant to be used by users of the render graph.
@@ -142,6 +145,8 @@ impl<P> RenderPassNode for RenderPassHolder<P> where P: RenderPass + Send + Sync
 
 /// Core trait for all render sub-passes in the render graph. A sub-pass is a sequence of commands executed within a render pass.
 /// For example, a GBuffer pass might have one sub-pass for rendering opaque objects and another for transparent objects.
+/// The `describe` method defines the commands to execute in this sub-pass, which can be setting pipelines, bind groups, vertex buffers, draw calls, or even custom rendering logic.
+/// See [crate::passes] for more details and examples.
 pub trait RenderSubPass {
     type Params: ReadOnlySystemParam;
 
@@ -169,9 +174,10 @@ impl<SP> RenderSubPassNode for RenderSubPassHolder<SP> where SP: RenderSubPass +
     }
 }
 
-
-
-
+/// The render graph resource, which stores all render passes and sub-passes, their descriptions, and their execution order.
+/// This is the core of the render graph system, and is responsible for executing the render passes in the correct order with the correct attachments and commands.
+/// 
+/// To register a new render pass, use the `add_pass` method with a type that implements the `RenderPass` trait. To register a sub-pass to a render pass, use the `add_sub_pass` method with a type that implements the `RenderSubPass` trait and the parent render pass type.
 #[derive(Resource, Default)]
 pub struct RenderGraph {
     // Raw storage of passes and subpasses
@@ -337,7 +343,8 @@ fn create_render_pass<'p>(world: &'p World, command_buffer: &'p mut CommandBuffe
 
         // Set depth attachments
         if pass_desc.attachments_depth.is_some() {
-            if let Some(depth_texture) = textures.get(pass_desc.attachments_depth.as_ref().unwrap().texture.unwrap()) {
+            if let Some(depth_texture) = pass_desc.attachments_depth.as_ref().unwrap().texture
+               && let Some(depth_texture) = textures.get(depth_texture) {
                 if !(surface_width == depth_texture.texture.size.0 && surface_height == depth_texture.texture.size.1) {
                     return Err(format!("Depth attachment texture has invalid size: expected ({}, {}), got ({}, {}).", surface_width, surface_height, depth_texture.texture.size.0, depth_texture.texture.size.1));
                 }

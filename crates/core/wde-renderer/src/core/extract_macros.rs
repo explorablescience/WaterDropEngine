@@ -1,78 +1,42 @@
 //! Macros for extracting data from the main world to the render world.
-//! 
 //! Provides the [`ExtractWorld`] system parameter, which allows accessing data from the main world in the render world.
-//! Also provides the [`ExtractState`] system parameter state, which is used to manage the [`ExtractWorld`] system parameter.
 
 use bevy::{ecs::{change_detection::Tick, system::{ReadOnlySystemParam, SystemMeta, SystemParam, SystemParamItem, SystemState}, world::unsafe_world_cell::UnsafeWorldCell}, prelude::*};
 use std::ops::{Deref, DerefMut};
 
 use super::MainWorld;
 
-/// Code by `Bevy`: <https://github.com/bevyengine/bevy/blob/main/crates/bevy_render/src/extract_param.rs>.
-/// 
 /// A helper for accessing MainWorld content using a system parameter.
-///
-/// A [`SystemParam`] adapter which applies the contained `SystemParam` to the [`World`]
-/// contained in the main world resource. This parameter only works for systems run
-/// during the extract schedule ([`crate::core::Extract`]).
-///
-/// This requires that the contained [`SystemParam`] does not mutate the world, as it
-/// uses a read-only reference to the main world internally.
-///
-/// ## Context
-///
-/// [`crate::core::Extract`] is used to ExtractWorld (move) data from the simulation world (MainWorld) to the
-/// render world. The render world drives rendering each frame (generally to a `Window`).
-/// This design is used to allow performing calculations related to rendering a prior frame at the same
-/// time as the next frame is simulated, which increases throughput (FPS).
-///
 /// [`ExtractWorld`] is used to get data from the main world during [`crate::core::Extract`].
+/// Note that the system parameter `P` must implement `ReadOnlySystemParam`, as the main world is only accessible for reading in this context.
 ///
-/// ## Examples
-///
+/// ## Example
 /// ```
-/// use bevy_ecs::prelude::*;
-/// use bevy_render::ExtractWorld;
-/// # #[derive(Component)]
-/// # struct Cloud;
-/// fn extract_clouds(mut commands: Commands, clouds: ExtractWorld<Query<Entity, With<Cloud>>>) {
-///     for cloud in &clouds {
-///         commands.get_or_spawn(cloud).insert(Cloud);
-///     }
+/// fn extract(mut commands: Commands, clouds: ExtractWorld<Query<Entity, With<Cloud>>>) {
+///     /* (...) */
 /// }
 /// ```
-///
-/// [Window]: bevy::window::Window
-pub struct ExtractWorld<'w, 's, P>
-where
-    P: ReadOnlySystemParam + 'static,
-{
+pub struct ExtractWorld<'w, 's, P> where P: ReadOnlySystemParam + 'static {
     item: SystemParamItem<'w, 's, P>,
 }
-
 pub struct ExtractState<P: SystemParam + 'static> {
     state: SystemState<P>,
     main_world_state: <Res<'static, MainWorld> as SystemParam>::State,
 }
-
 // SAFETY: The only `World` access (`Res<MainWorld>`) is read-only.
 unsafe impl<P> ReadOnlySystemParam for ExtractWorld<'_, '_, P> where P: ReadOnlySystemParam {}
-
 // SAFETY: The only `World` access is properly registered by `Res<MainWorld>::init_state`.
 // This call will also ensure that there are no conflicts with prior params.
-unsafe impl<P> SystemParam for ExtractWorld<'_, '_, P>
-where
-    P: ReadOnlySystemParam,
-{
+unsafe impl<P> SystemParam for ExtractWorld<'_, '_, P> where P: ReadOnlySystemParam {
     type State = ExtractState<P>;
     type Item<'w, 's> = ExtractWorld<'w, 's, P>;
 
     fn init_access(
-            state: &Self::State,
-            system_meta: &mut SystemMeta,
-            component_access_set: &mut bevy::ecs::query::FilteredAccessSet,
-            world: &mut World,
-        ) {
+        state: &Self::State,
+        system_meta: &mut SystemMeta,
+        component_access_set: &mut bevy::ecs::query::FilteredAccessSet,
+        world: &mut World,
+    ) {
         // Register access for `Res<MainWorld>`.
         Res::<MainWorld>::init_access(
             &state.main_world_state,
@@ -111,38 +75,17 @@ where
         ExtractWorld { item }
     }
 }
-
-impl<'w, 's, P> Deref for ExtractWorld<'w, 's, P>
-where
-    P: ReadOnlySystemParam,
-{
+impl<'w, 's, P> Deref for ExtractWorld<'w, 's, P> where P: ReadOnlySystemParam {
     type Target = SystemParamItem<'w, 's, P>;
-
     #[inline]
-    fn deref(&self) -> &Self::Target {
-        &self.item
-    }
+    fn deref(&self) -> &Self::Target { &self.item }
 }
-
-impl<P> DerefMut for ExtractWorld<'_, '_, P>
-where
-    P: ReadOnlySystemParam,
-{
+impl<P> DerefMut for ExtractWorld<'_, '_, P> where P: ReadOnlySystemParam {
     #[inline]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.item
-    }
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.item }
 }
-
-impl<'a, 'w, 's, P> IntoIterator for &'a ExtractWorld<'w, 's, P>
-where
-    P: ReadOnlySystemParam,
-    &'a SystemParamItem<'w, 's, P>: IntoIterator,
-{
+impl<'a, 'w, 's, P> IntoIterator for &'a ExtractWorld<'w, 's, P> where P: ReadOnlySystemParam, &'a SystemParamItem<'w, 's, P>: IntoIterator {
     type Item = <&'a SystemParamItem<'w, 's, P> as IntoIterator>::Item;
     type IntoIter = <&'a SystemParamItem<'w, 's, P> as IntoIterator>::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        (&self.item).into_iter()
-    }
+    fn into_iter(self) -> Self::IntoIter { (&self.item).into_iter() }
 }

@@ -3,7 +3,7 @@
 //! (G-buffer + lighting).
 //!
 //! # Architecture
-//! - **Assets**: [`assets::PbrMaterialAsset`] stores albedo/specular colors and optional textures;
+//! - **Assets**: [`assets::Material3dAsset`] stores albedo/specular colors and optional textures;
 //!   the material builder emits a uniform (flags, albedo, specular) plus optional sampled textures.
 //! - **Components**: [`components::lights`] defines [`components::lights::DirectionalLight`], [`components::lights::PointLight`],
 //!   [`components::lights::SpotLight`] with attenuation helpers and defaults.
@@ -62,14 +62,14 @@
 //!     ));
 //!
 //!     // Material + mesh
-//!     let mat = assets.add(PbrMaterialAsset {
+//!     let mat = assets.add(Material3dAsset {
 //!         albedo: (0.8, 0.7, 0.6, 1.0),
 //!         ..Default::default()
 //!     });
 //!     let mesh = assets.add(wde_renderer::prelude::meshes::CubeMesh::from("pbr-cube", 1.0));
 //!     commands.spawn((
 //!         Mesh(mesh),
-//!         crate::assets::PbrMaterial(mat),
+//!         crate::assets::Material3d(mat),
 //!         Transform::from_xyz(0.0, 0.5, 0.0),
 //!     ));
 //! }
@@ -77,7 +77,7 @@
 //!
 //! # Core usage patterns
 //! - Keep lights lean: first element of the light buffer stores count; default cap is 64.
-//! - Use `PbrMaterialAsset` flags to mix textures and constants; absent textures fall back to
+//! - Use `Material3dAsset` flags to mix textures and constants; absent textures fall back to
 //!   uniform values.
 //! - All PBR draws go through the G-buffer pass; lighting runs fullscreen and must see up-to-date
 //!   depth + deferred bind group + lights bind group.
@@ -90,19 +90,19 @@
 //! - [`passes`]: SSBOs, deferred targets, pipelines, and G-buffer/lighting render passes.
 //!
 //! # Examples and further reading
-//! - Extend `PbrMaterialAsset` with metallic/roughness maps by adding extra bindings in
+//! - Extend `Material3dAsset` with metallic/roughness maps by adding extra bindings in
 //!   `describe()` and mirroring them in WGSL.
 //! - For clustered/forward variants, reuse the light buffer format and swap the pipelines.
 #![allow(clippy::type_complexity)]
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{assets::{PbrAssetsPlugin, PbrMaterial, PbrMaterialAsset}, components::PbrComponentsPlugin, logic::PbrLogicPlugin, passes::PbrFeaturesPlugin as PbrPassesPlugin};
+use crate::{assets::{PbrAssetsPlugin, PbrMaterial}, components::PbrComponentsPlugin, logic::PbrLogicPlugin, passes::PbrFeaturesPlugin as PbrPassesPlugin};
 
 pub mod prelude {
     pub use crate::PbrPlugin;
-    pub use crate::assets::{PbrMaterial, PbrMaterialAsset};
-    pub use crate::components::{lights::*, model::*};
+    pub use crate::assets::PbrMaterial;
+    pub use crate::components::{lights::*, model::*, color::*};
     pub use crate::passes::*;
     pub use crate::logic::ssbo::SsboTransformPbr;
 }
@@ -130,8 +130,8 @@ impl Plugin for PbrPlugin {
 fn init_dummy_element(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Transform::from_xyz(1000.0, 1000.0, 1000.0).with_scale(Vec3::ZERO),
-        Mesh(asset_server.add(CubeMesh::from("dummy", 1.0))),
-        PbrMaterial(asset_server.add(PbrMaterialAsset {
+        Mesh3d(asset_server.add(CubeMesh::from("dummy", 1.0))),
+        Material3d(asset_server.add(PbrMaterial {
             label: "dummy".to_string(),
             albedo: (0.0, 0.0, 0.0, 0.0),
             metallic: 0.0,

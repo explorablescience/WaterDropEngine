@@ -62,7 +62,7 @@ impl FromWorld for CommandsBuffer {
                 BufferBindingType::Storage { read_only: true }
             );
         });
-        let layout_built = layout.build(&render_instance.0.read().unwrap());
+        let layout_built = layout.build(&render_instance.0.read().unwrap()).unwrap();
         
         CommandsBuffer { commands_buffer, commands_count: 0, layout, layout_built, bind_group: None, dirty_chunks: HashSet::new() }
     }
@@ -79,7 +79,7 @@ fn build_commands_bind_group(render_instance: Res<RenderInstance>, mut commands_
         let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroupBuilder::build("commands", &render_instance, &commands_buffer.layout_built, &vec![
             BindGroupBuilder::buffer(0, &buffer.buffer)
-        ]);
+        ]).unwrap();
         commands_buffer.bind_group = Some(bind_group);
     }
 }

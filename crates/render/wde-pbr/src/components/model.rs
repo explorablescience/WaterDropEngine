@@ -4,7 +4,7 @@ use wde_renderer::prelude::*;
 use wde_logger::prelude::*;
 use bevy::prelude::*;
 
-use crate::{assets::PbrMaterialAsset, logic::ssbo::MAX_ENTITY_COUNT};
+use crate::{assets::PbrMaterial, logic::ssbo::MAX_ENTITY_COUNT};
 
 /// A weak reference to a PbrModel, suitable for extraction to the render world
 pub type PbrModelElementUuid = u128; // Unique identifier for each model element in the world 
@@ -12,7 +12,7 @@ pub type PbrModelElementUuid = u128; // Unique identifier for each model element
 /// A PBR model component that holds references to meshes and their associated PBR materials.
 #[derive(Component, Debug, Clone)]
 #[require(Transform)]
-pub struct PbrModel(pub Vec<(Handle<MeshAsset>, Handle<PbrMaterialAsset>)>);
+pub struct PbrModel(pub Vec<(Handle<Mesh>, Handle<PbrMaterial>)>);
 
 #[derive(Resource, Default)]
 pub struct ModelUuidToTransformUuidRender(pub HashMap<PbrModelElementUuid, u32>);
@@ -24,7 +24,7 @@ pub struct PbrModelRegistry {
     /// Maps between entities and their model element UUIDs
     pub entity_to_model_uuids: HashMap<Entity, Vec<PbrModelElementUuid>>,
     /// Maps between each model element UUID and its mesh and material handles
-    pub model_uuid_to_weak: HashMap<PbrModelElementUuid, (AssetId<MeshAsset>, AssetId<PbrMaterialAsset>)>,
+    pub model_uuid_to_weak: HashMap<PbrModelElementUuid, (AssetId<Mesh>, AssetId<PbrMaterial>)>,
 
     /// Maps between model element UUIDs and their transform IDs in the SSBO
     pub model_uuid_to_transform_id: HashMap<PbrModelElementUuid, u32>,
@@ -43,8 +43,8 @@ impl PbrModelRegistry {
     fn register_entity(
         &mut self,
         entity: Entity,
-        mesh_handle: &Handle<MeshAsset>,
-        material_handle: &Handle<PbrMaterialAsset>,
+        mesh_handle: &Handle<Mesh>,
+        material_handle: &Handle<PbrMaterial>,
         transform_id: u32
     ) -> PbrModelElementUuid {
         let uuid = self.next_uuid();

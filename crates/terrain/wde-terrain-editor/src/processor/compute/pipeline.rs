@@ -14,11 +14,11 @@ pub(crate) struct PaintComputePipeline(pub Handle<PaintComputePipelineAsset>);
 pub(crate) struct GpuPaintComputePipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuPaintComputePipeline {
     type SourceAsset = PaintComputePipelineAsset;
-    type Param = (SRes<AssetServer>, SResMut<PipelineManager>, SRes<CommandsBuffer>);
+    type Params = (SRes<AssetServer>, SResMut<PipelineManager>, SRes<CommandsBuffer>);
 
-    fn prepare_asset(
+    fn prepare(
             _asset: Self::SourceAsset,
-            (assets_server, pipeline_manager, commands_buffer): &mut SystemParamItem<Self::Param>
+            (assets_server, pipeline_manager, commands_buffer): &mut SystemParamItem<Self::Params>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(GpuPaintComputePipeline(pipeline_manager.create_compute_pipeline(ComputePipelineDescriptor {
             label: "paint_compute",

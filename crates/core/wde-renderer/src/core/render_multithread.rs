@@ -7,22 +7,13 @@ use bevy::{app::{AppLabel, SubApp}, ecs::schedule::MainThreadExecutor, prelude::
 
 use super::RenderApp;
 
-
-/// A Label for the sub app that runs the parts of pipelined rendering that need to run on the main thread.
-///
-/// The Main schedule of this app can be used to run logic after the render schedule starts, but
-/// before I/O processing. This can be useful for something like frame pacing.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, AppLabel)]
-pub struct RenderExtractApp;
-
 /// Channels used by the main app to send and receive the render app.
 #[derive(Resource)]
-pub struct RenderAppChannels {
+struct RenderAppChannels {
     app_to_render_sender: Sender<SubApp>,
     render_to_app_receiver: Receiver<SubApp>,
     render_app_in_render_thread: bool,
 }
-
 impl RenderAppChannels {
     /// Create a `RenderAppChannels` from a [`async_channel::Receiver`] and [`async_channel::Sender`]
     pub fn new(
@@ -50,7 +41,6 @@ impl RenderAppChannels {
         Some(render_app)
     }
 }
-
 impl Drop for RenderAppChannels {
     fn drop(&mut self) {
         if self.render_app_in_render_thread {
@@ -62,6 +52,10 @@ impl Drop for RenderAppChannels {
         }
     }
 }
+
+/// A Label for the sub app that runs the parts of pipelined rendering that need to run on the main thread.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, AppLabel)]
+struct RenderExtractApp;
 
 /// The [`PipelinedRenderingPlugin`] can be added to your application to enable pipelined rendering.
 /// This moves rendering into a different thread, so that the Nth frame's rendering can
@@ -99,8 +93,7 @@ impl Drop for RenderAppChannels {
 /// - And finally the `main app schedule` is run.
 /// - Once both the `main app schedule` and the `render schedule` are finished running, `extract` is run again.
 #[derive(Default)]
-pub struct PipelinedRenderingPlugin;
-
+pub(crate) struct PipelinedRenderingPlugin;
 impl Plugin for PipelinedRenderingPlugin {
     fn build(&self, app: &mut App) {
         // Don't add RenderExtractApp if RenderApp isn't initialized.

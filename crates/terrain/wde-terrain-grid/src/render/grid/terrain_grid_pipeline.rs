@@ -1,6 +1,6 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_camera::prelude::*;
-use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
+use wde_renderer::prelude::*;
 
 use crate::render::grid::buffers::TerrainGridBuffer;
 
@@ -14,13 +14,13 @@ pub struct TerrainGridRenderPipeline(pub Handle<TerrainGridRenderPipelineAsset>)
 pub struct GpuTerrainGridRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuTerrainGridRenderPipeline {
     type SourceAsset = TerrainGridRenderPipelineAsset;
-    type Param = (
+    type Params = (
         SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<TerrainGridBuffer>
     );
 
-    fn prepare_asset(
+    fn prepare(
             _asset: Self::SourceAsset,
-            (assets_server, pipeline_manager, camera_feature, terrain_grid_buffer): &mut SystemParamItem<Self::Param>
+            (assets_server, pipeline_manager, camera_feature, terrain_grid_buffer): &mut SystemParamItem<Self::Params>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(GpuTerrainGridRenderPipeline(pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
             label: "terrain-grid",

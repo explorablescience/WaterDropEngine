@@ -1,35 +1,12 @@
-//! Pipeline cache and loader bridging renderer descriptors to `wde-wgpu` pipelines.
-//!
-//! The manager tracks pipeline descriptors queued by gameplay/render code,
-//! watches shader asset events, and builds render/compute pipelines inside the
-//! render sub-app. Cached indices let systems request pipeline handles without
-//! rebuilding them each frame.
-
 use std::collections::HashMap;
-
 use wde_logger::prelude::*;
 use bevy::{app::{App, Plugin}, asset::{AssetEvent, AssetId, Assets}, ecs::prelude::*, prelude::MessageReader};
 use wde_wgpu::{compute_pipeline::ComputePipeline, render_pipeline::{RenderPipeline, ShaderStages}};
-
 use crate::core::RenderInstance;
-
-use crate::{core::{extract_macros::ExtractWorld, Extract, Render, RenderSet}, assets::Shader};
-
+use crate::{core::{ExtractWorld, Extract, Render, RenderSet}, assets::Shader};
 use super::{RenderPipelineDescriptor, ComputePipelineDescriptor};
 
-/// The index of a cached pipeline.
-pub type CachedPipelineIndex = usize;
-
-/// The status of a cached pipeline.
-pub enum CachedPipelineStatus<'a> {
-    Loading,
-    OkRender(&'a RenderPipeline),
-    OkCompute(&'a ComputePipeline),
-    Error
-}
-
-
-pub struct PipelineManagerPlugin;
+pub(crate) struct PipelineManagerPlugin;
 impl Plugin for PipelineManagerPlugin {
     fn build(&self, app: &mut App) {
         app
@@ -39,50 +16,43 @@ impl Plugin for PipelineManagerPlugin {
     }
 }
 
-/// Example: queue a custom pipeline from gameplay code
-/// ```rust
-/// use bevy::prelude::*;
-/// use wde_renderer::pipelines::{PipelineManager, RenderPipelineDescriptor};
-///
-/// fn queue_pipeline(mut pm: ResMut<PipelineManager>, my_desc: RenderPipelineDescriptor) {
-///     let id = pm.create_render_pipeline(my_desc);
-///     // Store id on a component/resource to bind later
-///     info!("Queued pipeline id {}", id);
-/// }
-/// ```
-
-
-#[derive(Resource, Default)]
+/// The status of a cached pipeline. Used to query the pipeline manager for the status of a pipeline.
+pub enum CachedPipelineStatus<'a> {
+    Loading,
+    OkRender(&'a RenderPipeline),
+    OkCompute(&'a ComputePipeline),
+    Error
+}
+/// The index of a cached pipeline.
+pub type CachedPipelineIndex = usize;
 /// Stores queued and realized pipelines plus shader cache.
+/// Provides an interface to queue pipelines for loading and query their status.
+#[derive(Resource, Default)]
 pub struct PipelineManager {
     /// Monotonic index generator for cached pipelines.
-    pub pipeline_iter: CachedPipelineIndex,
+    pipeline_iter: CachedPipelineIndex,
 
     /// Render pipelines waiting to be built.
-    pub processing_render_pipelines: HashMap<CachedPipelineIndex, RenderPipelineDescriptor>,
+    processing_render_pipelines: HashMap<CachedPipelineIndex, RenderPipelineDescriptor>,
     /// Built render pipelines ready for use.
-    pub loaded_render_pipelines: HashMap<CachedPipelineIndex, RenderPipeline>,
+    loaded_render_pipelines: HashMap<CachedPipelineIndex, RenderPipeline>,
     /// Original descriptors corresponding to built render pipelines.
-    pub loaded_render_pipelines_desc: HashMap<CachedPipelineIndex, RenderPipelineDescriptor>,
+    loaded_render_pipelines_desc: HashMap<CachedPipelineIndex, RenderPipelineDescriptor>,
 
     /// Compute pipelines waiting to be built.
-    pub processing_compute_pipelines: HashMap<CachedPipelineIndex, ComputePipelineDescriptor>,
+    processing_compute_pipelines: HashMap<CachedPipelineIndex, ComputePipelineDescriptor>,
     /// Built compute pipelines ready for use.
-    pub loaded_compute_pipelines: HashMap<CachedPipelineIndex, ComputePipeline>,
+    loaded_compute_pipelines: HashMap<CachedPipelineIndex, ComputePipeline>,
     /// Original descriptors corresponding to built compute pipelines.
-    pub loaded_compute_pipelines_desc: HashMap<CachedPipelineIndex, ComputePipelineDescriptor>,
+    loaded_compute_pipelines_desc: HashMap<CachedPipelineIndex, ComputePipelineDescriptor>,
 
     /// CPU-side cache of shader assets keyed by asset id.
-    pub shader_cache: HashMap<AssetId<Shader>, Shader>,
+    shader_cache: HashMap<AssetId<Shader>, Shader>,
     /// Mapping from shader asset ids to pipelines that reference them (for hot-reload).
-    pub shader_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>>,
+    shader_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>>,
 }
-
 impl PipelineManager {
     /// Push the creation of a render pipeline to the pipeline manager queue.
-    /// 
-    /// # Returns
-    /// The index of the pipeline.
     pub fn create_render_pipeline(&mut self, descriptor: RenderPipelineDescriptor) -> CachedPipelineIndex {
         // Store the pipeline descriptor to the queued pipelines
         let id = self.pipeline_iter;
@@ -92,9 +62,6 @@ impl PipelineManager {
     }
 
     /// Push the creation of a compute pipeline to the pipeline manager queue.
-    /// 
-    /// # Returns
-    /// The index of the pipeline.
     pub fn create_compute_pipeline(&mut self, descriptor: ComputePipelineDescriptor) -> CachedPipelineIndex {
         // Store the pipeline descriptor to the queued pipelines
         let id = self.pipeline_iter;
@@ -118,6 +85,7 @@ impl PipelineManager {
         }
     }
 }
+
 
 /// Extract the shaders from the asset server and store them in the pipeline manager.
 fn extract_shaders(
@@ -221,7 +189,14 @@ fn load_render_pipelines(
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
-            bind_group_layouts.push(layout.build(&render_instance.0.read().unwrap()));
+            let layout = match layout.build(&render_instance.0.read().unwrap()) {
+                Ok(layout) => layout,
+                Err(e) => {
+                    error!("Failed to build bind group layout for pipeline {}: {:?}", descriptor.label, e);
+                    continue;
+                }
+            };
+            bind_group_layouts.push(layout);
         }
 
         // Load the pipeline
@@ -305,7 +280,14 @@ fn load_compute_pipelines(
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
-            bind_group_layouts.push(layout.build(&render_instance.0.read().unwrap()));
+            let layout = match layout.build(&render_instance.0.read().unwrap()) {
+                Ok(layout) => layout,
+                Err(e) => {
+                    error!("Failed to build bind group layout for pipeline {}: {:?}", descriptor.label, e);
+                    continue;
+                }
+            };
+            bind_group_layouts.push(layout);
         }
 
         // Load the pipeline

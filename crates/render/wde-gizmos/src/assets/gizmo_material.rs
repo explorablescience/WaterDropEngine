@@ -6,6 +6,13 @@ use wde_renderer::prelude::*;
 #[reflect(Component)]
 pub struct GizmoMaterial(pub Handle<GizmoMaterialAsset>);
 
+#[repr(C)]
+#[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub(crate) struct GizmoMaterialUniform {
+    /// Color of the material.
+    pub color: [f32; 4],
+}
+
 #[derive(Asset, Clone, TypePath)]
 /// Describes a simple gizmo material with a color.
 pub struct GizmoMaterialAsset {
@@ -22,27 +29,24 @@ impl Default for GizmoMaterialAsset {
         }
     }
 }
-
-#[repr(C)]
-#[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub(crate) struct GizmoMaterialUniform {
-    /// Color of the material.
-    pub color: [f32; 4],
-}
-impl Material for GizmoMaterialAsset {
-    fn describe(&self, builder: &mut MaterialBuilder) {
+impl Material for GizmoMaterialAsset {}
+impl RenderBinding for GizmoMaterialAsset {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
         // Create the uniform buffer
         let uniform = GizmoMaterialUniform {
             color: self.color,
         };
 
         // Build the material
-        builder.add_buffer(
-            0, ShaderStages::FRAGMENT, BufferBindingType::Uniform,
-            size_of::<GizmoMaterialUniform>(), Some(bytemuck::cast_slice(&[uniform]).to_vec()));
+        builder.add_buffer(0, Buffer {
+            label: format!("{}-uniform-buffer", self.label),
+            size: std::mem::size_of::<GizmoMaterialUniform>(),
+            usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+            content: Some(bytemuck::cast_slice(&[uniform]).to_vec())
+        });
     }
 
-    fn label(&self) -> String {
-        self.label.to_string() + "-material"
+    fn label(&self) -> &str {
+        &self.label
     }
 }

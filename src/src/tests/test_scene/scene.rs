@@ -1,4 +1,4 @@
-use wde::{assets::{Mesh, materials::{PbrMaterial, PbrMaterialAsset}, meshes::PlaneMesh}, bevy::prelude::*, components::{ActiveCamera, Camera, CameraController, CameraView, DirectionalLight, PointLight, SpotLight}};
+use wde::{assets::{Mesh, materials::{Material3d, Material3dAsset}, meshes::PlaneMesh}, bevy::prelude::*, components::{ActiveCamera, Camera, CameraController, CameraView, DirectionalLight, PointLight, SpotLight}};
 // use super::terrain::TerrainSpawner;
 
 pub struct ScenePlugin;
@@ -8,7 +8,7 @@ impl Plugin for ScenePlugin {
     }
 }
 
-fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<PbrMaterialAsset>>) {
+fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<Material3dAsset>>) {
     // Main camera
     commands.spawn((
         (
@@ -28,7 +28,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
     commands.spawn((
         Transform::IDENTITY.with_scale(Vec3::splat(0.0)),
         Mesh(asset_server.add(PlaneMesh::from("dummy", [1.0, 1.0]))),
-        PbrMaterial(materials.add(PbrMaterialAsset {
+        Material3d(materials.add(Material3dAsset {
             label: "dummy".to_string(),
             ..Default::default()
         }))
@@ -45,14 +45,14 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
     //     settings.format = WTextureFormat::R8Unorm;
     //     settings.usages = WTextureUsages::TEXTURE_BINDING;
     // });
-    // let red_box = materials.add(PbrMaterialAsset {
+    // let red_box = materials.add(Material3dAsset {
     //     label: "container".to_string(),
     //     albedo: (1.0, 0.0, 0.0, 1.0),
     //     // albedo_t:   Some(container_albedo),
     //     // specular_t: Some(container_specular),
     //     ..Default::default()
     // });
-    // let blue = materials.add(PbrMaterial {
+    // let blue = materials.add(Material3d {
     //     label: "blue".to_string(),
     //     albedo: (0.0, 0.0, 1.0, 1.0),
     //     specular: 0.5,
@@ -67,7 +67,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
     // commands.spawn((
     //     Transform::from_xyz(0.0, 0.0, 0.0),
     //     Mesh(cube.clone()),
-    //     PbrMaterial(red_box.clone())
+    //     Material3d(red_box.clone())
     // ));
     // commands.spawn(PbrBundle {
     //     transform: Transform::from_xyz(5.0, 0.0, 0.0).with_scale(Vec3::splat(3.0)),
@@ -113,7 +113,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
     //     settings.format = WTextureFormat::Rgba8UnormSrgb;
     //     settings.usages = WTextureUsages::TEXTURE_BINDING;
     // });
-    // let planks = materials.add(PbrMaterial {
+    // let planks = materials.add(Material3d {
     //     label: "planks".to_string(),
     //     albedo_t: Some(planks_albedo),
     //     specular: 0.8,

@@ -13,14 +13,14 @@ struct FragOutput {
     @location(2) normal_roughness: vec4<f32>, // (r, g, b) = normal - a = roughness
 };
 
-struct PbrMaterialUniform {
+struct Material3dUniform {
     flags: vec4<f32>,    // Flags indicating material textures (1.0 = present, 0.0 = absent) - albedo, metallic-roughness, normal, occlusion
     albedo: vec4<f32>,   // Albedo color of the material (r, g, b)
     metallic: f32,       // Metallic intensity of the material
     roughness: f32,      // Roughness intensity of the material
     _padding: vec2<f32>, // Unused padding to align to 16 bytes
 };
-@group(3) @binding(0) var<uniform> in_pbr_material: PbrMaterialUniform;    /// Material uniform buffer
+@group(3) @binding(0) var<uniform> in_pbr_material: Material3dUniform;    /// Material uniform buffer
 @group(3) @binding(1) var in_albedo_texture: texture_2d<f32>;              /// Albedo texture (r, g, b)
 @group(3) @binding(2) var in_albedo_sampler: sampler;                      /// Albedo texture sampler
 @group(3) @binding(3) var in_metallic_roughness_texture: texture_2d<f32>;  /// Metallic-roughness texture (b = metallic, g = roughness)

@@ -1,4 +1,4 @@
-use wde_renderer::{core::MainWorld, prelude::*};
+use wde_renderer::prelude::*;
 use bevy::prelude::*;
 
 use crate::{manager::{TerrainDirtyTile, CHUNK_RENDER_SUBDIVISIONS, ChunkPos}, prelude::TerrainRendererGPU};

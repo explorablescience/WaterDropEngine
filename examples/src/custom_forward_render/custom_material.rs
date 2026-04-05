@@ -29,23 +29,23 @@ pub(crate) struct CustomMaterialUniform {
     /// Whether the material has a texture (1.0) or not (0.0).
     pub has_texture: f32,
 }
-impl Material for CustomMaterialAsset {
-    fn describe(&self, builder: &mut MaterialBuilder) {
+impl RenderBinding for CustomMaterialAsset {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
         // Create the uniform buffer
         let uniform = CustomMaterialUniform {
             color: [self.color.0, self.color.1, self.color.2],
             has_texture: if self.texture.is_some() { 1.0 } else { 0.0 },
         };
 
-        // Build the material
-        builder.add_buffer(
-            0, ShaderStages::FRAGMENT, BufferBindingType::Uniform,
-            size_of::<CustomMaterialUniform>(), Some(bytemuck::cast_slice(&[uniform]).to_vec()));
-        builder.add_texture_view(1, ShaderStages::FRAGMENT, self.texture.clone());
-        builder.add_texture_sampler( 2, ShaderStages::FRAGMENT, self.texture.clone());
+        // // Build the material
+        // builder.add_buffer(
+        //     0, ShaderStages::FRAGMENT, BufferBindingType::Uniform,
+        //     size_of::<CustomMaterialUniform>(), Some(bytemuck::cast_slice(&[uniform]).to_vec()));
+        // builder.add_texture_view(1, ShaderStages::FRAGMENT, self.texture.clone());
+        // builder.add_texture_sampler( 2, ShaderStages::FRAGMENT, self.texture.clone());
     }
-    fn label(&self) -> String {
-        self.label.clone()
+    fn label(&self) -> &str {
+        self.label.as_str()
     }
 }
 

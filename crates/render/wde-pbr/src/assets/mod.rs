@@ -9,9 +9,6 @@ pub(crate) struct PbrAssetsPlugin;
 impl Plugin for PbrAssetsPlugin {
     fn build(&self, app: &mut App) {
         // Register the extract commands of the material
-        app.add_plugins(MaterialsPluginRegister::<PbrMaterialAsset>::default());
-
-        // Register the components to the reflect system
-        app.register_type::<PbrMaterial>();
+        app.add_plugins(MaterialsPluginRegister::<PbrMaterial>::default());
     }
 }

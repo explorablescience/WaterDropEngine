@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
+use wde_renderer::prelude::*;
 
 #[derive(Resource, Default)]
 pub struct PbrDeferredTexturesLayout {
@@ -46,8 +46,8 @@ impl PbrDeferredTexturesLayout {
 
         // Build the layout
         let render_instance = render_instance.0.read().unwrap();
-        let deferred_layout_built = BindGroupLayout::build(&deferred_layout, &render_instance);
-        let deferred_layout_resolved_built = BindGroupLayout::build(&deferred_layout_resolved, &render_instance);
+        let deferred_layout_built = BindGroupLayout::build(&deferred_layout, &render_instance).unwrap();
+        let deferred_layout_resolved_built = BindGroupLayout::build(&deferred_layout_resolved, &render_instance).unwrap();
 
         // Create the bind group
         let deferred_bind_group = BindGroupBuilder::build("deferred-textures", &render_instance, &deferred_layout_built, &vec![
@@ -57,7 +57,7 @@ impl PbrDeferredTexturesLayout {
             BindGroupBuilder::texture_sampler(3, &albedo.texture),
             BindGroupBuilder::texture_view(   4, &normal.texture),
             BindGroupBuilder::texture_sampler(5, &normal.texture)
-        ]);
+        ]).unwrap();
         let deferred_bind_group_resolved = BindGroupBuilder::build("deferred-textures-resolved", &render_instance, &deferred_layout_resolved_built, &vec![
             BindGroupBuilder::texture_view(   0, &depth_resolved.texture),
             BindGroupBuilder::texture_sampler(1, &depth_resolved.texture),
@@ -65,7 +65,7 @@ impl PbrDeferredTexturesLayout {
             BindGroupBuilder::texture_sampler(3, &albedo_resolved.texture),
             BindGroupBuilder::texture_view(   4, &normal_resolved.texture),
             BindGroupBuilder::texture_sampler(5, &normal_resolved.texture)
-        ]);
+        ]).unwrap();
 
         // Insert the resources
         textures_layout.deferred_layout = Some(deferred_layout);

@@ -5,7 +5,7 @@ use crate::manager::{CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE};
 
 #[derive(Resource, Default)]
 pub struct TerrainRenderPassMesh {
-    pub deferred_mesh: Option<Handle<MeshAsset>>,
+    pub deferred_mesh: Option<Handle<Mesh>>,
 }
 impl TerrainRenderPassMesh {
     // Creates the rendering mesh.

@@ -24,9 +24,7 @@ impl Plugin for PbrFeaturesPlugin {
             .add_plugins(RenderAssetsPlugin::<GpuPbrLightingRenderPipeline>::default());
 
         // Add the depth blit pipeline
-        app
-            .init_asset::<ResolveRenderPipelineAsset>()
-            .add_plugins(RenderAssetsPlugin::<GpuResolveRenderPipeline>::default());
+        app.add_plugins(RenderPipelinePluginRegister::<ResolveRenderPipeline>::default());
 
         // Add the render graph nodes
         app.get_sub_app_mut(RenderApp).unwrap().world_mut()
@@ -50,11 +48,6 @@ impl Plugin for PbrFeaturesPlugin {
         let pipeline = app.world_mut()
             .get_resource::<AssetServer>().unwrap().add(PbrLightingRenderPipelineAsset);
         app.get_sub_app_mut(RenderApp).unwrap().world_mut().spawn(PbrLightingRenderPipeline(pipeline));
-
-        // Create the depth blit pipeline
-        let pipeline = app.world_mut()
-            .get_resource::<AssetServer>().unwrap().add(ResolveRenderPipelineAsset);
-        app.get_sub_app_mut(RenderApp).unwrap().world_mut().spawn(ResolveRenderPipeline(pipeline));
     }
 }
 

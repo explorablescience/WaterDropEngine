@@ -103,10 +103,10 @@ fn get_assets(
             }
             let type_id = id.type_id();
             let mut type_name = "Unknown";
-            if type_id == TypeId::of::<Mesh>() {
+            if type_id == TypeId::of::<Mesh3d>() {
                 type_name = "Mesh";
-            } else if type_id == TypeId::of::<dyn Material>() {
-                type_name = "Material";
+            // } else if type_id == TypeId::of::<dyn Material>() {
+            //     type_name = "Material";
             } else if type_id == TypeId::of::<Texture>() {
                 type_name = "Texture";
             } else if type_id == TypeId::of::<Shader>() {

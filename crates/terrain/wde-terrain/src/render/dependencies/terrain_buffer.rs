@@ -72,7 +72,7 @@ impl FromWorld for TerrainBuffer {
                 1, ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                 BufferBindingType::Storage { read_only: true });
         });
-        let layout_built = layout.build(&render_instance.0.read().unwrap());
+        let layout_built = layout.build(&render_instance.0.read().unwrap()).unwrap();
         
         TerrainBuffer { desc_buffer, tiles_buffer, layout, layout_built, bind_group: None }
     }
@@ -93,7 +93,7 @@ fn build_terrain_bind_group(render_instance: Res<RenderInstance>, mut terrain_bu
         let bind_group = BindGroupBuilder::build("terrain", &render_instance, &terrain_buffer.layout_built, &vec![
             BindGroupBuilder::buffer(0, &desc_buffer.buffer),
             BindGroupBuilder::buffer(1, &tiles_buffer.buffer)
-        ]);
+        ]).unwrap();
         terrain_buffer.bind_group = Some(bind_group);
     }
 }

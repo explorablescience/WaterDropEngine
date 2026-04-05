@@ -80,8 +80,8 @@ pub mod passes;
 pub struct GizmosPlugin;
 impl Plugin for GizmosPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(GizmoMaterialPlugin)
-            .add_plugins(GizmoFeaturesPlugin);
+        // app
+        //     .add_plugins(GizmoMaterialPlugin)
+        //     .add_plugins(GizmoFeaturesPlugin);
     }
 }

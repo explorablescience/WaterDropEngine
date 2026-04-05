@@ -11,13 +11,13 @@ pub struct DisplayTextureMaterialAsset {
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct DisplayTextureMaterial(pub Handle<DisplayTextureMaterialAsset>);
-impl Material for DisplayTextureMaterialAsset {
-    fn describe(&self, builder: &mut MaterialBuilder) {
-        builder.add_texture_view(    0, ShaderStages::FRAGMENT, self.texture.clone());
-        builder.add_texture_sampler( 1, ShaderStages::FRAGMENT, self.texture.clone());
+impl RenderBinding for DisplayTextureMaterialAsset {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
+        // builder.add_texture_view(    0, ShaderStages::FRAGMENT, self.texture.clone());
+        // builder.add_texture_sampler( 1, ShaderStages::FRAGMENT, self.texture.clone());
     }
 
-    fn label(&self) -> String {
-        "display-texture-material".to_string()
+    fn label(&self) -> &str {
+        "display-texture-material"
     }
 }

@@ -31,13 +31,13 @@ impl LightsFeatureBuffer {
         };
 
         // Create the bind group layout
-        let layout_built = Self::layout().build(&render_instance.0.read().unwrap());
+        let layout_built = Self::layout().build(&render_instance.0.read().unwrap()).unwrap();
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
         let bind_group = BindGroupBuilder::build("lights", &render_instance, &layout_built, &vec![
             BindGroupBuilder::buffer(0, &buffer.buffer)
-        ]);
+        ]).unwrap();
         lights_buffer.bind_group = Some(bind_group);
     }
 

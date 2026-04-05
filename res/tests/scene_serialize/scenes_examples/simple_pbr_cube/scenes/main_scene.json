@@ -97,7 +97,7 @@
                         "wde_render::assets::mesh::Mesh": "models/container.obj"
                     },
                     {
-                        "wde_render::assets::materials::pbr_material::PbrMaterial": null
+                        "wde_render::assets::materials::pbr_material::Material3d": null
                     }
                 ]
             },

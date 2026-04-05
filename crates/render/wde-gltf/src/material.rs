@@ -1,8 +1,8 @@
 //! Material handling for glTF models.
 
-use wde_pbr::assets::PbrMaterialAsset;
+use wde_pbr::assets::PbrMaterial;
 use bevy::prelude::*;
-use wde_renderer::assets::TextureLoaderSettings;
+use wde_renderer::prelude::*;
 
 /// Representation of a glTF material's data.
 #[derive(Debug, Clone)]
@@ -19,15 +19,15 @@ pub struct GltfMaterial {
 }
 
 impl GltfMaterial {
-    /// Convert the GltfMaterial to a new PbrMaterialAsset.
+    /// Convert the GltfMaterial to a new Material3dAsset.
     /// 
     /// # Arguments
     /// 
     /// * `asset_server` - Reference to the Bevy asset server for loading textures.
     /// 
     /// # Returns
-    /// * `Handle<PbrMaterialAsset>` - Handle to the created PbrMaterialAsset.
-    pub fn to_pbr(&self, asset_server: &AssetServer) -> Handle<PbrMaterialAsset> {
+    /// * `Handle<Material3dAsset>` - Handle to the created Material3dAsset.
+    pub fn to_pbr(&self, asset_server: &AssetServer) -> Handle<PbrMaterial> {
         // Load base color texture if available
         let aldebo_texture_handle = self.base_color_tex_url
             .as_ref()
@@ -78,7 +78,7 @@ impl GltfMaterial {
 
         // Create and add the material to the asset server
         asset_server
-            .add(PbrMaterialAsset {
+            .add(PbrMaterial {
                 label: format!("gltf_material_{}", self.name),
 
                 albedo: (self.base_color[0], self.base_color[1], self.base_color[2], self.base_color[3]),

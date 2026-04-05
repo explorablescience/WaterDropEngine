@@ -10,7 +10,7 @@ impl Plugin for PbrBatchesPlugin {
     }
 }
 
-fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<PbrMaterialAsset>>) {
+fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: ResMut<Assets<PbrMaterial>>) {
     // Creates a camera
     commands.spawn(
         ((
@@ -26,12 +26,12 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
         settings.format = TextureFormat::Rgba8Unorm;
         settings.usages = TextureUsages::TEXTURE_BINDING;
     });
-    let red_box = materials.add(PbrMaterialAsset {
+    let red_box = materials.add(PbrMaterial {
         label: "pbr-material-red-box".to_string(),
         albedo_t: Some(box_texture),
         ..Default::default()
     });
-    let blue = materials.add(PbrMaterialAsset {
+    let blue = materials.add(PbrMaterial {
         label: "pbr-material-blue".to_string(),
         albedo: (0.0, 0.0, 1.0, 1.0),
         ..Default::default()
@@ -42,30 +42,30 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
     // Spawn the entities
     commands.spawn((
         Transform::from_xyz(0.0, 0.0, 0.0),
-        Mesh(cube.clone()),
-        PbrMaterial(blue.clone())
+        Mesh3d(cube.clone()),
+        Material3d(blue.clone())
     ));
     commands.spawn((
         Transform::from_xyz(5.0, 0.0, 0.0),
-        Mesh(cube.clone()),
-        PbrMaterial(blue.clone())
+        Mesh3d(cube.clone()),
+        Material3d(blue.clone())
     ));
     commands.spawn((
         Transform::from_xyz(10.0, 0.0, 0.0),
-        Mesh(cube.clone()),
-        PbrMaterial(red_box.clone())
+        Mesh3d(cube.clone()),
+        Material3d(red_box.clone())
     ));
     commands.spawn((
         Transform::from_xyz(15.0, 0.0, 0.0),
-        Mesh(suzanne.clone()),
-        PbrMaterial(red_box.clone())
+        Mesh3d(suzanne.clone()),
+        Material3d(red_box.clone())
     ));
     for i in 1..100 {
         for j in 1..100 {
             commands.spawn((
                 Transform::from_xyz(i as f32 * 5.0, 0.0, j as f32 * 5.0 + 5.0),
-                Mesh(suzanne.clone()),
-                PbrMaterial(blue.clone())
+                Mesh3d(suzanne.clone()),
+                Material3d(blue.clone())
             ));
         }
     }

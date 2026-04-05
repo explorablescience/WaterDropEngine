@@ -5,14 +5,14 @@ use crate::logic::deferred_textures::PbrDeferredTextures;
 
 pub struct RenderPassOpaqueGBuffer;
 impl RenderPass for RenderPassOpaqueGBuffer {
-    type Params = (SRes<PbrDeferredTextures>, SRes<DepthTextureMSAA>);
+    type Params = (SRes<PbrDeferredTextures>, SBinding<DepthTexture>);
 
     fn describe(
         (deferred_textures, depth_texture): &SystemParamItem<Self::Params>
     ) -> RenderPassDesc {
         RenderPassDesc {
             attachments_depth: Some(RenderPassDescDepthAttachment {
-                texture: Some(depth_texture.texture.id()),
+                texture: depth_texture.iter().next().and_then(|(_, t)| t.get_texture(0)),
                 load: LoadOp::Clear(1.0),
                 ..default()
             }),

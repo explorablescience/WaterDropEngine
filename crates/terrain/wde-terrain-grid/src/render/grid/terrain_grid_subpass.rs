@@ -7,13 +7,13 @@ use crate::{editor::PlacementUI, render::grid::{buffers::TerrainGridBuffer, terr
 
 #[derive(Resource, Default)]
 pub struct RenderSubPassTerrainGrid {
-    mesh: Option<Handle<MeshAsset>>,
+    mesh: Option<Handle<Mesh>>,
     render_grid: bool
 }
 impl RenderSubPassTerrainGrid {
     pub fn init(assets_server: Res<AssetServer>, mut pass: ResMut<RenderSubPassTerrainGrid>) {
         // Create the 2d quad mesh
-        let mesh: Handle<MeshAsset> = assets_server.add(MeshAsset {
+        let mesh: Handle<Mesh> = assets_server.add(Mesh {
             label: "terrain-grid-pass".to_string(),
             vertices: vec![
                 Vertex { position: [-1.0, 1.0, 0.0], uv: [0.0, 1.0], normal: [0.0, 0.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
@@ -22,7 +22,7 @@ impl RenderSubPassTerrainGrid {
                 Vertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], normal: [0.0, 0.0, 1.0], tangent: [1.0, 0.0, 0.0, 1.0] },
             ],
             indices: vec![0, 2, 1, 0, 3, 2],
-            bounding_box: ModelBoundingBox {
+            bbox: MeshBbox {
                 min: Vec3::new(-1.0, -1.0, 0.0),
                 max: Vec3::new(1.0, 1.0, 0.0),
             },

@@ -1,6 +1,6 @@
 use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_camera::prelude::*;
-use wde_renderer::{MSAA_SAMPLE_COUNT, prelude::*};
+use wde_renderer::prelude::*;
 
 use crate::render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer}, renderer_gpu::TerrainRendererGPU};
 
@@ -14,13 +14,13 @@ pub struct TerrainRenderPipeline(pub Handle<TerrainRenderPipelineAsset>);
 pub struct GpuTerrainRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuTerrainRenderPipeline {
     type SourceAsset = TerrainRenderPipelineAsset;
-    type Param = (
+    type Params = (
         SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<TerrainMaterialArrays>, SRes<TerrainBuffer>
     );
 
-    fn prepare_asset(
+    fn prepare(
             asset: Self::SourceAsset,
-            (assets_server, pipeline_manager, camera_feature, material_arrays, terrain_buffer): &mut SystemParamItem<Self::Param>
+            (assets_server, pipeline_manager, camera_feature, material_arrays, terrain_buffer): &mut SystemParamItem<Self::Params>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         let materials_layout = match &material_arrays.bind_group_layout {
             Some(layout) => layout,
