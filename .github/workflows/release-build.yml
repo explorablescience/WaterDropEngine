@@ -31,6 +31,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/install-linux-deps
+        with:
+          wayland: "true"
+          xkb: "true"
+          x11: "true"
+
       - name: Install Rust target
         uses: dtolnay/rust-toolchain@stable
         with:

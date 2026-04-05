@@ -27,6 +27,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install system dependencies
+        uses: ./.github/actions/install-linux-deps
+        with:
+          wayland: "true"
+          xkb: "true"
+          x11: "true"
+
       - name: Install Rust (stable)
         uses: dtolnay/rust-toolchain@stable
 
