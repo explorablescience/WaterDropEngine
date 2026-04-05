@@ -1,30 +1,49 @@
-use wde_logger::prelude::*;
-use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
+use bevy::{
+    ecs::system::{SystemParamItem, lifetimeless::SRes},
+    prelude::*
+};
 use wde_camera::render::CameraFeatureRender;
+use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{assets::PbrMaterial, logic::{batches::Batches, ssbo::SsboTransformPbr}, passes::subpass::gbuffer_pipeline::GpuPbrGBufferRenderPipeline};
-
+use crate::{
+    assets::PbrMaterial,
+    logic::{batches::Batches, ssbo::SsboTransformPbr},
+    passes::subpass::gbuffer_pipeline::GpuPbrGBufferRenderPipeline
+};
 
 pub(crate) struct SubRenderPassGbufferPbr;
 impl RenderSubPass for SubRenderPassGbufferPbr {
     type Params = (
-        SRes<RenderAssets<GpuPbrGBufferRenderPipeline>>, SRes<CameraFeatureRender>, SRes<SsboTransformPbr>, SRes<RenderAssets<GpuRenderBinding<SsboMesh>>>
+        SRes<RenderAssets<GpuPbrGBufferRenderPipeline>>,
+        SRes<CameraFeatureRender>,
+        SRes<SsboTransformPbr>,
+        SRes<RenderAssets<GpuRenderBinding<SsboMesh>>>
     );
 
     fn describe(
         (render_pipeline, camera_feature, pbr_ssbo, ssbo_mesh): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
-            SubPassCommand::Pipeline(Some(render_pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
-            SubPassCommand::BindGroup(0, ssbo_mesh.iter().next().map(|(_, mesh)| mesh.bind_group.clone())),
+            SubPassCommand::Pipeline(
+                Some(render_pipeline.iter().next().map(|(_, p)| p.0)).flatten()
+            ),
+            SubPassCommand::BindGroup(
+                0,
+                ssbo_mesh
+                    .iter()
+                    .next()
+                    .map(|(_, mesh)| mesh.bind_group.clone())
+            ),
             SubPassCommand::BindGroup(1, camera_feature.bind_group.clone()),
             SubPassCommand::BindGroup(2, pbr_ssbo.bind_group.clone()),
-            SubPassCommand::Custom(draw_custom)
+            SubPassCommand::Custom(draw_custom),
         ])
     }
 
-    fn label() -> &'static str { "pbr-gbuffer-main" }
+    fn label() -> &'static str {
+        "pbr-gbuffer-main"
+    }
 }
 
 #[repr(C)]
@@ -36,7 +55,9 @@ pub(crate) struct PushConstants {
 
 fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
     let batches = world.get_resource::<Batches>().unwrap();
-    let materials = world.get_resource::<RenderAssets<GpuMaterial<PbrMaterial>>>().unwrap();
+    let materials = world
+        .get_resource::<RenderAssets<GpuMaterial<PbrMaterial>>>()
+        .unwrap();
     let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
 
     // Create the batches of draw commands
@@ -54,12 +75,13 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
             current_mesh_id = Some(batch.mesh_id);
 
             // Set push constants
-            render_pass.set_push_constants(ShaderStages::VERTEX, bytemuck::bytes_of(&[
-                PushConstants {
+            render_pass.set_push_constants(
+                ShaderStages::VERTEX,
+                bytemuck::bytes_of(&[PushConstants {
                     first_vertex: mesh.ssbo_first_vertex,
                     first_index: mesh.ssbo_first_index
-                }
-            ]));
+                }])
+            );
         }
 
         // Set the material

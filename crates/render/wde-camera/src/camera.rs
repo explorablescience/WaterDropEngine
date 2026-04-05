@@ -12,14 +12,14 @@ pub struct ActiveCamera;
 pub struct CameraView {
     pub fov: f32,
     pub znear: f32,
-    pub zfar: f32,
+    pub zfar: f32
 }
 impl Default for CameraView {
     fn default() -> Self {
         Self {
             fov: 60.0,
             znear: 0.1,
-            zfar: 10000.0,
+            zfar: 10000.0
         }
     }
 }
@@ -30,21 +30,18 @@ impl CameraView {
     }
 
     /// Convert a 2D ndc position to a 3D world direction.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `ndc_pos` - The 2D ndc position.
     /// * `transform` - The camera transform.
     /// * `aspect_ratio` - The aspect ratio of the viewport.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The 3D world direction.
     pub fn ndc_to_world(&self, ndc_pos: Vec2, transform: &Transform, aspect_ratio: f32) -> Vec3 {
-        let proj = Mat4::perspective_rh(
-            self.fov.to_radians(), aspect_ratio,
-            self.znear, self.zfar
-        );
+        let proj = Mat4::perspective_rh(self.fov.to_radians(), aspect_ratio, self.znear, self.zfar);
         let view = TransformUniform::transform_world_to_obj(transform);
         let inv_vp = (proj * view).inverse();
 
@@ -84,58 +81,71 @@ pub(crate) struct CameraUniform {
 }
 impl CameraUniform {
     /// Create a new camera uniform buffer.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `camera` - The camera component.
     /// * `transform` - The transform component.
     /// * `aspect_ratio` - The aspect ratio of the screen.
     ///
     /// # Returns
-    /// 
+    ///
     /// The camera uniform buffer.
     pub fn new(transform: &Transform, camera_view: &CameraView, aspect_ratio: f32) -> Self {
         let world_to_view = Self::get_world_to_view(transform).to_cols_array_2d();
         let view_to_ndc = Self::get_view_to_ndc(camera_view, aspect_ratio).to_cols_array_2d();
-        let ndc_to_view = Mat4::from_cols_array_2d(&view_to_ndc).inverse().to_cols_array_2d();
-        let view_to_world = Mat4::from_cols_array_2d(&world_to_view).inverse().to_cols_array_2d();
+        let ndc_to_view = Mat4::from_cols_array_2d(&view_to_ndc)
+            .inverse()
+            .to_cols_array_2d();
+        let view_to_world = Mat4::from_cols_array_2d(&world_to_view)
+            .inverse()
+            .to_cols_array_2d();
 
         Self {
             world_to_view,
             view_to_ndc,
             ndc_to_view,
             view_to_world,
-            position: [transform.translation.x, transform.translation.y, transform.translation.z, 1.0]
+            position: [
+                transform.translation.x,
+                transform.translation.y,
+                transform.translation.z,
+                1.0
+            ]
         }
     }
 
     /// Get the world to ndc matrix.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `transform` - The transform component.
     /// * `camera_view` - The camera view component.
     /// * `aspect_ratio` - The aspect ratio of the screen.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The world to screen (NDC) matrix ((openGL to WGPU) * projection * view).
     #[inline]
     #[allow(dead_code)]
-    fn get_world_to_ndc(transform: &Transform, camera_view: &CameraView, aspect_ratio: f32) -> Mat4 {
+    fn get_world_to_ndc(
+        transform: &Transform,
+        camera_view: &CameraView,
+        aspect_ratio: f32
+    ) -> Mat4 {
         let view = Self::get_world_to_view(transform);
         let proj = Self::get_view_to_ndc(camera_view, aspect_ratio);
         proj * view
     }
 
     /// Get the world to view matrix.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `transform` - The transform component.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The world to view matrix.
     #[inline]
     fn get_world_to_view(transform: &Transform) -> Mat4 {
@@ -144,21 +154,23 @@ impl CameraUniform {
     }
 
     /// Get the view to ndc matrix.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `camera_view` - The camera view component.
     /// * `aspect_ratio` - The aspect ratio of the screen.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The view to screen (NDC) matrix (projection * openGL to WGPU).
     #[inline]
     fn get_view_to_ndc(camera_view: &CameraView, aspect_ratio: f32) -> Mat4 {
         // Projection from camera to NDC
         Mat4::perspective_rh(
-            camera_view.fov.to_radians(), aspect_ratio,
-            camera_view.znear, camera_view.zfar
+            camera_view.fov.to_radians(),
+            aspect_ratio,
+            camera_view.znear,
+            camera_view.zfar
         )
     }
 }

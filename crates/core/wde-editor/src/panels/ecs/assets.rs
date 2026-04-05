@@ -1,69 +1,68 @@
 use std::{any::TypeId, path::Path};
 
-use wde_renderer::prelude::*;
-use wde_egui::prelude::{EguiContext, egui};
 use bevy::prelude::*;
+use wde_egui::prelude::{EguiContext, egui};
+use wde_renderer::prelude::*;
 
 use crate::ui::UIMenu;
 
 #[derive(Resource, Default)]
 pub struct AssetCatalog {
-	paths: Vec<String>,
+    paths: Vec<String>
 }
 
 pub fn init_asset_catalog(mut asset_catalog: ResMut<AssetCatalog>) {
-	let mut paths = Vec::new();
-	collect_asset_paths(Path::new("res"), Path::new("res"), &mut paths);
-	paths.sort();
-	asset_catalog.paths = paths;
+    let mut paths = Vec::new();
+    collect_asset_paths(Path::new("res"), Path::new("res"), &mut paths);
+    paths.sort();
+    asset_catalog.paths = paths;
 }
 fn collect_asset_paths(root: &Path, current: &Path, out: &mut Vec<String>) {
-	let Ok(entries) = std::fs::read_dir(current) else {
-		return;
-	};
+    let Ok(entries) = std::fs::read_dir(current) else {
+        return;
+    };
 
-	for entry in entries.flatten() {
-		let path = entry.path();
+    for entry in entries.flatten() {
+        let path = entry.path();
 
-		if path.is_dir() {
-			collect_asset_paths(root, &path, out);
-			continue;
-		}
+        if path.is_dir() {
+            collect_asset_paths(root, &path, out);
+            continue;
+        }
 
-		let Ok(relative) = path.strip_prefix(root) else {
-			continue;
-		};
+        let Ok(relative) = path.strip_prefix(root) else {
+            continue;
+        };
 
-		let relative = relative.to_string_lossy().replace('\\', "/");
-		out.push(relative);
-	}
+        let relative = relative.to_string_lossy().replace('\\', "/");
+        out.push(relative);
+    }
 }
 
-
 pub fn draw_assets_panel(
-	ctx: Res<EguiContext>,
-	mut ui_menu: ResMut<UIMenu>,
-	asset_server: Res<AssetServer>,
-	asset_catalog: Res<AssetCatalog>,
+    ctx: Res<EguiContext>,
+    mut ui_menu: ResMut<UIMenu>,
+    asset_server: Res<AssetServer>,
+    asset_catalog: Res<AssetCatalog>
 ) {
-	if !ui_menu.is_clicked("Engine/Assets") {
-		return;
-	}
+    if !ui_menu.is_clicked("Engine/Assets") {
+        return;
+    }
 
     // Get list of loaded assets and all assets
     let loading_assets = get_assets(&asset_server, &asset_catalog, false);
-	let loaded_assets = get_assets(&asset_server, &asset_catalog, true);
+    let loaded_assets = get_assets(&asset_server, &asset_catalog, true);
 
     // Show the assets panel
-	egui::Window::new("Assets")
-		.default_size([1100.0, 600.0])
+    egui::Window::new("Assets")
+        .default_size([1100.0, 600.0])
         .open(ui_menu.clicked_mut("Engine/Assets").unwrap_or(&mut false))
-		.show(&ctx.0, |ui| {
+        .show(&ctx.0, |ui| {
             // Loaded assets
             ui.heading("Loaded Assets");
-			ui.label(format!("Total: {}", loaded_assets.len()));
+            ui.label(format!("Total: {}", loaded_assets.len()));
             ui.spacing();
-			egui::ScrollArea::vertical()
+            egui::ScrollArea::vertical()
                 .id_salt("loaded")
                 .show(ui, |ui| {
                     for (id, path) in &loaded_assets {
@@ -84,13 +83,13 @@ pub fn draw_assets_panel(
                         ui.label(format!("{:?} - {}", id, path));
                     }
                 });
-		});
+        });
 }
 
 fn get_assets(
     asset_server: &AssetServer,
     asset_catalog: &AssetCatalog,
-    only_loaded: bool,
+    only_loaded: bool
 ) -> Vec<(String, String)> {
     // Collect assets based on the catalog and filter by loaded status
     let mut assets = asset_catalog
@@ -117,9 +116,7 @@ fn get_assets(
         .collect::<Vec<_>>();
 
     // Sort assets by type and path
-    assets.sort_by(|a, b| {
-        a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1))
-    });
+    assets.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
 
     assets
 }

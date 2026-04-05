@@ -1,21 +1,21 @@
 use crate::{
     prelude::*,
-    ui_textures::{UITextureHandle, UITextures},
+    ui_textures::{UITextureHandle, UITextures}
 };
-use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_egui::prelude::*;
+use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 
 #[derive(Resource, Default)]
 struct ScreenshotRequest {
-    request: bool,
+    request: bool
 }
 
 #[derive(Resource, Default)]
 struct RenderGraphUIState {
     pub names: Vec<String>,
-    pub ghost_swapchain_texture_handle: Option<UITextureHandle>,
+    pub ghost_swapchain_texture_handle: Option<UITextureHandle>
 }
 
 pub struct RenderGraphPanelPlugin;
@@ -35,19 +35,19 @@ impl Plugin for RenderGraphPanelPlugin {
 
     fn finish(&self, app: &mut App) {
         // Register the names of the render passes in the UI state resource, for display in the UI.
-        let render_graph = app
+        let _render_graph = app
             .get_sub_app_mut(RenderApp)
             .unwrap()
             .world()
             .resource::<RenderGraph>();
-        let mut names = vec![];
+        let names = vec![];
         // for id in render_graph.get_sorted_passes_OLD() {
         //     let pass = render_graph.get_pass_OLD(id).unwrap();
         //     names.push(format!("{}: {}", id, pass.label()));
         // }
         app.world_mut().insert_resource(RenderGraphUIState {
             names,
-            ghost_swapchain_texture_handle: None,
+            ghost_swapchain_texture_handle: None
         });
     }
 }
@@ -60,7 +60,7 @@ fn init_render(
     asset_server: Res<AssetServer>,
     mut ui_textures: ResMut<UITextures>,
     mut render_graph_ui_state: ResMut<RenderGraphUIState>,
-    window: Query<&Window>,
+    window: Query<&Window>
 ) {
     // Create a texture used to blit from the swapchain, and register it in the UI textures resource
     let resolution = &window.single().unwrap().resolution;
@@ -81,7 +81,7 @@ fn resize(
     mut window_resized_events: MessageReader<SurfaceResized>,
     asset_server: Res<AssetServer>,
     mut ui_textures: ResMut<UITextures>,
-    mut render_graph_ui_state: ResMut<RenderGraphUIState>,
+    mut render_graph_ui_state: ResMut<RenderGraphUIState>
 ) {
     for event in window_resized_events.read() {
         // Recreate the ghost swapchain texture with the new size
@@ -104,7 +104,7 @@ fn draw_ui(
     mut ui_menu: ResMut<UIMenu>,
     ui_state: Res<RenderGraphUIState>,
     mut render_messages: ResMut<ScreenshotRequest>,
-    ui_textures: Res<UITextures>,
+    ui_textures: Res<UITextures>
 ) {
     if !ui_menu.is_clicked("Engine/Render Graph") {
         return;
@@ -116,7 +116,7 @@ fn draw_ui(
         .open(
             ui_menu
                 .clicked_mut("Engine/Render Graph")
-                .unwrap_or(&mut false),
+                .unwrap_or(&mut false)
         )
         .show(&ctx.0, |ui| {
             ui.label("Registered Render Passes:");
@@ -145,10 +145,10 @@ fn extract(
     main_messages: ExtractWorld<Res<ScreenshotRequest>>,
     mut render_messages: ResMut<ScreenshotRequest>,
     main_render_graph_ui_state: ExtractWorld<Res<RenderGraphUIState>>,
-    mut render_graph_ui_state: ResMut<RenderGraphUIState>,
+    mut render_graph_ui_state: ResMut<RenderGraphUIState>
 ) {
     *render_messages = ScreenshotRequest {
-        request: main_messages.request,
+        request: main_messages.request
     };
     render_graph_ui_state.ghost_swapchain_texture_handle = main_render_graph_ui_state
         .ghost_swapchain_texture_handle
@@ -169,7 +169,6 @@ fn render_custom_passes(world: &mut World) {
         .is_none()
     {
         warn!("No ghost swapchain texture handle available, skipping render passes.");
-        return;
     }
 
     // Run the update methods for each pass

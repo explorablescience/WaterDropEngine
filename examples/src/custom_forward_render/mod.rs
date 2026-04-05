@@ -69,7 +69,7 @@ use bevy::prelude::*;
 /// Plugin to add the custom forward render pass, pipeline and material
 pub struct CustomFeaturesPlugin;
 impl Plugin for CustomFeaturesPlugin {
-    fn build(&self, app: &mut App) {
+    fn build(&self, _app: &mut App) {
         // // Create the scene to display
         // app
         //     .add_systems(Startup, create_scene);
@@ -93,7 +93,7 @@ impl Plugin for CustomFeaturesPlugin {
         //     .add_systems(Render, CustomRenderPass::render.in_set(RenderSet::Render));
     }
 
-    fn finish(&self, app: &mut App) {
+    fn finish(&self, _app: &mut App) {
         // // Create the render pass
         // app.get_sub_app_mut(RenderApp).unwrap()
         //     .insert_resource(CustomRenderPass {

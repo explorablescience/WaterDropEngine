@@ -1,5 +1,10 @@
 use bevy::{asset::Handle, ecs::prelude::*};
-use wde_wgpu::{bind_group::BindGroupLayout, pipelines::BlendState, render_pipeline::{DepthDescriptor, Face, RenderTopology, ShaderStages}, texture::TextureFormat};
+use wde_wgpu::{
+    bind_group::BindGroupLayout,
+    pipelines::BlendState,
+    render_pipeline::{DepthDescriptor, Face, RenderTopology, ShaderStages},
+    texture::TextureFormat
+};
 
 use crate::assets::Shader;
 
@@ -12,7 +17,7 @@ pub struct PushConstantDescriptor {
     /// Byte offset from the start of the push constant buffer.
     pub offset: u32,
     /// Size in bytes (multiple of 4, up to 128).
-    pub size: u32,
+    pub size: u32
 }
 
 /// Describes a render pipeline, including its shaders, resources and states.
@@ -67,11 +72,11 @@ impl Default for RenderPipelineDescriptor {
 pub struct ComputePipelineDescriptor {
     pub label: &'static str,
     pub comp: Option<Handle<Shader>>,
-    
+
     /// Bind group layouts describing all resource bindings.
     pub bind_group_layouts: Vec<BindGroupLayout>,
     /// Push constant ranges exposed to the compute shader.
-    pub push_constants: Vec<PushConstantDescriptor>,
+    pub push_constants: Vec<PushConstantDescriptor>
 }
 impl Default for ComputePipelineDescriptor {
     fn default() -> Self {

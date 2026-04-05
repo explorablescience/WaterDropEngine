@@ -1,7 +1,7 @@
-use bevy::{ecs::system::lifetimeless::SRes, prelude::*};
-use wde_wgpu::{buffer::{BufferUsage as WBufferUsage, Buffer as WBuffer}};
-use crate::core::RenderInstance;
 use super::asset::RenderAsset;
+use crate::core::RenderInstance;
+use bevy::{ecs::system::lifetimeless::SRes, prelude::*};
+use wde_wgpu::buffer::{Buffer as WBuffer, BufferUsage as WBufferUsage};
 
 /// Stores a CPU buffer with raw byte data and metadata for GPU allocation.
 /// This buffer will be uploaded to the GPU, represented by a [`GpuBuffer`] asset.
@@ -28,7 +28,7 @@ impl RenderAsset for GpuBuffer {
 
     fn prepare(
         asset: Self::SourceAsset,
-        render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Params>,
+        render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Params>
     ) -> Result<Self, super::asset::PrepareAssetError<Self::SourceAsset>> {
         let render_instance = render_instance.0.read().unwrap();
         let buffer = WBuffer::new(
@@ -36,9 +36,15 @@ impl RenderAsset for GpuBuffer {
             asset.label.as_str(),
             asset.size,
             asset.usage,
-            asset.content.as_deref());
-        Ok(GpuBuffer { label: asset.label, buffer })
+            asset.content.as_deref()
+        );
+        Ok(GpuBuffer {
+            label: asset.label,
+            buffer
+        })
     }
 
-    fn label(&self) -> &str { &self.label }
+    fn label(&self) -> &str {
+        &self.label
+    }
 }

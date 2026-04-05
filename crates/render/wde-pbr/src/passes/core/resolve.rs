@@ -1,5 +1,11 @@
+use bevy::{
+    ecs::system::{
+        SystemParamItem,
+        lifetimeless::{SRes, SResMut}
+    },
+    prelude::*
+};
 use wde_renderer::prelude::*;
-use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 
 use crate::logic::render_texture::PbrRenderTextureBindGroup;
 
@@ -10,8 +16,12 @@ impl RenderPass for RenderPassResolve {
     fn describe(_: &SystemParamItem<Self::Params>) -> RenderPassDesc {
         RenderPassDesc::default()
     }
-    fn id() -> RenderPassId { 100 }
-    fn label() -> &'static str { "pbr-resolve" }
+    fn id() -> RenderPassId {
+        100
+    }
+    fn label() -> &'static str {
+        "pbr-resolve"
+    }
 }
 
 #[derive(TypePath, Default, Clone)]
@@ -21,24 +31,28 @@ impl RenderAsset for ResolveRenderPipeline {
     type Params = (SRes<AssetServer>, SResMut<PipelineManager>);
 
     fn prepare(
-            _asset: Self::SourceAsset,
-            (assets_server, pipeline_manager): &mut bevy::ecs::system::SystemParamItem<Self::Params>
-        ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        Ok(ResolveRenderPipeline(pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
-            label: "pbr-resolve",
-            vert: Some(assets_server.load("core/render/resolve/vert.wgsl")),
-            frag: Some(assets_server.load("core/render/resolve/frag.wgsl")),
-            bind_group_layouts: vec![
-                PbrRenderTextureBindGroup::layout()
-            ],
-            ..Default::default()
-        })))
+        _asset: Self::SourceAsset,
+        (assets_server, pipeline_manager): &mut bevy::ecs::system::SystemParamItem<Self::Params>
+    ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        Ok(ResolveRenderPipeline(
+            pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
+                label: "pbr-resolve",
+                vert: Some(assets_server.load("core/render/resolve/vert.wgsl")),
+                frag: Some(assets_server.load("core/render/resolve/frag.wgsl")),
+                bind_group_layouts: vec![PbrRenderTextureBindGroup::layout()],
+                ..Default::default()
+            })
+        ))
     }
 }
 
 pub struct SubRenderPassResolve;
 impl RenderSubPass for SubRenderPassResolve {
-    type Params = (SRes<RenderAssets<ResolveRenderPipeline>>, SRes<PostProcessingMesh>, SRes<PbrRenderTextureBindGroup>);
+    type Params = (
+        SRes<RenderAssets<ResolveRenderPipeline>>,
+        SRes<PostProcessingMesh>,
+        SRes<PbrRenderTextureBindGroup>
+    );
 
     fn describe(
         (pipeline, mesh, pbr_texture): &SystemParamItem<Self::Params>
@@ -50,9 +64,11 @@ impl RenderSubPass for SubRenderPassResolve {
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
                 index_range: 0..6,
                 ..Default::default()
-            }])
+            }]),
         ])
     }
 
-    fn label() -> &'static str { "pbr-resolve-main" }
+    fn label() -> &'static str {
+        "pbr-resolve-main"
+    }
 }

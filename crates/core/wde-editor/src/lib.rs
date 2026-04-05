@@ -1,6 +1,6 @@
 //! A simple editor plugin that demonstrates how to create a UI menu system using egui in Bevy.
 //! The plugin defines a `UIMenu` resource that stores the structure of the menu and provides methods to add menu items and check their clicked state. The `EditorPlugin` initializes a demo menu with some common items and handles the "Help/About" menu item to show an about window when clicked.
-//! 
+//!
 //! # Example : The top-level menu
 //! You can define terrain-related entries and gate a debug window on a clicked item:
 //! ```rust,no_run
@@ -28,9 +28,9 @@ use wde_egui::EguiPlugin;
 
 use crate::{panels::PanelsPlugin, ui::EditorUIMenu};
 
+mod panels;
 mod ui;
 mod ui_textures;
-mod panels;
 
 pub mod prelude {
     pub mod ui {
@@ -38,11 +38,14 @@ pub mod prelude {
     }
 
     // Re-export egui types for easier access in editor code
-    pub use wde_egui::prelude::egui::Window as UIWindow;
     pub use wde_egui::prelude::EguiContext as UIContext;
+    pub use wde_egui::prelude::egui::Window as UIWindow;
 
     // Re-export editor UI types
-    pub use wde_egui::prelude::egui::{ComboBox, Slider, Checkbox, TextEdit, Button, Label, Separator, CollapsingHeader, ScrollArea, FontId, Color32, ColorImage, DragValue};
+    pub use wde_egui::prelude::egui::{
+        Button, Checkbox, CollapsingHeader, Color32, ColorImage, ComboBox, DragValue, FontId,
+        Label, ScrollArea, Separator, Slider, TextEdit
+    };
 
     // Re-export editor types
     pub use super::EditorPlugin;
@@ -55,8 +58,7 @@ pub mod prelude {
 pub struct EditorPlugin;
 impl Plugin for EditorPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(EguiPlugin)
+        app.add_plugins(EguiPlugin)
             .add_plugins(EditorUIMenu)
             .add_plugins(PanelsPlugin);
     }

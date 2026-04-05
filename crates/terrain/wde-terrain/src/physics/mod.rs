@@ -7,7 +7,6 @@ pub mod terrain_physics;
 pub struct TerrainPhysicsPlugin;
 impl Plugin for TerrainPhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Update, TerrainPhysics::extract_dirty);
+        app.add_systems(Update, TerrainPhysics::extract_dirty);
     }
 }

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use wde_logger::prelude::*;
 use bevy::prelude::*;
+use wde_logger::prelude::*;
 
 use crate::utils::image_decoder::decode_png_as_channels;
 
@@ -30,7 +30,7 @@ pub(crate) type TerrainDirtyTile = (ChunkPos, u32, u32, TerrainTileData);
 pub struct TerrainTile {
     pub pos: ChunkPos,
     pub heightmap: TerrainTileData,
-    pub splatmaps: Vec<TerrainTileData>,
+    pub splatmaps: Vec<TerrainTileData>
 }
 
 /// The main terrain resource that holds all the terrain tiles.
@@ -45,14 +45,14 @@ pub struct Terrain {
     /// List of tile maps that are dirty and need to be re-processed.
     /// Each entry should be processed before the next frame, as it is cleared at the end of each frame.
     pub(crate) dirty_render: Vec<Option<TerrainDirtyTile>>,
-    pub(crate) dirty_physics: Vec<Option<TerrainDirtyTile>>,
+    pub(crate) dirty_physics: Vec<Option<TerrainDirtyTile>>
 }
 impl Terrain {
     /// Initializes the terrain by loading the heightmaps and splat maps for each tile from the specified folder.
-    /// 
+    ///
     /// # Arguments
     /// * `path` - The path where the terrain assets are located (e.g., "assets/terrain")
-    /// 
+    ///
     /// # Returns
     /// A `Terrain` resource containing the initialized terrain tiles with their respective heightmap and splat map data.
     pub fn load(path: &str) -> Self {
@@ -70,14 +70,22 @@ impl Terrain {
                 // Compute files_names
                 let cur_dir = std::env::current_dir().unwrap();
                 let full_path = format!("{}/res/{}", cur_dir.display(), path);
-                let heightmap_path = if std::fs::metadata(format!("{}/heightmap_{}_{}.png", full_path, px, pz)).is_ok() {
-                    format!("{}/heightmap_{}_{}.png", full_path, px, pz)
-                } else {
-                    format!("{}/heightmap_default.png", full_path)
-                };
+                let heightmap_path =
+                    if std::fs::metadata(format!("{}/heightmap_{}_{}.png", full_path, px, pz))
+                        .is_ok()
+                    {
+                        format!("{}/heightmap_{}_{}.png", full_path, px, pz)
+                    } else {
+                        format!("{}/heightmap_default.png", full_path)
+                    };
                 let mut splatmap_paths = Vec::new();
                 for i in 0..SPLAT_MAP_COUNT / 4 {
-                    let splatmap_path = if std::fs::metadata(format!("{}/splatmap_{}_{}-{}.png", full_path, px, pz, i)).is_ok() {
+                    let splatmap_path = if std::fs::metadata(format!(
+                        "{}/splatmap_{}_{}-{}.png",
+                        full_path, px, pz, i
+                    ))
+                    .is_ok()
+                    {
                         format!("{}/splatmap_{}_{}-{}.png", full_path, px, pz, i)
                     } else {
                         format!("{}/splatmap_default.png", full_path)
@@ -89,27 +97,43 @@ impl Terrain {
                 let mut tile = TerrainTile {
                     pos,
                     heightmap: Vec::new(),
-                    splatmaps: Vec::new(),
+                    splatmaps: Vec::new()
                 };
 
                 // Load heightmap as R8 (1 channel)
-                tile.heightmap = match decode_png_as_channels(&heightmap_path, 1, (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)) {
+                tile.heightmap = match decode_png_as_channels(
+                    &heightmap_path,
+                    1,
+                    (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)
+                ) {
                     Ok(data) => data,
                     Err(e) => {
-                        error!("Failed to decode heightmap for tile ({}, {}): {}", pos.x, pos.y, e);
+                        error!(
+                            "Failed to decode heightmap for tile ({}, {}): {}",
+                            pos.x, pos.y, e
+                        );
                         continue;
                     }
                 };
 
                 // Load splat maps
                 for splatmap_path in splatmap_paths {
-                    tile.splatmaps.push(match decode_png_as_channels(&splatmap_path, 4, (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)) {
-                        Ok(data) => data,
-                        Err(e) => {
-                            error!("Failed to decode splatmap for tile ({}, {}): {}", pos.x, pos.y, e);
-                            continue;
+                    tile.splatmaps.push(
+                        match decode_png_as_channels(
+                            &splatmap_path,
+                            4,
+                            (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)
+                        ) {
+                            Ok(data) => data,
+                            Err(e) => {
+                                error!(
+                                    "Failed to decode splatmap for tile ({}, {}): {}",
+                                    pos.x, pos.y, e
+                                );
+                                continue;
+                            }
                         }
-                    });
+                    );
                 }
 
                 // Add the tile to the list and mark it as dirty
@@ -132,10 +156,10 @@ impl Terrain {
     }
 
     /// Gets the tile indices for a given world position.
-    /// 
+    ///
     /// # Arguments
     /// * `world_pos` - The world position for which to get the tile indices
-    /// 
+    ///
     /// # Returns
     /// An option containing the tile indices (x, z) if the position is within the terrain bounds
     /// or None if the position is out of bounds.

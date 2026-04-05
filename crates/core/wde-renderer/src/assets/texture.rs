@@ -1,17 +1,23 @@
 use std::io::{Error, ErrorKind};
 
-use wde_logger::prelude::*;
-use bevy::{asset::{io::Reader, AssetLoader, LoadContext}, ecs::system::lifetimeless::SRes, prelude::*};
+use bevy::{
+    asset::{AssetLoader, LoadContext, io::Reader},
+    ecs::system::lifetimeless::SRes,
+    prelude::*
+};
 use image::GenericImageView;
-use thiserror::Error;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
+use wde_logger::prelude::*;
 
 use crate::core::RenderInstance;
 
 use super::asset::{PrepareAssetError, RenderAsset};
 
 // Reexport structs
-pub use wde_wgpu::texture::{TextureFormat, TextureUsages, SWAPCHAIN_FORMAT, DEPTH_FORMAT, FilterMode};
+pub use wde_wgpu::texture::{
+    DEPTH_FORMAT, FilterMode, SWAPCHAIN_FORMAT, TextureFormat, TextureUsages
+};
 
 /// Stores a CPU texture with raw pixel data and metadata for GPU allocation.
 /// If loaded from a file, the texture should have a `.png` or `.jpg` extension.
@@ -65,7 +71,7 @@ impl RenderAsset for GpuTexture {
 
     fn prepare(
         asset: Self::SourceAsset,
-        render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Params>,
+        render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         trace!(asset.label, "Preparing GPU texture asset.");
 
@@ -73,20 +79,30 @@ impl RenderAsset for GpuTexture {
 
         // Create the texture with mip levels
         let texture = wde_wgpu::texture::Texture::new(
-            &render_instance, &asset.label, (asset.size.0, asset.size.1),
-            asset.format, asset.usages, asset.sample_count, asset.layer_count, asset.mip_level_count
+            &render_instance,
+            &asset.label,
+            (asset.size.0, asset.size.1),
+            asset.format,
+            asset.usages,
+            asset.sample_count,
+            asset.layer_count,
+            asset.mip_level_count
         );
 
         // Copy the texture data
         if !asset.data.is_empty() {
             texture.copy_from_buffer(&render_instance, asset.format, &asset.data);
         }
-        Ok(GpuTexture { label: asset.label, texture })
+        Ok(GpuTexture {
+            label: asset.label,
+            texture
+        })
     }
 
-    fn label(&self) -> &str { &self.label }
+    fn label(&self) -> &str {
+        &self.label
+    }
 }
-
 
 /// Settings for loading a texture asset while creating a [`Texture`].
 #[derive(Serialize, Deserialize)]
@@ -111,7 +127,7 @@ impl Default for TextureLoaderSettings {
 #[derive(Debug, Error)]
 pub(crate) enum TextureLoaderError {
     #[error("Could not load texture: {0}")]
-    Io(#[from] std::io::Error),
+    Io(#[from] std::io::Error)
 }
 #[derive(Default, TypePath)]
 pub(crate) struct TextureLoader;
@@ -124,7 +140,7 @@ impl AssetLoader for TextureLoader {
         &self,
         reader: &mut dyn Reader,
         settings: &TextureLoaderSettings,
-        load_context: &mut LoadContext<'_>,
+        load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         debug!("Loading texture {}.", load_context.path());
 
@@ -137,7 +153,10 @@ impl AssetLoader for TextureLoader {
             Ok(image) => image,
             Err(err) => {
                 error!("Could not load texture: {}", err);
-                return Err(TextureLoaderError::Io(Error::new(ErrorKind::InvalidData, err)));
+                return Err(TextureLoaderError::Io(Error::new(
+                    ErrorKind::InvalidData,
+                    err
+                )));
             }
         };
         let size = image.dimensions();
@@ -145,9 +164,11 @@ impl AssetLoader for TextureLoader {
         // Convert to right format pixel size
         let format_properties = get_format_properties(settings.format).unwrap();
         let data = match format_properties.0 {
-            8  => from_channels(&image.into_rgba8(), format_properties.1),
-            16 => bytemuck::cast_slice(&from_channels(&image.into_rgba16(),  format_properties.1)).to_vec(),
-            21 => bytemuck::cast_slice(&from_channels(&image.into_rgba32f(), format_properties.1)).to_vec(),
+            8 => from_channels(&image.into_rgba8(), format_properties.1),
+            16 => bytemuck::cast_slice(&from_channels(&image.into_rgba16(), format_properties.1))
+                .to_vec(),
+            21 => bytemuck::cast_slice(&from_channels(&image.into_rgba32f(), format_properties.1))
+                .to_vec(),
             _ => unreachable!()
         };
 
@@ -163,9 +184,10 @@ impl AssetLoader for TextureLoader {
         })
     }
 
-    fn extensions(&self) -> &[&str] { &["png", "jpg"] }
+    fn extensions(&self) -> &[&str] {
+        &["png", "jpg"]
+    }
 }
-
 
 /// Get the properties of a texture format.
 /// - `None` if the format is not supported.
@@ -174,39 +196,50 @@ impl AssetLoader for TextureLoader {
 ///    - `channels`: The number of channels in the format (1 to 4).
 fn get_format_properties(texture_format: TextureFormat) -> Option<(u32, u32)> {
     match texture_format {
-        TextureFormat::R8Unorm | TextureFormat::R8Uint | TextureFormat::R8Snorm | TextureFormat::R8Sint => {
-            Some((8, 1))
-        },
-        TextureFormat::R16Unorm | TextureFormat::R16Uint | TextureFormat::R16Snorm | TextureFormat::R16Sint | TextureFormat::R16Float => {
-            Some((16, 1))
-        },
-        TextureFormat::R32Uint | TextureFormat::R32Sint | TextureFormat::R32Float => {
-            Some((32, 1))
-        },
-        TextureFormat::Rg8Unorm | TextureFormat::Rg8Uint | TextureFormat::Rg8Snorm | TextureFormat::Rg8Sint => {
-            Some((8, 2))
-        },
-        TextureFormat::Rg16Unorm | TextureFormat::Rg16Uint | TextureFormat::Rg16Snorm | TextureFormat::Rg16Sint | TextureFormat::Rg16Float => {
-            Some((16, 2))
-        },
+        TextureFormat::R8Unorm
+        | TextureFormat::R8Uint
+        | TextureFormat::R8Snorm
+        | TextureFormat::R8Sint => Some((8, 1)),
+        TextureFormat::R16Unorm
+        | TextureFormat::R16Uint
+        | TextureFormat::R16Snorm
+        | TextureFormat::R16Sint
+        | TextureFormat::R16Float => Some((16, 1)),
+        TextureFormat::R32Uint | TextureFormat::R32Sint | TextureFormat::R32Float => Some((32, 1)),
+        TextureFormat::Rg8Unorm
+        | TextureFormat::Rg8Uint
+        | TextureFormat::Rg8Snorm
+        | TextureFormat::Rg8Sint => Some((8, 2)),
+        TextureFormat::Rg16Unorm
+        | TextureFormat::Rg16Uint
+        | TextureFormat::Rg16Snorm
+        | TextureFormat::Rg16Sint
+        | TextureFormat::Rg16Float => Some((16, 2)),
         TextureFormat::Rg32Uint | TextureFormat::Rg32Sint | TextureFormat::Rg32Float => {
             Some((32, 2))
-        },
-        TextureFormat::Rgba8Unorm | TextureFormat::Rgba8UnormSrgb | TextureFormat::Rgba8Uint | TextureFormat::Rgba8Snorm | TextureFormat::Rgba8Sint => {
-            Some((8, 4))
-        },
-        TextureFormat::Rgba16Unorm | TextureFormat::Rgba16Uint | TextureFormat::Rgba16Snorm | TextureFormat::Rgba16Sint | TextureFormat::Rgba16Float => {
-            Some((16, 4))
-        },
+        }
+        TextureFormat::Rgba8Unorm
+        | TextureFormat::Rgba8UnormSrgb
+        | TextureFormat::Rgba8Uint
+        | TextureFormat::Rgba8Snorm
+        | TextureFormat::Rgba8Sint => Some((8, 4)),
+        TextureFormat::Rgba16Unorm
+        | TextureFormat::Rgba16Uint
+        | TextureFormat::Rgba16Snorm
+        | TextureFormat::Rgba16Sint
+        | TextureFormat::Rgba16Float => Some((16, 4)),
         TextureFormat::Rgba32Uint | TextureFormat::Rgba32Sint | TextureFormat::Rgba32Float => {
             Some((32, 4))
-        },
+        }
         _ => None
     }
 }
 
 /// Convert an image to a pixel buffer.
-fn from_channels<T: Clone + Copy + bytemuck::NoUninit + bytemuck::Pod>(data: &[T], channels: u32) -> Vec<T> {
+fn from_channels<T: Clone + Copy + bytemuck::NoUninit + bytemuck::Pod>(
+    data: &[T],
+    channels: u32
+) -> Vec<T> {
     let inv_channels = [4, 3, 2, 1];
     if channels == 4 {
         return data.to_vec();

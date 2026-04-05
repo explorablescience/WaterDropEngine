@@ -21,7 +21,11 @@ pub fn parse_file(path: &str) -> Result<FileData, Box<dyn std::error::Error>> {
 
     // Check if the file is valid and has the correct version
     if parsed["version"].as_f64().unwrap_or(0.0) != PARSER_VERSION as f64 {
-        return Err(format!("Unsupported file version: {}. Expected version: {}", parsed["version"], PARSER_VERSION).into());
+        return Err(format!(
+            "Unsupported file version: {}. Expected version: {}",
+            parsed["version"], PARSER_VERSION
+        )
+        .into());
     }
 
     // Parse the file type
@@ -40,4 +44,3 @@ pub fn parse_file(path: &str) -> Result<FileData, Box<dyn std::error::Error>> {
     };
     Ok(data)
 }
-

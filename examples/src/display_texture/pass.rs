@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use wde::prelude::*;
 
 use crate::display_texture::material::*;
-use crate::display_texture::pipeline::*;
 
 #[derive(Resource, Default)]
 pub struct RenderPassEntity {

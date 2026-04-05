@@ -1,5 +1,5 @@
-use wde_logger::prelude::*;
 use bevy::prelude::*;
+use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::components::lights::*;
@@ -16,7 +16,8 @@ pub struct LightsFeatureBuffer {
 }
 impl LightsFeatureBuffer {
     pub fn build_bind_group(
-        buffers: Res<RenderAssets<GpuBuffer>>, mut lights_buffer: ResMut<LightsFeatureBuffer>,
+        buffers: Res<RenderAssets<GpuBuffer>>,
+        mut lights_buffer: ResMut<LightsFeatureBuffer>,
         render_instance: Res<RenderInstance>
     ) {
         // Check if the bind group is already created
@@ -31,21 +32,29 @@ impl LightsFeatureBuffer {
         };
 
         // Create the bind group layout
-        let layout_built = Self::layout().build(&render_instance.0.read().unwrap()).unwrap();
+        let layout_built = Self::layout()
+            .build(&render_instance.0.read().unwrap())
+            .unwrap();
 
         // Create the bind group
         let render_instance = render_instance.0.read().unwrap();
-        let bind_group = BindGroupBuilder::build("lights", &render_instance, &layout_built, &vec![
-            BindGroupBuilder::buffer(0, &buffer.buffer)
-        ]).unwrap();
+        let bind_group = BindGroupBuilder::build(
+            "lights",
+            &render_instance,
+            &layout_built,
+            &vec![BindGroupBuilder::buffer(0, &buffer.buffer)]
+        )
+        .unwrap();
         lights_buffer.bind_group = Some(bind_group);
     }
 
     pub fn layout() -> BindGroupLayout {
         BindGroupLayout::new("lights", |builder| {
-            builder.add_buffer(0,
+            builder.add_buffer(
+                0,
                 ShaderStages::FRAGMENT,
-                BufferBindingType::Storage { read_only: true });
+                BufferBindingType::Storage { read_only: true }
+            );
         })
     }
 }
@@ -53,9 +62,13 @@ impl LightsFeatureBuffer {
 pub(crate) struct LightsFeature;
 impl Plugin for LightsFeature {
     fn build(&self, app: &mut App) {
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .add_systems(Extract, extract)
-            .add_systems(Render, LightsFeatureBuffer::build_bind_group.in_set(RenderSet::BindGroups))
+            .add_systems(
+                Render,
+                LightsFeatureBuffer::build_bind_group.in_set(RenderSet::BindGroups)
+            )
             .init_resource::<ExtractedLights>()
             .add_systems(Render, update_lights_buffer.in_set(RenderSet::Prepare));
     }
@@ -63,19 +76,20 @@ impl Plugin for LightsFeature {
     fn finish(&self, app: &mut App) {
         let buffer_cpu: Handle<Buffer> = app.world_mut().add_asset(Buffer {
             label: "lights".to_string(),
-            size:  std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
+            size: std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
             usage: BufferUsage::COPY_SRC | BufferUsage::COPY_DST,
-            content: None,
+            content: None
         });
         let buffer_gpu: Handle<Buffer> = app.world_mut().add_asset(Buffer {
             label: "lights".to_string(),
-            size:  std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
+            size: std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
             usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
-            content: None,
+            content: None
         });
-        
+
         // Add resources
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .insert_resource(LightsFeatureBuffer {
                 buffer_cpu,
                 buffer_gpu,
@@ -93,8 +107,10 @@ struct ExtractedLights {
 
 fn extract(
     (lights_directional, lights_point, lights_spot): (
-        ExtractWorld<Query<&DirectionalLight>>, ExtractWorld<Query<&PointLight>>, ExtractWorld<Query<&SpotLight>>
-    ), 
+        ExtractWorld<Query<&DirectionalLight>>,
+        ExtractWorld<Query<&PointLight>>,
+        ExtractWorld<Query<&SpotLight>>
+    ),
     mut extracted_lights: ResMut<ExtractedLights>
 ) {
     // Extract directional lights
@@ -127,26 +143,41 @@ fn update_lights_buffer(
         Some(lights_buffer) => lights_buffer,
         None => return
     };
-    
+
     let render_instance = render_instance.0.read().unwrap();
     let mut offset = 0;
     for light in extracted_lights.directional_lights.iter() {
         let data = LightsStorageElement::from_directional(light);
-        lights_buffer_cpu.buffer.write(&render_instance, bytemuck::bytes_of(&data), offset * std::mem::size_of::<LightsStorageElement>());
+        lights_buffer_cpu.buffer.write(
+            &render_instance,
+            bytemuck::bytes_of(&data),
+            offset * std::mem::size_of::<LightsStorageElement>()
+        );
         offset += 1;
     }
     for light in extracted_lights.point_lights.iter() {
         let data = LightsStorageElement::from_point(light);
-        lights_buffer_cpu.buffer.write(&render_instance, bytemuck::bytes_of(&data), offset * std::mem::size_of::<LightsStorageElement>());
+        lights_buffer_cpu.buffer.write(
+            &render_instance,
+            bytemuck::bytes_of(&data),
+            offset * std::mem::size_of::<LightsStorageElement>()
+        );
         offset += 1;
     }
     for light in extracted_lights.spot_lights.iter() {
         let data = LightsStorageElement::from_spot(light);
-        lights_buffer_cpu.buffer.write(&render_instance, bytemuck::bytes_of(&data), offset * std::mem::size_of::<LightsStorageElement>());
+        lights_buffer_cpu.buffer.write(
+            &render_instance,
+            bytemuck::bytes_of(&data),
+            offset * std::mem::size_of::<LightsStorageElement>()
+        );
         offset += 1;
     }
     if offset > MAX_LIGHTS {
-        warn!("Number of lights exceeded the maximum of {}. Some lights will be ignored in rendering.", MAX_LIGHTS);
+        warn!(
+            "Number of lights exceeded the maximum of {}. Some lights will be ignored in rendering.",
+            MAX_LIGHTS
+        );
     }
 
     // Update the buffer
@@ -154,6 +185,7 @@ fn update_lights_buffer(
         Some(buffer) => buffer,
         None => return
     };
-    lights_buffer_gpu.buffer.copy_from_buffer(&render_instance, &lights_buffer_cpu.buffer);
+    lights_buffer_gpu
+        .buffer
+        .copy_from_buffer(&render_instance, &lights_buffer_cpu.buffer);
 }
-

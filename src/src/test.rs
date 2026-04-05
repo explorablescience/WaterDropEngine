@@ -4,8 +4,7 @@ use wde::prelude::{Color as WdeColor, *};
 pub struct TestPlugin;
 impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, init_scene);
+        app.add_systems(Startup, init_scene);
     }
 }
 
@@ -17,7 +16,7 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
         Camera,
         CameraView::default(),
         ThirdPersonController::default(),
-        ActiveCamera,
+        ActiveCamera
     ));
 
     // Spawn the lights
@@ -55,7 +54,11 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 
     // Spawn a default gltf material
-    let model = GltfLoader::load("models/placement/house_demo1/house_demo1.gltf", &asset_server).unwrap();
+    let model = GltfLoader::load(
+        "models/placement/house_demo1/house_demo1.gltf",
+        &asset_server
+    )
+    .unwrap();
     commands.spawn((
         Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(1.0)),
         PbrModel(model.models)

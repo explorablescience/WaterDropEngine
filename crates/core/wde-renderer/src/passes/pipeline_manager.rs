@@ -1,18 +1,31 @@
+use super::{ComputePipelineDescriptor, RenderPipelineDescriptor};
+use crate::core::RenderInstance;
+use crate::{
+    assets::Shader,
+    core::{Extract, ExtractWorld, Render, RenderSet}
+};
+use bevy::{
+    app::{App, Plugin},
+    asset::{AssetEvent, AssetId, Assets},
+    ecs::prelude::*,
+    prelude::MessageReader
+};
 use std::collections::HashMap;
 use wde_logger::prelude::*;
-use bevy::{app::{App, Plugin}, asset::{AssetEvent, AssetId, Assets}, ecs::prelude::*, prelude::MessageReader};
-use wde_wgpu::{compute_pipeline::ComputePipeline, render_pipeline::{RenderPipeline, ShaderStages}};
-use crate::core::RenderInstance;
-use crate::{core::{ExtractWorld, Extract, Render, RenderSet}, assets::Shader};
-use super::{RenderPipelineDescriptor, ComputePipelineDescriptor};
+use wde_wgpu::{
+    compute_pipeline::ComputePipeline,
+    render_pipeline::{RenderPipeline, ShaderStages}
+};
 
 pub(crate) struct PipelineManagerPlugin;
 impl Plugin for PipelineManagerPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PipelineManager>()
+        app.init_resource::<PipelineManager>()
             .add_systems(Extract, extract_shaders)
-            .add_systems(Render, (load_render_pipelines, load_compute_pipelines).in_set(RenderSet::Prepare));
+            .add_systems(
+                Render,
+                (load_render_pipelines, load_compute_pipelines).in_set(RenderSet::Prepare)
+            );
     }
 }
 
@@ -49,11 +62,14 @@ pub struct PipelineManager {
     /// CPU-side cache of shader assets keyed by asset id.
     shader_cache: HashMap<AssetId<Shader>, Shader>,
     /// Mapping from shader asset ids to pipelines that reference them (for hot-reload).
-    shader_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>>,
+    shader_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>>
 }
 impl PipelineManager {
     /// Push the creation of a render pipeline to the pipeline manager queue.
-    pub fn create_render_pipeline(&mut self, descriptor: RenderPipelineDescriptor) -> CachedPipelineIndex {
+    pub fn create_render_pipeline(
+        &mut self,
+        descriptor: RenderPipelineDescriptor
+    ) -> CachedPipelineIndex {
         // Store the pipeline descriptor to the queued pipelines
         let id = self.pipeline_iter;
         self.processing_render_pipelines.insert(id, descriptor);
@@ -62,7 +78,10 @@ impl PipelineManager {
     }
 
     /// Push the creation of a compute pipeline to the pipeline manager queue.
-    pub fn create_compute_pipeline(&mut self, descriptor: ComputePipelineDescriptor) -> CachedPipelineIndex {
+    pub fn create_compute_pipeline(
+        &mut self,
+        descriptor: ComputePipelineDescriptor
+    ) -> CachedPipelineIndex {
         // Store the pipeline descriptor to the queued pipelines
         let id = self.pipeline_iter;
         self.processing_compute_pipelines.insert(id, descriptor);
@@ -73,7 +92,9 @@ impl PipelineManager {
     /// Get the status of a pipeline from its cached index.
     /// Returns loading/ready/error state for both render and compute pipelines.
     pub fn get_pipeline(&'_ self, id: CachedPipelineIndex) -> CachedPipelineStatus<'_> {
-        if self.processing_render_pipelines.contains_key(&id) || self.processing_compute_pipelines.contains_key(&id) {
+        if self.processing_render_pipelines.contains_key(&id)
+            || self.processing_compute_pipelines.contains_key(&id)
+        {
             CachedPipelineStatus::Loading
         } else if let Some(pipeline) = self.loaded_render_pipelines.get(&id) {
             CachedPipelineStatus::OkRender(pipeline)
@@ -86,10 +107,10 @@ impl PipelineManager {
     }
 }
 
-
 /// Extract the shaders from the asset server and store them in the pipeline manager.
 fn extract_shaders(
-    mut pipeline_manager: ResMut<PipelineManager>, shaders: ExtractWorld<Res<Assets<Shader>>>,
+    mut pipeline_manager: ResMut<PipelineManager>,
+    shaders: ExtractWorld<Res<Assets<Shader>>>,
     mut shader_events: ExtractWorld<MessageReader<AssetEvent<Shader>>>
 ) {
     let cache = &mut pipeline_manager.shader_cache;
@@ -124,13 +145,23 @@ fn extract_shaders(
         for p_id in p_ids.iter() {
             // Only update the pipeline if it is loaded
             if pipeline_manager.loaded_render_pipelines.contains_key(p_id) {
-                let desc = pipeline_manager.loaded_render_pipelines_desc.remove(p_id).unwrap();
-                pipeline_manager.processing_render_pipelines.insert(*p_id, desc.clone());
+                let desc = pipeline_manager
+                    .loaded_render_pipelines_desc
+                    .remove(p_id)
+                    .unwrap();
+                pipeline_manager
+                    .processing_render_pipelines
+                    .insert(*p_id, desc.clone());
                 pipeline_manager.loaded_render_pipelines.remove(p_id);
             }
             if pipeline_manager.loaded_compute_pipelines.contains_key(p_id) {
-                let desc = pipeline_manager.loaded_compute_pipelines_desc.remove(p_id).unwrap();
-                pipeline_manager.processing_compute_pipelines.insert(*p_id, desc.clone());
+                let desc = pipeline_manager
+                    .loaded_compute_pipelines_desc
+                    .remove(p_id)
+                    .unwrap();
+                pipeline_manager
+                    .processing_compute_pipelines
+                    .insert(*p_id, desc.clone());
                 pipeline_manager.loaded_compute_pipelines.remove(p_id);
             }
         }
@@ -143,8 +174,10 @@ fn load_render_pipelines(
     render_instance: Res<RenderInstance>
 ) {
     let mut pipelines_loaded_indices: Vec<(usize, RenderPipeline)> = Vec::new();
-    let mut pipelines_loaded_desc: HashMap<CachedPipelineIndex, RenderPipelineDescriptor> = HashMap::new();
-    let mut shaders_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>> = pipeline_manager.shader_to_pipelines.clone();
+    let mut pipelines_loaded_desc: HashMap<CachedPipelineIndex, RenderPipelineDescriptor> =
+        HashMap::new();
+    let mut shaders_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>> =
+        pipeline_manager.shader_to_pipelines.clone();
     for (id, descriptor) in pipeline_manager.processing_render_pipelines.iter() {
         let mut can_load = true;
 
@@ -159,7 +192,7 @@ fn load_render_pipelines(
                         None
                     }
                 }
-            },
+            }
             None => None
         };
 
@@ -174,7 +207,7 @@ fn load_render_pipelines(
                         None
                     }
                 }
-            },
+            }
             None => None
         };
 
@@ -183,8 +216,14 @@ fn load_render_pipelines(
             continue;
         }
         pipelines_loaded_desc.insert(*id, descriptor.clone());
-        shaders_to_pipelines.entry(descriptor.vert.as_ref().unwrap().id()).or_default().push(*id);
-        shaders_to_pipelines.entry(descriptor.frag.as_ref().unwrap().id()).or_default().push(*id);
+        shaders_to_pipelines
+            .entry(descriptor.vert.as_ref().unwrap().id())
+            .or_default()
+            .push(*id);
+        shaders_to_pipelines
+            .entry(descriptor.frag.as_ref().unwrap().id())
+            .or_default()
+            .push(*id);
 
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
@@ -192,7 +231,10 @@ fn load_render_pipelines(
             let layout = match layout.build(&render_instance.0.read().unwrap()) {
                 Ok(layout) => layout,
                 Err(e) => {
-                    error!("Failed to build bind group layout for pipeline {}: {:?}", descriptor.label, e);
+                    error!(
+                        "Failed to build bind group layout for pipeline {}: {:?}",
+                        descriptor.label, e
+                    );
                     continue;
                 }
             };
@@ -217,7 +259,11 @@ fn load_render_pipelines(
         }
         pipeline.set_sample_count(descriptor.sample_count);
         for push_constant in descriptor.push_constants.iter() {
-            pipeline.add_push_constant(push_constant.stages, push_constant.offset, push_constant.size);
+            pipeline.add_push_constant(
+                push_constant.stages,
+                push_constant.offset,
+                push_constant.size
+            );
         }
         pipeline.set_bind_groups(bind_group_layouts);
         match pipeline.init(&render_instance.0.read().unwrap()) {
@@ -236,8 +282,12 @@ fn load_render_pipelines(
     // Remove loaded pipelines and add them to the loaded pipelines
     while let Some((id, pipeline)) = pipelines_loaded_indices.pop() {
         pipeline_manager.processing_render_pipelines.remove(&id);
-        pipeline_manager.loaded_render_pipelines.insert(id, pipeline);
-        pipeline_manager.loaded_render_pipelines_desc.insert(id, pipelines_loaded_desc.remove(&id).unwrap());
+        pipeline_manager
+            .loaded_render_pipelines
+            .insert(id, pipeline);
+        pipeline_manager
+            .loaded_render_pipelines_desc
+            .insert(id, pipelines_loaded_desc.remove(&id).unwrap());
     }
 
     // Update the shader to pipelines map
@@ -250,8 +300,10 @@ fn load_compute_pipelines(
     render_instance: Res<RenderInstance>
 ) {
     let mut pipelines_loaded_indices: Vec<(usize, ComputePipeline)> = Vec::new();
-    let mut pipelines_loaded_desc: HashMap<CachedPipelineIndex, ComputePipelineDescriptor> = HashMap::new();
-    let mut shaders_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>> = pipeline_manager.shader_to_pipelines.clone();
+    let mut pipelines_loaded_desc: HashMap<CachedPipelineIndex, ComputePipelineDescriptor> =
+        HashMap::new();
+    let mut shaders_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>> =
+        pipeline_manager.shader_to_pipelines.clone();
     for (id, descriptor) in pipeline_manager.processing_compute_pipelines.iter() {
         let mut can_load = true;
 
@@ -266,7 +318,7 @@ fn load_compute_pipelines(
                         None
                     }
                 }
-            },
+            }
             None => None
         };
 
@@ -275,7 +327,10 @@ fn load_compute_pipelines(
             continue;
         }
         pipelines_loaded_desc.insert(*id, descriptor.clone());
-        shaders_to_pipelines.entry(descriptor.comp.as_ref().unwrap().id()).or_default().push(*id);
+        shaders_to_pipelines
+            .entry(descriptor.comp.as_ref().unwrap().id())
+            .or_default()
+            .push(*id);
 
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
@@ -283,7 +338,10 @@ fn load_compute_pipelines(
             let layout = match layout.build(&render_instance.0.read().unwrap()) {
                 Ok(layout) => layout,
                 Err(e) => {
-                    error!("Failed to build bind group layout for pipeline {}: {:?}", descriptor.label, e);
+                    error!(
+                        "Failed to build bind group layout for pipeline {}: {:?}",
+                        descriptor.label, e
+                    );
                     continue;
                 }
             };
@@ -314,8 +372,12 @@ fn load_compute_pipelines(
     // Remove loaded pipelines and add them to the loaded pipelines
     while let Some((id, pipeline)) = pipelines_loaded_indices.pop() {
         pipeline_manager.processing_compute_pipelines.remove(&id);
-        pipeline_manager.loaded_compute_pipelines.insert(id, pipeline);
-        pipeline_manager.loaded_compute_pipelines_desc.insert(id, pipelines_loaded_desc.remove(&id).unwrap());
+        pipeline_manager
+            .loaded_compute_pipelines
+            .insert(id, pipeline);
+        pipeline_manager
+            .loaded_compute_pipelines_desc
+            .insert(id, pipelines_loaded_desc.remove(&id).unwrap());
     }
 
     // Update the shader to pipelines map

@@ -1,7 +1,7 @@
 //! Main systems for extracting data from the main world into the render world.
 
-use wde_logger::prelude::*;
 use bevy::prelude::*;
+use wde_logger::prelude::*;
 
 use super::{EmptyWorld, Extract, MainWorld};
 
@@ -11,7 +11,7 @@ use super::{EmptyWorld, Extract, MainWorld};
 /// Extract commands are registered during the extract schedule but are not applied until the apply_extract_commands system is run.
 pub(crate) fn main_extract(main_world: &mut World, render_world: &mut World) {
     let _span = debug_span!("main_extract").entered();
-    
+
     // Temporarily add the main world to the render world
     let empty_world = main_world.remove_resource::<EmptyWorld>().unwrap();
     let previous_main_world = std::mem::replace(main_world, empty_world.0);
@@ -19,7 +19,7 @@ pub(crate) fn main_extract(main_world: &mut World, render_world: &mut World) {
 
     // Run the extract schedule
     render_world.run_schedule(Extract);
-    
+
     // Move the app world back
     let inserted_world = render_world.remove_resource::<MainWorld>().unwrap();
     let empty_world = std::mem::replace(main_world, inserted_world.0);

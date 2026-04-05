@@ -76,7 +76,7 @@ pub struct SpotLight {
 impl Default for SpotLight {
     fn default() -> Self {
         Self {
-            position:  Vec3::new(0.0,  0.0, 0.0),
+            position: Vec3::new(0.0, 0.0, 0.0),
             direction: Vec3::new(0.0, -1.0, 0.0),
             color: WdeColor::from_srgba(1.0, 1.0, 1.0, 1.0),
             intensity: DEFAULT_INTENSITY * INTENSITY_MULTIPLIER,
@@ -86,8 +86,6 @@ impl Default for SpotLight {
         }
     }
 }
-
-
 
 /// Lights storage buffer (matches the shader Light struct)
 #[repr(C)]
@@ -107,29 +105,44 @@ impl LightsStorageElement {
         let color = light.color.to_linear_rgba();
         Self {
             position_intensity: [0.0, 0.0, 0.0, light.intensity * INTENSITY_MULTIPLIER],
-            color_type:         [color.r(), color.g(), color.b(), 0.0],
-            direction_range:    [light.direction.x, light.direction.y, light.direction.z, 0.0],
-            spot_cone:          [0.0, 0.0, 0.0, 0.0]
+            color_type: [color.r(), color.g(), color.b(), 0.0],
+            direction_range: [light.direction.x, light.direction.y, light.direction.z, 0.0],
+            spot_cone: [0.0, 0.0, 0.0, 0.0]
         }
     }
 
     pub fn from_point(light: &PointLight) -> Self {
         let color = light.color.to_linear_rgba();
         Self {
-            position_intensity: [light.position.x, light.position.y, light.position.z, light.intensity * INTENSITY_MULTIPLIER],
-            color_type:         [color.r(), color.g(), color.b(), 1.0],
-            direction_range:    [0.0, 0.0, 0.0, light.range],
-            spot_cone:          [0.0, 0.0, 0.0, 0.0]
+            position_intensity: [
+                light.position.x,
+                light.position.y,
+                light.position.z,
+                light.intensity * INTENSITY_MULTIPLIER
+            ],
+            color_type: [color.r(), color.g(), color.b(), 1.0],
+            direction_range: [0.0, 0.0, 0.0, light.range],
+            spot_cone: [0.0, 0.0, 0.0, 0.0]
         }
     }
 
     pub fn from_spot(light: &SpotLight) -> Self {
         let color = light.color.to_linear_rgba();
         Self {
-            position_intensity: [light.position.x, light.position.y, light.position.z, light.intensity * INTENSITY_MULTIPLIER],
-            color_type:         [color.r(), color.g(), color.b(), 2.0],
-            direction_range:    [light.direction.x, light.direction.y, light.direction.z, light.range],
-            spot_cone:          [light.inner_cone.cos(), light.outer_cone.cos(), 0.0, 0.0]
+            position_intensity: [
+                light.position.x,
+                light.position.y,
+                light.position.z,
+                light.intensity * INTENSITY_MULTIPLIER
+            ],
+            color_type: [color.r(), color.g(), color.b(), 2.0],
+            direction_range: [
+                light.direction.x,
+                light.direction.y,
+                light.direction.z,
+                light.range
+            ],
+            spot_cone: [light.inner_cone.cos(), light.outer_cone.cos(), 0.0, 0.0]
         }
     }
 }

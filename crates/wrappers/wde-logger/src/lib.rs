@@ -20,9 +20,9 @@
 //!   This feature adds a `EditorLogLayer` to the tracing subscriber.
 
 pub mod editor_layer;
+mod panic_handler;
 mod panic_report_layer;
 mod puffin_layer;
-mod panic_handler;
 
 extern crate alloc;
 
@@ -37,13 +37,13 @@ pub mod prelude {
     pub use crate::{debug_once, error_once, info_once, trace_once, warn_once};
     pub use tracing::event;
     pub use tracing::{
-        debug, debug_span, error, error_span, info, info_span, trace, trace_span, warn, warn_span,
+        debug, debug_span, error, error_span, info, info_span, trace, trace_span, warn, warn_span
     };
 }
 
 pub use tracing::{
     self, Level, debug, debug_span, error, error_span, info, info_span, trace, trace_span, warn,
-    warn_span,
+    warn_span
 };
 pub use tracing_subscriber;
 
@@ -54,7 +54,7 @@ use tracing_subscriber::{
     filter::{FromEnvError, ParseError},
     layer::Layered,
     prelude::*,
-    registry::Registry,
+    registry::Registry
 };
 
 // Store the guard for the non-blocking file appender to ensure logs are flushed on drop and to prevent it from being dropped while the subscriber is still active.
@@ -117,7 +117,7 @@ pub struct LogPlugin {
     /// Override the default [`tracing_subscriber::fmt::Layer`] with a custom one.
     /// For example, you can use [`tracing_subscriber::fmt::Layer::without_time`] to remove the
     /// timestamp from the log output.
-    pub fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>,
+    pub fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>
 }
 impl Default for LogPlugin {
     fn default() -> Self {
@@ -125,7 +125,7 @@ impl Default for LogPlugin {
             filter: DEFAULT_FILTER.to_string(),
             level: Level::INFO,
             custom_layer: |_| None,
-            fmt_layer: |_| None,
+            fmt_layer: |_| None
         }
     }
 }
@@ -158,7 +158,13 @@ impl Plugin for LogPlugin {
         configure_panic_hook();
 
         // Build the tracing subscriber with the configured layers and filters
-        let (subscriber, _guard) = configure_subscriber(app, self.level, &self.filter, self.custom_layer, self.fmt_layer);
+        let (subscriber, _guard) = configure_subscriber(
+            app,
+            self.level,
+            &self.filter,
+            self.custom_layer,
+            self.fmt_layer
+        );
         app.insert_resource(LoggerGuard(_guard));
 
         // Set the global logger and subscriber based on the different features enabled
@@ -167,7 +173,13 @@ impl Plugin for LogPlugin {
 
         // Initial log message
         info!("Starting WaterDropEngine.");
-        info!("Logs will be written to {}.", std::env::temp_dir().join("waterdropengine").join("log.txt").display());
+        info!(
+            "Logs will be written to {}.",
+            std::env::temp_dir()
+                .join("waterdropengine")
+                .join("log.txt")
+                .display()
+        );
 
         // Log errors if we failed to set the global logger or subscriber, likely due to another logger/subscriber already being set.
         match (logger_already_set, subscriber_already_set) {
@@ -180,13 +192,18 @@ impl Plugin for LogPlugin {
             (false, true) => error!(
                 "Could not set global tracing subscriber as it is already set. Consider disabling LogPlugin."
             ),
-            (false, false) => (),
+            (false, false) => ()
         }
-        debug!("Logger and tracing subscriber initialized successfully with filter '{}' and log level '{}'.", self.filter, self.level);
+        debug!(
+            "Logger and tracing subscriber initialized successfully with filter '{}' and log level '{}'.",
+            self.filter, self.level
+        );
 
         // Log warnings about features that may increase memory usage and potential conflicts with existing loggers/subscribers
         #[cfg(feature = "tracing")]
-        warn!("Tracing with Tracy is active, memory consumption will grow until a client is connected.");
+        warn!(
+            "Tracing with Tracy is active, memory consumption will grow until a client is connected."
+        );
         #[cfg(feature = "puffin")]
         debug!("Tracing with Puffin is active.");
         #[cfg(feature = "editor")]
@@ -203,7 +220,16 @@ fn configure_panic_hook() {
     }));
 }
 
-fn configure_subscriber(app: &mut App, level: Level, filter: &str, custom_layer: fn(app: &mut App) -> Option<BoxedLayer>, fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>) -> (impl tracing::Subscriber + Send + Sync, tracing_appender::non_blocking::WorkerGuard) {
+fn configure_subscriber(
+    app: &mut App,
+    level: Level,
+    filter: &str,
+    custom_layer: fn(app: &mut App) -> Option<BoxedLayer>,
+    fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>
+) -> (
+    impl tracing::Subscriber + Send + Sync,
+    tracing_appender::non_blocking::WorkerGuard
+) {
     let subscriber = Registry::default();
 
     // Add optional layer provided by user
@@ -238,10 +264,9 @@ fn configure_subscriber(app: &mut App, level: Level, filter: &str, custom_layer:
 
         // Ignore some logs when using tracy
         #[cfg(feature = "tracing")]
-        let fmt_layer =
-            fmt_layer.with_filter(tracing_subscriber::filter::FilterFn::new(|meta| {
-                meta.fields().field("tracy.frame_mark").is_none()
-            }));
+        let fmt_layer = fmt_layer.with_filter(tracing_subscriber::filter::FilterFn::new(|meta| {
+            meta.fields().field("tracy.frame_mark").is_none()
+        }));
         fmt_layer
     };
     let subscriber = subscriber.with(fmt_layer);
@@ -267,7 +292,8 @@ fn configure_subscriber(app: &mut App, level: Level, filter: &str, custom_layer:
             .with_ansi(false)
             .with_filter(tracing_subscriber::filter::FilterFn::new(|meta| {
                 meta.fields().field("tracy.frame_mark").is_none()
-            })));
+            }))
+    );
 
     // Register editor log layer
     #[cfg(feature = "editor")]

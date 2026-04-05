@@ -1,10 +1,13 @@
 //! Camera controller based on bevy's first person camera controller.
 //! @see <https://github.com/bevyengine/bevy/blob/8de15ae71a23ce2eb272a7036b4ae82649f09634/examples/helpers/camera_controller.rs>
 
+use bevy::{
+    input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
+    prelude::*
+};
+use std::f32::consts::*;
 use wde_camera::camera::CameraView;
 use wde_logger::prelude::*;
-use bevy::{input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel}, prelude::*};
-use std::f32::consts::*;
 
 /// Based on Valorant's default sensitivity, not entirely sure why it is exactly 1.0 / 180.0,
 /// but I'm guessing it is a misunderstanding between degrees/radians and then sticking with
@@ -39,7 +42,7 @@ pub struct FreeCameraController {
     pub friction: f32,
     pub pitch: f32,
     pub yaw: f32,
-    pub velocity: Vec3,
+    pub velocity: Vec3
 }
 
 impl Default for FreeCameraController {
@@ -63,7 +66,7 @@ impl Default for FreeCameraController {
             friction: 0.5,
             pitch: 0.0,
             yaw: 0.0,
-            velocity: Vec3::ZERO,
+            velocity: Vec3::ZERO
         }
     }
 }
@@ -71,10 +74,17 @@ impl Default for FreeCameraController {
 // Update the camera controller
 fn update(
     mut camera_query: Query<(&mut Transform, &mut FreeCameraController), With<CameraView>>,
-    time: Res<Time>, mut windows: Query<&mut Window>,
-    (keyboard_input, mouse_button_input): (Res<ButtonInput<KeyCode>>, Res<ButtonInput<MouseButton>>),
-    (mut mouse_events, mut mouse_scroll_events): (MessageReader<MouseMotion>, MessageReader<MouseWheel>),
-    (mut toggle_cursor_grab, mut mouse_cursor_grab): (Local<bool>, Local<bool>),
+    time: Res<Time>,
+    mut windows: Query<&mut Window>,
+    (keyboard_input, mouse_button_input): (
+        Res<ButtonInput<KeyCode>>,
+        Res<ButtonInput<MouseButton>>
+    ),
+    (mut mouse_events, mut mouse_scroll_events): (
+        MessageReader<MouseMotion>,
+        MessageReader<MouseWheel>
+    ),
+    (mut toggle_cursor_grab, mut mouse_cursor_grab): (Local<bool>, Local<bool>)
 ) {
     let dt = time.delta_secs();
 
@@ -95,7 +105,7 @@ fn update(
         for scroll_event in mouse_scroll_events.read() {
             let amount = match scroll_event.unit {
                 MouseScrollUnit::Line => scroll_event.y,
-                MouseScrollUnit::Pixel => scroll_event.y / 16.0,
+                MouseScrollUnit::Pixel => scroll_event.y / 16.0
             };
             scroll += amount;
         }

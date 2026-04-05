@@ -6,7 +6,7 @@ use crate::core::{Extract, ExtractWorld, RenderApp};
 
 /// Plugin for extracting a resource from the main world to be used in the render world.
 /// This plugin will automatically add a system to extract the resource of the corresponding type from the main world and insert it into the render world.
-/// 
+///
 /// Note:
 /// - The resource to extract must implement the [`ExtractResource`] trait.
 /// - If the resource already exists in the render world, it will be updated with the new value from the main world. Otherwise, it will be inserted as a new resource in the render world.
@@ -14,11 +14,14 @@ use crate::core::{Extract, ExtractWorld, RenderApp};
 /// - The marker type `F` is only used as a way to bypass the orphan rules.
 pub struct ExtractResourcePlugin<R: ExtractResource<F>, F = ()>(PhantomData<(R, F)>);
 impl<R: ExtractResource<F>, F> Default for ExtractResourcePlugin<R, F> {
-    fn default() -> Self { Self(PhantomData) }
+    fn default() -> Self {
+        Self(PhantomData)
+    }
 }
 impl<R: ExtractResource<F>, F: 'static + Send + Sync> Plugin for ExtractResourcePlugin<R, F> {
     fn build(&self, app: &mut App) {
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .add_systems(Extract, extract::<R, F>);
     }
 }
@@ -35,7 +38,7 @@ pub trait ExtractResource<F = ()>: Resource {
 fn extract<R: ExtractResource<F>, F>(
     mut commands: Commands,
     main_resource: ExtractWorld<Option<Res<R::Source>>>,
-    render_resource: Option<ResMut<R>>,
+    render_resource: Option<ResMut<R>>
 ) {
     if let Some(main_resource) = main_resource.as_ref() {
         if let Some(mut render_resource) = render_resource {

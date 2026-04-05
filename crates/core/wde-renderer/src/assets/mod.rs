@@ -1,20 +1,20 @@
 //! Renderer assets module.
 //!
 //! This module contains:
-//! - Definitions and loading logic for all assets used by the renderer, that is [`mesh::Mesh`], [`texture::Texture`], [`buffer::Buffer`], [`shader::Shader`] assets. Each asset type has its own loading logic and GPU preparation steps, defined in their respective submodules. 
+//! - Definitions and loading logic for all assets used by the renderer, that is [`mesh::Mesh`], [`texture::Texture`], [`buffer::Buffer`], [`shader::Shader`] assets. Each asset type has its own loading logic and GPU preparation steps, defined in their respective submodules.
 //! - The [`bindings`] submodule, which provides utilities for defining custom renderer bindings, such as custom materials. See the documentation of the [`bindings`] module for more details.
 //! - A set of default utility meshes, defined in the [`meshes`] submodule.
-//! 
+//!
 //! # Custom renderer bindings
 //! For assets that require custom GPU bindings, such as custom materials [Material], the [`bindings`] module provides utilities to define the asset and its corresponding GPU asset, as a [`RenderBinding`] (or [`Material`]) and a [`GpuRenderBinding`] (or [`GpuMaterial`]) respectively. See the documentation of the [`bindings`] module for more details.
-//! 
+//!
 //! # Asset loading
 //! ## Default asset loading
 //! Assets can be loaded with the default options using the `AssetServer` as usual:
 //! ```
 //! let texture_handle: Handle<Texture> = asset_server.load("res/my_texture.png");
 //! ```
-//! 
+//!
 //! ## Load with options
 //! Some assets can be loaded with options, for example a texture can be loaded with specific sampler settings:
 //! ```
@@ -25,7 +25,7 @@
 //!         settings.usages = TextureUsages::TEXTURE_BINDING;
 //!     });
 //! ```
-//! 
+//!
 //! ## Custom asset creation
 //! Assets can also be created from raw data, for example a texture can be created from raw pixel data:
 //! ```
@@ -39,30 +39,29 @@
 //! });
 //! ```
 
-pub mod bindings;
-pub mod meshes;
-mod mesh;
-mod texture;
-mod buffer;
-mod shader;
 mod asset;
+pub mod bindings;
+mod buffer;
+mod mesh;
+pub mod meshes;
+mod shader;
+mod texture;
 
 use bevy::prelude::*;
 
-pub use mesh::*;
-pub use texture::*;
-pub use buffer::*;
-pub use shader::*;
-pub use bindings::*;
 pub use asset::*;
+pub use bindings::*;
+pub use buffer::*;
+pub use mesh::*;
 pub use meshes::*;
+pub use shader::*;
+pub use texture::*;
 
 pub(crate) struct AssetsPlugin;
 impl Plugin for AssetsPlugin {
     fn build(&self, app: &mut App) {
         // Setup the assets
-        app
-            .add_plugins(MaterialsPlugin)
+        app.add_plugins(MaterialsPlugin)
             .init_asset_loader::<TextureLoader>()
             .init_asset::<Texture>()
             .init_asset_loader::<MeshLoader>()
@@ -72,13 +71,11 @@ impl Plugin for AssetsPlugin {
             .init_asset::<Buffer>();
 
         // Add resource loaders to transfer the assets to the GPU
-        app
-            .add_plugins(RenderAssetsPlugin::<GpuMesh>::default())
+        app.add_plugins(RenderAssetsPlugin::<GpuMesh>::default())
             .add_plugins(RenderAssetsPlugin::<GpuTexture>::default())
             .add_plugins(RenderAssetsPlugin::<GpuBuffer>::default());
 
         // Register the components to the reflect system
-        app
-            .register_type::<Mesh3d>();
+        app.register_type::<Mesh3d>();
     }
 }

@@ -1,9 +1,8 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-
 /// Uniform structure for PBR material data.
-/// 
+///
 /// The structure sent to the GPU is the following :
 /// ```wgsl
 /// struct Material3dUniform {
@@ -13,7 +12,7 @@ use wde_renderer::prelude::*;
 ///     roughness: f32,   // Roughness intensity of the material
 ///     _padding: vec2<f32>, // Unused padding to align to 16 bytes
 /// };
-/// 
+///
 /// @group(2) @binding(0) var<uniform> pbr_material: PbrMaterialUniform;    /// Material uniform buffer
 /// @group(2) @binding(1) var albedo_texture: texture_2d<f32>;              /// Albedo texture (r, g, b)
 /// @group(2) @binding(2) var albedo_sampler: sampler;                      /// Albedo texture sampler
@@ -64,14 +63,14 @@ pub struct PbrMaterial {
     pub normal_t: Option<Handle<Texture>>,
     /// The occlusion texture of the material instance.
     /// The occlusion value is stored in the red channel.
-    pub occlusion_t: Option<Handle<Texture>>,
+    pub occlusion_t: Option<Handle<Texture>>
 }
 impl Default for PbrMaterial {
     fn default() -> Self {
         PbrMaterial {
             label: "pbr-material".to_string(),
 
-            albedo:   (1.0, 1.0, 1.0, 0.0),
+            albedo: (1.0, 1.0, 1.0, 0.0),
             albedo_t: None,
 
             metallic: 1.0,
@@ -79,7 +78,7 @@ impl Default for PbrMaterial {
             metallic_roughness_t: None,
 
             normal_t: None,
-            occlusion_t: None,
+            occlusion_t: None
         }
     }
 }
@@ -89,32 +88,39 @@ impl RenderBinding for PbrMaterial {
         // Create the uniform buffer
         let uniform = PbrMaterialUniform {
             flags: [
-                if self.albedo_t.is_some()   { 1.0 } else { 0.0 },
-                if self.metallic_roughness_t.is_some() { 1.0 } else { 0.0 },
-                if self.normal_t.is_some()   { 1.0 } else { 0.0 },
+                if self.albedo_t.is_some() { 1.0 } else { 0.0 },
+                if self.metallic_roughness_t.is_some() {
+                    1.0
+                } else {
+                    0.0
+                },
+                if self.normal_t.is_some() { 1.0 } else { 0.0 },
                 if self.occlusion_t.is_some() { 1.0 } else { 0.0 }
             ],
             albedo: [self.albedo.0, self.albedo.1, self.albedo.2, self.albedo.3],
             metallic: self.metallic,
             roughness: self.roughness,
-            _padding: [0.0, 0.0],
+            _padding: [0.0, 0.0]
         };
 
         // Build the material
-        builder.add_buffer(0, Buffer {
-            label: format!("{}-uniform-buffer", self.label),
-            size: std::mem::size_of::<PbrMaterialUniform>(),
-            usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-            content: Some(bytemuck::cast_slice(&[uniform]).to_vec())
-        });
-        builder.add_texture_view(    1, self.albedo_t.clone());
-        builder.add_texture_sampler( 2, self.albedo_t.clone());
-        builder.add_texture_view(    3, self.metallic_roughness_t.clone());
-        builder.add_texture_sampler( 4, self.metallic_roughness_t.clone());
-        builder.add_texture_view(    5, self.normal_t.clone());
-        builder.add_texture_sampler( 6, self.normal_t.clone());
-        builder.add_texture_view(    7, self.occlusion_t.clone());
-        builder.add_texture_sampler( 8, self.occlusion_t.clone());
+        builder.add_buffer(
+            0,
+            Buffer {
+                label: format!("{}-uniform-buffer", self.label),
+                size: std::mem::size_of::<PbrMaterialUniform>(),
+                usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                content: Some(bytemuck::cast_slice(&[uniform]).to_vec())
+            }
+        );
+        builder.add_texture_view(1, self.albedo_t.clone());
+        builder.add_texture_sampler(2, self.albedo_t.clone());
+        builder.add_texture_view(3, self.metallic_roughness_t.clone());
+        builder.add_texture_sampler(4, self.metallic_roughness_t.clone());
+        builder.add_texture_view(5, self.normal_t.clone());
+        builder.add_texture_sampler(6, self.normal_t.clone());
+        builder.add_texture_view(7, self.occlusion_t.clone());
+        builder.add_texture_sampler(8, self.occlusion_t.clone());
     }
 
     fn label(&self) -> &str {

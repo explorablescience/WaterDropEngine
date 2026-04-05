@@ -18,7 +18,7 @@ fn main() -> Result<()> {
     // Make sure the directories exist.
     std::fs::create_dir_all("./../target/debug/")?;
     std::fs::create_dir_all("./../target/release/")?;
-    
+
     // Check if we're in debug or release mode.
     if cfg!(debug_assertions) {
         // Copy the /res/ folder to the output directory.

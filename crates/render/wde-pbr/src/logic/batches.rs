@@ -1,8 +1,15 @@
-use wde_renderer::prelude::*;
-use wde_logger::prelude::*;
 use bevy::prelude::*;
+use wde_logger::prelude::*;
+use wde_renderer::prelude::*;
 
-use crate::{assets::PbrMaterial, logic::ssbo::SsboTransformPbr, prelude::{DirtyTransforms, ModelUuidToTransformUuidRender, PbrModel, PbrModelElementUuid, PbrModelRegistry}};
+use crate::{
+    assets::PbrMaterial,
+    logic::ssbo::SsboTransformPbr,
+    prelude::{
+        DirtyTransforms, ModelUuidToTransformUuidRender, PbrModel, PbrModelElementUuid,
+        PbrModelRegistry
+    }
+};
 
 type ModelMaterialPair = (AssetId<Mesh>, AssetId<PbrMaterial>);
 
@@ -16,7 +23,7 @@ pub struct Batches {
     /// The render batches
     pub render_batches: Vec<Batch>,
     /// Pointers to the transform IDs in the SSBO for each instance in the batches
-    pub transform_ids: Vec<u32>,
+    pub transform_ids: Vec<u32>
 }
 
 /// A single render batch
@@ -28,15 +35,23 @@ pub struct Batch {
     pub instance_count: u32
 }
 
-
 pub struct BatchesPlugin;
 impl Plugin for BatchesPlugin {
     fn build(&self, app: &mut App) {
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .init_resource::<Batches>()
             .init_resource::<ExtractedEntities>()
             .add_systems(Extract, extract)
-            .add_systems(Render, (build_batches, update_ssbo_transforms, set_batches_transforms).in_set(RenderSet::Prepare));
+            .add_systems(
+                Render,
+                (
+                    build_batches,
+                    update_ssbo_transforms,
+                    set_batches_transforms
+                )
+                    .in_set(RenderSet::Prepare)
+            );
     }
 }
 
@@ -50,13 +65,17 @@ fn extract(
     mut model_uuid_to_transform_id: ResMut<ModelUuidToTransformUuidRender>,
     main_dirty_transforms: ExtractWorld<Res<DirtyTransforms>>,
     mut render_dirty_transforms: ResMut<DirtyTransforms>
-) { 
+) {
     // Extract the model UUIDs and their associated mesh and material weak references from the main world to the render world
     model_uuid_to_transform_id.0 = pbr_model_registry.model_uuid_to_transform_id.clone();
     render_dirty_transforms.0 = main_dirty_transforms.0.clone();
 
     // Extract every uuid from the entities
-    let mut render_entities: Vec<(PbrModelElementUuid, (AssetId<Mesh>, AssetId<PbrMaterial>), u32)> = Vec::new();
+    let mut render_entities: Vec<(
+        PbrModelElementUuid,
+        (AssetId<Mesh>, AssetId<PbrMaterial>),
+        u32
+    )> = Vec::new();
     for entity in raw_entities.iter() {
         if let Some(uuid_list) = model_registry.entity_to_model_uuids.get(&entity) {
             for uuid in uuid_list.iter() {
@@ -66,7 +85,10 @@ fn extract(
                 ) {
                     render_entities.push((*uuid, *model_weak, *transform_id));
                 } else {
-                    warn!("PbrModelRegistry has no weak reference or transform ID for model UUID {}", uuid);
+                    warn!(
+                        "PbrModelRegistry has no weak reference or transform ID for model UUID {}",
+                        uuid
+                    );
                 }
             }
         } else {
@@ -107,7 +129,7 @@ fn update_ssbo_transforms(
 
     {
         let _span = debug_span!("update_pbr_ssbo_buffer").entered();
-        
+
         // Get the list of dirty transforms
         // Update the dirty transforms in the ssbo buffer
         for (uuid, transform) in dirty_transforms.iter() {
@@ -122,18 +144,21 @@ fn update_ssbo_transforms(
 
             // Write the transform uniform directly to the staging buffer
             let offset = (transform_id as usize) * std::mem::size_of::<TransformUniform>();
-            ssbo_staging.buffer.write(&render_instance, bytemuck::cast_slice(&[*transform]), offset);
+            ssbo_staging.buffer.write(
+                &render_instance,
+                bytemuck::cast_slice(&[*transform]),
+                offset
+            );
         }
     }
 
     // Update the ssbo from the cpu buffer
-    ssbo_gpu.buffer.copy_from_buffer(&render_instance, &ssbo_staging.buffer);
+    ssbo_gpu
+        .buffer
+        .copy_from_buffer(&render_instance, &ssbo_staging.buffer);
 }
 
-fn build_batches(
-    mut extracted_entities: ResMut<ExtractedEntities>,
-    mut batches: ResMut<Batches>
-) {
+fn build_batches(mut extracted_entities: ResMut<ExtractedEntities>, mut batches: ResMut<Batches>) {
     // Sort the entities first by mesh and then by material
     let _sort_span = debug_span!("build_batches_sort").entered();
     let mut entities = match extracted_entities.0.take() {
@@ -161,7 +186,9 @@ fn build_batches(
             render_batches.push(Batch {
                 mesh_id: *mesh_id,
                 material_id: *material_id,
-                first_instance: render_batches.last().map_or(0, |b| b.first_instance + b.instance_count),
+                first_instance: render_batches
+                    .last()
+                    .map_or(0, |b| b.first_instance + b.instance_count),
                 instance_count: 1
             });
             current_mesh_id = Some(*mesh_id);
@@ -177,7 +204,6 @@ fn build_batches(
     };
 }
 
-
 fn set_batches_transforms(
     buffers: Res<RenderAssets<GpuBuffer>>,
     ssbo: Res<SsboTransformPbr>,
@@ -191,14 +217,16 @@ fn set_batches_transforms(
         buffers.get(&ssbo.instance_to_transform_buffer),
         buffers.get(&ssbo.instance_to_transform_buffer_gpu)
     ) {
-        (Some(instance_to_transform_buffer), Some(instance_to_transform_gpu)) => (instance_to_transform_buffer, instance_to_transform_gpu),
+        (Some(instance_to_transform_buffer), Some(instance_to_transform_gpu)) => {
+            (instance_to_transform_buffer, instance_to_transform_gpu)
+        }
         _ => return
     };
 
     // Fill the ssbo instance-to-transform
     {
         let _span = debug_span!("fill_instance_to_transform_ssbo").entered();
-        
+
         // Write the instance-to-transform data directly
         ssbo_instance_to_transform_buffer.buffer.write(
             &render_instance,
@@ -208,5 +236,7 @@ fn set_batches_transforms(
     }
 
     // Update the ssbo from the cpu buffer
-    instance_to_transform_gpu.buffer.copy_from_buffer(&render_instance, &ssbo_instance_to_transform_buffer.buffer);
+    instance_to_transform_gpu
+        .buffer
+        .copy_from_buffer(&render_instance, &ssbo_instance_to_transform_buffer.buffer);
 }

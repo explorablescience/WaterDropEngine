@@ -11,15 +11,31 @@ impl PostProcessingMesh {
         let deferred_mesh: Handle<Mesh> = assets_server.add(Mesh {
             label: "post-process-mesh".to_string(),
             vertices: vec![
-                Vertex { position: [-1.0,  1.0, 0.0], uv: [0.0, 1.0], ..Default::default() },
-                Vertex { position: [-1.0, -1.0, 0.0], uv: [0.0, 0.0], ..Default::default() },
-                Vertex { position: [ 1.0, -1.0, 0.0], uv: [1.0, 0.0], ..Default::default() },
-                Vertex { position: [ 1.0,  1.0, 0.0], uv: [1.0, 1.0], ..Default::default() },
+                Vertex {
+                    position: [-1.0, 1.0, 0.0],
+                    uv: [0.0, 1.0],
+                    ..Default::default()
+                },
+                Vertex {
+                    position: [-1.0, -1.0, 0.0],
+                    uv: [0.0, 0.0],
+                    ..Default::default()
+                },
+                Vertex {
+                    position: [1.0, -1.0, 0.0],
+                    uv: [1.0, 0.0],
+                    ..Default::default()
+                },
+                Vertex {
+                    position: [1.0, 1.0, 0.0],
+                    uv: [1.0, 1.0],
+                    ..Default::default()
+                },
             ],
             indices: vec![0, 1, 2, 0, 2, 3],
             bbox: MeshBbox {
                 min: Vec3::new(-1.0, -1.0, 0.0),
-                max: Vec3::new(1.0, 1.0, 0.0),
+                max: Vec3::new(1.0, 1.0, 0.0)
             },
             use_ssbo: false
         });

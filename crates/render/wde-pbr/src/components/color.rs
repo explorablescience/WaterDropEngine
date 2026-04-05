@@ -12,7 +12,7 @@ pub enum Color {
     /// Linear RGBA color expressed in normalized `[0.0, 1.0]` space.
     LinearRgba(f32, f32, f32, f32),
     /// sRGB RGBA color expressed in normalized `[0.0, 1.0]` space.
-    Srgba(f32, f32, f32, f32),
+    Srgba(f32, f32, f32, f32)
 }
 impl Color {
     /// Create a linear RGBA color.
@@ -23,7 +23,6 @@ impl Color {
     pub fn from_srgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Color::Srgba(r, g, b, a)
     }
-
 
     /// Convert the color to linear RGBA (gamma ≈ 2.2).
     pub fn to_linear_rgba(&self) -> Self {
@@ -50,33 +49,32 @@ impl Color {
         }
     }
 
-
     /// Get the red component without converting color space.
     pub fn r(&self) -> f32 {
         match self {
             Color::LinearRgba(r, _, _, _) => *r,
-            Color::Srgba(r, _, _, _) => *r,
+            Color::Srgba(r, _, _, _) => *r
         }
     }
     /// Get the green component without converting color space.
     pub fn g(&self) -> f32 {
         match self {
             Color::LinearRgba(_, g, _, _) => *g,
-            Color::Srgba(_, g, _, _) => *g,
+            Color::Srgba(_, g, _, _) => *g
         }
     }
     /// Get the blue component without converting color space.
     pub fn b(&self) -> f32 {
         match self {
             Color::LinearRgba(_, _, b, _) => *b,
-            Color::Srgba(_, _, b, _) => *b,
+            Color::Srgba(_, _, b, _) => *b
         }
     }
     /// Get the alpha component without converting color space.
     pub fn a(&self) -> f32 {
         match self {
             Color::LinearRgba(_, _, _, a) => *a,
-            Color::Srgba(_, _, _, a) => *a,
+            Color::Srgba(_, _, _, a) => *a
         }
     }
 }

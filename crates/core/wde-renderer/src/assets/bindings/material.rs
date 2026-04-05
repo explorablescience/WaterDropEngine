@@ -1,5 +1,5 @@
-use bevy::{ecs::system::lifetimeless::SRes, prelude::*};
 use crate::prelude::*;
+use bevy::{ecs::system::lifetimeless::SRes, prelude::*};
 
 /// Alias for a `SRes<RenderAssets<GpuMaterial<M>>>`.
 pub type SMaterial<M> = SRes<RenderAssets<GpuMaterial<M>>>;
@@ -20,12 +20,15 @@ pub struct MaterialsPluginRegister<M: Material> {
     _phantom: std::marker::PhantomData<M>
 }
 impl<M: Material> Default for MaterialsPluginRegister<M> {
-    fn default() -> Self { MaterialsPluginRegister { _phantom: std::marker::PhantomData } }
+    fn default() -> Self {
+        MaterialsPluginRegister {
+            _phantom: std::marker::PhantomData
+        }
+    }
 }
 impl<M: Material> Plugin for MaterialsPluginRegister<M> {
     fn build(&self, app: &mut App) {
-        app
-            .init_asset::<M>()
+        app.init_asset::<M>()
             .add_plugins(RenderAssetsPlugin::<GpuMaterial<M>>::default());
     }
 }

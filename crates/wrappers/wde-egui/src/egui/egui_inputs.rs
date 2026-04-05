@@ -1,5 +1,13 @@
-use bevy::{input::{ButtonState, keyboard::KeyboardInput, mouse::{MouseButtonInput, MouseMotion, MouseWheel}, prelude::*}, prelude::*};
 use super::egui_context::EguiContext;
+use bevy::{
+    input::{
+        ButtonState,
+        keyboard::KeyboardInput,
+        mouse::{MouseButtonInput, MouseMotion, MouseWheel},
+        prelude::*
+    },
+    prelude::*
+};
 
 /// Resource to store egui inputs
 #[derive(Resource, Default)]
@@ -9,8 +17,7 @@ pub(crate) struct EguiInputs(pub egui::RawInput);
 pub(crate) struct EguiInputsPlugin;
 impl Plugin for EguiInputsPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<EguiInputs>();
+        app.init_resource::<EguiInputs>();
     }
 }
 
@@ -22,13 +29,15 @@ pub(crate) fn handle_input(
     mut keyboard_input_messages: MessageReader<KeyboardInput>,
     mut mouse_button_input_messages: MessageReader<MouseButtonInput>,
     mut mouse_motion_messages: MessageReader<MouseMotion>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>
 ) {
     let mut raw_input = egui::RawInput::default();
 
     // Get mouse position
     let window = windows.iter().next().unwrap();
-    let mouse_position = window.cursor_position().map(|pos| egui::Pos2 { x: pos.x, y: pos.y });
+    let mouse_position = window
+        .cursor_position()
+        .map(|pos| egui::Pos2 { x: pos.x, y: pos.y });
 
     // Add pointer position event if we have cursor position
     if let Some(pos) = mouse_position {
@@ -43,11 +52,14 @@ pub(crate) fn handle_input(
 
     // Track modifiers
     let modifiers = egui::Modifiers {
-        ctrl: keyboard_input.pressed(KeyCode::ControlLeft) || keyboard_input.pressed(KeyCode::ControlRight),
-        shift: keyboard_input.pressed(KeyCode::ShiftLeft) || keyboard_input.pressed(KeyCode::ShiftRight),
+        ctrl: keyboard_input.pressed(KeyCode::ControlLeft)
+            || keyboard_input.pressed(KeyCode::ControlRight),
+        shift: keyboard_input.pressed(KeyCode::ShiftLeft)
+            || keyboard_input.pressed(KeyCode::ShiftRight),
         alt: keyboard_input.pressed(KeyCode::AltLeft) || keyboard_input.pressed(KeyCode::AltRight),
         mac_cmd: false, // Can add Mac support if needed
-        command: keyboard_input.pressed(KeyCode::ControlLeft) || keyboard_input.pressed(KeyCode::ControlRight),
+        command: keyboard_input.pressed(KeyCode::ControlLeft)
+            || keyboard_input.pressed(KeyCode::ControlRight)
     };
     raw_input.modifiers = modifiers;
 
@@ -57,7 +69,7 @@ pub(crate) fn handle_input(
             MouseButton::Left => Some(egui::PointerButton::Primary),
             MouseButton::Right => Some(egui::PointerButton::Secondary),
             MouseButton::Middle => Some(egui::PointerButton::Middle),
-            _ => None,
+            _ => None
         };
 
         if let Some(button) = pointer_button {
@@ -67,7 +79,7 @@ pub(crate) fn handle_input(
                         pos: mouse_position.unwrap_or_default(),
                         button,
                         pressed: true,
-                        modifiers,
+                        modifiers
                     });
                 }
                 ButtonState::Released => {
@@ -75,7 +87,7 @@ pub(crate) fn handle_input(
                         pos: mouse_position.unwrap_or_default(),
                         button,
                         pressed: false,
-                        modifiers,
+                        modifiers
                     });
                 }
             }
@@ -90,7 +102,7 @@ pub(crate) fn handle_input(
                 // Send text to egui for typing in text fields
                 raw_input.events.push(egui::Event::Text(s.to_string()));
             }
-            
+
             // Also send key events for special keys
             if let Some(key) = bevy_to_egui_key(event.key_code) {
                 raw_input.events.push(egui::Event::Key {
@@ -98,19 +110,20 @@ pub(crate) fn handle_input(
                     pressed: true,
                     repeat: false,
                     modifiers,
-                    physical_key: None,
+                    physical_key: None
                 });
             }
         } else if event.state == ButtonState::Released
-            && let Some(key) = bevy_to_egui_key(event.key_code) {
-                raw_input.events.push(egui::Event::Key {
-                    key,
-                    pressed: false,
-                    repeat: false,
-                    modifiers,
-                    physical_key: None,
-                });
-            }
+            && let Some(key) = bevy_to_egui_key(event.key_code)
+        {
+            raw_input.events.push(egui::Event::Key {
+                key,
+                pressed: false,
+                repeat: false,
+                modifiers,
+                physical_key: None
+            });
+        }
     }
     egui_inputs.0 = raw_input;
 }
@@ -122,7 +135,7 @@ pub(crate) fn clear_egui_inputs(
     mut keyboard_input_messages: ResMut<Messages<KeyboardInput>>,
     mut mouse_wheel_messages: ResMut<Messages<MouseWheel>>,
     mut mouse_button_input_messages: ResMut<Messages<MouseButtonInput>>,
-    mut mouse_motion_messages: ResMut<Messages<MouseMotion>>,
+    mut mouse_motion_messages: ResMut<Messages<MouseMotion>>
 ) {
     // Check if egui wants keyboard or pointer input (now accurate since begin_pass was called)
     let egui_wants_keyboard = egui_ctx.0.wants_keyboard_input();
@@ -137,7 +150,7 @@ pub(crate) fn clear_egui_inputs(
         KeyCode::AltLeft,
         KeyCode::AltRight,
         KeyCode::ShiftLeft,
-        KeyCode::ShiftRight,
+        KeyCode::ShiftRight
     ];
     let pressed = modifiers.map(|key| keyboard_input.pressed(key).then_some(key));
     if egui_wants_keyboard {
@@ -174,7 +187,7 @@ fn bevy_to_egui_key(key: KeyCode) -> Option<egui::Key> {
         KeyCode::PageUp => Some(egui::Key::PageUp),
         KeyCode::PageDown => Some(egui::Key::PageDown),
         KeyCode::Insert => Some(egui::Key::Insert),
-        
+
         // Letters for shortcuts (Ctrl+A, Ctrl+C, etc.)
         KeyCode::KeyA => Some(egui::Key::A),
         KeyCode::KeyB => Some(egui::Key::B),
@@ -202,7 +215,7 @@ fn bevy_to_egui_key(key: KeyCode) -> Option<egui::Key> {
         KeyCode::KeyX => Some(egui::Key::X),
         KeyCode::KeyY => Some(egui::Key::Y),
         KeyCode::KeyZ => Some(egui::Key::Z),
-        
-        _ => None,
+
+        _ => None
     }
 }

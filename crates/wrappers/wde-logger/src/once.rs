@@ -33,7 +33,6 @@ macro_rules! once {
     }};
 }
 
-
 /// Call [`trace!`](crate::trace) once per call site.
 ///
 /// Useful for logging within systems which are called every frame.

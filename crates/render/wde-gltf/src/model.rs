@@ -19,7 +19,7 @@ pub struct GltfModel {
 #[derive(Clone)]
 pub struct GltfBuffer {
     pub data: Vec<u8>,
-    pub slices: Vec<BufferSliceData>,
+    pub slices: Vec<BufferSliceData>
 }
 impl std::fmt::Debug for GltfBuffer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -59,7 +59,7 @@ pub struct MeshPrimitive {
     /// Node rotation as quaternion [x, y, z, w]
     pub rotation: [f32; 4],
     /// Node scale [x, y, z]
-    pub scale: [f32; 3],
+    pub scale: [f32; 3]
 }
 
 /// Representation of a glTF accessor for accessing buffer data.
@@ -78,7 +78,7 @@ pub struct AccessorData {
     /// Optional minimum values (for bounding box computation)
     pub min: Option<Vec<f32>>,
     /// Optional maximum values (for bounding box computation)
-    pub max: Option<Vec<f32>>,
+    pub max: Option<Vec<f32>>
 }
 
 /// Enumeration of glTF accessor component types.
@@ -89,7 +89,7 @@ pub enum GltfAccessorComponentType {
     Short = 5122,
     UnsignedShort = 5123,
     UnsignedInt = 5125,
-    Float = 5126,
+    Float = 5126
 }
 impl GltfAccessorComponentType {
     /// Create a GltfAccessorComponentType from its integer value.
@@ -101,7 +101,7 @@ impl GltfAccessorComponentType {
             5123 => Some(GltfAccessorComponentType::UnsignedShort),
             5125 => Some(GltfAccessorComponentType::UnsignedInt),
             5126 => Some(GltfAccessorComponentType::Float),
-            _ => unreachable!("Unsupported component type: {}", value),
+            _ => unreachable!("Unsupported component type: {}", value)
         }
     }
 }

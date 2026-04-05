@@ -8,8 +8,10 @@ pub struct PbrRenderTextureBindGroup {
 impl PbrRenderTextureBindGroup {
     /// Build the bind group for the deferred renderer.
     pub fn build_bind_group(
-        textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance>,
-        mut tex_bind_group: ResMut<PbrRenderTextureBindGroup>, texture: Res<PbrRenderTexture>
+        textures: Res<RenderAssets<GpuTexture>>,
+        render_instance: Res<RenderInstance>,
+        mut tex_bind_group: ResMut<PbrRenderTextureBindGroup>,
+        texture: Res<PbrRenderTexture>
     ) {
         // Check if the bind group is already created
         if tex_bind_group.bind_group.is_some() {
@@ -27,20 +29,29 @@ impl PbrRenderTextureBindGroup {
         let layout_built = BindGroupLayout::build(&Self::layout(), &render_instance).unwrap();
 
         // Create the bind group
-        let bind_group = BindGroupBuilder::build("pbr-render-texture", &render_instance, &layout_built, &vec![
-            BindGroupBuilder::texture_view(   0, &render_texture.texture),
-            BindGroupBuilder::texture_sampler(1, &render_texture.texture)
-        ]).unwrap();
+        let bind_group = BindGroupBuilder::build(
+            "pbr-render-texture",
+            &render_instance,
+            &layout_built,
+            &vec![
+                BindGroupBuilder::texture_view(0, &render_texture.texture),
+                BindGroupBuilder::texture_sampler(1, &render_texture.texture),
+            ]
+        )
+        .unwrap();
 
         // Insert the resources
         tex_bind_group.bind_group = Some(bind_group);
     }
 
     pub fn layout() -> BindGroupLayout {
-        BindGroupLayout::new("pbr-render-texture", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_view(   0, ShaderStages::FRAGMENT, true);
-            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-        })
+        BindGroupLayout::new(
+            "pbr-render-texture",
+            |builder: &mut BindGroupLayoutBuilder| {
+                builder.add_texture_view(0, ShaderStages::FRAGMENT, true);
+                builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
+            }
+        )
     }
 }
 
@@ -53,7 +64,11 @@ pub struct PbrRenderTexture {
     pub resized: bool
 }
 impl PbrRenderTexture {
-    pub fn create_texture(mut commands: Commands, assets_server: Res<AssetServer>, window: Query<&Window>) {
+    pub fn create_texture(
+        mut commands: Commands,
+        assets_server: Res<AssetServer>,
+        window: Query<&Window>
+    ) {
         let resolution = &window.single().unwrap().resolution;
         let texture = assets_server.add(Texture {
             label: "pbr-render-texture".to_string(),
@@ -64,13 +79,15 @@ impl PbrRenderTexture {
             ..Default::default()
         });
         commands.insert_resource(PbrRenderTexture {
-            texture, resized: false
+            texture,
+            resized: false
         });
     }
 
     pub fn resize_texture(
         mut window_resized_events: MessageReader<SurfaceResized>,
-        server: Res<AssetServer>, mut deferred_textures: ResMut<PbrRenderTexture>
+        server: Res<AssetServer>,
+        mut deferred_textures: ResMut<PbrRenderTexture>
     ) {
         deferred_textures.resized = false;
         for event in window_resized_events.read() {
@@ -90,7 +107,11 @@ impl PbrRenderTexture {
     }
 
     /// Extract the textures for the deferred renderer.
-    pub fn extract_texture(mut commands: Commands, textures: ExtractWorld<Res<PbrRenderTexture>>, mut textures_layout: ResMut<PbrRenderTextureBindGroup>) {
+    pub fn extract_texture(
+        mut commands: Commands,
+        textures: ExtractWorld<Res<PbrRenderTexture>>,
+        mut textures_layout: ResMut<PbrRenderTextureBindGroup>
+    ) {
         if textures.resized {
             textures_layout.bind_group = None;
         }

@@ -32,7 +32,7 @@
 //!    .get_resource_mut::<RenderGraph>().unwrap()
 //!    .add_pass::<DemoRenderPass>();
 //! ```
-//! 
+//!
 //! ## Render pipeline
 //! Then, as each sub-pass requires a render pipeline, you need to define a render pipeline asset that implements the [`crate::prelude::RenderAsset`] trait, which describes how to prepare the pipeline from a source asset. For example:
 //! ```rust
@@ -56,13 +56,13 @@
 //!     }
 //! }
 //! ```
-//! 
+//!
 //! To register this render pipeline asset, you can use the `RenderPipelinePluginRegister` in a plugin
 //! ```rust
 //! app.add_plugins(RenderPipelinePluginRegister::<DemoRenderPipeline>::default());
 //! ```
 //! which will prepare the pipeline and make it available in the render world.
-//! 
+//!
 //! ## Render sub-pass
 //! Finally, you can define a render sub-pass that uses this pipeline and executes some draw calls. To do this, you need to implement the [`RenderSubPass`] trait and its `describe` method, which returns a [`RenderSubPassDesc`] describing the commands to execute in this sub-pass (see [`SubPassCommand`] for the list of available commands). For example:
 //! ```rust
@@ -89,7 +89,7 @@
 //!   .get_resource_mut::<RenderGraph>().unwrap()
 //!   .add_sub_pass::<DemoSubRenderPass, DemoRenderPass>();
 //! ```
-//! 
+//!
 //! # Custom rendering
 //! ## Custom render commands
 //! If the available commands in the `SubPassCommand` enum are not sufficient to describe your rendering logic, you can also use the `Custom` command, which takes a closure with access to the render world and the render pass encoder, allowing you to execute any custom rendering logic you want. For example:
@@ -102,33 +102,35 @@
 //!    // Custom rendering logic here, with access to the render world and the render pass encoder
 //! }
 //! ```
-//! 
+//!
 //! ## Custom render passes
 //! If you want to execute a completely custom render pass, you can implement the [`RenderPass::custom_render`] method, which gives you access to the render world and a command buffer to execute commands directly without the restrictions of a render pass encoder. For example:
 //! ```rust
 //! pub struct CustomRenderPass;
 //! impl RenderPass for CustomRenderPass {
 //!    type Params = ();
-//! 
+//!
 //!    fn describe(_params: &SystemParamItem<Self::Params>) -> RenderPassDesc { RenderPassDesc::default() }
-//! 
+//!
 //!    fn custom_render(world: &mut World, command_buffer: &mut CommandBuffer) {
 //!       // Custom render pass logic here, with access to the render world and a command buffer to execute commands directly without the restrictions of a render pass encoder
 //!    }
 //! }
 //! ```
 
-mod render_graph;
-mod pipeline_types;
 mod pipeline_manager;
 mod pipeline_register_plugin;
+mod pipeline_types;
+mod render_graph;
 
 // Reexport wgpu types
+pub use wde_wgpu::pipelines::{
+    BlendComponent, BlendFactor, BlendOperation, BlendState, CompareFunction, DepthDescriptor,
+    Face, RenderTopology, ShaderStages
+};
 pub use wde_wgpu::vertex::Vertex;
-pub use wde_wgpu::pipelines::{ShaderStages, DepthDescriptor, Face, RenderTopology, BlendState, CompareFunction, BlendComponent, BlendFactor, BlendOperation};
 
-pub use render_graph::*;
-pub use pipeline_types::*;
 pub use pipeline_manager::*;
 pub use pipeline_register_plugin::*;
-
+pub use pipeline_types::*;
+pub use render_graph::*;

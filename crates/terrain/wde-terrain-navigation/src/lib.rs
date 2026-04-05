@@ -12,5 +12,4 @@ impl Plugin for TerrainNavigationPlugin {
     }
 }
 
-
 pub struct TerrainNavigationProvider;

@@ -1,15 +1,20 @@
-use wde_logger::prelude::*;
-use wde_editor::prelude::*;
-use wde_terrain::prelude::*;
 use bevy::prelude::*;
+use wde_editor::prelude::*;
+use wde_logger::prelude::*;
+use wde_terrain::prelude::*;
 
-use crate::{SaveManager, paint::{brush::{PaintBrush, PaintMode}, paint_manager::PaintManager}};
+use crate::{
+    SaveManager,
+    paint::{
+        brush::{PaintBrush, PaintMode},
+        paint_manager::PaintManager
+    }
+};
 
 pub struct TerrainEditorUIPlugin;
 impl Plugin for TerrainEditorUIPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, init_ui)
+        app.add_systems(Startup, init_ui)
             .add_systems(Update, ui_paint_terrain)
             .add_systems(Update, ui_save_terrain);
     }
@@ -53,7 +58,11 @@ fn ui_paint_terrain(
                             ui.selectable_value(&mut brush.paint_mode, PaintMode::Raise, "Raise");
                             ui.selectable_value(&mut brush.paint_mode, PaintMode::Lower, "Lower");
                             ui.selectable_value(&mut brush.paint_mode, PaintMode::Smooth, "Smooth");
-                            ui.selectable_value(&mut brush.paint_mode, PaintMode::Flatten, "Flatten");
+                            ui.selectable_value(
+                                &mut brush.paint_mode,
+                                PaintMode::Flatten,
+                                "Flatten"
+                            );
                         });
                 });
             } else {
@@ -65,7 +74,10 @@ fn ui_paint_terrain(
             ui.checkbox(&mut paint_manager.active, "Active");
             ui.label(format!("Painting: {}", paint_manager.painting));
             ui.label(format!("Should Flush: {}", paint_manager.should_flush));
-            ui.label(format!("Commands: {}", paint_manager.commands.as_ref().map_or(0, |c| c.len())));
+            ui.label(format!(
+                "Commands: {}",
+                paint_manager.commands.as_ref().map_or(0, |c| c.len())
+            ));
         });
 }
 
@@ -83,7 +95,6 @@ fn ui_save_terrain(
 
     // Clear the previous list of tiles to extract
     extractor.clear_tiles_to_extract();
-    
 
     // Draw UI
     UIWindow::new("Save Terrain")
@@ -98,7 +109,7 @@ fn ui_save_terrain(
                 }
                 let terrain = match terrain.single() {
                     Ok(terrain) => terrain,
-                    Err(_) => return,
+                    Err(_) => return
                 };
                 for pos in terrain.pos_to_tile.keys() {
                     for t in 0..2 {

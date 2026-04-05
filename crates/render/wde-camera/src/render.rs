@@ -8,7 +8,7 @@ use crate::camera::{ActiveCamera, CameraUniform, CameraView};
 pub struct CameraFeatureRender {
     pub layout: BindGroupLayout,
     pub layout_built: WgpuBindGroupLayout,
-    pub bind_group: Option<BindGroup>,
+    pub bind_group: Option<BindGroup>
 }
 impl FromWorld for CameraFeatureRender {
     fn from_world(world: &mut World) -> Self {
@@ -17,25 +17,32 @@ impl FromWorld for CameraFeatureRender {
         // Create the camera layout
         let layout = BindGroupLayout::new("camera", |builder| {
             builder.add_buffer(
-                0, ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                BufferBindingType::Uniform);
+                0,
+                ShaderStages::VERTEX | ShaderStages::FRAGMENT,
+                BufferBindingType::Uniform
+            );
         });
         let layout_built = layout.build(&render_instance.0.read().unwrap()).unwrap();
-        
-        CameraFeatureRender { layout, layout_built, bind_group: None }
+
+        CameraFeatureRender {
+            layout,
+            layout_built,
+            bind_group: None
+        }
     }
 }
 
 /// Struct to hold the camera uniform buffer.
 #[derive(Resource, Default)]
 pub(crate) struct CameraFeatureBuffer {
-    pub buffer: Handle<Buffer>,
+    pub buffer: Handle<Buffer>
 }
 
 pub(crate) struct CameraFeature;
 impl Plugin for CameraFeature {
     fn build(&self, app: &mut App) {
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .add_systems(Extract, extract)
             .add_systems(Render, build_bind_group.in_set(RenderSet::BindGroups))
             .add_systems(Render, update_buffer.in_set(RenderSet::Prepare))
@@ -49,20 +56,23 @@ impl Plugin for CameraFeature {
             label: "camera".to_string(),
             size: std::mem::size_of::<CameraUniform>(),
             usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-            content: None,
+            content: None
         });
-        
+
         // Add resources
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .insert_resource(CameraFeatureBuffer { buffer });
     }
 }
 
 // Create the bind group for the camera
 fn build_bind_group(
-    render_instance: Res<RenderInstance>, mut camera_feature_render: ResMut<CameraFeatureRender>,
-    camera_buffer: Res<CameraFeatureBuffer>, mut buffers: ResMut<RenderAssets<GpuBuffer>>)
-{
+    render_instance: Res<RenderInstance>,
+    mut camera_feature_render: ResMut<CameraFeatureRender>,
+    camera_buffer: Res<CameraFeatureBuffer>,
+    mut buffers: ResMut<RenderAssets<GpuBuffer>>
+) {
     // Check if the bind group is already created
     if camera_feature_render.bind_group.is_some() {
         return;
@@ -71,9 +81,13 @@ fn build_bind_group(
     // Create the bind group
     if let Some(camera_buffer) = buffers.get_mut(&camera_buffer.buffer) {
         let render_instance = render_instance.0.read().unwrap();
-        let bind_group = BindGroupBuilder::build("camera", &render_instance, &camera_feature_render.layout_built, &vec![
-            BindGroupBuilder::buffer(0, &camera_buffer.buffer)
-        ]).unwrap();
+        let bind_group = BindGroupBuilder::build(
+            "camera",
+            &render_instance,
+            &camera_feature_render.layout_built,
+            &vec![BindGroupBuilder::buffer(0, &camera_buffer.buffer)]
+        )
+        .unwrap();
         camera_feature_render.bind_group = Some(bind_group);
     }
 }
@@ -82,12 +96,12 @@ fn build_bind_group(
 #[allow(clippy::type_complexity)]
 fn extract(
     (cameras, mut camera_uniform): (
-        ExtractWorld<Query<(&Transform, &CameraView), With<ActiveCamera>>>, ResMut<CameraUniform>
-    ), window: ExtractWorld<Query<&Window>>)
-{
-    if let (
-        Ok((transform, view)), Ok(window)
-    ) = (cameras.single(), window.single()) {
+        ExtractWorld<Query<(&Transform, &CameraView), With<ActiveCamera>>>,
+        ResMut<CameraUniform>
+    ),
+    window: ExtractWorld<Query<&Window>>
+) {
+    if let (Ok((transform, view)), Ok(window)) = (cameras.single(), window.single()) {
         // Update the camera uniform
         let aspect_ratio = window.width() / window.height();
         *camera_uniform = CameraUniform::new(transform, view, aspect_ratio);
@@ -97,13 +111,19 @@ fn extract(
 // Update the camera buffer
 fn update_buffer(
     (render_instance, camera_uniform, camera_buffer): (
-        Res<RenderInstance>, Res<CameraUniform>, Res<CameraFeatureBuffer>
+        Res<RenderInstance>,
+        Res<CameraUniform>,
+        Res<CameraFeatureBuffer>
     ),
     mut buffers: ResMut<RenderAssets<GpuBuffer>>
 ) {
     // Update the camera buffer
     if let Some(camera_buffer) = buffers.get_mut(&camera_buffer.buffer) {
         let render_instance = render_instance.0.read().unwrap();
-        camera_buffer.buffer.write(&render_instance, bytemuck::cast_slice(&[camera_uniform.to_owned()]), 0);
+        camera_buffer.buffer.write(
+            &render_instance,
+            bytemuck::cast_slice(&[camera_uniform.to_owned()]),
+            0
+        );
     }
 }

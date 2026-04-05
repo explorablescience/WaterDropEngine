@@ -97,27 +97,31 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{assets::{PbrAssetsPlugin, PbrMaterial}, components::PbrComponentsPlugin, logic::PbrLogicPlugin, passes::PbrFeaturesPlugin as PbrPassesPlugin};
+use crate::{
+    assets::{PbrAssetsPlugin, PbrMaterial},
+    components::PbrComponentsPlugin,
+    logic::PbrLogicPlugin,
+    passes::PbrFeaturesPlugin as PbrPassesPlugin
+};
 
 pub mod prelude {
     pub use crate::PbrPlugin;
     pub use crate::assets::PbrMaterial;
-    pub use crate::components::{lights::*, model::*, color::*};
-    pub use crate::passes::*;
+    pub use crate::components::{color::*, lights::*, model::*};
     pub use crate::logic::ssbo::SsboTransformPbr;
+    pub use crate::passes::*;
 }
 
 pub mod assets;
 pub mod components;
-mod passes;
 mod logic;
+mod passes;
 
 pub struct PbrPlugin;
 impl Plugin for PbrPlugin {
     fn build(&self, app: &mut App) {
         // Add the different plugins
-        app
-            .add_plugins(PbrAssetsPlugin)
+        app.add_plugins(PbrAssetsPlugin)
             .add_plugins(PbrComponentsPlugin)
             .add_plugins(PbrPassesPlugin)
             .add_plugins(PbrLogicPlugin);

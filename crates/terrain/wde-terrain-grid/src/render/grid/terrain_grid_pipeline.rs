@@ -1,9 +1,14 @@
-use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
+use bevy::{
+    ecs::system::{
+        SystemParamItem,
+        lifetimeless::{SRes, SResMut}
+    },
+    prelude::*
+};
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::render::grid::buffers::TerrainGridBuffer;
-
 
 #[derive(Default, Asset, Clone, TypePath)]
 pub struct TerrainGridRenderPipelineAsset;
@@ -15,36 +20,41 @@ pub struct GpuTerrainGridRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for GpuTerrainGridRenderPipeline {
     type SourceAsset = TerrainGridRenderPipelineAsset;
     type Params = (
-        SRes<AssetServer>, SResMut<PipelineManager>, SRes<CameraFeatureRender>, SRes<TerrainGridBuffer>
+        SRes<AssetServer>,
+        SResMut<PipelineManager>,
+        SRes<CameraFeatureRender>,
+        SRes<TerrainGridBuffer>
     );
 
     fn prepare(
-            _asset: Self::SourceAsset,
-            (assets_server, pipeline_manager, camera_feature, terrain_grid_buffer): &mut SystemParamItem<Self::Params>
-        ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        Ok(GpuTerrainGridRenderPipeline(pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
-            label: "terrain-grid",
-            vert: Some(assets_server.load("core/render/terrain/render_grid_vert.wgsl")),
-            frag: Some(assets_server.load("core/render/terrain/render_grid_frag.wgsl")),
-            fragment_blend: Some(BlendState {
-                color: BlendComponent {
-                    src_factor: BlendFactor::SrcAlpha,
-                    dst_factor: BlendFactor::OneMinusSrcAlpha,
-                    operation: BlendOperation::Add
+        _asset: Self::SourceAsset,
+        (assets_server, pipeline_manager, camera_feature, terrain_grid_buffer): &mut SystemParamItem<Self::Params>
+    ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        Ok(GpuTerrainGridRenderPipeline(
+            pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
+                label: "terrain-grid",
+                vert: Some(assets_server.load("core/render/terrain/render_grid_vert.wgsl")),
+                frag: Some(assets_server.load("core/render/terrain/render_grid_frag.wgsl")),
+                fragment_blend: Some(BlendState {
+                    color: BlendComponent {
+                        src_factor: BlendFactor::SrcAlpha,
+                        dst_factor: BlendFactor::OneMinusSrcAlpha,
+                        operation: BlendOperation::Add
+                    },
+                    alpha: BlendComponent::OVER
+                }),
+                bind_group_layouts: vec![
+                    camera_feature.layout.clone(),
+                    terrain_grid_buffer.layout.clone(),
+                ],
+                depth: DepthDescriptor {
+                    enabled: true,
+                    ..Default::default()
                 },
-                alpha: BlendComponent::OVER
-            }),
-            bind_group_layouts: vec![
-                camera_feature.layout.clone(),
-                terrain_grid_buffer.layout.clone()
-            ],
-            depth: DepthDescriptor {
-                enabled: true,
+                sample_count: MSAA_SAMPLE_COUNT,
                 ..Default::default()
-            },
-            sample_count: MSAA_SAMPLE_COUNT,
-            ..Default::default()
-        })))
+            })
+        ))
     }
 
     fn label(&self) -> &str {

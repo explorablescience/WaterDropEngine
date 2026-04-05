@@ -11,8 +11,8 @@ use crate::instance::RenderError;
 use crate::render_pipeline::RenderPipeline;
 
 // Alias struct for the draw indirect functions.
-pub use wgpu::util::DrawIndirectArgs;
 pub use wgpu::util::DrawIndexedIndirectArgs;
+pub use wgpu::util::DrawIndirectArgs;
 
 /// RAII wrapper over `wgpu::RenderPass` with guard rails to prevent draws without required
 /// state (pipeline + vertex/index buffers).
@@ -24,7 +24,7 @@ pub use wgpu::util::DrawIndexedIndirectArgs;
 ///     render_pass::RenderPass,
 ///     render_pipeline::RenderPipeline,
 /// };
-/// 
+///
 /// let mut pass = RenderPassInstance::new("example", render_pass);
 /// pass
 ///     .set_pipeline(pipeline).unwrap()
@@ -41,7 +41,7 @@ pub struct RenderPassInstance<'a> {
     render_pass: wgpu::RenderPass<'a>,
     pipeline_set: bool,
     vertex_buffer_set: bool,
-    index_buffer_set: bool,
+    index_buffer_set: bool
 }
 
 impl std::fmt::Debug for RenderPassInstance<'_> {
@@ -54,9 +54,9 @@ impl std::fmt::Debug for RenderPassInstance<'_> {
 
 impl<'a> RenderPassInstance<'a> {
     /// Create a new render pass.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `label` - The label of the render pass.
     /// * `render_pass` - The render pass to create.
     pub fn new(label: &str, render_pass: wgpu::RenderPass<'a>) -> Self {
@@ -67,19 +67,19 @@ impl<'a> RenderPassInstance<'a> {
             render_pass,
             pipeline_set: false,
             vertex_buffer_set: false,
-            index_buffer_set: false,
+            index_buffer_set: false
         }
     }
 
     /// Set the pipeline of the render pass.
     /// The bind groups of the pipeline are also set.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `pipeline` - The pipeline to set.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `RenderError::PipelineNotInitialized` - The pipeline is not initialized.
     pub fn set_pipeline(&mut self, pipeline: &'a RenderPipeline) -> Result<&mut Self, RenderError> {
         if pipeline.get_pipeline().is_none() {
@@ -88,38 +88,41 @@ impl<'a> RenderPassInstance<'a> {
         }
 
         // Set pipeline
-        self.render_pass.set_pipeline(pipeline.get_pipeline().as_ref().unwrap());
+        self.render_pass
+            .set_pipeline(pipeline.get_pipeline().as_ref().unwrap());
         self.pipeline_set = true;
         Ok(self)
     }
 
     /// Set a vertex buffer of the render pass.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `binding` - The binding of the vertex buffer.
     /// * `buffer` - The buffer to set.
     pub fn set_vertex_buffer(&mut self, binding: u32, buffer: &'a Buffer) -> &mut Self {
-        self.render_pass.set_vertex_buffer(binding, buffer.buffer.slice(..));
+        self.render_pass
+            .set_vertex_buffer(binding, buffer.buffer.slice(..));
         self.vertex_buffer_set = true;
         self
     }
 
     /// Set the index buffer of the render pass.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `buffer` - The buffer to set.
     pub fn set_index_buffer(&mut self, buffer: &'a Buffer) -> &mut Self {
-        self.render_pass.set_index_buffer(buffer.buffer.slice(..), wgpu::IndexFormat::Uint32);
+        self.render_pass
+            .set_index_buffer(buffer.buffer.slice(..), wgpu::IndexFormat::Uint32);
         self.index_buffer_set = true;
         self
     }
 
     /// Set the scissor rect of the render pass.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `x` - X coordinate of the scissor rect.
     /// * `y` - Y coordinate of the scissor rect.
     /// * `width` - Width of the scissor rect.
@@ -129,12 +132,10 @@ impl<'a> RenderPassInstance<'a> {
         self
     }
 
-
-
     /// Set push constants of the render pass.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `stages` - The shader stages to set the push constants for.
     /// * `data` - The data to set.
     pub fn set_push_constants(&mut self, stages: ShaderStages, data: &[u8]) -> &mut Self {
@@ -143,9 +144,9 @@ impl<'a> RenderPassInstance<'a> {
     }
 
     /// Set a bind group of the render pass at a binding.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `binding` - The binding of the bind group.
     /// * `bind_group` - The bind group to set.
     pub fn set_bind_group(&mut self, binding: u32, bind_group: &'a wgpu::BindGroup) -> &mut Self {
@@ -153,64 +154,79 @@ impl<'a> RenderPassInstance<'a> {
         self
     }
 
-
-
     /// Draws primitives from the active vertex buffers.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `vertices` - Range of vertices to draw.
     /// * `instances` - Range of instances to draw.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `RenderError::PipelineNotSet` - The pipeline is not set.
     pub fn draw(&mut self, vertices: Range<u32>, instances: Range<u32>) -> Result<(), RenderError> {
         if !self.pipeline_set {
             error!(self.label, "Pipeline is not set.");
             return Err(RenderError::PipelineNotSet);
         }
-        event!(Level::TRACE, "Drawing {} vertices and {} instances.", vertices.end - vertices.start, instances.end - instances.start);
+        event!(
+            Level::TRACE,
+            "Drawing {} vertices and {} instances.",
+            vertices.end - vertices.start,
+            instances.end - instances.start
+        );
         self.render_pass.draw(vertices, instances);
         Ok(())
     }
 
     /// Draws primitives from the active vertex buffers as indexed triangles.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `indices` - Range of indices to draw.
     /// * `instance_index` - Indice of the instance to draw.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `RenderError::PipelineNotSet` - The pipeline is not set.
-    pub fn draw_indexed(&mut self, indices: Range<u32>, instance_index: Range<u32>) -> Result<(), RenderError> {
+    pub fn draw_indexed(
+        &mut self,
+        indices: Range<u32>,
+        instance_index: Range<u32>
+    ) -> Result<(), RenderError> {
         if !self.pipeline_set {
             error!(self.label, "Pipeline is not set.");
             return Err(RenderError::PipelineNotSet);
         }
-        event!(Level::TRACE, "Drawing indexed {} indices and {} instances.", indices.end - indices.start, instance_index.end - instance_index.start);
+        event!(
+            Level::TRACE,
+            "Drawing indexed {} indices and {} instances.",
+            indices.end - indices.start,
+            instance_index.end - instance_index.start
+        );
         self.render_pass.draw_indexed(indices, 0, instance_index);
         Ok(())
     }
 
-
-
     /// Draws primitives from the active vertex buffers.
     /// The draw is indirect, meaning the draw arguments are read from a buffer.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `buffer` - The buffer to read the draw arguments from.
     /// * `offset` - The first draw argument to read.
     /// * `count` - The number of draw arguments to read.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `RenderError::PipelineNotSet` - The pipeline is not set.
     /// * `RenderError::MissingVertexBuffer` - The vertex buffer is not set.
-    pub fn multi_draw_indirect(&mut self, buffer: &'a Buffer, offset: BufferAddress, count: u32) -> Result<(), RenderError> {
+    pub fn multi_draw_indirect(
+        &mut self,
+        buffer: &'a Buffer,
+        offset: BufferAddress,
+        count: u32
+    ) -> Result<(), RenderError> {
         if !self.pipeline_set {
             error!(self.label, "Pipeline is not set.");
             return Err(RenderError::PipelineNotSet);
@@ -219,32 +235,47 @@ impl<'a> RenderPassInstance<'a> {
             error!(self.label, "Vertex buffer is not set.");
             return Err(RenderError::MissingVertexBuffer);
         }
-        event!(Level::TRACE, "Drawing {} instances from indirect buffer.", count);
-        self.render_pass.multi_draw_indirect(&buffer.buffer, offset, count);
+        event!(
+            Level::TRACE,
+            "Drawing {} instances from indirect buffer.",
+            count
+        );
+        self.render_pass
+            .multi_draw_indirect(&buffer.buffer, offset, count);
         Ok(())
     }
 
     /// Draws primitives from the active vertex buffers as indexed triangles.
     /// The draw is indirect, meaning the draw arguments are read from a buffer.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `buffer` - The buffer to read the draw arguments from.
     /// * `offset` - The first draw argument to read.
     /// * `count` - The number of draw arguments to read.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `RenderError::PipelineNotSet` - The pipeline is not set.
     /// * `RenderError::MissingVertexBuffer` - The vertex buffer is not set.
     /// * `RenderError::MissingIndexBuffer` - The index buffer is not set.
-    pub fn multi_draw_indexed_indirect(&mut self, buffer: &'a Buffer, offset: BufferAddress, count: u32) -> Result<(), RenderError> {
+    pub fn multi_draw_indexed_indirect(
+        &mut self,
+        buffer: &'a Buffer,
+        offset: BufferAddress,
+        count: u32
+    ) -> Result<(), RenderError> {
         if !self.pipeline_set {
             error!(self.label, "Pipeline is not set.");
             return Err(RenderError::PipelineNotSet);
         }
-        event!(Level::TRACE, "Drawing indexed {} instances from indirect buffer.", count);
-        self.render_pass.multi_draw_indexed_indirect(&buffer.buffer, offset, count);
+        event!(
+            Level::TRACE,
+            "Drawing indexed {} instances from indirect buffer.",
+            count
+        );
+        self.render_pass
+            .multi_draw_indexed_indirect(&buffer.buffer, offset, count);
         Ok(())
     }
 
@@ -257,7 +288,7 @@ impl<'a> RenderPassInstance<'a> {
             render_pass,
             pipeline_set: self.pipeline_set,
             vertex_buffer_set: self.vertex_buffer_set,
-            index_buffer_set: self.index_buffer_set,
+            index_buffer_set: self.index_buffer_set
         }
     }
 

@@ -27,7 +27,7 @@ impl Plugin for DisplayTextureComponentPlugin {
             .add_systems(Extract, DisplayTexturePass::extract);
 
         // Add the render passes
-        let mut render_graph = app.get_sub_app_mut(RenderApp).unwrap()
+        let _render_graph = app.get_sub_app_mut(RenderApp).unwrap()
             .init_resource::<RenderPassEntity>()
             .world_mut().get_resource_mut::<RenderGraph>().unwrap();
         // render_graph.add_pass_old::<DisplayTexturePass>(2);

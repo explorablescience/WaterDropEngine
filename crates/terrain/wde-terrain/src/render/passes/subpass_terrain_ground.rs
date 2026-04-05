@@ -1,9 +1,21 @@
-use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
-use wde_renderer::prelude::*;
+use bevy::{
+    ecs::system::{SystemParamItem, lifetimeless::SRes},
+    prelude::*
+};
 use wde_camera::prelude::*;
+use wde_renderer::prelude::*;
 
-use crate::{prelude::{TerrainExtractor, TerrainRenderer}, render::{dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer, terrain_mesh::TerrainRenderPassMesh}, passes::pipeline::GpuTerrainRenderPipeline, renderer_gpu::TerrainRendererGPU}};
-
+use crate::{
+    prelude::{TerrainExtractor, TerrainRenderer},
+    render::{
+        dependencies::{
+            materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer,
+            terrain_mesh::TerrainRenderPassMesh
+        },
+        passes::pipeline::GpuTerrainRenderPipeline,
+        renderer_gpu::TerrainRendererGPU
+    }
+};
 
 pub struct SubRenderPassTerrainGround;
 impl SubRenderPassTerrainGround {
@@ -23,16 +35,34 @@ impl SubRenderPassTerrainGround {
 }
 impl RenderSubPass for SubRenderPassTerrainGround {
     type Params = (
-        SRes<TerrainRenderPassMesh>, SRes<RenderAssets<GpuMesh>>, SRes<RenderAssets<GpuTerrainRenderPipeline>>,
-        SRes<CameraFeatureRender>, SRes<TerrainMaterialArrays>, SRes<TerrainBuffer>, SRes<TerrainRendererGPU>
+        SRes<TerrainRenderPassMesh>,
+        SRes<RenderAssets<GpuMesh>>,
+        SRes<RenderAssets<GpuTerrainRenderPipeline>>,
+        SRes<CameraFeatureRender>,
+        SRes<TerrainMaterialArrays>,
+        SRes<TerrainBuffer>,
+        SRes<TerrainRendererGPU>
     );
 
-    fn describe((
-        terrain_render_pass_mesh, meshes, pipeline,
-        camera_feature_render, terrain_material_arrays, terrain_buffer, terrain_renderer
-    ): &SystemParamItem<Self::Params>) -> RenderSubPassDesc {
+    fn describe(
+        (
+            terrain_render_pass_mesh,
+            meshes,
+            pipeline,
+            camera_feature_render,
+            terrain_material_arrays,
+            terrain_buffer,
+            terrain_renderer
+        ): &SystemParamItem<Self::Params>
+    ) -> RenderSubPassDesc {
         // Create the batches of draw commands
-        let mesh = match meshes.get(terrain_render_pass_mesh.deferred_mesh.as_ref().unwrap().id()) {
+        let mesh = match meshes.get(
+            terrain_render_pass_mesh
+                .deferred_mesh
+                .as_ref()
+                .unwrap()
+                .id()
+        ) {
             Some(mesh) => mesh,
             None => return RenderSubPassDesc::default()
         };
@@ -52,13 +82,20 @@ impl RenderSubPass for SubRenderPassTerrainGround {
         // Create the sub-pass description
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
-            SubPassCommand::Mesh(terrain_render_pass_mesh.deferred_mesh.as_ref().map(|mesh| mesh.id())),
+            SubPassCommand::Mesh(
+                terrain_render_pass_mesh
+                    .deferred_mesh
+                    .as_ref()
+                    .map(|mesh| mesh.id())
+            ),
             SubPassCommand::BindGroup(0, camera_feature_render.bind_group.clone()),
             SubPassCommand::BindGroup(1, terrain_material_arrays.bind_group.clone()),
             SubPassCommand::BindGroup(2, terrain_buffer.bind_group.clone()),
-            SubPassCommand::DrawBatches(batches)
+            SubPassCommand::DrawBatches(batches),
         ])
     }
 
-    fn label() -> &'static str { "terrain-ground" }
+    fn label() -> &'static str {
+        "terrain-ground"
+    }
 }

@@ -1,9 +1,14 @@
 //! This module contains the [`PipelinedRenderingPlugin`] which moves rendering into a different thread.
 //! From the bevy source code, this is a modified version of the `bevy::render::pipeline::PipelinedRenderingPlugin`.
 
-use wde_logger::prelude::*;
 use async_channel::{Receiver, Sender};
-use bevy::{app::{AppLabel, SubApp}, ecs::schedule::MainThreadExecutor, prelude::*, tasks::ComputeTaskPool};
+use bevy::{
+    app::{AppLabel, SubApp},
+    ecs::schedule::MainThreadExecutor,
+    prelude::*,
+    tasks::ComputeTaskPool
+};
+use wde_logger::prelude::*;
 
 use super::RenderApp;
 
@@ -12,18 +17,18 @@ use super::RenderApp;
 struct RenderAppChannels {
     app_to_render_sender: Sender<SubApp>,
     render_to_app_receiver: Receiver<SubApp>,
-    render_app_in_render_thread: bool,
+    render_app_in_render_thread: bool
 }
 impl RenderAppChannels {
     /// Create a `RenderAppChannels` from a [`async_channel::Receiver`] and [`async_channel::Sender`]
     pub fn new(
         app_to_render_sender: Sender<SubApp>,
-        render_to_app_receiver: Receiver<SubApp>,
+        render_to_app_receiver: Receiver<SubApp>
     ) -> Self {
         Self {
             app_to_render_sender,
             render_to_app_receiver,
-            render_app_in_render_thread: false,
+            render_app_in_render_thread: false
         }
     }
 
@@ -129,38 +134,40 @@ impl Plugin for PipelinedRenderingPlugin {
 
         app.insert_resource(RenderAppChannels::new(
             app_to_render_sender,
-            render_to_app_receiver,
+            render_to_app_receiver
         ));
 
         let render_thread = std::thread::Builder::new().name("Render thread".to_string());
-        render_thread.spawn(move || {
-            // Set thread name for debugging
-            let _span = info_span!("render thread").entered();
+        render_thread
+            .spawn(move || {
+                // Set thread name for debugging
+                let _span = info_span!("render thread").entered();
 
-            let compute_task_pool = ComputeTaskPool::get();
-            loop {
-                // run a scope here to allow main world to use this thread while it's waiting for the render app
-                let sent_app = compute_task_pool
-                    .scope(|s| {
-                        s.spawn(async { app_to_render_receiver.recv().await });
-                    })
-                    .pop();
-                let Some(Ok(mut render_app)) = sent_app else {
-                    break;
-                };
+                let compute_task_pool = ComputeTaskPool::get();
+                loop {
+                    // run a scope here to allow main world to use this thread while it's waiting for the render app
+                    let sent_app = compute_task_pool
+                        .scope(|s| {
+                            s.spawn(async { app_to_render_receiver.recv().await });
+                        })
+                        .pop();
+                    let Some(Ok(mut render_app)) = sent_app else {
+                        break;
+                    };
 
-                {
-                    let _sub_app_span = info_span!("sub app", name = ?RenderApp).entered();
-                    render_app.update();
+                    {
+                        let _sub_app_span = info_span!("sub app", name = ?RenderApp).entered();
+                        render_app.update();
+                    }
+
+                    if render_to_app_sender.send_blocking(render_app).is_err() {
+                        break;
+                    }
                 }
 
-                if render_to_app_sender.send_blocking(render_app).is_err() {
-                    break;
-                }
-            }
-
-            debug!("exiting pipelined rendering thread");
-        }).expect("Failed to spawn render thread");
+                debug!("exiting pipelined rendering thread");
+            })
+            .expect("Failed to spawn render thread");
     }
 }
 

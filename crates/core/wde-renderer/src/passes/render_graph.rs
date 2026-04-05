@@ -1,16 +1,19 @@
 use std::collections::HashMap;
 use std::ops::Range;
 
-use bevy::ecs::system::{ReadOnlySystemParam, SystemParamItem, SystemState};
-use wde_logger::prelude::*;
-use bevy::prelude::*;
-use wde_wgpu::pipelines::BindGroup;
 use crate::prelude::*;
+use bevy::ecs::system::{ReadOnlySystemParam, SystemParamItem, SystemState};
+use bevy::prelude::*;
+use wde_logger::prelude::*;
+use wde_wgpu::pipelines::BindGroup;
 
-use crate::{assets::{Mesh, Texture}, core::SwapchainFrame};
+use crate::{
+    assets::{Mesh, Texture},
+    core::SwapchainFrame
+};
 
-pub use wde_wgpu::render_pass::RenderPassInstance;
 pub use wde_wgpu::command_buffer::*;
+pub use wde_wgpu::render_pass::RenderPassInstance;
 
 /// Color attachment description for a render pass.
 /// If `texture` is None, the pass will render to the swapchain texture.
@@ -41,14 +44,14 @@ pub struct RenderPassDescDepthAttachment {
     /// How to load the texture at the start of the pass (default: Load).
     pub load: LoadOp<f32>,
     /// How to store the texture at the end of the pass (default: Store).
-    pub store: StoreOp,
+    pub store: StoreOp
 }
 impl Default for RenderPassDescDepthAttachment {
     fn default() -> Self {
         Self {
             texture: None,
             load: LoadOp::Load,
-            store: StoreOp::Store,
+            store: StoreOp::Store
         }
     }
 }
@@ -65,7 +68,7 @@ pub struct RenderPassDesc {
 pub struct DrawCommandsBatch {
     pub bind_group: Option<(u32, BindGroup)>, // index, bind group
     pub index_range: Range<u32>,
-    pub instance_range: Range<u32>,
+    pub instance_range: Range<u32>
 }
 impl Default for DrawCommandsBatch {
     fn default() -> Self {
@@ -94,8 +97,6 @@ pub enum SubPassCommand {
 #[derive(Default)]
 pub struct RenderSubPassDesc(pub Vec<SubPassCommand>);
 
-
-
 /// Type alias for render pass IDs. These are numeric identifiers that control the execution order of passes in the render graph; lower IDs execute first.
 pub type RenderPassId = i32;
 /// Describes a render pass in the render graph, with its attachments, load ops, etc.
@@ -113,23 +114,32 @@ pub trait RenderPass {
 
     /// Custom rendering logic for this pass.
     /// This can be used for passes that require custom rendering logic that doesn't fit into the default render graph execution flow.
-    /// 
+    ///
     /// Notes:
     /// - Returns None by default, meaning the pass will be rendered with the default render graph execution flow.
     /// - If it returns Some(true), it means the pass executed custom rendering logic and should be considered successfully rendered for this frame.
     /// - The provided command buffer is already begun and will be submitted at the end of the render graph execution, so the custom rendering logic can simply record commands to it.
-    fn custom_render(_world: &mut World, _command_buffer: &mut CommandBuffer) -> Option<bool> { None }
+    fn custom_render(_world: &mut World, _command_buffer: &mut CommandBuffer) -> Option<bool> {
+        None
+    }
 }
 // Utility traits for the render graph implementation. Not meant to be used by users of the render graph.
 trait RenderPassNode: Send + Sync + 'static {
     fn describe(&mut self, world: &mut World) -> RenderPassDesc;
     fn label(&mut self) -> &'static str;
-    fn custom_render(&mut self, world: &mut World, command_buffer: &mut CommandBuffer) -> Option<bool>;
+    fn custom_render(
+        &mut self,
+        world: &mut World,
+        command_buffer: &mut CommandBuffer
+    ) -> Option<bool>;
 }
 struct RenderPassHolder<P: RenderPass> {
-    _phantom: std::marker::PhantomData<P>,
+    _phantom: std::marker::PhantomData<P>
 }
-impl<P> RenderPassNode for RenderPassHolder<P> where P: RenderPass + Send + Sync + 'static {
+impl<P> RenderPassNode for RenderPassHolder<P>
+where
+    P: RenderPass + Send + Sync + 'static
+{
     fn describe(&mut self, world: &mut World) -> RenderPassDesc {
         let mut state: SystemState<P::Params> = SystemState::new(world);
         let params = state.get(world);
@@ -138,7 +148,11 @@ impl<P> RenderPassNode for RenderPassHolder<P> where P: RenderPass + Send + Sync
     fn label(&mut self) -> &'static str {
         P::label()
     }
-    fn custom_render(&mut self, world: &mut World, command_buffer: &mut CommandBuffer) -> Option<bool> {
+    fn custom_render(
+        &mut self,
+        world: &mut World,
+        command_buffer: &mut CommandBuffer
+    ) -> Option<bool> {
         P::custom_render(world, command_buffer)
     }
 }
@@ -161,9 +175,12 @@ trait RenderSubPassNode: Send + Sync + 'static {
     fn label(&mut self) -> &'static str;
 }
 struct RenderSubPassHolder<SP: RenderSubPass> {
-    _phantom: std::marker::PhantomData<SP>,
+    _phantom: std::marker::PhantomData<SP>
 }
-impl<SP> RenderSubPassNode for RenderSubPassHolder<SP> where SP: RenderSubPass + Send + Sync + 'static {
+impl<SP> RenderSubPassNode for RenderSubPassHolder<SP>
+where
+    SP: RenderSubPass + Send + Sync + 'static
+{
     fn describe(&mut self, world: &mut World) -> RenderSubPassDesc {
         let mut state: SystemState<SP::Params> = SystemState::new(world);
         let params = state.get(world);
@@ -176,7 +193,7 @@ impl<SP> RenderSubPassNode for RenderSubPassHolder<SP> where SP: RenderSubPass +
 
 /// The render graph resource, which stores all render passes and sub-passes, their descriptions, and their execution order.
 /// This is the core of the render graph system, and is responsible for executing the render passes in the correct order with the correct attachments and commands.
-/// 
+///
 /// To register a new render pass, use the `add_pass` method with a type that implements the `RenderPass` trait. To register a sub-pass to a render pass, use the `add_sub_pass` method with a type that implements the `RenderSubPass` trait and the parent render pass type.
 #[derive(Resource, Default)]
 pub struct RenderGraph {
@@ -189,7 +206,7 @@ pub struct RenderGraph {
 
     // Indexing for execution
     render_passes_by_id: HashMap<RenderPassId, usize>, // pass id -> pass index in `passes`
-    sub_passes_by_renderpass: HashMap<usize, Vec<usize>> // render pass index -> sub-pass indices
+    sub_passes_by_renderpass: HashMap<usize, Vec<usize>>  // render pass index -> sub-pass indices
 }
 impl RenderGraph {
     /// Add a render pass to the graph. Passes execute in order of their IDs (lower IDs execute first).
@@ -198,10 +215,16 @@ impl RenderGraph {
         let id = P::id();
 
         // Assert that the pass ID is unique
-        debug_assert!(!self.render_passes_by_id.contains_key(&id), "A render pass with ID {} already exists in the render graph.", id);
+        debug_assert!(
+            !self.render_passes_by_id.contains_key(&id),
+            "A render pass with ID {} already exists in the render graph.",
+            id
+        );
 
         // Insert the new pass
-        self.passes.push(Box::new(RenderPassHolder { _phantom: std::marker::PhantomData::<P> }));
+        self.passes.push(Box::new(RenderPassHolder {
+            _phantom: std::marker::PhantomData::<P>
+        }));
         self.render_passes_by_id.insert(id, self.passes.len() - 1);
         self.sorted_ids.push(id);
 
@@ -212,15 +235,27 @@ impl RenderGraph {
 
     /// Add a sub-pass to a render pass in the graph. The sub-pass will be executed in the order it was added within its parent render pass.
     /// The sub-pass type must implement the `RenderSubPass` trait, which defines the sub-pass's commands and the render pass it belongs to.
-    pub fn add_sub_pass<SP: RenderSubPass + Send + Sync + 'static, P: RenderPass>(&mut self) -> &mut Self {
-        self.sub_passes.push(Box::new(RenderSubPassHolder { _phantom: std::marker::PhantomData::<SP> }));
+    pub fn add_sub_pass<SP: RenderSubPass + Send + Sync + 'static, P: RenderPass>(
+        &mut self
+    ) -> &mut Self {
+        self.sub_passes.push(Box::new(RenderSubPassHolder {
+            _phantom: std::marker::PhantomData::<SP>
+        }));
         let sub_pass_index = self.render_passes_by_id.get(&P::id()).copied();
-        debug_assert!(sub_pass_index.is_some(), "Cannot add sub-pass '{}' to render pass '{}': no render pass with ID {} found in the render graph.", SP::label(), P::label(), P::id());
-        self.sub_passes_by_renderpass.entry(sub_pass_index.unwrap()).or_default().push(self.sub_passes.len() - 1);
+        debug_assert!(
+            sub_pass_index.is_some(),
+            "Cannot add sub-pass '{}' to render pass '{}': no render pass with ID {} found in the render graph.",
+            SP::label(),
+            P::label(),
+            P::id()
+        );
+        self.sub_passes_by_renderpass
+            .entry(sub_pass_index.unwrap())
+            .or_default()
+            .push(self.sub_passes.len() - 1);
         self
     }
 
-    
     pub(crate) fn render(world: &mut World) {
         world.resource_scope(|world, mut graph: Mut<RenderGraph>| {
             render(&mut graph, world);
@@ -228,9 +263,11 @@ impl RenderGraph {
     }
 }
 
-
 fn render(graph: &mut RenderGraph, world: &mut World) {
-    trace!("Starting render graph execution with {} passes.", graph.passes.len());
+    trace!(
+        "Starting render graph execution with {} passes.",
+        graph.passes.len()
+    );
 
     // Create command buffer
     let mut command_buffer = {
@@ -250,7 +287,10 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
         if let Some(custom_render_result) = pass.custom_render(world, &mut command_buffer) {
             // If it was Some(true or false), it means the pass used custom rendering logic.
             if !custom_render_result {
-                debug!("Custom rendering for pass '{}' could not be completed. Skipping this pass for this frame.", pass_label);
+                debug!(
+                    "Custom rendering for pass '{}' could not be completed. Skipping this pass for this frame.",
+                    pass_label
+                );
             }
             continue;
         }
@@ -269,18 +309,23 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
         // Create the render pass from its description
         trace!("Rendering render pass '{}'.", pass_label);
         let _pass_span = debug_span!("render_pass", pass_id = *pass_id, pass_label).entered();
-        let mut render_pass = match create_render_pass(world, &mut command_buffer, pass_label, &pass_desc) {
-            Ok(pass) => pass,
-            Err(e) => {
-                debug!("Failed to create render pass: '{}'. Skipping this frame.", e);
-                continue;
-            }
-        };
+        let mut render_pass =
+            match create_render_pass(world, &mut command_buffer, pass_label, &pass_desc) {
+                Ok(pass) => pass,
+                Err(e) => {
+                    debug!(
+                        "Failed to create render pass: '{}'. Skipping this frame.",
+                        e
+                    );
+                    continue;
+                }
+            };
 
         // Execute sub-passes in order of addition
         for (sub_pass_label, sub_pass_desc) in &sub_passes {
             trace!("Rendering sub-pass '{}'.", sub_pass_label);
-            let _sub_pass_span = debug_span!("render_sub_pass", sub_pass_label = *sub_pass_label).entered();
+            let _sub_pass_span =
+                debug_span!("render_sub_pass", sub_pass_label = *sub_pass_label).entered();
             render_sub_pass(world, &mut render_pass, sub_pass_desc);
         }
     }
@@ -290,11 +335,16 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
     command_buffer.submit(&render_instance.0.read().unwrap());
 }
 
-fn create_render_pass<'p>(world: &'p World, command_buffer: &'p mut CommandBuffer, label: &str, pass_desc: &RenderPassDesc) -> Result<RenderPassInstance<'p>, String> {
+fn create_render_pass<'p>(
+    world: &'p World,
+    command_buffer: &'p mut CommandBuffer,
+    label: &str,
+    pass_desc: &RenderPassDesc
+) -> Result<RenderPassInstance<'p>, String> {
     // Get generic handlers
-    let render_instance    = world.get_resource::<RenderInstance>().unwrap();
+    let render_instance = world.get_resource::<RenderInstance>().unwrap();
     let textures = world.get_resource::<RenderAssets<GpuTexture>>().unwrap();
-    let swapchain_frame    = world.get_resource::<SwapchainFrame>().unwrap();
+    let swapchain_frame = world.get_resource::<SwapchainFrame>().unwrap();
     let (surface_width, surface_height) = {
         let render_instance = render_instance.0.read().unwrap();
         let config = render_instance.surface_config.as_ref().unwrap();
@@ -361,10 +411,14 @@ fn create_render_pass<'p>(world: &'p World, command_buffer: &'p mut CommandBuffe
     })
 }
 
-fn render_sub_pass<'p>(world: &'p World, render_pass: &mut RenderPassInstance<'p>, sub_pass_desc: &'p RenderSubPassDesc) {
+fn render_sub_pass<'p>(
+    world: &'p World,
+    render_pass: &mut RenderPassInstance<'p>,
+    sub_pass_desc: &'p RenderSubPassDesc
+) {
     // Get generic handlers
     let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
-    let meshes     = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
+    let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
 
     // Issue global commands
     for stage_command in &sub_pass_desc.0 {
@@ -372,20 +426,25 @@ fn render_sub_pass<'p>(world: &'p World, render_pass: &mut RenderPassInstance<'p
             // Set pipeline
             SubPassCommand::Pipeline(pipeline) => {
                 if let Some(pipeline) = pipeline
-                    && let CachedPipelineStatus::OkRender(pipeline) = pipeline_manager.get_pipeline(*pipeline)
+                    && let CachedPipelineStatus::OkRender(pipeline) =
+                        pipeline_manager.get_pipeline(*pipeline)
                 {
                     if let Err(e) = render_pass.set_pipeline(pipeline) {
                         error!("Failed to set pipeline: {:?}.", e);
                         return;
                     }
-                } else { return }
+                } else {
+                    return;
+                }
             }
 
             // Set bind groups at given index
             SubPassCommand::BindGroup(index, bind_group) => {
                 if let Some(bind_group) = bind_group {
                     render_pass.set_bind_group(*index, bind_group);
-                } else { return }
+                } else {
+                    return;
+                }
             }
 
             // Bind mesh vertex and index buffers
@@ -395,7 +454,9 @@ fn render_sub_pass<'p>(world: &'p World, render_pass: &mut RenderPassInstance<'p
                 {
                     render_pass.set_vertex_buffer(0, mesh.vertex_buffer.as_ref().unwrap());
                     render_pass.set_index_buffer(mesh.index_buffer.as_ref().unwrap());
-                } else { return }
+                } else {
+                    return;
+                }
             }
 
             // Issue draw calls
@@ -407,7 +468,9 @@ fn render_sub_pass<'p>(world: &'p World, render_pass: &mut RenderPassInstance<'p
                     }
 
                     // Draw the mesh
-                    match render_pass.draw_indexed(batch.index_range.clone(), batch.instance_range.clone()) {
+                    match render_pass
+                        .draw_indexed(batch.index_range.clone(), batch.instance_range.clone())
+                    {
                         Ok(_) => {}
                         Err(e) => {
                             error!("Failed to draw: {:?}.", e);
@@ -423,4 +486,3 @@ fn render_sub_pass<'p>(world: &'p World, render_pass: &mut RenderPassInstance<'p
         }
     }
 }
-

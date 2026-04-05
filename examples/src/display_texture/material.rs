@@ -12,7 +12,7 @@ pub struct DisplayTextureMaterialAsset {
 #[reflect(Component)]
 pub struct DisplayTextureMaterial(pub Handle<DisplayTextureMaterialAsset>);
 impl RenderBinding for DisplayTextureMaterialAsset {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+    fn describe(&self, _builder: &mut RenderBindingBuilder) {
         // builder.add_texture_view(    0, ShaderStages::FRAGMENT, self.texture.clone());
         // builder.add_texture_sampler( 1, ShaderStages::FRAGMENT, self.texture.clone());
     }

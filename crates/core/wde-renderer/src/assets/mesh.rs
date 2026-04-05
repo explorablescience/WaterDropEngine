@@ -1,13 +1,30 @@
-use std::{fs::File, io::{BufReader, Error}};
+use std::{
+    fs::File,
+    io::{BufReader, Error}
+};
 
-use wde_logger::prelude::*;
-use bevy::{asset::{AssetLoader, LoadContext, io::Reader}, ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
-use thiserror::Error;
+use bevy::{
+    asset::{AssetLoader, LoadContext, io::Reader},
+    ecs::system::{
+        SystemParamItem,
+        lifetimeless::{SRes, SResMut}
+    },
+    prelude::*
+};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use tobj::LoadError;
-use wde_wgpu::{buffer::{BufferUsage, Buffer}, vertex::Vertex};
+use wde_logger::prelude::*;
+use wde_wgpu::{
+    buffer::{Buffer, BufferUsage},
+    vertex::Vertex
+};
 
-use crate::{assets::{GpuBuffer, RenderAssets, SBinding}, core::RenderInstance, utils::{SsboMesh, SsboMeshDescriptor}};
+use crate::{
+    assets::{GpuBuffer, RenderAssets, SBinding},
+    core::RenderInstance,
+    utils::{SsboMesh, SsboMeshDescriptor}
+};
 
 use super::asset::{PrepareAssetError, RenderAsset};
 
@@ -18,7 +35,7 @@ pub struct Mesh3d(pub Handle<Mesh>);
 #[derive(Clone, Debug)]
 pub struct MeshBbox {
     pub min: Vec3,
-    pub max: Vec3,
+    pub max: Vec3
 }
 /// Stores a CPU mesh with vertex and index data, along with metadata for GPU allocation.
 /// If loaded from a file, the mesh should have a `.obj` or `.fbx` extension.
@@ -33,7 +50,7 @@ pub struct Mesh {
     pub bbox: MeshBbox,
 
     /// If true, the vertices and indices will automatically be placed in the SSBO mesh buffers [`SsboMesh`] for GPU access; if false, separate vertex and index buffers will be created with `VERTEX` and `INDEX` usage respectively. Defaults to true.
-    pub use_ssbo: bool,
+    pub use_ssbo: bool
 }
 
 /// Represents a GPU mesh resource allocated from a CPU [`Mesh`] asset.
@@ -51,17 +68,24 @@ pub struct GpuMesh {
     pub vertex_buffer: Option<Buffer>,
     /// If not using SSBO, the GPU index buffer containing `u32` index data. `None` if `use_ssbo` is true.
     pub index_buffer: Option<Buffer>,
-    
+
     pub index_count: u32,
-    pub bounding_box: MeshBbox,
+    pub bounding_box: MeshBbox
 }
 impl RenderAsset for GpuMesh {
     type SourceAsset = Mesh;
-    type Params = (SRes<RenderInstance>, SResMut<SsboMeshDescriptor>, SBinding<SsboMesh>, SRes<RenderAssets<GpuBuffer>>);
+    type Params = (
+        SRes<RenderInstance>,
+        SResMut<SsboMeshDescriptor>,
+        SBinding<SsboMesh>,
+        SRes<RenderAssets<GpuBuffer>>
+    );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (render_instance, ssbo_descriptor, ssbo_mesh, gpu_buffers): &mut SystemParamItem<Self::Params>,
+        (render_instance, ssbo_descriptor, ssbo_mesh, gpu_buffers): &mut SystemParamItem<
+            Self::Params
+        >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         trace!(asset.label, "Preparing GPU mesh asset.");
 
@@ -73,7 +97,10 @@ impl RenderAsset for GpuMesh {
 
         // Get the ssbo buffers
         let (ssbo_vertex_buffer, ssbo_index_buffer) = match (
-            gpu_buffers.get(ssbo.get_buffer(ssbo_descriptor.ssbo_vertex_binding).unwrap()),
+            gpu_buffers.get(
+                ssbo.get_buffer(ssbo_descriptor.ssbo_vertex_binding)
+                    .unwrap()
+            ),
             gpu_buffers.get(ssbo.get_buffer(ssbo_descriptor.ssbo_index_binding).unwrap())
         ) {
             (Some(vb), Some(ib)) => (vb, ib),
@@ -99,13 +126,15 @@ impl RenderAsset for GpuMesh {
             format!("{}-vertex-staging", asset.label).as_str(),
             std::mem::size_of::<Vertex>() * asset.vertices.len(),
             usage_vertex,
-            Some(bytemuck::cast_slice(&asset.vertices)));
+            Some(bytemuck::cast_slice(&asset.vertices))
+        );
         let index_buffer = Buffer::new(
             &render_instance,
             format!("{}-indices-staging", asset.label).as_str(),
             std::mem::size_of::<u32>() * asset.indices.len(),
             usage_index,
-            Some(bytemuck::cast_slice(&asset.indices)));
+            Some(bytemuck::cast_slice(&asset.indices))
+        );
 
         // If not using SSBO, return the buffers directly
         if !asset.use_ssbo {
@@ -117,7 +146,7 @@ impl RenderAsset for GpuMesh {
                 bounding_box: asset.bbox,
                 use_ssbo: asset.use_ssbo,
                 vertex_buffer: Some(vertex_buffer),
-                index_buffer: Some(index_buffer),
+                index_buffer: Some(index_buffer)
             });
         }
 
@@ -134,13 +163,23 @@ impl RenderAsset for GpuMesh {
         let indices_size_bytes = (indices_count as u64) * (std::mem::size_of::<u32>() as u64);
 
         ssbo_vertex_buffer.buffer.copy_from_buffer_offset(
-            &render_instance, &vertex_buffer, 0, vertices_offset_bytes, vertices_size_bytes);
+            &render_instance,
+            &vertex_buffer,
+            0,
+            vertices_offset_bytes,
+            vertices_size_bytes
+        );
         ssbo_descriptor.vertex_buffer_offset += vertices_count;
-        
+
         ssbo_index_buffer.buffer.copy_from_buffer_offset(
-            &render_instance, &index_buffer, 0, indices_offset_bytes, indices_size_bytes);
+            &render_instance,
+            &index_buffer,
+            0,
+            indices_offset_bytes,
+            indices_size_bytes
+        );
         ssbo_descriptor.index_buffer_offset += indices_count;
-        
+
         Ok(GpuMesh {
             label: asset.label,
             ssbo_first_vertex: first_vertex,
@@ -149,32 +188,35 @@ impl RenderAsset for GpuMesh {
             bounding_box: asset.bbox,
             use_ssbo: asset.use_ssbo,
             vertex_buffer: None,
-            index_buffer: None,
+            index_buffer: None
         })
     }
 
-    fn label(&self) -> &str { &self.label }
+    fn label(&self) -> &str {
+        &self.label
+    }
 }
-
-
 
 /// Settings for loading a mesh asset while creating a [`Mesh`].
 #[derive(Serialize, Deserialize)]
 pub struct MeshLoaderSettings {
     pub label: String,
     /// Should the vertices and indices be in the SSBO mesh buffers? Defaults to true. If false, separate vertex and index buffers will be created.
-    pub use_ssbo: bool,
+    pub use_ssbo: bool
 }
 impl Default for MeshLoaderSettings {
     fn default() -> Self {
-        Self { label: "Unknown Mesh".to_string(), use_ssbo: true }
+        Self {
+            label: "Unknown Mesh".to_string(),
+            use_ssbo: true
+        }
     }
 }
 
 #[derive(Debug, Error)]
 pub(crate) enum MeshLoaderError {
     #[error("Could not load mesh: {0}")]
-    Io(#[from] std::io::Error),
+    Io(#[from] std::io::Error)
 }
 #[derive(Default, TypePath)]
 pub(crate) struct MeshLoader;
@@ -187,7 +229,7 @@ impl AssetLoader for MeshLoader {
         &self,
         reader: &mut dyn Reader,
         settings: &Self::Settings,
-        load_context: &mut LoadContext<'_>,
+        load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         info!("Loading mesh {}.", load_context.path());
 
@@ -218,7 +260,7 @@ impl AssetLoader for MeshLoader {
             }
         ) {
             Ok(res) => res,
-            Err(e) => return Err(MeshLoaderError::Io(Error::other(e.to_string()))),
+            Err(e) => return Err(MeshLoaderError::Io(Error::other(e.to_string())))
         };
         let models = load_res.0;
 
@@ -227,12 +269,14 @@ impl AssetLoader for MeshLoader {
         let mut indices: Vec<u32> = Vec::new();
         let mut bounding_box = MeshBbox {
             min: Vec3::new(f32::MAX, f32::MAX, f32::MAX),
-            max: Vec3::new(f32::MIN, f32::MIN, f32::MIN),
+            max: Vec3::new(f32::MIN, f32::MIN, f32::MIN)
         };
         for m in models.iter() {
             let mesh = &m.mesh;
             if mesh.positions.len() % 3 != 0 {
-                return Err(MeshLoaderError::Io(std::io::Error::other("Mesh positions are not divisible by 3.")));
+                return Err(MeshLoaderError::Io(std::io::Error::other(
+                    "Mesh positions are not divisible by 3."
+                )));
             }
 
             // Allocate sizes
@@ -267,7 +311,7 @@ impl AssetLoader for MeshLoader {
                     position: [x, y, z],
                     normal: [nx, ny, nz],
                     uv: [u, v],
-                    tangent: [0.0, 0.0, 0.0, 0.0],
+                    tangent: [0.0, 0.0, 0.0, 0.0]
                 });
 
                 // Update bounding box
@@ -282,8 +326,16 @@ impl AssetLoader for MeshLoader {
             // Push indices
             indices.extend_from_slice(&mesh.indices);
         }
-        Ok(Mesh { label, vertices, indices, bbox: bounding_box, use_ssbo: settings.use_ssbo })
+        Ok(Mesh {
+            label,
+            vertices,
+            indices,
+            bbox: bounding_box,
+            use_ssbo: settings.use_ssbo
+        })
     }
 
-    fn extensions(&self) -> &[&str] { &["obj", "fbx"] }
+    fn extensions(&self) -> &[&str] {
+        &["obj", "fbx"]
+    }
 }

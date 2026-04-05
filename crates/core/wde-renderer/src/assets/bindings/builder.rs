@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
+use crate::prelude::*;
 use bevy::prelude::*;
 use wde_wgpu::pipelines::ShaderStages;
-use crate::prelude::*;
 
 pub(crate) struct RenderBindingBuilderTextureView {
     pub binding: u32,
@@ -33,19 +33,33 @@ pub struct RenderBindingBuilder {
 impl RenderBindingBuilder {
     pub fn add_buffer(&mut self, binding: u32, buffer: Buffer) {
         self.buffers.push((binding, buffer, None));
-        self.elements.push((RenderBindingBuilderType::Buffer, self.buffers.len() as u32 - 1));
+        self.elements.push((
+            RenderBindingBuilderType::Buffer,
+            self.buffers.len() as u32 - 1
+        ));
     }
     pub fn add_texture_view(&mut self, binding: u32, texture: Option<Handle<Texture>>) {
         self.texture_views.push(RenderBindingBuilderTextureView {
-            binding, visibility: ShaderStages::all(), texture
+            binding,
+            visibility: ShaderStages::all(),
+            texture
         });
-        self.elements.push((RenderBindingBuilderType::TextureView, self.texture_views.len() as u32 - 1));
+        self.elements.push((
+            RenderBindingBuilderType::TextureView,
+            self.texture_views.len() as u32 - 1
+        ));
     }
     pub fn add_texture_sampler(&mut self, binding: u32, texture: Option<Handle<Texture>>) {
-        self.texture_samplers.push(RenderBindingBuilderTextureSampler {
-            binding, visibility: ShaderStages::all(), texture
-        });
-        self.elements.push((RenderBindingBuilderType::TextureSampler, self.texture_samplers.len() as u32 - 1));
+        self.texture_samplers
+            .push(RenderBindingBuilderTextureSampler {
+                binding,
+                visibility: ShaderStages::all(),
+                texture
+            });
+        self.elements.push((
+            RenderBindingBuilderType::TextureSampler,
+            self.texture_samplers.len() as u32 - 1
+        ));
     }
 }
 

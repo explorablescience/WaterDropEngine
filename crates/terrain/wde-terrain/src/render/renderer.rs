@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::manager::{TerrainDirtyTile, SPLAT_MAP_COUNT, CHUNK_COUNT, CHUNK_RENDER_SUBDIVISIONS, Terrain, ChunkPos};
+use crate::manager::{
+    CHUNK_COUNT, CHUNK_RENDER_SUBDIVISIONS, ChunkPos, SPLAT_MAP_COUNT, Terrain, TerrainDirtyTile
+};
 
 /// Represents a single terrain tile, containing its position and the associated heightmap, normal map, and splat maps.
 #[derive(Default, Clone)]
@@ -27,14 +29,17 @@ pub struct TerrainRenderer {
 }
 impl TerrainRenderer {
     /// Initializes the terrain renderer by creating the heightmap and splat map textures for each tile, and setting up the mapping from tile positions to their corresponding data.
-    /// 
+    ///
     /// # Arguments
     /// * `asset_server` - The Bevy asset server used to create the texture assets for the heightmaps and splat maps.
-    /// 
+    ///
     /// # Returns
     /// A `TerrainRenderer` component containing the initialized terrain render tiles with their respective heightmap and splat map textures, as well as the mapping from tile positions to their data.
     pub fn new(asset_server: &AssetServer) -> Self {
-        let usages = TextureUsages::COPY_SRC | TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING | TextureUsages::STORAGE_BINDING;
+        let usages = TextureUsages::COPY_SRC
+            | TextureUsages::COPY_DST
+            | TextureUsages::TEXTURE_BINDING
+            | TextureUsages::STORAGE_BINDING;
         let mut pos_to_tile = HashMap::new();
         let mut tiles = Vec::new();
         for i in 0..CHUNK_COUNT {
@@ -72,18 +77,25 @@ impl TerrainRenderer {
                 pos_to_tile.insert(position, tiles.len() - 1);
             }
         }
-        TerrainRenderer { dirty: Vec::new(), tiles, pos_to_tile }
+        TerrainRenderer {
+            dirty: Vec::new(),
+            tiles,
+            pos_to_tile
+        }
     }
 
     /// Extracts the dirty tiles from the main terrain
-    pub fn extract_dirty(mut renderer: Query<&mut TerrainRenderer>, mut terrain: Query<&mut Terrain>) {
+    pub fn extract_dirty(
+        mut renderer: Query<&mut TerrainRenderer>,
+        mut terrain: Query<&mut Terrain>
+    ) {
         let mut terrain_renderer = match renderer.iter_mut().next() {
             Some(terrain) => terrain,
-            None => return,
+            None => return
         };
         let mut terrain = match terrain.iter_mut().next() {
             Some(terrain) => terrain,
-            None => return,
+            None => return
         };
 
         // Clear the dirty tiles list before processing

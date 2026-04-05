@@ -109,56 +109,61 @@
 //! }
 //! ```
 
-use bevy::{app::{ScheduleRunnerPlugin, TaskPoolThreadAssignmentPolicy, plugin_group}, diagnostic::FrameCountPlugin, input::InputPlugin, prelude::*, time::TimePlugin};
+use bevy::{
+    app::{ScheduleRunnerPlugin, TaskPoolThreadAssignmentPolicy, plugin_group},
+    diagnostic::FrameCountPlugin,
+    input::InputPlugin,
+    prelude::*,
+    time::TimePlugin
+};
 
 /// Custom Bevy plugins for WaterDropEngine default plugins.
 #[derive(Default)]
 struct CustomBevyPlugins;
 impl Plugin for CustomBevyPlugins {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(TaskPoolPlugin {
-                task_pool_options: TaskPoolOptions {
-                    min_total_threads: 1,
-                    max_total_threads: usize::MAX,
+        app.add_plugins(TaskPoolPlugin {
+            task_pool_options: TaskPoolOptions {
+                min_total_threads: 1,
+                max_total_threads: usize::MAX,
 
-                    // Use 1 core for IO
-                    io: TaskPoolThreadAssignmentPolicy {
-                        min_threads: 1,
-                        max_threads: 2,
-                        percent: 0.25,
-                        on_thread_spawn: None,
-                        on_thread_destroy: None,
-                    },
+                // Use 1 core for IO
+                io: TaskPoolThreadAssignmentPolicy {
+                    min_threads: 1,
+                    max_threads: 2,
+                    percent: 0.25,
+                    on_thread_spawn: None,
+                    on_thread_destroy: None
+                },
 
-                    // Use 1 core for async compute
-                    async_compute: TaskPoolThreadAssignmentPolicy {
-                        min_threads: 1,
-                        max_threads: 2,
-                        percent: 0.25,
-                        on_thread_spawn: None,
-                        on_thread_destroy: None,
-                    },
+                // Use 1 core for async compute
+                async_compute: TaskPoolThreadAssignmentPolicy {
+                    min_threads: 1,
+                    max_threads: 2,
+                    percent: 0.25,
+                    on_thread_spawn: None,
+                    on_thread_destroy: None
+                },
 
-                    // Use all remaining cores for compute (at least 1)
-                    compute: TaskPoolThreadAssignmentPolicy {
-                        min_threads: 1,
-                        max_threads: usize::MAX,
-                        percent: 1.0, // This 1.0 here means "whatever is left over"
-                        on_thread_spawn: None,
-                        on_thread_destroy: None,
-                    },
+                // Use all remaining cores for compute (at least 1)
+                compute: TaskPoolThreadAssignmentPolicy {
+                    min_threads: 1,
+                    max_threads: usize::MAX,
+                    percent: 1.0, // This 1.0 here means "whatever is left over"
+                    on_thread_spawn: None,
+                    on_thread_destroy: None
                 }
-            })
-            .add_plugins(FrameCountPlugin)
-            .add_plugins(TimePlugin)
-            .add_plugins(ScheduleRunnerPlugin::default())
-            .add_plugins(bevy::prelude::AssetPlugin {
-                mode: AssetMode::Unprocessed,
-                file_path: "res".to_string(),
-                ..Default::default()
-            })
-            .add_plugins(InputPlugin);
+            }
+        })
+        .add_plugins(FrameCountPlugin)
+        .add_plugins(TimePlugin)
+        .add_plugins(ScheduleRunnerPlugin::default())
+        .add_plugins(bevy::prelude::AssetPlugin {
+            mode: AssetMode::Unprocessed,
+            file_path: "res".to_string(),
+            ..Default::default()
+        })
+        .add_plugins(InputPlugin);
     }
 }
 
@@ -167,8 +172,7 @@ impl Plugin for CustomBevyPlugins {
 struct CustomWdePlugins;
 impl Plugin for CustomWdePlugins {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(wde_logger::LogPlugin::default().auto_level())
+        app.add_plugins(wde_logger::LogPlugin::default().auto_level())
             .add_plugins(wde_renderer::RenderPlugin)
             .add_plugins(wde_camera::CameraPlugin)
             .add_plugins(wde_camera_controller::CameraControllerPlugin)
@@ -192,16 +196,16 @@ impl Plugin for CustomWdePlugins {
 
 plugin_group! {
     /// Default plugins for WaterDropEngine.
-    /// 
+    ///
     /// # Description
-    /// 
+    ///
     /// To use, add the following to your app;
     /// ```rust
     /// app.add_plugins(WdeDefaultPlugins);
     /// ```
-    /// 
+    ///
     /// # Modifying Plugins
-    /// 
+    ///
     /// To modify and configure individual plugins, use:
     /// ```rust
     /// app.add_plugins(WdeDefaultPlugins.set(LogPlugin {
@@ -234,21 +238,19 @@ pub mod prelude {
     pub use crate::WdeDefaultPlugins;
 
     // Core modules
-    pub use wde_logger::prelude::*;
-    pub use wde_renderer::prelude::*;
     pub use wde_camera::prelude::*;
     pub use wde_camera_controller::prelude::*;
-    pub use wde_physics::prelude::*;
     pub use wde_gltf::prelude::*;
-    pub use wde_terrain::prelude::*;
-    pub use wde_terrain_grid::prelude::*;
-    pub use wde_terrain_editor::prelude::*;
-    pub use wde_terrain_navigation::prelude::*;
+    pub use wde_logger::prelude::*;
+    pub use wde_physics::prelude::*;
+    pub use wde_renderer::prelude::*;
     pub use wde_scene::prelude::*;
+    pub use wde_terrain::prelude::*;
+    pub use wde_terrain_editor::prelude::*;
+    pub use wde_terrain_grid::prelude::*;
+    pub use wde_terrain_navigation::prelude::*;
 
     // Optional feature modules
-    #[cfg(feature = "gizmos")]
-    pub use wde_gizmos::prelude::*;
 
     #[cfg(feature = "pbr")]
     pub use wde_pbr::prelude::*;
@@ -258,7 +260,7 @@ pub mod prelude {
 }
 
 /// Rendering module.
-/// 
+///
 /// Provides core rendering functionality:
 /// - Custom render passes
 /// - Material management
@@ -300,4 +302,3 @@ pub mod gizmos {
 pub mod pbr {
     pub use wde_pbr::*;
 }
-

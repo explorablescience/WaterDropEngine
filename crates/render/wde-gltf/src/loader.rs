@@ -1,5 +1,5 @@
-use wde_logger::prelude::*;
 use bevy::prelude::*;
+use wde_logger::prelude::*;
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
@@ -7,13 +7,14 @@ use crate::GltfAsset;
 use crate::accessor::{parse_attribute_as_f32, parse_indices};
 use crate::error::GltfError;
 use crate::material::GltfMaterial;
-use crate::model::{GltfModel};
+use crate::model::GltfModel;
 
 /// A dataset representing mesh's data (indices, vertices), material ID.
 type MeshDataSet = (Vec<u32>, Vec<Vertex>, usize);
 
 /// Result type for form_models function
-type FormedModelsResult = Result<(Vec<GltfMaterial>, Vec<MeshDataSet>, Vec<(Vec3, Vec3)>), GltfError>;
+type FormedModelsResult =
+    Result<(Vec<GltfMaterial>, Vec<MeshDataSet>, Vec<(Vec3, Vec3)>), GltfError>;
 
 /// Register meshes and materials from the parsed glTF model into the Bevy world.
 /// Returns a GltfAsset representing the loaded model.
@@ -43,18 +44,24 @@ pub fn load_models(
             indices: indices_data.clone(),
             bbox: MeshBbox {
                 min: bb_min,
-                max: bb_max,
+                max: bb_max
             },
             use_ssbo: true
         };
-        models.push((asset_server.add(mesh_asset), materials_handles[*material_id].clone()));
-        trace!("Added mesh: {} (bbox min={:?}, max={:?})", label, bb_min, bb_max);
+        models.push((
+            asset_server.add(mesh_asset),
+            materials_handles[*material_id].clone()
+        ));
+        trace!(
+            "Added mesh: {} (bbox min={:?}, max={:?})",
+            label, bb_min, bb_max
+        );
     }
 
     // Create a gltf asset to hold references to meshes and materials
     GltfAsset {
         path: folder_path.to_string(),
-        models,
+        models
     }
 }
 
@@ -87,10 +94,10 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                 // Populate vertices
                 let vertex_count = accessor_data.count;
                 if !first && vertices.len() != vertex_count {
-                    return Err(GltfError::MismatchedVertexCount { 
-                        primitive: primitive.name.clone(), 
-                        expected: vertices.len(), 
-                        actual: vertex_count 
+                    return Err(GltfError::MismatchedVertexCount {
+                        primitive: primitive.name.clone(),
+                        expected: vertices.len(),
+                        actual: vertex_count
                     });
                 }
                 if first {
@@ -109,16 +116,24 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                             vertices[i].uv = [data[i * 2], data[i * 2 + 1]];
                         }
                         "TANGENT" => {
-                            vertices[i].tangent = [data[i * 4], data[i * 4 + 1], data[i * 4 + 2], data[i * 4 + 3]];
+                            vertices[i].tangent = [
+                                data[i * 4],
+                                data[i * 4 + 1],
+                                data[i * 4 + 2],
+                                data[i * 4 + 3]
+                            ];
                         }
                         _ => {
-                            warn!("Ignoring unsupported attribute '{}' in primitive {}", attr_name, primitive.name);
+                            warn!(
+                                "Ignoring unsupported attribute '{}' in primitive {}",
+                                attr_name, primitive.name
+                            );
                         }
                     }
                 }
             }
             trace!("Loaded {} vertices for {}", vertices.len(), primitive.name);
-            
+
             // Apply node transform to vertices
             let transform_quat = Quat::from_array(primitive.rotation);
             let scale_vec = Vec3::from(primitive.scale);
@@ -128,12 +143,12 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                 let pos = Vec3::from(vertex.position);
                 let transformed_pos = transform_quat * (pos * scale_vec) + translation_vec;
                 vertex.position = transformed_pos.into();
-                
+
                 // Transform normal: only rotate (scale is removed by normalization)
                 let normal = Vec3::from(vertex.normal);
                 let transformed_normal = (transform_quat * normal).normalize();
                 vertex.normal = transformed_normal.into();
-                
+
                 // Transform tangent: only rotate the xyz components
                 let tangent = Vec3::from([vertex.tangent[0], vertex.tangent[1], vertex.tangent[2]]);
                 let transformed_tangent = (transform_quat * tangent).normalize();
@@ -141,27 +156,30 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                 vertex.tangent[1] = transformed_tangent.y;
                 vertex.tangent[2] = transformed_tangent.z;
             }
-            
+
             // Compute bounding box: try to use accessor min/max, otherwise compute from vertices
             let mut bb_min = None;
             let mut bb_max = None;
             for (attr_name, accessor_data) in &primitive.vertex_attributes {
                 if attr_name == "POSITION" {
                     if let (Some(min), Some(max)) = (&accessor_data.min, &accessor_data.max)
-                        && min.len() >= 3 && max.len() >= 3
+                        && min.len() >= 3
+                        && max.len() >= 3
                     {
                         // Transform the bounding box min/max
                         let min_vec = Vec3::new(min[0], min[1], min[2]);
                         let max_vec = Vec3::new(max[0], max[1], max[2]);
-                        let transformed_min = transform_quat * (min_vec * scale_vec) + translation_vec;
-                        let transformed_max = transform_quat * (max_vec * scale_vec) + translation_vec;
+                        let transformed_min =
+                            transform_quat * (min_vec * scale_vec) + translation_vec;
+                        let transformed_max =
+                            transform_quat * (max_vec * scale_vec) + translation_vec;
                         bb_min = Some(transformed_min.min(transformed_max));
                         bb_max = Some(transformed_min.max(transformed_max));
                     }
                     break;
                 }
             }
-            
+
             // If accessor didn't have min/max, compute from vertices
             let (final_min, final_max) = if let (Some(min), Some(max)) = (bb_min, bb_max) {
                 (min, max)
@@ -176,12 +194,12 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                 trace!("Computed bounding box from vertices for {}", primitive.name);
                 (min, max)
             };
-            
+
             let material_id = primitive.material_id.unwrap_or(0); // Default to first material if none assigned
             meshes_data.push((
                 indices.unwrap_or(Vec::new()),
                 vertices,
-                material_id as usize,
+                material_id as usize
             ));
             bounding_boxes.push((final_min, final_max));
 
@@ -199,7 +217,10 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
     // Log materials without assigned primitives
     let mut material_datas = model.materials.clone();
     if !meshes_null_materials_ptr.is_empty() {
-        warn!("{} primitives without materials, using default white material", meshes_null_materials_ptr.len());
+        warn!(
+            "{} primitives without materials, using default white material",
+            meshes_null_materials_ptr.len()
+        );
 
         // Create a default material for primitives without assigned materials
         material_datas.push(GltfMaterial::default());

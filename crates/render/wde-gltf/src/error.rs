@@ -16,11 +16,19 @@ pub enum GltfError {
     /// Invalid buffer view index
     InvalidBufferView(i64),
     /// Buffer overflow (reading beyond buffer size)
-    BufferOverflow { start: usize, end: usize, buffer_size: usize },
+    BufferOverflow {
+        start: usize,
+        end: usize,
+        buffer_size: usize
+    },
     /// Unsupported accessor component type
     UnsupportedComponentType(i64),
     /// Mismatched vertex counts across attributes
-    MismatchedVertexCount { primitive: String, expected: usize, actual: usize },
+    MismatchedVertexCount {
+        primitive: String,
+        expected: usize,
+        actual: usize
+    },
     /// Base64 decode error
     Base64Error(String),
     /// No buffers found in glTF file
@@ -30,7 +38,7 @@ pub enum GltfError {
     /// Invalid accessor type
     InvalidAccessorType(String),
     /// Unsupported accessor type
-    UnsupportedAccessorType(String),
+    UnsupportedAccessorType(String)
 }
 
 impl fmt::Display for GltfError {
@@ -38,21 +46,51 @@ impl fmt::Display for GltfError {
         match self {
             GltfError::IoError(msg) => write!(f, "I/O error: {}", msg),
             GltfError::JsonError(msg) => write!(f, "JSON parsing error: {}", msg),
-            GltfError::UnsupportedVersion(version) => write!(f, "Unsupported glTF version: {}", version),
-            GltfError::MissingField(field) => write!(f, "Missing required field: {}", field),
-            GltfError::InvalidBufferView(index) => write!(f, "Invalid buffer view index: {}", index),
-            GltfError::BufferOverflow { start, end, buffer_size } => {
-                write!(f, "Buffer overflow: trying to read {}..{} from buffer of size {}", start, end, buffer_size)
+            GltfError::UnsupportedVersion(version) => {
+                write!(f, "Unsupported glTF version: {}", version)
             }
-            GltfError::UnsupportedComponentType(type_id) => write!(f, "Unsupported component type: {}", type_id),
-            GltfError::MismatchedVertexCount { primitive, expected, actual } => {
-                write!(f, "Mismatched vertex count in primitive '{}': expected {}, got {}", primitive, expected, actual)
+            GltfError::MissingField(field) => write!(f, "Missing required field: {}", field),
+            GltfError::InvalidBufferView(index) => {
+                write!(f, "Invalid buffer view index: {}", index)
+            }
+            GltfError::BufferOverflow {
+                start,
+                end,
+                buffer_size
+            } => {
+                write!(
+                    f,
+                    "Buffer overflow: trying to read {}..{} from buffer of size {}",
+                    start, end, buffer_size
+                )
+            }
+            GltfError::UnsupportedComponentType(type_id) => {
+                write!(f, "Unsupported component type: {}", type_id)
+            }
+            GltfError::MismatchedVertexCount {
+                primitive,
+                expected,
+                actual
+            } => {
+                write!(
+                    f,
+                    "Mismatched vertex count in primitive '{}': expected {}, got {}",
+                    primitive, expected, actual
+                )
             }
             GltfError::Base64Error(msg) => write!(f, "Base64 decode error: {}", msg),
             GltfError::NoBuffers => write!(f, "No buffers found in glTF file"),
-            GltfError::MultipleBuffers(count) => write!(f, "Multiple buffers found ({}), only single buffer supported", count),
-            GltfError::InvalidAccessorType(type_name) => write!(f, "Invalid accessor type: {}", type_name),
-            GltfError::UnsupportedAccessorType(type_name) => write!(f, "Unsupported accessor type: {}", type_name),
+            GltfError::MultipleBuffers(count) => write!(
+                f,
+                "Multiple buffers found ({}), only single buffer supported",
+                count
+            ),
+            GltfError::InvalidAccessorType(type_name) => {
+                write!(f, "Invalid accessor type: {}", type_name)
+            }
+            GltfError::UnsupportedAccessorType(type_name) => {
+                write!(f, "Unsupported accessor type: {}", type_name)
+            }
         }
     }
 }

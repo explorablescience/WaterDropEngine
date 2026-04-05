@@ -96,8 +96,7 @@ pub mod raycasting;
 pub struct PhysicsPlugin;
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PhysicsWorld>()
+        app.init_resource::<PhysicsWorld>()
             .add_systems(Update, handle_changes);
     }
 }

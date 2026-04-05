@@ -6,16 +6,19 @@ pub struct PbrDeferredTexturesLayout {
     pub deferred_layout: Option<BindGroupLayout>,
     pub deferred_bind_group: Option<BindGroup>,
     pub deferred_layout_resolved: Option<BindGroupLayout>,
-    pub deferred_bind_group_resolved: Option<BindGroup>,
+    pub deferred_bind_group_resolved: Option<BindGroup>
 }
 impl PbrDeferredTexturesLayout {
     /// Build the bind group for the deferred renderer.
     pub fn build_bind_group(
-        textures: Res<RenderAssets<GpuTexture>>, render_instance: Res<RenderInstance>,
-        mut textures_layout: ResMut<PbrDeferredTexturesLayout>, deferred_textures: Res<PbrDeferredTextures>
+        textures: Res<RenderAssets<GpuTexture>>,
+        render_instance: Res<RenderInstance>,
+        mut textures_layout: ResMut<PbrDeferredTexturesLayout>,
+        deferred_textures: Res<PbrDeferredTextures>
     ) {
         // Check if the bind group is already created
-        if textures_layout.deferred_bind_group.is_some() & textures_layout.deferred_layout.is_some() {
+        if textures_layout.deferred_bind_group.is_some() & textures_layout.deferred_layout.is_some()
+        {
             return;
         }
 
@@ -28,44 +31,74 @@ impl PbrDeferredTexturesLayout {
             textures.get(&deferred_textures.normal),
             textures.get(&deferred_textures.normal_resolved)
         ) {
-            (Some(depth), Some(depth_resolved), Some(albedo), Some(albedo_resolved), Some(normal), Some(normal_resolved)) =>
-                (depth, depth_resolved, albedo, albedo_resolved, normal, normal_resolved),
+            (
+                Some(depth),
+                Some(depth_resolved),
+                Some(albedo),
+                Some(albedo_resolved),
+                Some(normal),
+                Some(normal_resolved)
+            ) => (
+                depth,
+                depth_resolved,
+                albedo,
+                albedo_resolved,
+                normal,
+                normal_resolved
+            ),
             _ => return
         };
 
         // Create the layouts
-        let deferred_layout = BindGroupLayout::new("deferred-textures-resolved", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_view(   0, ShaderStages::FRAGMENT, true);
-            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   2, ShaderStages::FRAGMENT, true);
-            builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   4, ShaderStages::FRAGMENT, true);
-            builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
-        });
+        let deferred_layout = BindGroupLayout::new(
+            "deferred-textures-resolved",
+            |builder: &mut BindGroupLayoutBuilder| {
+                builder.add_texture_view(0, ShaderStages::FRAGMENT, true);
+                builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
+                builder.add_texture_view(2, ShaderStages::FRAGMENT, true);
+                builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
+                builder.add_texture_view(4, ShaderStages::FRAGMENT, true);
+                builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
+            }
+        );
         let deferred_layout_resolved = Self::layout();
 
         // Build the layout
         let render_instance = render_instance.0.read().unwrap();
-        let deferred_layout_built = BindGroupLayout::build(&deferred_layout, &render_instance).unwrap();
-        let deferred_layout_resolved_built = BindGroupLayout::build(&deferred_layout_resolved, &render_instance).unwrap();
+        let deferred_layout_built =
+            BindGroupLayout::build(&deferred_layout, &render_instance).unwrap();
+        let deferred_layout_resolved_built =
+            BindGroupLayout::build(&deferred_layout_resolved, &render_instance).unwrap();
 
         // Create the bind group
-        let deferred_bind_group = BindGroupBuilder::build("deferred-textures", &render_instance, &deferred_layout_built, &vec![
-            BindGroupBuilder::texture_view(   0, &depth.texture),
-            BindGroupBuilder::texture_sampler(1, &depth.texture),
-            BindGroupBuilder::texture_view(   2, &albedo.texture),
-            BindGroupBuilder::texture_sampler(3, &albedo.texture),
-            BindGroupBuilder::texture_view(   4, &normal.texture),
-            BindGroupBuilder::texture_sampler(5, &normal.texture)
-        ]).unwrap();
-        let deferred_bind_group_resolved = BindGroupBuilder::build("deferred-textures-resolved", &render_instance, &deferred_layout_resolved_built, &vec![
-            BindGroupBuilder::texture_view(   0, &depth_resolved.texture),
-            BindGroupBuilder::texture_sampler(1, &depth_resolved.texture),
-            BindGroupBuilder::texture_view(   2, &albedo_resolved.texture),
-            BindGroupBuilder::texture_sampler(3, &albedo_resolved.texture),
-            BindGroupBuilder::texture_view(   4, &normal_resolved.texture),
-            BindGroupBuilder::texture_sampler(5, &normal_resolved.texture)
-        ]).unwrap();
+        let deferred_bind_group = BindGroupBuilder::build(
+            "deferred-textures",
+            &render_instance,
+            &deferred_layout_built,
+            &vec![
+                BindGroupBuilder::texture_view(0, &depth.texture),
+                BindGroupBuilder::texture_sampler(1, &depth.texture),
+                BindGroupBuilder::texture_view(2, &albedo.texture),
+                BindGroupBuilder::texture_sampler(3, &albedo.texture),
+                BindGroupBuilder::texture_view(4, &normal.texture),
+                BindGroupBuilder::texture_sampler(5, &normal.texture),
+            ]
+        )
+        .unwrap();
+        let deferred_bind_group_resolved = BindGroupBuilder::build(
+            "deferred-textures-resolved",
+            &render_instance,
+            &deferred_layout_resolved_built,
+            &vec![
+                BindGroupBuilder::texture_view(0, &depth_resolved.texture),
+                BindGroupBuilder::texture_sampler(1, &depth_resolved.texture),
+                BindGroupBuilder::texture_view(2, &albedo_resolved.texture),
+                BindGroupBuilder::texture_sampler(3, &albedo_resolved.texture),
+                BindGroupBuilder::texture_view(4, &normal_resolved.texture),
+                BindGroupBuilder::texture_sampler(5, &normal_resolved.texture),
+            ]
+        )
+        .unwrap();
 
         // Insert the resources
         textures_layout.deferred_layout = Some(deferred_layout);
@@ -75,14 +108,17 @@ impl PbrDeferredTexturesLayout {
     }
 
     pub fn layout() -> BindGroupLayout {
-        BindGroupLayout::new("deferred-textures", |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_view(   0, ShaderStages::FRAGMENT, false);
-            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   2, ShaderStages::FRAGMENT, false);
-            builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-            builder.add_texture_view(   4, ShaderStages::FRAGMENT, false);
-            builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
-        })
+        BindGroupLayout::new(
+            "deferred-textures",
+            |builder: &mut BindGroupLayoutBuilder| {
+                builder.add_texture_view(0, ShaderStages::FRAGMENT, false);
+                builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
+                builder.add_texture_view(2, ShaderStages::FRAGMENT, false);
+                builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
+                builder.add_texture_view(4, ShaderStages::FRAGMENT, false);
+                builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
+            }
+        )
     }
 }
 
@@ -98,7 +134,11 @@ pub struct PbrDeferredTextures {
 }
 impl PbrDeferredTextures {
     /// Create the textures for the deferred renderer.
-    pub fn create_textures(mut commands: Commands, assets_server: Res<AssetServer>, window: Query<&Window>) {
+    pub fn create_textures(
+        mut commands: Commands,
+        assets_server: Res<AssetServer>,
+        window: Query<&Window>
+    ) {
         let resolution = &window.single().unwrap().resolution;
 
         // Create the depth texture
@@ -154,14 +194,21 @@ impl PbrDeferredTextures {
 
         // Insert the resources
         commands.insert_resource(PbrDeferredTextures {
-            depth, depth_resolved, albedo, albedo_resolved, normal, normal_resolved, resized: false
+            depth,
+            depth_resolved,
+            albedo,
+            albedo_resolved,
+            normal,
+            normal_resolved,
+            resized: false
         });
     }
 
     /// Resize the textures for the deferred renderer.
     pub fn resize_textures(
         mut window_resized_events: MessageReader<SurfaceResized>,
-        server: Res<AssetServer>, mut deferred_textures: ResMut<PbrDeferredTextures>
+        server: Res<AssetServer>,
+        mut deferred_textures: ResMut<PbrDeferredTextures>
     ) {
         deferred_textures.resized = false;
         for event in window_resized_events.read() {
@@ -228,7 +275,11 @@ impl PbrDeferredTextures {
     }
 
     /// Extract the textures for the deferred renderer.
-    pub fn extract_textures(mut commands: Commands, textures: ExtractWorld<Res<PbrDeferredTextures>>, mut textures_layout: ResMut<PbrDeferredTexturesLayout>) {
+    pub fn extract_textures(
+        mut commands: Commands,
+        textures: ExtractWorld<Res<PbrDeferredTextures>>,
+        mut textures_layout: ResMut<PbrDeferredTexturesLayout>
+    ) {
         if textures.resized {
             textures_layout.deferred_layout = None;
             textures_layout.deferred_bind_group = None;

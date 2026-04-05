@@ -1,9 +1,11 @@
+use bevy::prelude::*;
 use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::*;
-use bevy::prelude::*;
 
-use crate::processor::{compute::pipeline::GpuPaintComputePipeline, resources::commands_buffer::CommandsBuffer};
+use crate::processor::{
+    compute::pipeline::GpuPaintComputePipeline, resources::commands_buffer::CommandsBuffer
+};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -11,7 +13,7 @@ pub struct TileInfo {
     pub tile_idx: [f32; 2],
     pub tile_size: [f32; 2],
     pub tile_subdivisions: f32
-} 
+}
 
 pub fn apply_paint_compute(
     render_instance: Res<RenderInstance>,
@@ -37,10 +39,7 @@ pub fn apply_paint_compute(
     {
         let mut compute_pass = command_buffer.create_compute_pass("paint");
 
-        if let (
-            CachedPipelineStatus::OkCompute(pipeline),
-            Some(commands_bind_group)
-        ) = (
+        if let (CachedPipelineStatus::OkCompute(pipeline), Some(commands_bind_group)) = (
             pipeline_manager.get_pipeline(pipeline.0),
             &commands_buffer.bind_group
         ) {
@@ -70,7 +69,7 @@ pub fn apply_paint_compute(
                         // Get the tile index from the position
                         let tile_index = match terrain_tiles.pos_to_tile.get(tile_id) {
                             Some(index) => *index,
-                            None => continue,
+                            None => continue
                         };
                         let tile = &terrain_tiles.tiles[tile_index];
 
@@ -85,13 +84,16 @@ pub fn apply_paint_compute(
                         // Set the bind group for the tile
                         let tile_bind_group = match &tile.compute_bind_group {
                             Some(bind_group) => bind_group,
-                            None => continue,
+                            None => continue
                         };
                         compute_pass.set_bind_group(1, tile_bind_group);
 
                         // Dispatch the compute shader for the tile
                         if let Err(e) = compute_pass.dispatch(count, 1, 1) {
-                            error!("Failed to dispatch paint compute shader for tile {:?}: {:?}", tile_id, e);
+                            error!(
+                                "Failed to dispatch paint compute shader for tile {:?}: {:?}",
+                                tile_id, e
+                            );
                         }
                     }
                 }

@@ -1,10 +1,10 @@
-use wde_camera::camera::CameraView;
-use wde_logger::prelude::*;
 use bevy::{
     input::mouse::{MouseMotion, MouseScrollUnit, MouseWheel},
-    prelude::*,
+    prelude::*
 };
 use std::f32::consts::*;
+use wde_camera::camera::CameraView;
+use wde_logger::prelude::*;
 
 pub(crate) struct ThirdPersonControllerPlugin;
 impl Plugin for ThirdPersonControllerPlugin {
@@ -43,7 +43,7 @@ pub struct ThirdPersonController {
     pub velocity: Vec3,
     pub edge_scroll_enabled: bool,
     pub edge_scroll_distance: f32,
-    pub edge_scroll_speed: f32,
+    pub edge_scroll_speed: f32
 }
 
 impl Default for ThirdPersonController {
@@ -76,7 +76,7 @@ impl Default for ThirdPersonController {
             velocity: Vec3::ZERO,
             edge_scroll_enabled: !cfg!(debug_assertions),
             edge_scroll_distance: 5.0,
-            edge_scroll_speed: 20.0,
+            edge_scroll_speed: 20.0
         }
     }
 }
@@ -89,7 +89,7 @@ fn update(
     mouse_button_input: Res<ButtonInput<MouseButton>>,
     mut mouse_events: MessageReader<MouseMotion>,
     mut mouse_scroll_events: MessageReader<MouseWheel>,
-    windows: Query<&Window>,
+    windows: Query<&Window>
 ) {
     let dt = time.delta_secs();
 
@@ -111,7 +111,7 @@ fn update(
         for scroll_event in mouse_scroll_events.read() {
             let amount = match scroll_event.unit {
                 MouseScrollUnit::Line => scroll_event.y,
-                MouseScrollUnit::Pixel => scroll_event.y / 16.0,
+                MouseScrollUnit::Pixel => scroll_event.y / 16.0
             };
             scroll += amount;
         }

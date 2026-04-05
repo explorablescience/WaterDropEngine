@@ -1,14 +1,14 @@
 use std::{
     collections::{BTreeMap, VecDeque},
     sync::{Mutex, OnceLock},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH}
 };
 
 use tracing::{
-    field::{Field, Visit},
     Level,
+    field::{Field, Visit}
 };
-use tracing_subscriber::{layer::Context, Layer};
+use tracing_subscriber::{Layer, layer::Context};
 
 const PANIC_REPORT_LOG_CAPACITY: usize = 8_000;
 
@@ -17,7 +17,7 @@ struct PanicReportLogEntry {
     timestamp_unix_ms: u128,
     level: Level,
     target: String,
-    message: String,
+    message: String
 }
 
 static PANIC_REPORT_LOG_BUFFER: OnceLock<Mutex<VecDeque<PanicReportLogEntry>>> = OnceLock::new();
@@ -54,7 +54,7 @@ pub fn panic_report_logs_snapshot() -> Vec<String> {
 #[derive(Default)]
 struct PanicReportLogVisitor {
     message: Option<String>,
-    fields: BTreeMap<String, String>,
+    fields: BTreeMap<String, String>
 }
 impl Visit for PanicReportLogVisitor {
     fn record_debug(&mut self, field: &Field, value: &dyn core::fmt::Debug) {
@@ -117,7 +117,7 @@ impl PanicReportLogVisitor {
 pub(crate) struct PanicReportLogLayer;
 impl<S> Layer<S> for PanicReportLogLayer
 where
-    S: tracing::Subscriber,
+    S: tracing::Subscriber
 {
     fn on_event(&self, event: &tracing::Event<'_>, _ctx: Context<'_, S>) {
         let metadata = event.metadata();
@@ -132,7 +132,7 @@ where
             timestamp_unix_ms,
             level: *metadata.level(),
             target: metadata.target().to_string(),
-            message: visitor.build_message(),
+            message: visitor.build_message()
         });
     }
 }

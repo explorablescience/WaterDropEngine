@@ -1,8 +1,14 @@
-use std::{collections::{BTreeMap, VecDeque}, sync::{Mutex, OnceLock}, time::SystemTime};
+use std::{
+    collections::{BTreeMap, VecDeque},
+    sync::{Mutex, OnceLock},
+    time::SystemTime
+};
 
-use tracing::{Level, field::{Field, Visit}};
+use tracing::{
+    Level,
+    field::{Field, Visit}
+};
 use tracing_subscriber::{Layer, layer::Context};
-
 
 const EDITOR_LOG_CAPACITY: usize = 4_000;
 
@@ -11,7 +17,7 @@ pub struct EditorLogEntry {
     pub timestamp: SystemTime,
     pub level: Level,
     pub target: String,
-    pub message: String,
+    pub message: String
 }
 
 static EDITOR_LOG_BUFFER: OnceLock<Mutex<VecDeque<EditorLogEntry>>> = OnceLock::new();
@@ -49,7 +55,7 @@ pub fn editor_logs_clear() {
 #[derive(Default)]
 pub struct EditorLogVisitor {
     message: Option<String>,
-    fields: BTreeMap<String, String>,
+    fields: BTreeMap<String, String>
 }
 impl Visit for EditorLogVisitor {
     fn record_debug(&mut self, field: &Field, value: &dyn core::fmt::Debug) {
@@ -112,7 +118,7 @@ impl EditorLogVisitor {
 pub(crate) struct EditorLogLayer;
 impl<S> Layer<S> for EditorLogLayer
 where
-    S: tracing::Subscriber,
+    S: tracing::Subscriber
 {
     fn on_event(&self, event: &tracing::Event<'_>, _ctx: Context<'_, S>) {
         let metadata = event.metadata();
@@ -123,7 +129,7 @@ where
             timestamp: SystemTime::now(),
             level: *metadata.level(),
             target: metadata.target().to_string(),
-            message: visitor.build_message(),
+            message: visitor.build_message()
         });
     }
 }

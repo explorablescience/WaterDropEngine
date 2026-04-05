@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{core::grid::GridPos, prelude::{Grid, GridLocalDir}};
+use crate::{
+    core::grid::GridPos,
+    prelude::{Grid, GridLocalDir}
+};
 
 /// Local rotation of an entity on the grid around its center, in 90 degree increments.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -33,7 +36,11 @@ pub struct GridEntity {
 impl GridEntity {
     pub fn new(center: Vec2, extent: UVec2, rotation: GridRotation) -> Self {
         let (center, bbox, footprint) = compute_footprint(center, extent, rotation);
-        GridEntity { center, bbox, footprint }
+        GridEntity {
+            center,
+            bbox,
+            footprint
+        }
     }
     /// Gets the center tile position of this entity.
     /// Note that this is not necessarily the center of the footprint, but the position used to place the entity on the grid.
@@ -51,7 +58,11 @@ impl GridEntity {
 }
 
 // For non-rotated entities, the footprint is a simple rectangle around the center
-fn compute_footprint(center: Vec2, extent: UVec2, rotation: GridRotation) -> (Vec2, (Vec2, Vec2), Vec<GridPos>) {
+fn compute_footprint(
+    center: Vec2,
+    extent: UVec2,
+    rotation: GridRotation
+) -> (Vec2, (Vec2, Vec2), Vec<GridPos>) {
     let ts = Grid::tile_size();
 
     // Change extent if rotated
@@ -65,7 +76,12 @@ fn compute_footprint(center: Vec2, extent: UVec2, rotation: GridRotation) -> (Ve
 
     // Compute the footprint
     let mut footprint = Vec::new();
-    let dir_list = [GridLocalDir::North, GridLocalDir::East, GridLocalDir::West, GridLocalDir::South];
+    let dir_list = [
+        GridLocalDir::North,
+        GridLocalDir::East,
+        GridLocalDir::West,
+        GridLocalDir::South
+    ];
     for x in 0..extent.x {
         for z in 0..extent.y {
             let local_pos = center - offset_to_center_object + Vec2::new(x as f32, z as f32) * ts;
@@ -78,12 +94,15 @@ fn compute_footprint(center: Vec2, extent: UVec2, rotation: GridRotation) -> (Ve
     }
 
     // Compute bbox
-    let bottom_left_pos = center - offset_to_center_object + Vec2::new(extent.x as f32 - 1.0, extent.y as f32 - 1.0) * ts;
+    let bottom_left_pos = center - offset_to_center_object
+        + Vec2::new(extent.x as f32 - 1.0, extent.y as f32 - 1.0) * ts;
     let (bottom_chunk_pos, bottom_local_pos) = Grid::world_to_pos(bottom_left_pos);
-    let bottom_left_pos = Grid::pos_to_world_tile_center(bottom_chunk_pos, (bottom_local_pos.0, bottom_local_pos.1));
+    let bottom_left_pos =
+        Grid::pos_to_world_tile_center(bottom_chunk_pos, (bottom_local_pos.0, bottom_local_pos.1));
     let top_right_pos = center - offset_to_center_object;
     let (top_chunk_pos, top_local_pos) = Grid::world_to_pos(top_right_pos);
-    let top_right_pos = Grid::pos_to_world_tile_center(top_chunk_pos, (top_local_pos.0, top_local_pos.1));
+    let top_right_pos =
+        Grid::pos_to_world_tile_center(top_chunk_pos, (top_local_pos.0, top_local_pos.1));
     let center = (bottom_left_pos + top_right_pos) / 2.0;
 
     (center, (bottom_left_pos, top_right_pos), footprint)

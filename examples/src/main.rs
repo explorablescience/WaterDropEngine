@@ -2,22 +2,22 @@
 use bevy::prelude::*;
 use wde::prelude::*;
 
-use crate::custom_forward_render::CustomFeaturesPlugin;
-use crate::pbr_batches::PbrBatchesPlugin;
+// use crate::custom_forward_render::CustomFeaturesPlugin;
+// use crate::pbr_batches::PbrBatchesPlugin;
 
-mod custom_forward_render;
-mod display_texture;
-mod pbr_batches;
-mod ray_casting;
+// mod custom_forward_render;
+// mod display_texture;
+// mod pbr_batches;
+// mod ray_casting;
 
 #[allow(unused)]
 enum Example {
     CustomForwardRender,
     DisplayTexture,
     PbrBatches,
-    RayCasting,
+    RayCasting
 }
-const SELECTED_EXAMPLE: Example = Example::PbrBatches;
+// const SELECTED_EXAMPLE: Example = Example::PbrBatches;
 
 pub fn main() {
     // Create the app
@@ -28,24 +28,24 @@ pub fn main() {
     app.add_plugins(WdeDefaultPlugins);
 
     // Start the selected example
-    match SELECTED_EXAMPLE {
-        Example::CustomForwardRender => {
-            info!("Starting Custom Forward Render example.");
-            app.add_plugins(CustomFeaturesPlugin);
-        }
-        Example::DisplayTexture => {
-            info!("Starting Display Texture example.");
-            app.add_plugins(display_texture::DisplayTextureComponentPlugin);
-        }
-        Example::PbrBatches => {
-            info!("Starting PBR Batches example.");
-            app.add_plugins(PbrBatchesPlugin);
-        }
-        Example::RayCasting => {
-            info!("Starting Ray Casting example.");
-            app.add_plugins(ray_casting::RayCastingPlugin);
-        }
-    }
+    // match SELECTED_EXAMPLE {
+    //     Example::CustomForwardRender => {
+    //         info!("Starting Custom Forward Render example.");
+    //         app.add_plugins(CustomFeaturesPlugin);
+    //     }
+    //     Example::DisplayTexture => {
+    //         info!("Starting Display Texture example.");
+    //         app.add_plugins(display_texture::DisplayTextureComponentPlugin);
+    //     }
+    //     Example::PbrBatches => {
+    //         info!("Starting PBR Batches example.");
+    //         app.add_plugins(PbrBatchesPlugin);
+    //     }
+    //     Example::RayCasting => {
+    //         info!("Starting Ray Casting example.");
+    //         app.add_plugins(ray_casting::RayCastingPlugin);
+    //     }
+    // }
 
     // Run the app
     info!("Initialization complete.");

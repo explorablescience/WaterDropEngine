@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use wde_logger::prelude::*;
 
-use base64::{Engine, engine::general_purpose};
-use serde_json::Value;
 use crate::error::GltfError;
 use crate::material::GltfMaterial;
 use crate::model::{
-    AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBuffer, GltfMesh, GltfModel, MeshPrimitive
+    AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBuffer, GltfMesh, GltfModel,
+    MeshPrimitive
 };
+use base64::{Engine, engine::general_purpose};
+use serde_json::Value;
 
 /// Parse a glTF 2.0 JSON file from `res/` and build an in-memory `GltfModel`.
 pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
@@ -72,8 +73,12 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
     let buffer_views = json["bufferViews"]
         .as_array()
         .ok_or(GltfError::MissingField("bufferViews".to_string()))?;
-    trace!("Found {} bufferViews and {} accessors", buffer_views.len(), accessors.len());
-    
+    trace!(
+        "Found {} bufferViews and {} accessors",
+        buffer_views.len(),
+        accessors.len()
+    );
+
     let mut slices_data = Vec::new();
     for (i, buffer_view) in buffer_views.iter().enumerate() {
         // For simplicity, we only handle buffer index 0 in this example
@@ -91,7 +96,10 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
             .unwrap_or(0);
         let _byte_length = buffer_view["byteLength"]
             .as_i64()
-            .ok_or(GltfError::MissingField(format!("bufferView[{}].byteLength", i)))?;
+            .ok_or(GltfError::MissingField(format!(
+                "bufferView[{}].byteLength",
+                i
+            )))?;
 
         // Store buffer slice data
         let slice_data = BufferSliceData {
@@ -101,7 +109,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
     }
     let buffer = GltfBuffer {
         data: buffer_data,
-        slices: slices_data,
+        slices: slices_data
     };
 
     // Retrieve the nodes of the default scene
@@ -119,12 +127,14 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
     let mut material_map: HashMap<i64, usize> = HashMap::new();
     for node in nodes_list {
         // Retrieve node data
-        let node_idx = node.as_i64()
+        let node_idx = node
+            .as_i64()
             .ok_or(GltfError::JsonError("Invalid node index".to_string()))?;
         let node = &json["nodes"][node_idx as usize];
 
         // Handle meshes in the node
-        let mesh_index = node["mesh"].as_i64()
+        let mesh_index = node["mesh"]
+            .as_i64()
             .ok_or(GltfError::MissingField("node.mesh".to_string()))?;
         let mesh = &json["meshes"][mesh_index as usize];
 
@@ -154,20 +164,28 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                     .unwrap_or(0) as usize;
                 let count = accessor["count"]
                     .as_i64()
-                    .ok_or(GltfError::MissingField("accessor.count".to_string()))? as usize;
-                let component_type_value = accessor["componentType"]
-                    .as_i64()
-                    .ok_or(GltfError::MissingField("accessor.componentType".to_string()))?;
+                    .ok_or(GltfError::MissingField("accessor.count".to_string()))?
+                    as usize;
+                let component_type_value =
+                    accessor["componentType"]
+                        .as_i64()
+                        .ok_or(GltfError::MissingField(
+                            "accessor.componentType".to_string()
+                        ))?;
                 let component_type = GltfAccessorComponentType::from_i64(component_type_value)
                     .ok_or(GltfError::UnsupportedComponentType(component_type_value))?;
                 let min = accessor.get("min").and_then(|v| {
                     v.as_array().map(|arr| {
-                        arr.iter().filter_map(|val| val.as_f64().map(|f| f as f32)).collect()
+                        arr.iter()
+                            .filter_map(|val| val.as_f64().map(|f| f as f32))
+                            .collect()
                     })
                 });
                 let max = accessor.get("max").and_then(|v| {
                     v.as_array().map(|arr| {
-                        arr.iter().filter_map(|val| val.as_f64().map(|f| f as f32)).collect()
+                        arr.iter()
+                            .filter_map(|val| val.as_f64().map(|f| f as f32))
+                            .collect()
                     })
                 });
                 Some(AccessorData {
@@ -180,7 +198,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                         .expect("Accessor missing type")
                         .to_string(),
                     min,
-                    max,
+                    max
                 })
             } else {
                 None
@@ -189,7 +207,9 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
             // Process vertex attributes
             let attributes = &primitive["attributes"];
             let mut vertex_attributes: Vec<(String, AccessorData)> = Vec::new();
-            for (attr_name, accessor_value) in attributes.as_object().expect("Attributes is not an object") {
+            for (attr_name, accessor_value) in
+                attributes.as_object().expect("Attributes is not an object")
+            {
                 // Retrieve accessor index
                 let accessor_index = accessor_value
                     .as_i64()
@@ -204,9 +224,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                     .get("byteOffset")
                     .and_then(|v| v.as_i64())
                     .unwrap_or(0) as usize;
-                let count = accessor["count"]
-                    .as_i64()
-                    .expect("Accessor missing count") as usize;
+                let count = accessor["count"].as_i64().expect("Accessor missing count") as usize;
                 let component_type_value = accessor["componentType"]
                     .as_i64()
                     .expect("Accessor missing componentType");
@@ -218,12 +236,16 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                     .to_string();
                 let min = accessor.get("min").and_then(|v| {
                     v.as_array().map(|arr| {
-                        arr.iter().filter_map(|val| val.as_f64().map(|f| f as f32)).collect()
+                        arr.iter()
+                            .filter_map(|val| val.as_f64().map(|f| f as f32))
+                            .collect()
                     })
                 });
                 let max = accessor.get("max").and_then(|v| {
                     v.as_array().map(|arr| {
-                        arr.iter().filter_map(|val| val.as_f64().map(|f| f as f32)).collect()
+                        arr.iter()
+                            .filter_map(|val| val.as_f64().map(|f| f as f32))
+                            .collect()
                     })
                 });
                 let accessor_data = AccessorData {
@@ -233,19 +255,22 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                     count,
                     accessor_type,
                     min,
-                    max,
+                    max
                 };
                 vertex_attributes.push((attr_name.clone(), accessor_data));
             }
 
             // Process material (if any)
-            let material_index = primitive
-                .get("material")
-                .and_then(|v| v.as_i64());
+            let material_index = primitive.get("material").and_then(|v| v.as_i64());
             if let Some(mat_index) = material_index
                 && !material_map.contains_key(&mat_index)
             {
-                let mat_data = parse_material(Some(mat_index), &json["materials"][mat_index as usize], &json, &folder_path)?;
+                let mat_data = parse_material(
+                    Some(mat_index),
+                    &json["materials"][mat_index as usize],
+                    &json,
+                    &folder_path
+                )?;
                 if let Some(mat) = mat_data {
                     material_map.insert(mat_index, material_datas.len());
                     material_datas.push(mat);
@@ -253,36 +278,39 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
             }
 
             // Extract node transform
-            let translation = node.get("translation")
+            let translation = node
+                .get("translation")
                 .and_then(|v| v.as_array())
                 .map(|arr| {
                     [
                         arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                         arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32
                     ]
                 })
                 .unwrap_or([0.0, 0.0, 0.0]);
-            
-            let rotation = node.get("rotation")
+
+            let rotation = node
+                .get("rotation")
                 .and_then(|v| v.as_array())
                 .map(|arr| {
                     [
                         arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                         arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
                         arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                        arr.get(3).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                        arr.get(3).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32
                     ]
                 })
                 .unwrap_or([0.0, 0.0, 0.0, 1.0]);
-            
-            let scale = node.get("scale")
+
+            let scale = node
+                .get("scale")
                 .and_then(|v| v.as_array())
                 .map(|arr| {
                     [
                         arr.first().and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
                         arr.get(1).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
-                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32
                     ]
                 })
                 .unwrap_or([1.0, 1.0, 1.0]);
@@ -295,7 +323,7 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
                 material_id: material_index.map(|idx| idx as u32),
                 translation,
                 rotation,
-                scale,
+                scale
             };
             mesh_primitives.push(mesh_primitive);
         }
@@ -320,15 +348,19 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
         path: folder_path,
         buffers: vec![buffer],
         meshes: vec![GltfMesh {
-            primitives: mesh_primitives,
+            primitives: mesh_primitives
         }],
-        materials: material_datas,
+        materials: material_datas
     })
 }
 
-
 /// Parse material data from the glTF JSON
-fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Value, folder_path: &str) -> Result<Option<GltfMaterial>, GltfError> {
+fn parse_material(
+    material_index: Option<i64>,
+    material_json: &Value,
+    json: &Value,
+    folder_path: &str
+) -> Result<Option<GltfMaterial>, GltfError> {
     if material_index.is_none() {
         return Ok(None);
     }
@@ -337,16 +369,17 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
     // Extract material number properties
     let base_color_factor = pbr["baseColorFactor"]
         .as_array()
-        .unwrap_or(&vec![Value::from(1.0), Value::from(1.0), Value::from(1.0), Value::from(1.0)])
+        .unwrap_or(&vec![
+            Value::from(1.0),
+            Value::from(1.0),
+            Value::from(1.0),
+            Value::from(1.0),
+        ])
         .iter()
         .map(|v| v.as_f64().unwrap_or(1.0) as f32)
         .collect::<Vec<f32>>();
-    let metallic_factor = pbr["metallicFactor"]
-        .as_f64()
-        .unwrap_or(1.0) as f32;
-    let roughness_factor = pbr["roughnessFactor"]
-        .as_f64()
-        .unwrap_or(1.0) as f32;
+    let metallic_factor = pbr["metallicFactor"].as_f64().unwrap_or(1.0) as f32;
+    let roughness_factor = pbr["roughnessFactor"].as_f64().unwrap_or(1.0) as f32;
 
     // Extract material textures
     const OPT_TEX_CANDIDATES: [(&str, &str); 4] = [
@@ -397,6 +430,6 @@ fn parse_material(material_index: Option<i64>, material_json: &Value, json: &Val
         base_color_tex_url: opt_textures_urls.get("baseColorTexture").cloned(),
         metallic_roughness_tex_url: opt_textures_urls.get("metallicRoughnessTexture").cloned(),
         normal_tex_url: opt_textures_urls.get("normalTexture").cloned(),
-        occlusion_tex_url: opt_textures_urls.get("occlusionTexture").cloned(),
+        occlusion_tex_url: opt_textures_urls.get("occlusionTexture").cloned()
     }))
 }

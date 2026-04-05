@@ -38,17 +38,23 @@ impl Default for SsboMeshDescriptor {
 pub struct SsboMesh;
 impl RenderBinding for SsboMesh {
     fn describe(&self, builder: &mut RenderBindingBuilder) {
-        builder.add_buffer(0, Buffer {
-            label: "ssbo-mesh-vertex-buffer-gpu".to_string(),
-            size: std::mem::size_of::<Vertex>() * MAX_VERTICES,
-            usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
-            content: None,
-        });
-        builder.add_buffer(1, Buffer {
-            label: "ssbo-mesh-index-buffer-gpu".to_string(),
-            size: std::mem::size_of::<u32>() * MAX_INDICES,
-            usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
-            content: None,
-        });
+        builder.add_buffer(
+            0,
+            Buffer {
+                label: "ssbo-mesh-vertex-buffer-gpu".to_string(),
+                size: std::mem::size_of::<Vertex>() * MAX_VERTICES,
+                usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
+                content: None
+            }
+        );
+        builder.add_buffer(
+            1,
+            Buffer {
+                label: "ssbo-mesh-index-buffer-gpu".to_string(),
+                size: std::mem::size_of::<u32>() * MAX_INDICES,
+                usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
+                content: None
+            }
+        );
     }
 }

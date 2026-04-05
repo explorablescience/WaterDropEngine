@@ -8,10 +8,16 @@ pub struct UIFrameDataPlugin;
 impl Plugin for UIFrameDataPlugin {
     fn build(&self, app: &mut App) {
         // Add the overlay that displays stats on the screen (frame time)
-        app
-            .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        app.add_plugins(FrameTimeDiagnosticsPlugin::default())
             .init_resource::<overlay::FrameDataAverages>()
-            .add_systems(Update, (overlay::update_long_averages, overlay::draw_framedata_overlay).chain());
+            .add_systems(
+                Update,
+                (
+                    overlay::update_long_averages,
+                    overlay::draw_framedata_overlay
+                )
+                    .chain()
+            );
     }
 }
 
@@ -19,7 +25,7 @@ impl Plugin for UIFrameDataPlugin {
 /// Returns None if the diagnostic or value is not available.
 pub(crate) fn read_diagnostic(
     diagnostics: &DiagnosticsStore,
-    path: bevy::diagnostic::DiagnosticPath,
+    path: bevy::diagnostic::DiagnosticPath
 ) -> Option<f64> {
     diagnostics
         .get(&path)

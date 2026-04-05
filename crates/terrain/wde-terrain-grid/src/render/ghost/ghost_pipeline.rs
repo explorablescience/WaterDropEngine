@@ -5,7 +5,6 @@
 
 // use crate::render::ghost::GhostMaterial;
 
-
 // #[derive(Default, Asset, Clone, TypePath)]
 // pub struct GhostRenderPipelineAsset;
 // #[allow(unused)]

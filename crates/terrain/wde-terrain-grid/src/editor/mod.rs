@@ -1,9 +1,12 @@
 use bevy::prelude::*;
 
-use crate::{core::placement_config::PlacementConfigEntry, editor::{placement::*, ui::*}};
+use crate::{
+    core::placement_config::PlacementConfigEntry,
+    editor::{placement::*, ui::*}
+};
 
-mod ui;
 mod placement;
+mod ui;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum PlacementTool {
@@ -29,8 +32,7 @@ pub struct PlacementUI {
 pub struct EditorPlugin;
 impl Plugin for EditorPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PlacementUI>()
+        app.init_resource::<PlacementUI>()
             .add_systems(Startup, init_ui)
             .add_systems(Update, (show_ui, handle_placement_tool));
     }

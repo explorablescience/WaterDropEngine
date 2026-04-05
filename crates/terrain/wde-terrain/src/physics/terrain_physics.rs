@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use wde_physics::prelude::*;
 use bevy::prelude::*;
+use wde_physics::prelude::*;
 
 use crate::manager::{CHUNK_HEIGHT, CHUNK_SIZE, ChunkPos, Terrain};
 
@@ -14,14 +14,18 @@ pub struct TerrainPhysics {
 }
 impl TerrainPhysics {
     /// Extracts the dirty tiles from the main terrain
-    pub fn extract_dirty(mut commands: Commands, mut renderer: Query<&mut TerrainPhysics>, mut terrain: Query<&mut Terrain>) {
+    pub fn extract_dirty(
+        mut commands: Commands,
+        mut renderer: Query<&mut TerrainPhysics>,
+        mut terrain: Query<&mut Terrain>
+    ) {
         let mut terrain_renderer = match renderer.iter_mut().next() {
             Some(terrain) => terrain,
-            None => return,
+            None => return
         };
         let mut terrain = match terrain.iter_mut().next() {
             Some(terrain) => terrain,
-            None => return,
+            None => return
         };
 
         // Ensure the parent entity for the colliders exists
@@ -50,12 +54,23 @@ impl TerrainPhysics {
             if let Some(entity) = terrain_renderer.pos_to_entity.get(tile_pos) {
                 commands.entity(*entity).insert(collider);
             } else {
-                let entity = commands.spawn((
-                    Name::new(format!("Terrain TileCollider ({}, {})", tile_pos.x, tile_pos.y)),
-                    Transform::from_xyz(tile_pos.x as f32 * CHUNK_SIZE, 0.0, tile_pos.y as f32 * CHUNK_SIZE),
-                    collider
-                )).id();
-                commands.entity(entity).set_parent_in_place(terrain_renderer.parent.unwrap());
+                let entity = commands
+                    .spawn((
+                        Name::new(format!(
+                            "Terrain TileCollider ({}, {})",
+                            tile_pos.x, tile_pos.y
+                        )),
+                        Transform::from_xyz(
+                            tile_pos.x as f32 * CHUNK_SIZE,
+                            0.0,
+                            tile_pos.y as f32 * CHUNK_SIZE
+                        ),
+                        collider
+                    ))
+                    .id();
+                commands
+                    .entity(entity)
+                    .set_parent_in_place(terrain_renderer.parent.unwrap());
                 terrain_renderer.pos_to_entity.insert(*tile_pos, entity);
             }
         }

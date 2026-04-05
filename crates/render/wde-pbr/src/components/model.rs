@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use wde_renderer::prelude::*;
-use wde_logger::prelude::*;
 use bevy::prelude::*;
+use wde_logger::prelude::*;
+use wde_renderer::prelude::*;
 
 use crate::{assets::PbrMaterial, logic::ssbo::MAX_ENTITY_COUNT};
 
@@ -30,7 +30,7 @@ pub struct PbrModelRegistry {
     pub model_uuid_to_transform_id: HashMap<PbrModelElementUuid, u32>,
 
     /// The next available UUID for a model element
-    pub next_uuid: PbrModelElementUuid,
+    pub next_uuid: PbrModelElementUuid
 }
 impl PbrModelRegistry {
     fn next_uuid(&mut self) -> PbrModelElementUuid {
@@ -48,11 +48,10 @@ impl PbrModelRegistry {
         transform_id: u32
     ) -> PbrModelElementUuid {
         let uuid = self.next_uuid();
-        self.model_uuid_to_weak.insert(
-            uuid,
-            (mesh_handle.id(), material_handle.id())
-        );
-        self.entity_to_model_uuids.entry(entity)
+        self.model_uuid_to_weak
+            .insert(uuid, (mesh_handle.id(), material_handle.id()));
+        self.entity_to_model_uuids
+            .entry(entity)
             .or_default()
             .push(uuid);
         self.model_uuid_to_transform_id.insert(uuid, transform_id);
@@ -65,7 +64,7 @@ pub struct PbrSsboIdHandler {
     /// Index of the last used transform ID
     last_transform_id: u32,
     /// List of free transform IDs
-    free_transform_ids: Vec<u32>,
+    free_transform_ids: Vec<u32>
 }
 impl PbrSsboIdHandler {
     /// Allocate a new transform ID
@@ -77,7 +76,10 @@ impl PbrSsboIdHandler {
             self.last_transform_id += 1;
             id
         } else {
-            warn!("PbrSsbo: Maximum number of transform IDs reached ({})", MAX_ENTITY_COUNT);
+            warn!(
+                "PbrSsbo: Maximum number of transform IDs reached ({})",
+                MAX_ENTITY_COUNT
+            );
             0
         }
     }
@@ -90,18 +92,18 @@ impl PbrSsboIdHandler {
 
 /// Resource to track dirty transforms that need to be updated in the SSBO.
 /// This automatically updates every frame with the modified transforms of entities with a PbrModel component, and is used to update the SSBO `SsboTransformPbr` with the new transforms.
-#[derive(Resource, Default)]    
+#[derive(Resource, Default)]
 pub struct DirtyTransforms(pub Option<Vec<(PbrModelElementUuid, TransformUniform)>>);
 
 pub struct PbrModelRegistryPlugin;
 impl Plugin for PbrModelRegistryPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PbrModelRegistry>()
+        app.init_resource::<PbrModelRegistry>()
             .init_resource::<PbrSsboIdHandler>()
             .init_resource::<DirtyTransforms>()
             .add_systems(Update, on_models_updates);
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .init_resource::<ModelUuidToTransformUuidRender>()
             .init_resource::<DirtyTransforms>();
     }
@@ -131,7 +133,12 @@ fn on_models_updates(
 
         // Register the new model elements
         for (mesh_handle, material_handle) in pbr_model.0.iter() {
-            let uuid = registry.register_entity(entity, mesh_handle, material_handle, ssbo.allocate_transform_id());
+            let uuid = registry.register_entity(
+                entity,
+                mesh_handle,
+                material_handle,
+                ssbo.allocate_transform_id()
+            );
             new_dirty_transforms.push((uuid, TransformUniform::new(transform)));
         }
     }

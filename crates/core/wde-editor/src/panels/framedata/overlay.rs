@@ -5,17 +5,16 @@ use wde_egui::prelude::*;
 
 use crate::panels::framedata::read_diagnostic;
 
-
 #[derive(Resource, Default)]
 pub struct FrameDataAverages {
     fps_long_avg: Option<f64>,
-    frame_ms_long_avg: Option<f64>,
+    frame_ms_long_avg: Option<f64>
 }
 
 pub fn update_long_averages(
     time: Res<Time>,
     diagnostics: Res<DiagnosticsStore>,
-    mut averages: ResMut<FrameDataAverages>,
+    mut averages: ResMut<FrameDataAverages>
 ) {
     let frame_count = read_diagnostic(&diagnostics, FrameTimeDiagnosticsPlugin::FRAME_COUNT);
     if frame_count.is_some_and(|count| count < 10.0) {
@@ -30,14 +29,14 @@ pub fn update_long_averages(
     if let Some(fps) = read_diagnostic(&diagnostics, FrameTimeDiagnosticsPlugin::FPS) {
         averages.fps_long_avg = Some(match averages.fps_long_avg {
             Some(prev) => prev + alpha * (fps - prev),
-            None => fps,
+            None => fps
         });
     }
 
     if let Some(frame_ms) = read_diagnostic(&diagnostics, FrameTimeDiagnosticsPlugin::FRAME_TIME) {
         averages.frame_ms_long_avg = Some(match averages.frame_ms_long_avg {
             Some(prev) => prev + alpha * (frame_ms - prev),
-            None => frame_ms,
+            None => frame_ms
         });
     }
 }
@@ -57,15 +56,15 @@ pub fn draw_framedata_overlay(
     let mut lines = Vec::with_capacity(3);
     lines.push(match averages.fps_long_avg {
         Some(long_avg) => format!("FPS: {long_avg:.1}"),
-        _ => "FPS: n/a".to_string(),
+        _ => "FPS: n/a".to_string()
     });
     lines.push(match averages.frame_ms_long_avg {
         Some(long_avg) => format!("Frame Time: {long_avg:.2} ms"),
-        _ => "Frame Time: n/a".to_string(),
+        _ => "Frame Time: n/a".to_string()
     });
     lines.push(match frame_count {
         Some(value) => format!("Frame Count: {:.0}", value),
-        None => "Frame Count: n/a".to_string(),
+        None => "Frame Count: n/a".to_string()
     });
 
     let text = lines.join("\n");
@@ -81,6 +80,6 @@ pub fn draw_framedata_overlay(
         egui::Align2::LEFT_TOP,
         &text,
         font,
-        text_color,
+        text_color
     );
 }

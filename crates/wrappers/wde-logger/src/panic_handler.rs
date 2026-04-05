@@ -35,25 +35,41 @@ impl PanicHook {
                 let system_data = get_system_data();
                 let backtrace = render_backtrace();
                 let engine_logs = panic_report_layer::panic_report_logs_snapshot();
-                let serialized = ReportData::from(metadata, system_data, backtrace, engine_logs, panic_message.clone()).serialize();
+                let serialized = ReportData::from(
+                    metadata,
+                    system_data,
+                    backtrace,
+                    engine_logs,
+                    panic_message.clone()
+                )
+                .serialize();
 
                 // Write data to disk
                 let file_path = match serialized.clone() {
                     Ok(data) => {
                         let panic_reports_dir = std::env::temp_dir().join("waterdropengine");
                         if let Err(e) = std::fs::create_dir_all(&panic_reports_dir) {
-                            error!("Failed to create panic reports directory at '{}': {}", panic_reports_dir.display(), e);
+                            error!(
+                                "Failed to create panic reports directory at '{}': {}",
+                                panic_reports_dir.display(),
+                                e
+                            );
                         }
                         let uuid = Uuid::new_v4().hyphenated().to_string();
-                        let file_path = std::path::Path::new(&panic_reports_dir).join(format!("panic-report-{uuid}.toml"));
+                        let file_path = std::path::Path::new(&panic_reports_dir)
+                            .join(format!("panic-report-{uuid}.toml"));
                         match std::fs::write(&file_path, data.as_bytes()) {
                             Ok(_) => Some(file_path),
                             Err(e) => {
-                                error!("Failed to write panic report to file '{}': {}", file_path.display(), e);
+                                error!(
+                                    "Failed to write panic report to file '{}': {}",
+                                    file_path.display(),
+                                    e
+                                );
                                 None
                             }
                         }
-                    },
+                    }
                     Err(e) => {
                         error!("Failed to serialize panic report: {}", e);
                         None
@@ -62,19 +78,29 @@ impl PanicHook {
 
                 // Log the panic information using the `error!` macro from `tracing`.
                 report.push_str("\nA fatal problem occurred in WaterDropEngine that couldn't be recovered and crashed!");
-                    report.push_str(" We are sorry about that.");
-                    if let Some(location) = file_path {
-                        report.push_str(format!("\n\nWe have generated a panic report at {:#?}.", location).as_str());
-                        report.push_str("\nPlease consider sending this report to the developers to help us fix this issue at <explorablescience@gmail.com>.");
-                    }
-                    let args = std::env::args().collect::<Vec<_>>();
-                    if !args.iter().any(|arg| arg == "--debug") {
-                        report.push_str("\n\nFor more details, if this happens repeatedly, please run the game with the `--debug` flag to enable debug mode and get a more detailed panic report. This will provide more information about the panic, which can help us identify and fix the underlying issue.");
-                    }
-            }
-            else {
+                report.push_str(" We are sorry about that.");
+                if let Some(location) = file_path {
+                    report.push_str(
+                        format!("\n\nWe have generated a panic report at {:#?}.", location)
+                            .as_str()
+                    );
+                    report.push_str("\nPlease consider sending this report to the developers to help us fix this issue at <explorablescience@gmail.com>.");
+                }
+                let args = std::env::args().collect::<Vec<_>>();
+                if !args.iter().any(|arg| arg == "--debug") {
+                    report.push_str("\n\nFor more details, if this happens repeatedly, please run the game with the `--debug` flag to enable debug mode and get a more detailed panic report. This will provide more information about the panic, which can help us identify and fix the underlying issue.");
+                }
+            } else {
                 report.push_str("Panic occurred in WaterDropEngine.\n");
-                report.push_str(format!("{}\n", infos.location().unwrap_or_else(|| std::panic::Location::caller())).as_str());
+                report.push_str(
+                    format!(
+                        "{}\n",
+                        infos
+                            .location()
+                            .unwrap_or_else(|| std::panic::Location::caller())
+                    )
+                    .as_str()
+                );
                 report.push_str(format!("  {panic_message}").as_str());
             }
             error!("{}", report);
@@ -103,7 +129,13 @@ struct ReportData {
     panic_message: String
 }
 impl ReportData {
-    fn from(metadata: Metadata, system_data: SystemData, backtrace: String, engine_logs: Vec<String>, panic_message: String) -> Self {
+    fn from(
+        metadata: Metadata,
+        system_data: SystemData,
+        backtrace: String,
+        engine_logs: Vec<String>,
+        panic_message: String
+    ) -> Self {
         Self {
             name: metadata.name,
             version: metadata.version,
@@ -126,9 +158,9 @@ struct SystemInfo {
     os_version: Option<String>,
     host_name: Option<String>,
     total_memory: u64, // in bytes
-    used_memory: u64, // in bytes
-    total_swap: u64, // in bytes
-    used_swap: u64, // in bytes
+    used_memory: u64,  // in bytes
+    total_swap: u64,   // in bytes
+    used_swap: u64,    // in bytes
     cpus: CPUInfo
 }
 #[derive(Debug, serde::Serialize)]
@@ -141,8 +173,8 @@ struct CPUInfo {
 #[derive(Debug, serde::Serialize)]
 struct NetworkInfo {
     name: String,
-    total_received: u64, // in bytes
-    total_transmitted: u64 // in bytes
+    total_received: u64,    // in bytes
+    total_transmitted: u64  // in bytes
 }
 #[derive(Debug, serde::Serialize)]
 struct SystemData {
@@ -166,17 +198,29 @@ fn get_system_data() -> SystemData {
         used_swap: sys.used_swap(),
         cpus: CPUInfo {
             count: sys.cpus().len(),
-            brand: sys.cpus().first().map_or_else(|| "Unknown".into(), |cpu| cpu.brand().to_string()),
+            brand: sys
+                .cpus()
+                .first()
+                .map_or_else(|| "Unknown".into(), |cpu| cpu.brand().to_string()),
             frequency: sys.cpus().first().map_or(0, |cpu| cpu.frequency())
         }
     };
-    let disks = sysinfo::Disks::new_with_refreshed_list().iter().map(|disk| format!("{:?}", disk)).collect();
-    let networks = sysinfo::Networks::new_with_refreshed_list().iter().map(|(interface_name, ntw_data)| NetworkInfo {
-        name: interface_name.clone(),
-        total_received: ntw_data.total_received(),
-        total_transmitted: ntw_data.total_transmitted()
-    }).collect();
-    let components = sysinfo::Components::new_with_refreshed_list().iter().map(|component| format!("{:?}", component)).collect();
+    let disks = sysinfo::Disks::new_with_refreshed_list()
+        .iter()
+        .map(|disk| format!("{:?}", disk))
+        .collect();
+    let networks = sysinfo::Networks::new_with_refreshed_list()
+        .iter()
+        .map(|(interface_name, ntw_data)| NetworkInfo {
+            name: interface_name.clone(),
+            total_received: ntw_data.total_received(),
+            total_transmitted: ntw_data.total_transmitted()
+        })
+        .collect();
+    let components = sysinfo::Components::new_with_refreshed_list()
+        .iter()
+        .map(|component| format!("{:?}", component))
+        .collect();
     SystemData {
         system_info,
         disks,
@@ -213,7 +257,7 @@ fn render_backtrace() -> String {
                             Some(s),
                             s.name()
                                 .map(|n| n.to_string())
-                                .unwrap_or_else(|| "<unknown>".to_owned()),
+                                .unwrap_or_else(|| "<unknown>".to_owned())
                         )
                     })
                     .collect::<Vec<_>>()
@@ -245,4 +289,3 @@ fn render_backtrace() -> String {
 
     backtrace
 }
-

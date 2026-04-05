@@ -21,14 +21,14 @@ pub struct RayCastConfig {
     pub solid: bool,
     /// Filter to selectively include/exclude colliders from the raycast.
     /// See `QueryFilter` documentation for filtering options.
-    pub filter: RayQueryFilter<'static>,
+    pub filter: RayQueryFilter<'static>
 }
 impl Default for RayCastConfig {
     fn default() -> Self {
         RayCastConfig {
             max_toi: f32::MAX,
             solid: true,
-            filter: RayQueryFilter::default(),
+            filter: RayQueryFilter::default()
         }
     }
 }
@@ -52,17 +52,17 @@ impl Default for RayCastConfig {
 pub struct Ray(pub(crate) rapier3d::prelude::Ray);
 impl Ray {
     /// Create a new ray from an origin and direction.
-    /// 
+    ///
     /// # Arguments
     /// * `origin` - The origin point of the ray.
     /// * `dir` - The direction vector of the ray.
-    /// 
+    ///
     /// # Returns
     /// A new `Ray` in world space.
     pub fn new(origin: Vec3, dir: Vec3) -> Self {
         Ray(rapier3d::prelude::Ray::new(
             rapier3d::prelude::Point::new(origin.x, origin.y, origin.z),
-            rapier3d::prelude::Vector::new(dir.x, dir.y, dir.z),
+            rapier3d::prelude::Vector::new(dir.x, dir.y, dir.z)
         ))
     }
 
@@ -71,13 +71,13 @@ impl Ray {
     /// This is useful for mouse picking and screen-space raycasting. The ray originates
     /// at the camera position and points in the direction corresponding to the given
     /// screen coordinates.
-    /// 
+    ///
     /// # Arguments
     /// * `ndc_pos` - Normalized screen position (0.0 to 1.0 range, where (0,0) is top-left).
     /// * `aspect_ratio` - The viewport aspect ratio (width / height).
     /// * `camera_transform` - The world transform of the camera.
     /// * `camera_view` - The camera's view settings (FOV, near/far planes).
-    /// 
+    ///
     /// # Returns
     /// A new `Ray` originating from the camera and pointing through the screen position.
     ///
@@ -119,10 +119,10 @@ impl Ray {
     }
 
     /// Get a point along the ray at time of impact (toi).
-    /// 
+    ///
     /// # Arguments
     /// * `toi` - The time of impact along the ray.
-    /// 
+    ///
     /// # Returns
     /// A point in world space at the specified time of impact.
     pub fn point_at(&self, toi: f32) -> Vec3 {

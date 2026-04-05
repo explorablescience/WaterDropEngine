@@ -1,7 +1,7 @@
 //! GLTF (GL Transmission Format) model loader and parser for WaterDropEngine.
 //! This crate provides functionality to load and parse glTF 2.0 files,
 //! converting them into Bevy-compatible mesh and material assets for rendering.
-//! 
+//!
 //! # Features
 //! - Load glTF files from disk.
 //! - Parse glTF structures including buffers, meshes, accessors, and materials.
@@ -17,36 +17,36 @@
 //!         GltfLoader::spawn(Transform::from_scale(Vec3::ONE * 10.0), commands, &gltf_model);
 //!     }
 //! }
-//! ``` 
+//! ```
 #![allow(clippy::too_many_arguments)]
 
-use wde_logger::prelude::*;
-use wde_renderer::prelude::*;
-use wde_pbr::prelude::*;
 use bevy::prelude::*;
+use wde_logger::prelude::*;
+use wde_pbr::prelude::*;
+use wde_renderer::prelude::*;
 
 pub mod prelude {
     pub use crate::GltfAsset;
-    pub use crate::GltfLoader;
     pub use crate::GltfError;
+    pub use crate::GltfLoader;
 }
 
-mod model;
-mod material;
-mod parser;
-mod loader;
 mod accessor;
 mod error;
+mod loader;
+mod material;
+mod model;
+mod parser;
 
 pub use error::GltfError;
 
 /// Representation of a 3D GLTF model asset.
-/// 
+///
 /// # Fields
 /// - `path`: The path to the glTF file.
 /// - `models`: The list of parsed glTF models. Each model is represented by a mesh and its associated material.
 ///   Node transforms are baked directly into the mesh vertices.
-/// 
+///
 /// # Example
 /// ```rust,no_run
 /// let gltf_asset = GltfLoader::load("models/model.gltf", &asset_server).unwrap();
@@ -60,15 +60,15 @@ pub struct GltfAsset {
     /// The list of parsed glTF models. Each model is represented by a mesh and its associated material.
     /// Node transforms are baked directly into the mesh vertices.
     /// Format: (mesh_handle, material_handle)
-    pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>,
+    pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>
 }
 
 /// Manager to load glTF models into the Bevy world.
-/// 
+///
 /// # Methods
 /// - `load`: Load a glTF file and register its models and materials into the Bevy world.
 ///   Returns a loaded `GltfAsset` which contains handles to the meshes and materials.
-/// 
+///
 /// # Example
 /// ```rust,no_run
 /// let gltf_asset = GltfLoader::load("models/model.gltf", &asset_server).unwrap();
@@ -77,17 +77,14 @@ pub struct GltfLoader;
 impl GltfLoader {
     /// Load a glTF file and register its models and materials into the Bevy world.
     /// Returns a loaded `GltfAsset` which contains handles to the meshes and materials.
-    /// 
+    ///
     /// # Arguments
     /// - `path`: Path to the glTF file.
     /// - `asset_server`: Reference to the Bevy asset server for loading assets.
-    /// 
+    ///
     /// # Returns
     /// - `Result<GltfAsset, GltfError>`: On success, returns the loaded `GltfAsset`. On failure, returns a `GltfError`.
-    pub fn load(
-        path: &str,
-        asset_server: &AssetServer
-    ) -> Result<GltfAsset, GltfError> {
+    pub fn load(path: &str, asset_server: &AssetServer) -> Result<GltfAsset, GltfError> {
         debug!("Loading glTF model {}.", path);
 
         // Parse the glTF file
@@ -95,7 +92,13 @@ impl GltfLoader {
 
         // Form and load the model into the Bevy world
         let (materials, meshes, bounding_boxes) = loader::form_models(&model)?;
-        let gltf_asset = loader::load_models(&model.path, &materials, &meshes, &bounding_boxes, asset_server);
+        let gltf_asset = loader::load_models(
+            &model.path,
+            &materials,
+            &meshes,
+            &bounding_boxes,
+            asset_server
+        );
         Ok(gltf_asset)
     }
 }

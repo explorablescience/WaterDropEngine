@@ -1,12 +1,27 @@
 use std::collections::HashMap;
 
+use crate::{
+    assets::bindings::{
+        builder::{RenderBindingBuilderType, RenderBindingsBuilderCache},
+        dummy_texture::DummyTexture
+    },
+    prelude::*
+};
+use bevy::{
+    ecs::system::{
+        ScheduleSystem, SystemParamItem,
+        lifetimeless::{SRes, SResMut}
+    },
+    prelude::*
+};
 use wde_logger::prelude::*;
-use bevy::{ecs::system::{ScheduleSystem, SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
-use crate::{assets::{bindings::{builder::{RenderBindingBuilderType, RenderBindingsBuilderCache}, dummy_texture::DummyTexture}}, prelude::*};
 
 // Reexport wgpu types
-pub use wde_wgpu::buffer::{BufferUsage, BufferBindingType};
-pub use wde_wgpu::bind_group::{WgpuBindGroupLayout, BindGroupBuilder, BindGroupLayout, WgpuBindGroup as BindGroup, BindGroupLayoutBuilder};
+pub use wde_wgpu::bind_group::{
+    BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup as BindGroup,
+    WgpuBindGroupLayout
+};
+pub use wde_wgpu::buffer::{BufferBindingType, BufferUsage};
 
 /// Alias for a `SRes<RenderAssets<GpuRenderBinding<M>>>`.
 pub type SBinding<M> = SRes<RenderAssets<GpuRenderBinding<M>>>;
@@ -25,23 +40,31 @@ impl<M: RenderBinding> RenderBindingPluginRegister<M> {
     /// Create the plugin with a custom initialization system, that can be used to insert the corresponding [`RenderBindingHolder`] resource with a handle to a custom created asset.
     pub fn with_init<S>(init: impl IntoScheduleConfigs<ScheduleSystem, S>, app: &mut App) -> Self {
         app.add_systems(Startup, init);
-        Self { _phantom: std::marker::PhantomData, default_init: false }
+        Self {
+            _phantom: std::marker::PhantomData,
+            default_init: false
+        }
     }
 }
 impl<M: RenderBinding> Default for RenderBindingPluginRegister<M> {
     /// Create the plugin with a default initialization, that inserts the corresponding [`RenderBindingHolder`] resource with a handle to a default created asset.
-    fn default() -> Self { RenderBindingPluginRegister { _phantom: std::marker::PhantomData, default_init: true } }
+    fn default() -> Self {
+        RenderBindingPluginRegister {
+            _phantom: std::marker::PhantomData,
+            default_init: true
+        }
+    }
 }
 impl<M: RenderBinding + Default> Plugin for RenderBindingPluginRegister<M> {
     fn build(&self, app: &mut App) {
-        app
-            .init_asset::<M>()
+        app.init_asset::<M>()
             .add_plugins(RenderAssetsPlugin::<GpuRenderBinding<M>>::default());
     }
     fn finish(&self, app: &mut App) {
         if self.default_init {
             let binding: Handle<M> = app.world_mut().add_asset(M::default());
-            app.get_sub_app_mut(RenderApp).unwrap()
+            app.get_sub_app_mut(RenderApp)
+                .unwrap()
                 .insert_resource(RenderBindingHolder(binding));
         }
     }
@@ -53,7 +76,9 @@ pub trait RenderBinding: Asset + Clone + Sized {
     /// Describe buffers, textures and samplers that make up this render bind group.
     /// Use the provided [`RenderBindingBuilder`] to add entries at specific bindings that correspond to the shader's expected layout.
     fn describe(&self, builder: &mut RenderBindingBuilder);
-    fn label(&self) -> &str { std::any::type_name::<Self>() }
+    fn label(&self) -> &str {
+        std::any::type_name::<Self>()
+    }
 }
 
 /// Represents a GPU material asset prepared from a [`RenderBinding`].
@@ -73,8 +98,12 @@ impl<M: RenderBinding> GpuRenderBinding<M> {
     /// Get the GPU buffer asset id for a given binding, if it exists.
     pub fn get_buffer(&self, binding: u32) -> Option<AssetId<Buffer>> {
         if let Some(index) = self.builder_bindings_to_index.get(&binding)
-            && let RenderBindingBuilderType::Buffer = self.builder.elements[*index].0 {
-            return self.builder.buffers[*index].2.as_ref().map(|handle| handle.id());
+            && let RenderBindingBuilderType::Buffer = self.builder.elements[*index].0
+        {
+            return self.builder.buffers[*index]
+                .2
+                .as_ref()
+                .map(|handle| handle.id());
         }
         None
     }
@@ -83,10 +112,16 @@ impl<M: RenderBinding> GpuRenderBinding<M> {
         if let Some(index) = self.builder_bindings_to_index.get(&binding) {
             match self.builder.elements[*index].0 {
                 RenderBindingBuilderType::TextureView => {
-                    return self.builder.texture_views[*index].texture.as_ref().map(|handle| handle.id());
+                    return self.builder.texture_views[*index]
+                        .texture
+                        .as_ref()
+                        .map(|handle| handle.id());
                 }
                 RenderBindingBuilderType::TextureSampler => {
-                    return self.builder.texture_samplers[*index].texture.as_ref().map(|handle| handle.id());
+                    return self.builder.texture_samplers[*index]
+                        .texture
+                        .as_ref()
+                        .map(|handle| handle.id());
                 }
                 _ => {}
             }
@@ -97,20 +132,25 @@ impl<M: RenderBinding> GpuRenderBinding<M> {
 impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
     type SourceAsset = M;
     type Params = (
-        SRes<RenderInstance>, SResMut<RenderBindingsBuilderCache>, SRes<AssetServer>,
-        SRes<DummyTexture>, SRes<RenderAssets<GpuBuffer>>, SRes<RenderAssets<GpuTexture>>
+        SRes<RenderInstance>,
+        SResMut<RenderBindingsBuilderCache>,
+        SRes<AssetServer>,
+        SRes<DummyTexture>,
+        SRes<RenderAssets<GpuBuffer>>,
+        SRes<RenderAssets<GpuTexture>>
     );
 
     fn prepare(
-            asset: Self::SourceAsset,
-            (render_instance, renderbinding_cache, assets_server, dummy_texture, buffers, textures): &mut SystemParamItem<Self::Params>
-        ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        asset: Self::SourceAsset,
+        (render_instance, renderbinding_cache, assets_server, dummy_texture, buffers, textures): &mut SystemParamItem<Self::Params>
+    ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         let render_instance = render_instance.0.read().unwrap();
         let label = asset.label();
         let binding_label = format!("{}-{}", std::any::type_name::<M>(), label);
 
         // Get or create render bind groups builder
-        let mut bindings_builder = if let Some(builder) = renderbinding_cache.remove(&binding_label) {
+        let mut bindings_builder = if let Some(builder) = renderbinding_cache.remove(&binding_label)
+        {
             builder
         } else {
             let mut builder = RenderBindingBuilder::default();
@@ -150,15 +190,18 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
 
                     if let Some(ref texture_handle) = texture.texture {
                         if let Some(tex) = textures.get(texture_handle) {
-                            bg_entries.push(BindGroupBuilder::texture_view(texture.binding, &tex.texture));
+                            bg_entries.push(BindGroupBuilder::texture_view(
+                                texture.binding,
+                                &tex.texture
+                            ));
                         } else {
                             renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
                             return Err(PrepareAssetError::RetryNextUpdate(asset));
                         }
-                    }
-                    else {
+                    } else {
                         // Set dummy texture
-                        bindings_builder.texture_views[*binding_index as usize].texture = Some(dummy_texture.0.clone());
+                        bindings_builder.texture_views[*binding_index as usize].texture =
+                            Some(dummy_texture.0.clone());
                         renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
                         return Err(PrepareAssetError::RetryNextUpdate(asset));
                     }
@@ -169,15 +212,18 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
 
                     if let Some(ref texture_handle) = texture.texture {
                         if let Some(tex) = textures.get(texture_handle) {
-                            bg_entries.push(BindGroupBuilder::texture_sampler(texture.binding, &tex.texture));
+                            bg_entries.push(BindGroupBuilder::texture_sampler(
+                                texture.binding,
+                                &tex.texture
+                            ));
                         } else {
                             renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
                             return Err(PrepareAssetError::RetryNextUpdate(asset));
                         }
-                    }
-                    else {
+                    } else {
                         // Set dummy texture
-                        bindings_builder.texture_samplers[*binding_index as usize].texture = Some(dummy_texture.0.clone());
+                        bindings_builder.texture_samplers[*binding_index as usize].texture =
+                            Some(dummy_texture.0.clone());
                         renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
                         return Err(PrepareAssetError::RetryNextUpdate(asset));
                     }
@@ -197,7 +243,10 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
                         } else if buffer.1.usage.contains(BufferUsage::STORAGE) {
                             BufferBindingType::Storage { read_only: true }
                         } else {
-                            error!("Buffer at binding {} has no usage flag, defaulting to UNIFORM.", buffer.0);
+                            error!(
+                                "Buffer at binding {} has no usage flag, defaulting to UNIFORM.",
+                                buffer.0
+                            );
                             BufferBindingType::Uniform
                         };
                         builder.add_buffer(buffer.0, ShaderStages::all(), binding_type);
@@ -205,8 +254,13 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
                     RenderBindingBuilderType::TextureView => {
                         let view = &bindings_builder.texture_views[*material_index as usize];
                         if let Some(ref texture_handle) = view.texture
-                            && let Some(tex) = textures.get(texture_handle) {
-                            builder.add_texture_view(view.binding, view.visibility, tex.texture.sample_count > 1);
+                            && let Some(tex) = textures.get(texture_handle)
+                        {
+                            builder.add_texture_view(
+                                view.binding,
+                                view.visibility,
+                                tex.texture.sample_count > 1
+                            );
                         } else {
                             is_err = true;
                         }
@@ -232,12 +286,13 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
         };
 
         // Create bind group
-        let bind_group = match BindGroupBuilder::build(label, &render_instance, &layout_built, &bg_entries) {
-            Ok(bind_group) => bind_group,
-            Err(_) => {
-                return Err(PrepareAssetError::RetryNextUpdate(asset));
-            }
-        };
+        let bind_group =
+            match BindGroupBuilder::build(label, &render_instance, &layout_built, &bg_entries) {
+                Ok(bind_group) => bind_group,
+                Err(_) => {
+                    return Err(PrepareAssetError::RetryNextUpdate(asset));
+                }
+            };
 
         // Return GPU asset
         Ok(GpuRenderBinding {
@@ -249,5 +304,7 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
         })
     }
 
-    fn label(&self) -> &str { &self.builder.label }
+    fn label(&self) -> &str {
+        &self.builder.label
+    }
 }

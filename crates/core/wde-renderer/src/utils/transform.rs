@@ -10,33 +10,59 @@ pub struct TransformUniform {
 impl TransformUniform {
     /// Create a new transform uniform.
     pub fn new(transform: &Transform) -> Self {
-        Self { object_to_world: Self::transform_obj_to_world(transform).to_cols_array_2d() }
+        Self {
+            object_to_world: Self::transform_obj_to_world(transform).to_cols_array_2d()
+        }
     }
 
     /// Get the matrix transform from object space to world space (translate * rotate * scale).
     #[inline]
     pub fn transform_obj_to_world(transform: &Transform) -> Mat4 {
-        Mat4::from_scale_rotation_translation(transform.scale, transform.rotation, transform.translation)
+        Mat4::from_scale_rotation_translation(
+            transform.scale,
+            transform.rotation,
+            transform.translation
+        )
     }
     /// Get the matrix transform from world space to object space (translate * rotate * scale)^(-1).
     #[inline]
     pub fn transform_world_to_obj(transform: &Transform) -> Mat4 {
-        Mat4::from_scale_rotation_translation(transform.scale, transform.rotation, transform.translation).inverse()
+        Mat4::from_scale_rotation_translation(
+            transform.scale,
+            transform.rotation,
+            transform.translation
+        )
+        .inverse()
     }
 
     /// Get the forward vector (z axis) that the object is facing.
     #[inline]
     pub fn forward(transform: Transform) -> Vec3 {
-        transform.rotation * Vec3 { x: 0.0, y: 0.0, z: 1.0 }
+        transform.rotation
+            * Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0
+            }
     }
     /// Get the right vector (x axis) that the object is facing.
     #[inline]
     pub fn right(transform: Transform) -> Vec3 {
-        transform.rotation * Vec3 { x: 1.0, y: 0.0, z: 0.0 }
+        transform.rotation
+            * Vec3 {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0
+            }
     }
     /// Get the up vector (y axis) that the object is facing.
     #[inline]
     pub fn up(transform: Transform) -> Vec3 {
-        transform.rotation * Vec3 { x: 0.0, y: 1.0, z: 0.0 }
+        transform.rotation
+            * Vec3 {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0
+            }
     }
 }

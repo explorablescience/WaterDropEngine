@@ -1,32 +1,32 @@
 //! The renderer module is responsible for rendering the scene.
-//! 
+//!
 //! It extracts the main world into the render world and runs the render schedule.
 //! It provides the [`Render`] and the [`Extract`] schedule, of the [`RenderApp`] (see [`RenderSet`] for the sets of the render schedule).
 //! It also provides multiple resources, such as the [`RenderInstance`] and the [`SwapchainFrame`], which are used by the render graph and the render pipelines.
 //! Lastly, it also handles window events, such as resizing, and sends the corresponding events to the render app.
-//! 
-//! 
+//!
+//!
 //! # Render resources
 //! - The render instance is stored in the [`RenderInstance`] resource (available in the render app), which is an Arc<RwLock<>> to allow parallelism in the render app.
 //! - The current swap chain frame is stored in the [`SwapchainFrame`] resource (available in the render app).
 //! - The device limits are stored in the [`DeviceLimits`] resource (available in both the main app and the render app).
-//! 
-//! 
+//!
+//!
 //! # Simple render system
 //! To add a simple render system, you can add a system to the render schedule. For example, to update the camera buffer before rendering, you can add a system to the `RenderSet::Prepare` set of the render schedule:
 //! ```
 //! app.get_sub_app_mut(RenderApp).unwrap()
 //!     .add_systems(Render, update_camera_buffer.in_set(RenderSet::Prepare));
 //! ```
-//! 
-//! 
+//!
+//!
 //! # Extract phase
 //! ## Extracting data from the main world
 //! As the render app runs in a separate thread from the main app, it cannot access the main world directly. To extract data from the main world, you can use the extract schedule and the [`ExtractWorld`] system parameter. For example, to extract the camera data from the main world, you can add a system to the extract schedule:
 //! ```
 //! app.get_sub_app_mut(RenderApp).unwrap()
 //!     .add_systems(Extract, extract_camera_data);
-//! 
+//!
 //! fn extract_camera_data(mut commands: Commands, camera_query: ExtractWorld<Query<&Camera>>) {
 //!     let camera = camera_query.single();
 //!     commands.insert_resource(ExtractedCameraData {
@@ -34,7 +34,7 @@
 //!     });
 //! }
 //! ```
-//! 
+//!
 //! ## Extracting while mutating the main world
 //! If you need to extract data from the main world while also mutating it, you can use the [`MainWorld`] resource:
 //! ```
@@ -45,7 +45,7 @@
 //!    /* (...) */
 //! }
 //! ```
-//! 
+//!
 //! ## Extracting plugins
 //! If you have a plugin that has resources that need to be extracted, you can implement the [`ExtractResource`] trait for those resources and add the corresponding [`ExtractResourcePlugin`] to your plugin. For example, if you have a plugin with a resource `MyResource`, you can do:
 //! ```
@@ -54,15 +54,15 @@
 //!     .add_plugins(ExtractResourcePlugin::<MyResource>::default());
 //! ```
 //! This will automatically add a system to extract `MyResource` from the main world to the render world, as long as you implement the `ExtractResource` trait for `MyResource`.
-//! 
-//! 
+//!
+//!
 //! # Window events
 //! The renderer also handles window events, such as resizing. If the window is resized, an event of type [`SurfaceResized`] is sent to the main and render app, which contains the new width and height of the window in physical pixels.
 //! To listen to these events, you can do:
 //! ```
 //! app.get_sub_app_mut(RenderApp).unwrap()
 //!     .add_systems(Render, handle_resize_events);
-//! 
+//!
 //! fn handle_resize_events(mut window_resized_events: MessageReader<SurfaceResized>) {
 //!     for event in window_resized_events.read() {
 //!         // Handle the resize event
@@ -70,27 +70,38 @@
 //! }
 //! ```
 
-mod window;
 mod extract;
+mod extract_macros;
 mod extract_plugin_resource;
 mod render_manager;
-mod extract_macros;
 mod render_multithread;
+mod window;
 
-pub use window::SurfaceResized;
 pub use extract_macros::ExtractWorld;
 pub use extract_plugin_resource::*;
+pub use window::SurfaceResized;
 
-use bevy::{app::AppLabel, ecs::{schedule::{ScheduleBuildSettings, ScheduleLabel}, system::SystemState}, prelude::*, tasks::futures_lite, window::{PrimaryWindow, RawHandleWrapperHolder}};
+use bevy::{
+    app::AppLabel,
+    ecs::{
+        schedule::{ScheduleBuildSettings, ScheduleLabel},
+        system::SystemState
+    },
+    prelude::*,
+    tasks::futures_lite,
+    window::{PrimaryWindow, RawHandleWrapperHolder}
+};
 use extract::{apply_extract_commands, main_extract};
 use render_manager::{init_main_world, init_surface, prepare, present};
 use render_multithread::PipelinedRenderingPlugin;
-use wde_wgpu::instance::{create_instance, Limits, RenderTexture};
-use window::{extract_surface_size, send_surface_resized, WindowPlugins};
-use std::{ops::{Deref, DerefMut}, sync::{Arc, RwLock}};
+use std::{
+    ops::{Deref, DerefMut},
+    sync::{Arc, RwLock}
+};
+use wde_wgpu::instance::{Limits, RenderTexture, create_instance};
+use window::{WindowPlugins, extract_surface_size, send_surface_resized};
 
 use crate::passes::{PipelineManagerPlugin, RenderGraph};
-
 
 /// Stores the main world for rendering as a resource.
 /// This resource is only available during the extract schedule and is used to move data from the main world to the render world.
@@ -99,17 +110,19 @@ use crate::passes::{PipelineManagerPlugin, RenderGraph};
 pub struct MainWorld(World);
 impl Deref for MainWorld {
     type Target = World;
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 impl DerefMut for MainWorld {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 /// Used to avoid allocating new worlds every frame when swapping out worlds.
 #[derive(Resource, Default)]
 struct EmptyWorld(World);
-
-
 
 /// The schedule that is used to extract the main world into the render world.
 /// Configure it such that it skips applying commands during the extract schedule.
@@ -144,14 +157,17 @@ impl Render {
         use RenderSet::*;
 
         let mut schedule = Schedule::new(Self);
-        schedule.configure_sets((
-            ExtractAuto,
-            PrepareAssets,
-            Prepare,
-            BindGroups,
-            Render,
-            Submit
-        ).chain());
+        schedule.configure_sets(
+            (
+                ExtractAuto,
+                PrepareAssets,
+                Prepare,
+                BindGroups,
+                Render,
+                Submit
+            )
+                .chain()
+        );
 
         schedule
     }
@@ -173,7 +189,7 @@ pub struct DeviceLimits(pub Limits);
 /// It is wrapped in an Option because there may not be a frame available at all times (e.g. when the window is minimized). It is also wrapped in a resource to avoid borrowing issues when accessing it from different systems.
 #[derive(Resource, Default)]
 pub struct SwapchainFrame {
-    pub data: Option<RenderTexture>,
+    pub data: Option<RenderTexture>
 }
 
 /// The plugin that is responsible for the renderer.
@@ -182,15 +198,12 @@ impl Plugin for RenderCorePlugin {
     fn build(&self, app: &mut App) {
         // === MAIN APP ===
         // Add window
-        app
-            .add_plugins(WindowPlugins)
+        app.add_plugins(WindowPlugins)
             .add_message::<SurfaceResized>()
             .add_systems(Update, send_surface_resized);
 
         // Add empty world component
         app.add_systems(Startup, init_main_world);
-
-
 
         // === RENDER APP ===
         let mut render_app = SubApp::new();
@@ -198,7 +211,9 @@ impl Plugin for RenderCorePlugin {
         {
             // Create the wgpu instance
             render_app.insert_resource(futures_lite::future::block_on(async {
-                let mut system_state: SystemState<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>> = SystemState::new(app.world_mut());
+                let mut system_state: SystemState<
+                    Query<&RawHandleWrapperHolder, With<PrimaryWindow>>
+                > = SystemState::new(app.world_mut());
                 let primary_window = system_state.get(app.world()).single().ok().cloned();
 
                 // Create the instance
@@ -229,8 +244,10 @@ impl Plugin for RenderCorePlugin {
 
             // Add extract command systems
             render_app
-                .add_systems(Render, 
-                    apply_extract_commands.in_set(RenderSet::ExtractAuto)) // Apply the extract commands
+                .add_systems(
+                    Render,
+                    apply_extract_commands.in_set(RenderSet::ExtractAuto)
+                ) // Apply the extract commands
                 .set_extract(main_extract); // Register the extract commands
 
             // Add render graph system
@@ -239,7 +256,10 @@ impl Plugin for RenderCorePlugin {
                 .add_systems(Render, RenderGraph::render.in_set(RenderSet::Render));
 
             // Init wgpu instance
-            render_app.add_systems(Extract, (init_surface.run_if(run_once), extract_surface_size).chain());
+            render_app.add_systems(
+                Extract,
+                (init_surface.run_if(run_once), extract_surface_size).chain()
+            );
 
             // Add present system
             render_app
@@ -247,8 +267,7 @@ impl Plugin for RenderCorePlugin {
                 .add_systems(Render, present.in_set(RenderSet::Submit));
 
             // Add render plugins
-            render_app
-                .add_plugins(PipelineManagerPlugin);
+            render_app.add_plugins(PipelineManagerPlugin);
         }
 
         // Register the render app
@@ -256,10 +275,11 @@ impl Plugin for RenderCorePlugin {
 
         // Add the GPU limits
         app.insert_resource(DeviceLimits(gpu_limits.as_ref().unwrap().clone()));
-        app.get_sub_app_mut(RenderApp).unwrap().insert_resource(DeviceLimits(gpu_limits.unwrap()));
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .insert_resource(DeviceLimits(gpu_limits.unwrap()));
 
         // Add the render pipeline plugins
-        app
-            .add_plugins(PipelinedRenderingPlugin);
+        app.add_plugins(PipelinedRenderingPlugin);
     }
 }

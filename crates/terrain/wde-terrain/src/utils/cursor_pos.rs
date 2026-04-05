@@ -1,6 +1,6 @@
-use wde_physics::prelude::*;
-use wde_camera::prelude::*;
 use bevy::{prelude::*, window::PrimaryWindow};
+use wde_camera::prelude::*;
+use wde_physics::prelude::*;
 use wde_renderer::prelude::ExtractWorld;
 
 /// Position of the cursor in world space, updated every frame by casting a ray from the camera to the terrain and finding the intersection point.
@@ -17,11 +17,15 @@ impl TerrainCursorPos {
         mut terrain_cursor_pos: ResMut<TerrainCursorPos>
     ) {
         // Get cursor position in NDC
-        let Some(cursor_pos) = window.cursor_position() else { return };
+        let Some(cursor_pos) = window.cursor_position() else {
+            return;
+        };
         let cursor_ndc = cursor_pos / window.size();
 
         // Get camera data
-        let Ok((camera_transform, camera_view)) = camera_query.single() else { return };
+        let Ok((camera_transform, camera_view)) = camera_query.single() else {
+            return;
+        };
         let aspect_ratio = window.size().x / window.size().y;
 
         // Create ray from camera

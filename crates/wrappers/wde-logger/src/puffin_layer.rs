@@ -5,14 +5,14 @@ use std::{cell::RefCell, collections::VecDeque};
 use bevy::prelude::*;
 use puffin::ThreadProfiler;
 use tracing::{
-    span::{Attributes, Record},
     Id, Subscriber,
+    span::{Attributes, Record}
 };
 use tracing_subscriber::{
-    fmt::{format::DefaultFields, FormatFields, FormattedFields},
-    layer::Context,
-    registry::LookupSpan,
     Layer,
+    fmt::{FormatFields, FormattedFields, format::DefaultFields},
+    layer::Context,
+    registry::LookupSpan
 };
 
 thread_local! {
@@ -29,7 +29,7 @@ struct PuffinScopeId(puffin::ScopeId);
 
 /// A tracing layer that collects data for puffin.
 pub struct PuffinLayer<F = DefaultFields> {
-    fmt: F,
+    fmt: F
 }
 impl Default for PuffinLayer<DefaultFields> {
     fn default() -> Self {
@@ -39,14 +39,14 @@ impl Default for PuffinLayer<DefaultFields> {
 impl PuffinLayer<DefaultFields> {
     pub fn new() -> Self {
         Self {
-            fmt: DefaultFields::default(),
+            fmt: DefaultFields::default()
         }
     }
 }
 impl<S: Subscriber, F> Layer<S> for PuffinLayer<F>
 where
     S: Subscriber + for<'a> LookupSpan<'a>,
-    F: for<'writer> FormatFields<'writer> + 'static,
+    F: for<'writer> FormatFields<'writer> + 'static
 {
     fn on_new_span(&self, attrs: &Attributes<'_>, id: &Id, ctx: Context<'_, S>) {
         if let Some(span) = ctx.span(id) {

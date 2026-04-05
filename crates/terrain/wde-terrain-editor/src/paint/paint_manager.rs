@@ -1,11 +1,15 @@
 use std::collections::HashSet;
 
-use wde_physics::prelude::*;
+use bevy::{
+    input::{ButtonState, mouse::MouseButtonInput},
+    prelude::*,
+    window::PrimaryWindow
+};
 use wde_camera::prelude::*;
+use wde_physics::prelude::*;
 use wde_terrain::prelude::*;
-use bevy::{input::{ButtonState, mouse::MouseButtonInput}, prelude::*, window::PrimaryWindow};
 
-use crate::paint::brush::{PaintCommand, PaintBrush};
+use crate::paint::brush::{PaintBrush, PaintCommand};
 
 // Number of commands after which we automatically flush
 const FLUSH_ON_N_COMMANDS: usize = 50;
@@ -17,8 +21,7 @@ const MIN_DT_BETWEEN_COMMANDS: f32 = 0.01;
 pub struct PaintManagerPlugin;
 impl Plugin for PaintManagerPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<PaintManager>()
+        app.init_resource::<PaintManager>()
             .add_systems(PreUpdate, flush_commands)
             .add_systems(Update, add_paint_command.chain());
     }
@@ -61,7 +64,6 @@ impl PaintManager {
     }
 }
 
-
 /// Check for mouse input and add paint commands to the list
 #[allow(clippy::too_many_arguments)]
 fn add_paint_command(
@@ -74,7 +76,7 @@ fn add_paint_command(
     terrain: Query<&Terrain>,
     time: Res<Time>,
     mut last_update: Local<Option<f32>>,
-    mut last_flush: Local<Option<f32>>,
+    mut last_flush: Local<Option<f32>>
 ) {
     // Check if active
     if !paint_manager.active {
@@ -102,15 +104,23 @@ fn add_paint_command(
     *last_update = Some(time.elapsed_secs());
 
     // Check if we have a brush and terrain
-    let Ok(brush) = brush_query.single() else { return };
-    let Ok(terrain) = terrain.single() else { return };
+    let Ok(brush) = brush_query.single() else {
+        return;
+    };
+    let Ok(terrain) = terrain.single() else {
+        return;
+    };
 
     // Get cursor position in NDC
-    let Some(cursor_pos) = window.cursor_position() else { return };
+    let Some(cursor_pos) = window.cursor_position() else {
+        return;
+    };
     let cursor_ndc = cursor_pos / window.size();
 
     // Get camera data
-    let Ok((camera_transform, camera_view)) = camera_query.single() else { return };
+    let Ok((camera_transform, camera_view)) = camera_query.single() else {
+        return;
+    };
     let aspect_ratio = window.size().x / window.size().y;
 
     // Create ray from camera
@@ -123,9 +133,15 @@ fn add_paint_command(
 
         // Compute new position (interpolate)
         let neighbors = [
-            IVec2::new(-1, -1), IVec2::new(0, -1), IVec2::new(1, -1),
-            IVec2::new(-1, 0), IVec2::new(0, 0), IVec2::new(1, 0),
-            IVec2::new(-1, 1), IVec2::new(0, 1), IVec2::new(1, 1),
+            IVec2::new(-1, -1),
+            IVec2::new(0, -1),
+            IVec2::new(1, -1),
+            IVec2::new(-1, 0),
+            IVec2::new(0, 0),
+            IVec2::new(1, 0),
+            IVec2::new(-1, 1),
+            IVec2::new(0, 1),
+            IVec2::new(1, 1)
         ];
         if let Some(last_pos) = paint_manager.last_paint_position {
             let distance = last_pos.distance(paint_pos);
@@ -139,11 +155,17 @@ fn add_paint_command(
                 let interp_pos = last_pos.lerp(paint_pos, t);
                 match terrain.get_tile_idx_for_world_pos(interp_pos) {
                     Some(pos) => {
-                        paint_manager.commands.get_or_insert_with(Vec::new).push(brush.paint(interp_pos));
+                        paint_manager
+                            .commands
+                            .get_or_insert_with(Vec::new)
+                            .push(brush.paint(interp_pos));
                         for neighbor in neighbors {
-                            paint_manager.commands_chunks.get_or_insert_with(HashSet::new).insert(pos + neighbor);
+                            paint_manager
+                                .commands_chunks
+                                .get_or_insert_with(HashSet::new)
+                                .insert(pos + neighbor);
                         }
-                    },
+                    }
                     None => continue
                 }
             }
@@ -154,16 +176,28 @@ fn add_paint_command(
             Some(pos) => pos,
             None => return
         };
-        paint_manager.commands.get_or_insert_with(Vec::new).push(brush.paint(paint_pos));
+        paint_manager
+            .commands
+            .get_or_insert_with(Vec::new)
+            .push(brush.paint(paint_pos));
         for neighbor in neighbors {
-            paint_manager.commands_chunks.get_or_insert_with(HashSet::new).insert(tile_pos + neighbor);
+            paint_manager
+                .commands_chunks
+                .get_or_insert_with(HashSet::new)
+                .insert(tile_pos + neighbor);
         }
         paint_manager.last_paint_position = Some(paint_pos);
     }
 
     // If more than x commands, flush to avoid memory issues
-    if paint_manager.commands.as_ref().is_some_and(|c| c.len() > FLUSH_ON_N_COMMANDS)
-        || (last_flush.is_none_or(|t| time.elapsed_secs() - t > MAX_T_BEFORE_FLUSH && paint_manager.commands.is_some())) {
+    if paint_manager
+        .commands
+        .as_ref()
+        .is_some_and(|c| c.len() > FLUSH_ON_N_COMMANDS)
+        || (last_flush.is_none_or(|t| {
+            time.elapsed_secs() - t > MAX_T_BEFORE_FLUSH && paint_manager.commands.is_some()
+        }))
+    {
         paint_manager.should_flush = true;
         *last_flush = Some(time.elapsed_secs());
     }

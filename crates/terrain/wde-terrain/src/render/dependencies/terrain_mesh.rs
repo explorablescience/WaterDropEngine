@@ -5,7 +5,7 @@ use crate::manager::{CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE};
 
 #[derive(Resource, Default)]
 pub struct TerrainRenderPassMesh {
-    pub deferred_mesh: Option<Handle<Mesh>>,
+    pub deferred_mesh: Option<Handle<Mesh>>
 }
 impl TerrainRenderPassMesh {
     // Creates the rendering mesh.
@@ -30,13 +30,13 @@ impl TerrainRenderPassMesh {
     // Extracts the mesh handle to the render world.
     pub fn extract_terrain_mesh(
         mesh_cpu: ExtractWorld<Res<TerrainRenderPassMesh>>,
-        mut mesh: ResMut<TerrainRenderPassMesh>,
+        mut mesh: ResMut<TerrainRenderPassMesh>
     ) {
         // Check if the mesh is already extracted
         if mesh.deferred_mesh.is_some() {
             return;
         }
-        
+
         // Extract the mesh handle to the render world
         if let Some(ref mesh_cpu) = mesh_cpu.deferred_mesh {
             mesh.deferred_mesh = Some(mesh_cpu.clone());

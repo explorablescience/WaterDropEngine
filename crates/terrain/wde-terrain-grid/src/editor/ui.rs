@@ -1,8 +1,11 @@
+use bevy::prelude::*;
 use wde_editor::prelude::*;
 use wde_pbr::prelude::*;
-use bevy::prelude::*;
 
-use crate::{core::placement_config::PlacementConfig, editor::{PlacementTool, PlacementUI}};
+use crate::{
+    core::placement_config::PlacementConfig,
+    editor::{PlacementTool, PlacementUI}
+};
 
 pub fn init_ui(mut ui_menu: ResMut<UIMenu>) {
     ui_menu.push("Terrain/Placement");
@@ -37,7 +40,11 @@ pub fn show_ui(
             }
 
             ui.label("Tool:");
-            ui.selectable_value(&mut placement_ui.selected_tool, PlacementTool::Place, "Place");
+            ui.selectable_value(
+                &mut placement_ui.selected_tool,
+                PlacementTool::Place,
+                "Place"
+            );
 
             ui.separator();
 
@@ -49,23 +56,36 @@ pub fn show_ui(
                 ui.horizontal(|ui| {
                     ui.selectable_value(&mut placement_ui.placement_entry_label, None, "None");
                     for label in placement_config.labels.iter() {
-                        ui.selectable_value(&mut placement_ui.placement_entry_label, Some(label.clone()), label);
+                        ui.selectable_value(
+                            &mut placement_ui.placement_entry_label,
+                            Some(label.clone()),
+                            label
+                        );
                     }
                 });
 
                 // Update placement entry based on selected label
                 if old_label != placement_ui.placement_entry_label {
                     if let Some(label) = &placement_ui.placement_entry_label {
-                        if let Some(entry) = placement_config.entries.iter().find(|e| &e.label == label) {
+                        if let Some(entry) =
+                            placement_config.entries.iter().find(|e| &e.label == label)
+                        {
                             placement_ui.placement_entry = Some(entry.clone());
-                            let entity = placement_ui.placement_entity.unwrap_or_else(|| commands.spawn_empty().id());
+                            let entity = placement_ui
+                                .placement_entity
+                                .unwrap_or_else(|| commands.spawn_empty().id());
                             placement_ui.placement_entity = Some(entity);
                             commands.entity(entity).insert((
-                                Transform::default().with_translation(Vec3::new(10000.0, -10000.0, 10000.0)),
+                                Transform::default()
+                                    .with_translation(Vec3::new(10000.0, -10000.0, 10000.0)),
                                 PbrModel(entry.asset.models.clone())
                             ));
                         } else {
-                            reset_tool(&mut commands, placement_ui.selected_tool, &mut placement_ui);
+                            reset_tool(
+                                &mut commands,
+                                placement_ui.selected_tool,
+                                &mut placement_ui
+                            );
                         }
                     } else {
                         reset_tool(&mut commands, placement_ui.selected_tool, &mut placement_ui);
@@ -78,15 +98,13 @@ pub fn show_ui(
                     ui.label(format!("Model: {}", entry.asset.path));
                     ui.label(format!("Extent: {}x{}", entry.extent.x, entry.extent.y));
                 }
-            } else { reset_tool(&mut commands, placement_ui.selected_tool, &mut placement_ui); }
+            } else {
+                reset_tool(&mut commands, placement_ui.selected_tool, &mut placement_ui);
+            }
         });
 }
 
-fn reset_tool(
-    commands: &mut Commands,
-    tool: PlacementTool,
-    placement_ui: &mut PlacementUI
-) {
+fn reset_tool(commands: &mut Commands, tool: PlacementTool, placement_ui: &mut PlacementUI) {
     if tool == PlacementTool::Place {
         placement_ui.placement_entry_label = None;
         placement_ui.placement_entry = None;

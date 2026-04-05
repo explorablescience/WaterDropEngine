@@ -1,13 +1,16 @@
-use wde_renderer::prelude::*;
 use bevy::prelude::*;
+use wde_renderer::prelude::*;
 
-use crate::{manager::{TerrainDirtyTile, CHUNK_RENDER_SUBDIVISIONS, ChunkPos}, prelude::TerrainRendererGPU};
+use crate::{
+    manager::{CHUNK_RENDER_SUBDIVISIONS, ChunkPos, TerrainDirtyTile},
+    prelude::TerrainRendererGPU
+};
 
 /// Type of the message sent from the render world to the main world when a tile is extracted from the GPU.
 #[derive(Message)]
 pub struct ExtractedTileMessage {
     pub pos: ChunkPos,
-    pub map_type: u32, // 0 for heightmap, 1 for splatmap
+    pub map_type: u32,        // 0 for heightmap, 1 for splatmap
     pub splat_map_index: u32, // only relevant if map_type is 1, should be between 0 and SPLAT_MAP_COUNT/4 - 1
     pub data: Vec<u8>
 }
@@ -15,18 +18,19 @@ pub struct ExtractedTileMessage {
 pub struct TerrainExtractorPlugin;
 impl Plugin for TerrainExtractorPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<StaggingBuffers>()
+        app.init_resource::<StaggingBuffers>()
             .init_resource::<TerrainExtractor>()
             .add_systems(Startup, init_stagging_buffers);
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .init_resource::<TerrainExtractor>()
             .init_resource::<StaggingBuffers>()
             .add_systems(Extract, extract_staging_buffers)
             .add_systems(Render, extract_tiles_from_gpu.in_set(RenderSet::Render));
 
         // Add the extract system
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .add_systems(Extract, extract_messages);
     }
 }
@@ -49,13 +53,19 @@ pub struct TerrainExtractor {
 impl TerrainExtractor {
     /// Queues a tile for extraction from the GPU.
     /// The tile will be processed in the next render pass and the extracted data will be available in the main world in the next frame.
-    /// 
+    ///
     /// # Arguments
     /// * `tile_pos` - The position of the tile to extract (x, z)
     /// * `map_type` - The type of map to extract (0 for heightmap, 1 for splatmap)
     /// * `splat_map_index` - The index of the splat map to extract (only relevant if map_type is 1, should be between 0 and SPLAT_MAP_COUNT/4 - 1)
-    pub fn queue_tile_extraction(&mut self, tile_pos: ChunkPos, map_type: u32, splat_map_index: u32) {
-        self.tiles_to_extract.push(Some((tile_pos, map_type, splat_map_index)));
+    pub fn queue_tile_extraction(
+        &mut self,
+        tile_pos: ChunkPos,
+        map_type: u32,
+        splat_map_index: u32
+    ) {
+        self.tiles_to_extract
+            .push(Some((tile_pos, map_type, splat_map_index)));
     }
 
     /// Clears the list of tiles to extract. Should be called after processing the extracted tiles to avoid extracting the same tiles multiple times.
@@ -71,13 +81,15 @@ fn init_stagging_buffers(asset_server: Res<AssetServer>, mut buffers: ResMut<Sta
 
     let stagging_heightmap = asset_server.add(Buffer {
         label: "stagging_heightmap".to_string(),
-        size: (CHUNK_RENDER_SUBDIVISIONS as usize * CHUNK_RENDER_SUBDIVISIONS as usize) * std::mem::size_of::<u8>(),
+        size: (CHUNK_RENDER_SUBDIVISIONS as usize * CHUNK_RENDER_SUBDIVISIONS as usize)
+            * std::mem::size_of::<u8>(),
         usage,
         content: None
     });
     let stagging_splatmap = asset_server.add(Buffer {
         label: "stagging_splatmap".to_string(),
-        size: (CHUNK_RENDER_SUBDIVISIONS as usize * CHUNK_RENDER_SUBDIVISIONS as usize) * std::mem::size_of::<[u8; 4]>(), // RGBA8Unorm
+        size: (CHUNK_RENDER_SUBDIVISIONS as usize * CHUNK_RENDER_SUBDIVISIONS as usize)
+            * std::mem::size_of::<[u8; 4]>(), // RGBA8Unorm
         usage,
         content: None
     });
@@ -109,32 +121,34 @@ fn extract_tiles_from_gpu(
             let texture_handle = match map_type {
                 0 => render_tile.heightmap,
                 1 => render_tile.splatmaps[splat_map_index as usize],
-                _ => continue,
+                _ => continue
             };
 
             // Get the GPU texture
             let texture = match textures.get(texture_handle) {
                 Some(texture) => texture,
-                None => continue,
+                None => continue
             };
 
             // Get the buffer
             let staging_buffer_handle = match map_type {
                 0 => &stagging_buffers.heightmap,
                 1 => &stagging_buffers.splatmap,
-                _ => continue,
+                _ => continue
             };
             let staging_buffer_handle = match staging_buffer_handle {
                 Some(handle) => handle,
-                None => continue,
+                None => continue
             };
             let stagging_buffer = match buffers.get_mut(staging_buffer_handle) {
-                 Some(buffer) => buffer,
-                 None => continue,
-             };
-             
+                Some(buffer) => buffer,
+                None => continue
+            };
+
             // Copy the texture data to the staging buffer
-            stagging_buffer.buffer.copy_from_texture(&render_instance, &texture.texture.texture);
+            stagging_buffer
+                .buffer
+                .copy_from_texture(&render_instance, &texture.texture.texture);
 
             // Read the buffer data and create a dirty tile
             let mut data = Vec::new();
@@ -157,7 +171,6 @@ fn extract_tiles_from_gpu(
     extractor.tiles_to_extract.retain(|entry| entry.is_some());
 }
 
-
 fn extract_staging_buffers(
     main_stagging_buffers: ExtractWorld<Res<StaggingBuffers>>,
     mut render_stagging_buffers: ResMut<StaggingBuffers>
@@ -166,8 +179,10 @@ fn extract_staging_buffers(
         return;
     }
 
-    if let (Some(heightmap), Some(splatmap))
-        = (main_stagging_buffers.heightmap.clone(), main_stagging_buffers.splatmap.clone()) {
+    if let (Some(heightmap), Some(splatmap)) = (
+        main_stagging_buffers.heightmap.clone(),
+        main_stagging_buffers.splatmap.clone()
+    ) {
         render_stagging_buffers.heightmap = Some(heightmap);
         render_stagging_buffers.splatmap = Some(splatmap);
     }
@@ -186,11 +201,20 @@ pub fn extract_messages(
     mut main_world: ResMut<MainWorld>
 ) {
     // Send events for each extracted tile to the main world
-    for (pos, map_type, splat_map_index, data) in render_terrain_extractor.extracted_tiles.clone().into_iter().flatten() {
-        main_world.write_message(ExtractedTileMessage { pos, map_type, splat_map_index, data });
+    for (pos, map_type, splat_map_index, data) in render_terrain_extractor
+        .extracted_tiles
+        .clone()
+        .into_iter()
+        .flatten()
+    {
+        main_world.write_message(ExtractedTileMessage {
+            pos,
+            map_type,
+            splat_map_index,
+            data
+        });
     }
 
     // Clear the extracted tiles list after processing
     render_terrain_extractor.extracted_tiles.clear();
 }
-

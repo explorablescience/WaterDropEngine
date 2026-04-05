@@ -6,17 +6,17 @@ use crate::assets::{Mesh, MeshBbox};
 pub struct PlaneMesh;
 impl PlaneMesh {
     /// Create a new plane mesh.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `label` - The label for this mesh asset.
     /// * `size` - The size in the u and v direction.
     ///   The plane will be centered at the origin.
     /// * `subdivisions` - Number of subdivisions per axis (minimum 1).
     /// * `normal` - The normal direction of the plane.
-    /// 
+    ///
     /// # Returns
-    /// 
+    ///
     /// The plane mesh.
     pub fn from(label: &str, subdivisions: u32, normal: Vec3) -> Mesh {
         let subdivisions = subdivisions.max(1);
@@ -53,7 +53,7 @@ impl PlaneMesh {
                     position: [position.x, position.y, position.z],
                     normal: [normal.x, normal.y, normal.z],
                     uv: [u, v],
-                    tangent: [tangent.x, tangent.y, tangent.z, 1.0],
+                    tangent: [tangent.x, tangent.y, tangent.z, 1.0]
                 });
             }
         }
@@ -83,7 +83,7 @@ impl PlaneMesh {
         // Create bounding box
         let bounding_box = MeshBbox {
             min: min_bounds,
-            max: max_bounds,
+            max: max_bounds
         };
 
         Mesh {
@@ -91,7 +91,7 @@ impl PlaneMesh {
             vertices,
             indices,
             bbox: bounding_box,
-            use_ssbo: false,
+            use_ssbo: false
         }
     }
 }
@@ -111,4 +111,3 @@ fn compute_tangent_bitangent(normal: Vec3) -> (Vec3, Vec3) {
 
     (tangent, bitangent)
 }
-

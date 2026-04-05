@@ -60,7 +60,7 @@ use crate::render::CameraFeature;
 
 pub mod prelude {
     pub use crate::CameraPlugin;
-    pub use crate::camera::{CameraView, ActiveCamera, Camera};
+    pub use crate::camera::{ActiveCamera, Camera, CameraView};
     pub use crate::render::CameraFeatureRender;
 }
 
@@ -79,4 +79,3 @@ impl Plugin for CameraPlugin {
         app.add_plugins(editor::CameraPropertiesEditor);
     }
 }
-

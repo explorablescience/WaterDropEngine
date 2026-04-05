@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use bevy::prelude::*;
+use std::collections::HashMap;
 use wde_terrain::prelude::{CHUNK_SIZE, ChunkPos};
 
 /// The number of subdivisions per chunk in the grid system (number of grid cells per chunk).
@@ -24,7 +24,6 @@ pub enum GridLocalDir {
     South
 }
 
-
 /// A terrain chunk that contains a list of terrain tiles.
 #[derive(Default)]
 pub struct Chunk {
@@ -39,9 +38,12 @@ impl Chunk {
     /// Creates a new terrain chunk with the specified position and an empty tile list.
     pub fn new(pos: GridChunkPos) -> Self {
         let tiles = vec![None; (CHUNK_GRID_SUBDIVISIONS * CHUNK_GRID_SUBDIVISIONS * 4) as usize];
-        Chunk { pos, tiles, entity_to_tile: HashMap::new() }
+        Chunk {
+            pos,
+            tiles,
+            entity_to_tile: HashMap::new()
+        }
     }
-
 
     // Entity management methods
     /// Sets the entity at the specified local tile position within this chunk.
@@ -49,7 +51,10 @@ impl Chunk {
         let index = Self::local_pos_to_index(local_pos);
         if let Some(tile) = self.tiles.get_mut(index) {
             *tile = Some(entity);
-            self.entity_to_tile.entry(entity).or_default().push(local_pos);
+            self.entity_to_tile
+                .entry(entity)
+                .or_default()
+                .push(local_pos);
         }
     }
     /// Gets the entity at the specified local tile position within this chunk, if it exists.
@@ -62,7 +67,9 @@ impl Chunk {
         if let Some(local_positions) = self.entity_to_tile.remove(&entity) {
             for local_pos in local_positions {
                 let index = Self::local_pos_to_index(local_pos);
-                if let Some(tile) = self.tiles.get_mut(index) && tile.as_ref() == Some(&entity) {
+                if let Some(tile) = self.tiles.get_mut(index)
+                    && tile.as_ref() == Some(&entity)
+                {
                     *tile = None;
                 }
             }
@@ -103,12 +110,19 @@ impl Chunk {
             GridLocalDir::South => Vec2::new(0.0, -1.0),
             GridLocalDir::West => Vec2::new(-1.0, 0.0),
             GridLocalDir::East => Vec2::new(1.0, 0.0)
-        } * Grid::tile_size() / 4.0;
+        } * Grid::tile_size()
+            / 4.0;
         cell_pos + tr
     }
     /// Gets the center position of a tile.
-    pub fn local_to_world_tile_center(chunk_pos: GridChunkPos, local_pos: GridTileLocalPos) -> Vec2 {
-        chunk_pos.as_vec2() * CHUNK_SIZE + Vec2::new(local_pos.0 as f32, local_pos.1 as f32) * Grid::tile_size() +  Grid::tile_size() / 2.0 - CHUNK_SIZE / 2.0
+    pub fn local_to_world_tile_center(
+        chunk_pos: GridChunkPos,
+        local_pos: GridTileLocalPos
+    ) -> Vec2 {
+        chunk_pos.as_vec2() * CHUNK_SIZE
+            + Vec2::new(local_pos.0 as f32, local_pos.1 as f32) * Grid::tile_size()
+            + Grid::tile_size() / 2.0
+            - CHUNK_SIZE / 2.0
     }
 
     // Helper methods
@@ -123,12 +137,11 @@ impl Chunk {
             GridLocalDir::North => 0,
             GridLocalDir::East => 1,
             GridLocalDir::West => 2,
-            GridLocalDir::South => 3,
+            GridLocalDir::South => 3
         };
         (local_y * CHUNK_GRID_SUBDIVISIONS + local_x) as usize * 4 + dir_offset
     }
 }
-
 
 /// The main terrain grid resource that holds all the terrain chunks and their respective tiles.
 #[derive(Resource, Default)]
@@ -138,13 +151,27 @@ pub struct Grid {
 impl Grid {
     // Methods to manage entities in the grid
     /// Sets the entity at the specified chunk and local tile position in the grid.
-    pub fn set_entity_at(&mut self, chunk_pos: GridChunkPos, local_pos: GridLocalPos, entity: Entity) {
-        let chunk = self.chunks.entry(chunk_pos).or_insert_with(|| Chunk::new(chunk_pos));
+    pub fn set_entity_at(
+        &mut self,
+        chunk_pos: GridChunkPos,
+        local_pos: GridLocalPos,
+        entity: Entity
+    ) {
+        let chunk = self
+            .chunks
+            .entry(chunk_pos)
+            .or_insert_with(|| Chunk::new(chunk_pos));
         chunk.set_entity_at(local_pos, entity);
     }
     /// Gets the entity at the specified chunk and local tile position in the grid, if it exists.
-    pub fn get_entity_at(&self, chunk_pos: GridChunkPos, local_pos: GridLocalPos) -> Option<Entity> {
-        self.chunks.get(&chunk_pos).and_then(|chunk| chunk.get_entity_at(local_pos))
+    pub fn get_entity_at(
+        &self,
+        chunk_pos: GridChunkPos,
+        local_pos: GridLocalPos
+    ) -> Option<Entity> {
+        self.chunks
+            .get(&chunk_pos)
+            .and_then(|chunk| chunk.get_entity_at(local_pos))
     }
     /// Removes the entity from all tiles it occupies in the grid.
     pub fn remove_entity(&mut self, entity: Entity) {
@@ -156,7 +183,6 @@ impl Grid {
     pub fn clear_all(&mut self) {
         self.chunks.clear();
     }
-
 
     // Methods to convert between world positions and chunk/local positions
     /// Gets the nearest chunk and local tile position for a given world position.
@@ -177,7 +203,7 @@ impl Grid {
         let half_chunk = CHUNK_SIZE * 0.5;
         ChunkPos::new(
             (world_pos.x + half_chunk).div_euclid(CHUNK_SIZE) as i32,
-            (world_pos.y + half_chunk).div_euclid(CHUNK_SIZE) as i32,
+            (world_pos.y + half_chunk).div_euclid(CHUNK_SIZE) as i32
         )
     }
     /// Gets the world position for a given chunk and local tile position.
@@ -196,14 +222,14 @@ impl Grid {
         let half_chunk = CHUNK_SIZE * 0.5;
         Vec2::new(
             chunk_pos.x as f32 * CHUNK_SIZE + local_x as f32 * cell_size + half_cell - half_chunk,
-            chunk_pos.y as f32 * CHUNK_SIZE + local_y as f32 * cell_size + half_cell - half_chunk,
+            chunk_pos.y as f32 * CHUNK_SIZE + local_y as f32 * cell_size + half_cell - half_chunk
         )
     }
     /// Gets the center world position of a given chunk.
     pub fn chunk_pos_to_world(chunk_pos: GridChunkPos) -> Vec2 {
         Vec2::new(
             chunk_pos.x as f32 * CHUNK_SIZE * 2.0,
-            chunk_pos.y as f32 * CHUNK_SIZE * 2.0,
+            chunk_pos.y as f32 * CHUNK_SIZE * 2.0
         )
     }
 

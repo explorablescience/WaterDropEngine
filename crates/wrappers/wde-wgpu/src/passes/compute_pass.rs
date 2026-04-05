@@ -1,7 +1,6 @@
 //! Compute pass abstraction.
-use wde_logger::prelude::*;
 use crate::{compute_pipeline::ComputePipeline, instance::RenderError};
-
+use wde_logger::prelude::*;
 
 /// RAII wrapper around `wgpu::ComputePass` created by `CommandBuffer::create_compute_pass`.
 ///
@@ -13,7 +12,7 @@ use crate::{compute_pipeline::ComputePipeline, instance::RenderError};
 ///     compute_pipeline::ComputePipeline,
 ///     instance::{RenderError, RenderInstanceData},
 /// };
-/// 
+///
 /// let mut cmd = CommandBuffer::new(instance, "compute-frame");
 /// {
 ///     let mut pass: WComputePass = cmd.create_compute_pass("cull");
@@ -28,7 +27,7 @@ use crate::{compute_pipeline::ComputePipeline, instance::RenderError};
 pub struct WComputePass<'a> {
     pub label: String,
     compute_pass: wgpu::ComputePass<'a>,
-    pipeline_set: bool,
+    pipeline_set: bool
 }
 
 impl std::fmt::Debug for WComputePass<'_> {
@@ -41,9 +40,9 @@ impl std::fmt::Debug for WComputePass<'_> {
 
 impl<'a> WComputePass<'a> {
     /// Create a new compute pass.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `label` - The label of the compute pass.
     /// * `compute_pass` - The compute pass to create.
     pub fn new(label: &str, compute_pass: wgpu::ComputePass<'a>) -> Self {
@@ -57,32 +56,34 @@ impl<'a> WComputePass<'a> {
 
     /// Set the pipeline of the compute pass.
     /// The bind groups of the pipeline are also set.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `pipeline` - The pipeline to set.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `RenderError::PipelineNotInitialized` - The pipeline is not initialized.
-    pub fn set_pipeline(&mut self, pipeline: &'a ComputePipeline) -> Result<&mut Self, RenderError> {
+    pub fn set_pipeline(
+        &mut self,
+        pipeline: &'a ComputePipeline
+    ) -> Result<&mut Self, RenderError> {
         if pipeline.get_pipeline().is_none() {
             error!(pipeline.label, "Pipeline is not created yet.");
             return Err(RenderError::PipelineNotInitialized);
         }
 
         // Set pipeline
-        self.compute_pass.set_pipeline(pipeline.get_pipeline().as_ref().unwrap());
+        self.compute_pass
+            .set_pipeline(pipeline.get_pipeline().as_ref().unwrap());
         self.pipeline_set = true;
         Ok(self)
     }
 
-
-
     /// Set push constants of the compute pass.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `data` - The data to set.
     pub fn set_push_constants(&mut self, data: &[u8]) -> &mut Self {
         self.compute_pass.set_push_constants(0, data);
@@ -90,9 +91,9 @@ impl<'a> WComputePass<'a> {
     }
 
     /// Set a bind group of the compute pass at a binding.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `binding` - The binding of the bind group.
     /// * `bind_group` - The bind group to set.
     pub fn set_bind_group(&mut self, binding: u32, bind_group: &'a wgpu::BindGroup) -> &mut Self {
@@ -100,17 +101,16 @@ impl<'a> WComputePass<'a> {
         self
     }
 
-
     /// Dispatch the compute pass.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `x` - The x dimension.
     /// * `y` - The y dimension.
     /// * `z` - The z dimension.
-    /// 
+    ///
     /// # Errors
-    /// 
+    ///
     /// * `RenderError::PipelineNotSet` - The pipeline is not set.
     pub fn dispatch(&mut self, x: u32, y: u32, z: u32) -> Result<(), RenderError> {
         if !self.pipeline_set {
@@ -119,7 +119,14 @@ impl<'a> WComputePass<'a> {
         }
 
         // Dispatch
-        event!(Level::TRACE, "Dispatching compute pipeline {} with dimension ({}, {}, {}).", self.label, x, y, z);
+        event!(
+            Level::TRACE,
+            "Dispatching compute pipeline {} with dimension ({}, {}, {}).",
+            self.label,
+            x,
+            y,
+            z
+        );
         self.compute_pass.dispatch_workgroups(x, y, z);
         Ok(())
     }

@@ -3,12 +3,15 @@
 //! This module contains the main physics world resource and systems for managing
 //! colliders, rigid bodies, and spatial queries.
 
-use wde_logger::prelude::*;
-use std::{collections::HashMap, sync::RwLock};
 use bevy::prelude::*;
 use rapier3d::prelude::*;
+use std::{collections::HashMap, sync::RwLock};
+use wde_logger::prelude::*;
 
-use crate::{colliders::Collider, raycasting::{Ray, RayCastConfig}};
+use crate::{
+    colliders::Collider,
+    raycasting::{Ray, RayCastConfig}
+};
 
 /// Internal handler for Rapier physics components.
 ///
@@ -30,7 +33,7 @@ struct RapierHandler {
     /// Manages impulse-based joints between rigid bodies
     impulse_joint_set: RwLock<ImpulseJointSet>,
     /// Manages multibody joints (reduced coordinates articulations)
-    multibody_joint_set: RwLock<MultibodyJointSet>,
+    multibody_joint_set: RwLock<MultibodyJointSet>
 }
 
 /// The main physics world resource.
@@ -63,15 +66,15 @@ pub struct PhysicsWorld {
     /// Mapping from Bevy entities to their Rapier rigid body handles
     entity_to_rigid_body: HashMap<Entity, RigidBodyHandle>,
     /// Reverse mapping from Rapier rigid body handles to Bevy entities
-    rigid_body_to_entity: HashMap<RigidBodyHandle, Entity>,
+    rigid_body_to_entity: HashMap<RigidBodyHandle, Entity>
 }
 impl PhysicsWorld {
     /// Cast a ray in the physics world.
-    /// 
+    ///
     /// # Arguments
     /// * `ray` - The ray to cast.
     /// * `params` - The ray cast configuration parameters.
-    /// 
+    ///
     /// # Returns
     /// An optional tuple containing the hit entity and the time of impact (toi) if a hit occurred.
     pub fn cast_ray(&self, ray: &Ray, params: &RayCastConfig) -> Option<(Entity, f32)> {
@@ -85,8 +88,9 @@ impl PhysicsWorld {
             &ray.0,
             params.max_toi,
             params.solid,
-            params.filter,
-        ) && let Some(&entity) = self.collider_to_entity.get(&col_handle) {
+            params.filter
+        ) && let Some(&entity) = self.collider_to_entity.get(&col_handle)
+        {
             return Some((entity, toi));
         }
         None
@@ -94,7 +98,7 @@ impl PhysicsWorld {
 }
 
 /// System to handle changes in colliders, including additions, removals, and updates.
-/// 
+///
 /// This system listens for added, removed, and changed colliders, as well as changed transforms,
 /// and updates the physics world accordingly.
 pub(crate) fn handle_changes(
@@ -103,7 +107,7 @@ pub(crate) fn handle_changes(
     new_collider: Query<Entity, Added<Collider>>,
     updated_collider: Query<Entity, Changed<Collider>>,
     updated_transform: Query<Entity, (Changed<Transform>, With<Collider>)>,
-    mut removed_collider: RemovedComponents<Collider>,
+    mut removed_collider: RemovedComponents<Collider>
 ) {
     // Add new colliders to the physics world
     {
@@ -117,7 +121,7 @@ pub(crate) fn handle_changes(
             // Get the collider component and transform
             let (entity, transform, collider) = match colliders.get(entity) {
                 Ok(data) => data,
-                Err(_) => continue,
+                Err(_) => continue
             };
             // Build the Rapier collider and insert it into the collider set
             let col = collider.data.read().unwrap().build();
@@ -134,14 +138,19 @@ pub(crate) fn handle_changes(
             let rb_handle = phworld.rapier.rigid_body_set.write().unwrap().insert(rb);
 
             // Associate the collider with its rigid body and store the mapping
-            phworld
-                .rapier.collider_set.write().unwrap()
-                .set_parent(col_handle, Some(rb_handle), &mut phworld.rapier.rigid_body_set.write().unwrap());
+            phworld.rapier.collider_set.write().unwrap().set_parent(
+                col_handle,
+                Some(rb_handle),
+                &mut phworld.rapier.rigid_body_set.write().unwrap()
+            );
             phworld.entity_to_collider.insert(entity, col_handle);
             phworld.collider_to_entity.insert(col_handle, entity);
             phworld.entity_to_rigid_body.insert(entity, rb_handle);
             phworld.rigid_body_to_entity.insert(rb_handle, entity);
-            trace!("Added collider and rigidbody for entity {:?} with collider {:?} and rigidbody {:?} handles", entity, col_handle, rb_handle);
+            trace!(
+                "Added collider and rigidbody for entity {:?} with collider {:?} and rigidbody {:?} handles",
+                entity, col_handle, rb_handle
+            );
         }
     }
 
@@ -155,13 +164,13 @@ pub(crate) fn handle_changes(
                     col_handle,
                     &mut phworld.rapier.island_manager.write().unwrap(),
                     &mut phworld.rapier.rigid_body_set.write().unwrap(),
-                    true,
+                    true
                 );
 
                 // Get the updated collider component
                 let (entity, _, collider) = match colliders.get(entity) {
                     Ok(data) => data,
-                    Err(_) => continue,
+                    Err(_) => continue
                 };
                 // Build the new Rapier collider and insert it into the collider set
                 let col = collider.data.read().unwrap().build();
@@ -169,14 +178,19 @@ pub(crate) fn handle_changes(
 
                 // Re-associate the new collider with its rigid body
                 let rb_handle = phworld.entity_to_rigid_body[&entity];
-                phworld
-                    .rapier.collider_set.write().unwrap()
-                    .set_parent(new_col_handle, Some(rb_handle), &mut phworld.rapier.rigid_body_set.write().unwrap());
+                phworld.rapier.collider_set.write().unwrap().set_parent(
+                    new_col_handle,
+                    Some(rb_handle),
+                    &mut phworld.rapier.rigid_body_set.write().unwrap()
+                );
 
                 // Update the mappings
                 phworld.entity_to_collider.insert(entity, new_col_handle);
                 phworld.collider_to_entity.insert(new_col_handle, entity);
-                trace!("Updated collider for entity {:?} with new handle {:?}", entity, new_col_handle);
+                trace!(
+                    "Updated collider for entity {:?} with new handle {:?}",
+                    entity, new_col_handle
+                );
             }
         }
     }
@@ -189,19 +203,28 @@ pub(crate) fn handle_changes(
                 // Get the updated transform
                 let (_, transform, _) = match colliders.get(entity) {
                     Ok(data) => data,
-                    Err(_) => continue,
+                    Err(_) => continue
                 };
                 // Update the rigid body's position
-                if let Some(rigid_body) = phworld.rapier.rigid_body_set.write().unwrap().get_mut(rb_handle) {
+                if let Some(rigid_body) = phworld
+                    .rapier
+                    .rigid_body_set
+                    .write()
+                    .unwrap()
+                    .get_mut(rb_handle)
+                {
                     rigid_body.set_translation(
                         vector![
                             transform.translation.x,
                             transform.translation.y,
                             transform.translation.z
                         ],
-                        true,
+                        true
                     );
-                    trace!("Updated transform for entity {:?} with rigidbody handle {:?}", entity, rb_handle);
+                    trace!(
+                        "Updated transform for entity {:?} with rigidbody handle {:?}",
+                        entity, rb_handle
+                    );
                 }
             }
         }
@@ -222,7 +245,11 @@ pub(crate) fn handle_changes(
     {
         let _span = trace_span!("handle_changes_pipeline").entered();
         let mut modified_colliders = Vec::new();
-        for entity in new_collider.iter().chain(updated_collider.iter()).chain(updated_transform.iter()) {
+        for entity in new_collider
+            .iter()
+            .chain(updated_collider.iter())
+            .chain(updated_transform.iter())
+        {
             if let Some(&col_handle) = phworld.entity_to_collider.get(&entity) {
                 modified_colliders.push(col_handle);
             }
@@ -237,8 +264,17 @@ pub(crate) fn handle_changes(
         // Update the query pipeline incrementally
         // This is more efficient than rebuilding it from scratch
         let colliders = &phworld.rapier.collider_set.read().unwrap();
-        phworld.rapier.query_pipeline.write().unwrap().update_incremental(colliders, &modified_colliders, &removed_colliders, true);
-        trace!("Updated query pipeline with {} modified and {} removed colliders", modified_colliders.len(), removed_colliders.len());
+        phworld
+            .rapier
+            .query_pipeline
+            .write()
+            .unwrap()
+            .update_incremental(colliders, &modified_colliders, &removed_colliders, true);
+        trace!(
+            "Updated query pipeline with {} modified and {} removed colliders",
+            modified_colliders.len(),
+            removed_colliders.len()
+        );
     }
 
     // Handle removed colliders
@@ -253,13 +289,16 @@ pub(crate) fn handle_changes(
                     &mut phworld.rapier.collider_set.write().unwrap(),
                     &mut phworld.rapier.impulse_joint_set.write().unwrap(),
                     &mut phworld.rapier.multibody_joint_set.write().unwrap(),
-                    true,
+                    true
                 );
 
                 // Remove the mappings
                 phworld.entity_to_collider.remove(&entity);
                 phworld.collider_to_entity.remove(&col_handle);
-                debug!("Removed collider and rigidbody for entity {:?} with handle {:?}", entity, col_handle);
+                debug!(
+                    "Removed collider and rigidbody for entity {:?} with handle {:?}",
+                    entity, col_handle
+                );
             }
         });
     }

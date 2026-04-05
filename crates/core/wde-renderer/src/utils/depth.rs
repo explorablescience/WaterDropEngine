@@ -1,8 +1,14 @@
 use bevy::prelude::*;
 use wde_wgpu::texture::{DEPTH_FORMAT, TextureUsages};
 
-use crate::{assets::{RenderBinding, RenderBindingBuilder, RenderBindingHolder, RenderBindingPluginRegister}, core::SurfaceResized, utils::MSAA_SAMPLE_COUNT};
 use crate::assets::Texture;
+use crate::{
+    assets::{
+        RenderBinding, RenderBindingBuilder, RenderBindingHolder, RenderBindingPluginRegister
+    },
+    core::SurfaceResized,
+    utils::MSAA_SAMPLE_COUNT
+};
 
 pub(crate) struct DepthTexturePlugin;
 impl Plugin for DepthTexturePlugin {
@@ -14,7 +20,7 @@ impl Plugin for DepthTexturePlugin {
 }
 
 /// Describes a depth texture that can be used in rendering.
-/// 
+///
 /// Notes:
 /// - It uses the [`DEPTH_FORMAT`], as well as the [`MSAA_SAMPLE_COUNT`] for multisampling.
 /// - It is created and resized automatically based on the window size
@@ -30,7 +36,10 @@ impl RenderBinding for DepthTexture {
 fn init(mut commands: Commands, asset_server: Res<AssetServer>, window: Query<&Window>) {
     // Create the depth texture
     let resolution = &window.single().unwrap().resolution;
-    let texture = asset_server.add(get_texture((resolution.physical_width(), resolution.physical_height())));
+    let texture = asset_server.add(get_texture((
+        resolution.physical_width(),
+        resolution.physical_height()
+    )));
     let depth_texture = asset_server.add(DepthTexture(texture));
     commands.insert_resource(RenderBindingHolder(depth_texture));
 }
