@@ -10,7 +10,8 @@ use bevy::prelude::*;
 
 use crate::{
     assets::RenderBindingPluginRegister,
-    core::{ExtractResourcePlugin, RenderApp}
+    core::{ExtractResourcePlugin, RenderApp},
+    utils::depth::DepthTexturePlugin
 };
 
 mod depth;
@@ -18,10 +19,10 @@ mod post_process_mesh;
 mod ssbo_mesh;
 mod transform;
 
-pub use depth::*;
-pub use post_process_mesh::*;
-pub use ssbo_mesh::*;
-pub use transform::*;
+pub use depth::DepthTexture;
+pub use post_process_mesh::PostProcessingMesh;
+pub use ssbo_mesh::{SsboMesh, SsboMeshDescriptor};
+pub use transform::TransformUniform;
 
 /** Multisample anti-aliasing sample count used throughout the renderer. */
 pub const MSAA_SAMPLE_COUNT: u32 = 4;

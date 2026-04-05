@@ -46,7 +46,7 @@ impl<'a> WComputePass<'a> {
     /// * `label` - The label of the compute pass.
     /// * `compute_pass` - The compute pass to create.
     pub fn new(label: &str, compute_pass: wgpu::ComputePass<'a>) -> Self {
-        event!(Level::TRACE, "Creating a new compute pass {}.", label);
+        event!(LogLevel::TRACE, "Creating a new compute pass {}.", label);
         Self {
             label: label.to_string(),
             compute_pass,
@@ -120,7 +120,7 @@ impl<'a> WComputePass<'a> {
 
         // Dispatch
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Dispatching compute pipeline {} with dimension ({}, {}, {}).",
             self.label,
             x,

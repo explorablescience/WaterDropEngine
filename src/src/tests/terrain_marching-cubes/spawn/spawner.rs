@@ -62,7 +62,7 @@ impl MarchingCubesSpawner {
                     sub_count: cs.chunk_sub_count.into(),
                     iso_level: cs.iso_level
                 };
-                event!(Level::TRACE, "Spawn chunk at index {:?}: {:?}", chunk_global_index, desc.clone());
+                event!(LogLevel::TRACE, "Spawn chunk at index {:?}: {:?}", chunk_global_index, desc.clone());
                 current_chunks.insert(chunk_global_index, chunk_global_index);
                 new_chunks.push((chunk_global_index, desc));
             }
@@ -70,7 +70,7 @@ impl MarchingCubesSpawner {
 
         // Remove the chunks that should be deleted
         for chunk_index in delete_chunks.keys() {
-            event!(Level::TRACE, "Delete chunk at index {:?}.", chunk_index);
+            event!(LogLevel::TRACE, "Delete chunk at index {:?}.", chunk_index);
             current_chunks.remove(chunk_index);
         }
 

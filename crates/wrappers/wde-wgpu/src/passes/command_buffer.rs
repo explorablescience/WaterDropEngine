@@ -157,7 +157,7 @@ impl CommandBuffer {
     /// * `instance` - The render instance.
     /// * `label` - The label of the command buffer.
     pub fn new(instance: &RenderInstanceData<'_>, label: &str) -> Self {
-        event!(Level::TRACE, "Creating a command buffer {}.", label);
+        event!(LogLevel::TRACE, "Creating a command buffer {}.", label);
 
         // Create command encoder
         let command_encoder =
@@ -184,7 +184,7 @@ impl CommandBuffer {
         label: &str,
         builder_func: impl FnOnce(&mut RenderPassBuilder<'pass>) -> Result<(), String>
     ) -> Result<RenderPassInstance<'pass>, String> {
-        event!(Level::TRACE, "Creating a render pass {}.", label);
+        event!(LogLevel::TRACE, "Creating a render pass {}.", label);
 
         // Run the builder function
         let mut builder = RenderPassBuilder::default();
@@ -237,7 +237,7 @@ impl CommandBuffer {
     ///
     /// * `label` - The label of the compute pass.
     pub fn create_compute_pass<'pass>(&'pass mut self, label: &str) -> WComputePass<'pass> {
-        event!(Level::TRACE, "Creating a compute pass {}.", label);
+        event!(LogLevel::TRACE, "Creating a compute pass {}.", label);
         let compute_pass = self
             .encoder
             .begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -254,7 +254,7 @@ impl CommandBuffer {
     ///
     /// * `instance` - The render instance.
     pub fn submit(self, instance: &RenderInstanceData) {
-        event!(Level::TRACE, "Submitted command buffer {}.", self.label);
+        event!(LogLevel::TRACE, "Submitted command buffer {}.", self.label);
         instance
             .queue
             .submit(std::iter::once(self.encoder.finish()));
@@ -269,7 +269,7 @@ impl CommandBuffer {
     /// * `destination` - The destination buffer.
     pub fn copy_buffer_to_buffer(&mut self, source: &Buffer, destination: &Buffer) {
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Copying buffer {} to buffer {}.",
             source.label,
             destination.label
@@ -303,7 +303,7 @@ impl CommandBuffer {
         size: u64
     ) {
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Copying buffer {} to buffer {}.",
             source.label,
             destination.label
@@ -333,7 +333,7 @@ impl CommandBuffer {
         size: wgpu::Extent3d
     ) {
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Copying texture to buffer {}.",
             destination.label
         );

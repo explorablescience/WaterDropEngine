@@ -89,7 +89,7 @@ impl Buffer {
         usage: BufferUsage,
         content: Option<&[u8]>
     ) -> Self {
-        event!(Level::TRACE, "Creating new buffer {}.", label);
+        event!(LogLevel::TRACE, "Creating new buffer {}.", label);
 
         // In case the content is not provided, create an empty buffer.
         match content {

@@ -12,7 +12,6 @@
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::RenderPlugin;
     pub use crate::assets::*;
     pub use crate::core::*;
     pub use crate::passes::*;

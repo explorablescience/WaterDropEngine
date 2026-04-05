@@ -110,7 +110,7 @@ impl ComputePipeline {
     ///
     /// * `Result<(), RenderError>` - The result of the initialization.
     pub fn init(&mut self, instance: &RenderInstanceData) -> Result<(), RenderError> {
-        event!(Level::TRACE, "Creating compute pipeline {}.", self.label);
+        event!(LogLevel::TRACE, "Creating compute pipeline {}.", self.label);
         let d = &self.config;
 
         // Security checks

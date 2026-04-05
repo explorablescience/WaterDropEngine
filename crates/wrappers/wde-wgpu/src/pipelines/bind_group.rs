@@ -292,7 +292,11 @@ impl BindGroupLayout {
     ///
     /// * `instance` - The render instance data.
     pub fn build(&self, instance: &RenderInstanceData) -> Result<WgpuBindGroupLayout, RenderError> {
-        event!(Level::TRACE, "Creating bind group layout: {}.", self.label);
+        event!(
+            LogLevel::TRACE,
+            "Creating bind group layout: {}.",
+            self.label
+        );
 
         // Add validation to intercept potential errors in bind group layout creation
         instance
@@ -355,7 +359,7 @@ impl BindGroupBuilder {
         layout: &wgpu::BindGroupLayout,
         entries: &Vec<wgpu::BindGroupEntry>
     ) -> Result<wgpu::BindGroup, RenderError> {
-        event!(Level::TRACE, "Creating bind group: {}.", label);
+        event!(LogLevel::TRACE, "Creating bind group: {}.", label);
 
         // Add validation to intercept potential errors in bind group creation
         instance

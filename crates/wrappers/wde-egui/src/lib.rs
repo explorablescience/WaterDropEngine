@@ -1,15 +1,8 @@
-//!! Egui integration for WaterDropEngine using Bevy.
-//!
-//! This crate provides plugins and systems to integrate the egui immediate mode GUI library
-//! with the WaterDropEngine, leveraging Bevy's ECS and rendering architecture.
-//!
-//! # Features
-//! - Egui context management
-//! - Input handling from Bevy to egui
-//! - Frame update and rendering integration
+//! Egui integration for WaterDropEngine.
 //!
 //! # Example
-//! ```rust,no_run
+//! To draw a new egui window, you can use the [`crate::prelude::EguiContext`] resource provided by the plugin:
+//! ```rust
 //! fn draw_new_window(ctx: &EguiContext) {
 //!   egui::Window::new("My Egui Window")
 //!      .show(&ctx.0, |ui| {
@@ -18,13 +11,16 @@
 //! }
 //! ```
 
+#[doc(hidden)]
 pub mod prelude {
-    pub use crate::EguiPlugin;
     pub use crate::egui::egui_context::EguiContext;
-    pub use crate::egui::egui_pass::EguiRenderPassHolder;
     pub mod egui {
         pub use egui::*;
     }
+}
+
+pub mod render {
+    pub use crate::egui::egui_pass::EguiRenderPassHolder;
 }
 
 mod egui;

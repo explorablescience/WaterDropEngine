@@ -1,15 +1,8 @@
-//! Raycasting utilities for physics queries.
-//!
-//! This module provides types and utilities for casting rays through the physics world
-//! to detect collisions and intersections.
-
 use bevy::prelude::*;
 
 pub use rapier3d::prelude::QueryFilter as RayQueryFilter;
 use wde_camera::prelude::CameraView;
 
-/// Configuration for ray casting operations.
-///
 /// Controls how rays interact with colliders during physics queries.
 #[derive(Clone)]
 pub struct RayCastConfig {
@@ -20,7 +13,7 @@ pub struct RayCastConfig {
     /// If `false`, rays ignore colliders they start inside.
     pub solid: bool,
     /// Filter to selectively include/exclude colliders from the raycast.
-    /// See `QueryFilter` documentation for filtering options.
+    /// See [`RayQueryFilter`] documentation for filtering options.
     pub filter: RayQueryFilter<'static>
 }
 impl Default for RayCastConfig {
@@ -34,31 +27,11 @@ impl Default for RayCastConfig {
 }
 
 /// A ray in 3D space for physics queries.
-///
-/// Rays are defined by an origin point and a direction vector. They can be used
-/// to perform line-of-sight checks, mouse picking, and other spatial queries.
-///
-/// # Example
-///
-/// ```no_run
-/// # use bevy::prelude::*;
-/// # use wde_physics::prelude::*;
-/// // Create a ray pointing downward from (0, 10, 0)
-/// let ray = Ray::new(
-///     Vec3::new(0.0, 10.0, 0.0),
-///     Vec3::new(0.0, -1.0, 0.0),
-/// );
-/// ```
+/// It can be casted using methods on [`crate::PhysicsWorld`].
+/// See [crate] for examples of raycasting usage.
 pub struct Ray(pub(crate) rapier3d::prelude::Ray);
 impl Ray {
     /// Create a new ray from an origin and direction.
-    ///
-    /// # Arguments
-    /// * `origin` - The origin point of the ray.
-    /// * `dir` - The direction vector of the ray.
-    ///
-    /// # Returns
-    /// A new `Ray` in world space.
     pub fn new(origin: Vec3, dir: Vec3) -> Self {
         Ray(rapier3d::prelude::Ray::new(
             rapier3d::prelude::Point::new(origin.x, origin.y, origin.z),
@@ -67,39 +40,7 @@ impl Ray {
     }
 
     /// Create a ray from normalized device coordinates (NDC).
-    ///
-    /// This is useful for mouse picking and screen-space raycasting. The ray originates
-    /// at the camera position and points in the direction corresponding to the given
-    /// screen coordinates.
-    ///
-    /// # Arguments
-    /// * `ndc_pos` - Normalized screen position (0.0 to 1.0 range, where (0,0) is top-left).
-    /// * `aspect_ratio` - The viewport aspect ratio (width / height).
-    /// * `camera_transform` - The world transform of the camera.
-    /// * `camera_view` - The camera's view settings (FOV, near/far planes).
-    ///
-    /// # Returns
-    /// A new `Ray` originating from the camera and pointing through the screen position.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # use bevy::prelude::*;
-    /// # use bevy::window::PrimaryWindow;
-    /// # use wde_physics::prelude::*;
-    /// # use wde_camera::prelude::*;
-    /// # fn example(
-    /// #     window: Single<&Window, With<PrimaryWindow>>,
-    /// #     camera_query: Query<(&Transform, &CameraView), With<Camera>>
-    /// # ) {
-    /// let cursor_pos = window.cursor_position().unwrap();
-    /// let cursor_ndc = cursor_pos / window.size();
-    /// let (cam_transform, cam_view) = camera_query.single();
-    /// let aspect = window.size().x / window.size().y;
-    ///
-    /// let ray = Ray::from_ndc(cursor_ndc, aspect, cam_transform, cam_view);
-    /// # }
-    /// ```
+    /// This is useful for casting rays from the camera through the screen (e.g. for mouse picking).
     pub fn from_ndc(
         ndc_pos: Vec2,
         aspect_ratio: f32,
@@ -119,12 +60,6 @@ impl Ray {
     }
 
     /// Get a point along the ray at time of impact (toi).
-    ///
-    /// # Arguments
-    /// * `toi` - The time of impact along the ray.
-    ///
-    /// # Returns
-    /// A point in world space at the specified time of impact.
     pub fn point_at(&self, toi: f32) -> Vec3 {
         let point = self.0.point_at(toi);
         Vec3::new(point.x, point.y, point.z)

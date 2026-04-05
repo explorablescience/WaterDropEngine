@@ -1,23 +1,17 @@
-//! Logging functions and configuration for WaterDropEngine.
+//! Logging functions and configuration for WaterDropEngine using [`tracing`](https://docs.rs/tracing).
 //!
-//! Provides logging macros reexported from [`tracing`](https://docs.rs/tracing).
-//! Configure logging behavior using the [`LogPlugin`].
+//! The logging behavior can be configured using the [`LogPlugin`], which allows you to set the log level, filter logs using `EnvFilter` syntax, and add custom layers to the tracing subscriber. The `RUST_LOG` environment variable can also be used to override plugin settings and configure log filtering.
 //!
-//! By default, the filter used is:
-//! ```text
-//! wgpu_hal=warn,wgpu_hal::vulkan::instance=error,wgpu_core=warn,naga=warn
-//! ```
-//! to ignore verbose logs from wgpu and naga.
+//! This crate provides multiple macros for logging, including:
+//! - [`trace!()`](crate::trace) - Verbose tracing information, typically only useful for debugging.
+//! - [`debug!()`](crate::debug) - Debug information, useful for development and debugging.
+//! - [`info!()`](crate::info) - General information about the application's operation.
+//! - [`warn!()`](crate::warn) - Important warnings that may indicate potential issues.
+//! - [`error!()`](crate::error) - Critical errors that indicate failures in the application.
 //!
-//!! # Features
-//!! - `tracing`: Enables integration with [Tracy](https://tracy.nagisa.org/), a real-time, nanosecond resolution, remote telemetry, hybrid frame and sampling profiler
-//!   This feature enables the `tracing-tracy` crate and adds a `TracyLayer` to the tracing subscriber.
-//!!   Note that this will increase memory usage until a Tracy client is connected.
-//!!   See the [tracing-tracy documentation](https://docs.rs/tracing-tracy) for more information.
-//!! - `puffin`: Enables integration with [Puffin](https://github.com/EmbarkStudios/puffin).
-//!   This feature adds a `PuffinLayer` to the tracing subscriber and marks a new frame every update.
-//!! - `editor`: Enables integration with the editor logging system.
-//!   This feature adds a `EditorLogLayer` to the tracing subscriber.
+//! Each of these macros also has a corresponding `_once` variant (e.g. [`info_once!()`](crate::info_once)) that will only log the message once per call site, which is useful for logging within systems that are called every frame without spamming the logs.
+//!
+//! Lastly, span tracing is supported using the `*_span!()` macros (e.g. [`info_span!()`](crate::info_span)) which can be used to create spans for better structuring of logs and performance profiling.
 
 pub mod editor_layer;
 mod panic_handler;
@@ -31,9 +25,9 @@ use core::error::Error;
 mod once;
 pub use once::OnceFlag;
 
+#[doc(hidden)]
 pub mod prelude {
-    pub use crate::Level;
-    pub use crate::LogPlugin;
+    pub use crate::LogLevel;
     pub use crate::{debug_once, error_once, info_once, trace_once, warn_once};
     pub use tracing::event;
     pub use tracing::{
@@ -42,10 +36,9 @@ pub mod prelude {
 }
 
 pub use tracing::{
-    self, Level, debug, debug_span, error, error_span, info, info_span, trace, trace_span, warn,
-    warn_span
+    self, Level as LogLevel, debug, debug_span, error, error_span, info, info_span, trace,
+    trace_span, warn, warn_span
 };
-pub use tracing_subscriber;
 
 use bevy::prelude::*;
 use tracing_log::LogTracer;
@@ -60,13 +53,13 @@ use tracing_subscriber::{
 // Store the guard for the non-blocking file appender to ensure logs are flushed on drop and to prevent it from being dropped while the subscriber is still active.
 #[allow(dead_code)]
 #[derive(Resource)]
-pub struct LoggerGuard(tracing_appender::non_blocking::WorkerGuard);
+struct LoggerGuard(tracing_appender::non_blocking::WorkerGuard);
 
 #[cfg(feature = "puffin")]
 use crate::puffin_layer::PuffinLayer;
 
 /// A boxed [`Layer`] that can be used with [`LogPlugin::custom_layer`].
-pub type BoxedLayer = Box<dyn Layer<Registry> + Send + Sync + 'static>;
+type BoxedLayer = Box<dyn Layer<Registry> + Send + Sync + 'static>;
 #[cfg(feature = "tracing")]
 type BaseSubscriber =
     Layered<EnvFilter, Layered<Option<Box<dyn Layer<Registry> + Send + Sync>>, Registry>>;
@@ -77,10 +70,10 @@ type PreFmtSubscriber =
     Layered<EnvFilter, Layered<Option<Box<dyn Layer<Registry> + Send + Sync>>, Registry>>;
 
 /// A boxed [`Layer`] that can be used with [`LogPlugin::fmt_layer`].
-pub type BoxedFmtLayer = Box<dyn Layer<PreFmtSubscriber> + Send + Sync + 'static>;
+type BoxedFmtLayer = Box<dyn Layer<PreFmtSubscriber> + Send + Sync + 'static>;
 
 /// The default [`LogPlugin`] [`EnvFilter`].
-pub const DEFAULT_FILTER: &str = concat!(
+const DEFAULT_FILTER: &str = concat!(
     "wgpu_hal=warn,",
     "wgpu_hal::vulkan::instance=error,",
     "wgpu_core=warn,",
@@ -109,7 +102,7 @@ pub struct LogPlugin {
     pub filter: String,
 
     /// Filters out logs that are "less than" the given level. This can be further filtered using the `filter` setting.
-    pub level: Level,
+    pub level: LogLevel,
 
     /// Optionally add an extra [`Layer`] to the tracing subscriber.
     pub custom_layer: fn(app: &mut App) -> Option<BoxedLayer>,
@@ -123,7 +116,7 @@ impl Default for LogPlugin {
     fn default() -> Self {
         Self {
             filter: DEFAULT_FILTER.to_string(),
-            level: Level::INFO,
+            level: LogLevel::INFO,
             custom_layer: |_| None,
             fmt_layer: |_| None
         }
@@ -135,18 +128,18 @@ impl LogPlugin {
         #[cfg(debug_assertions)]
         {
             self.level = if cfg!(feature = "tracing") {
-                Level::TRACE
+                LogLevel::TRACE
             } else {
-                Level::DEBUG
+                LogLevel::DEBUG
             };
         }
         #[cfg(not(debug_assertions))]
         {
             let args = std::env::args().collect::<Vec<_>>();
             self.level = if args.iter().any(|arg| arg == "--debug") {
-                Level::DEBUG
+                LogLevel::DEBUG
             } else {
-                Level::INFO
+                LogLevel::INFO
             };
         }
         self
@@ -222,7 +215,7 @@ fn configure_panic_hook() {
 
 fn configure_subscriber(
     app: &mut App,
-    level: Level,
+    level: LogLevel,
     filter: &str,
     custom_layer: fn(app: &mut App) -> Option<BoxedLayer>,
     fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>

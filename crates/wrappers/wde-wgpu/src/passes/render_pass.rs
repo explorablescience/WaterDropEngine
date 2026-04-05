@@ -60,7 +60,7 @@ impl<'a> RenderPassInstance<'a> {
     /// * `label` - The label of the render pass.
     /// * `render_pass` - The render pass to create.
     pub fn new(label: &str, render_pass: wgpu::RenderPass<'a>) -> Self {
-        event!(Level::TRACE, "Creating a new render pass {}.", label);
+        event!(LogLevel::TRACE, "Creating a new render pass {}.", label);
 
         Self {
             label: label.to_string(),
@@ -170,7 +170,7 @@ impl<'a> RenderPassInstance<'a> {
             return Err(RenderError::PipelineNotSet);
         }
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Drawing {} vertices and {} instances.",
             vertices.end - vertices.start,
             instances.end - instances.start
@@ -199,7 +199,7 @@ impl<'a> RenderPassInstance<'a> {
             return Err(RenderError::PipelineNotSet);
         }
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Drawing indexed {} indices and {} instances.",
             indices.end - indices.start,
             instance_index.end - instance_index.start
@@ -236,7 +236,7 @@ impl<'a> RenderPassInstance<'a> {
             return Err(RenderError::MissingVertexBuffer);
         }
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Drawing {} instances from indirect buffer.",
             count
         );
@@ -270,7 +270,7 @@ impl<'a> RenderPassInstance<'a> {
             return Err(RenderError::PipelineNotSet);
         }
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Drawing indexed {} instances from indirect buffer.",
             count
         );

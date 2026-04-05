@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use wde_egui::prelude::*;
 use wde_logger::{
-    Level,
-    editor_layer::{editor_logs_clear, editor_logs_snapshot}
+    editor_layer::{editor_logs_clear, editor_logs_snapshot},
+    prelude::*
 };
 
 use crate::ui::UIMenu;
@@ -36,13 +36,13 @@ impl Default for LogFilters {
     }
 }
 impl LogFilters {
-    fn allows(&self, level: Level) -> bool {
+    fn allows(&self, level: LogLevel) -> bool {
         match level {
-            Level::ERROR => self.error,
-            Level::WARN => self.warn,
-            Level::INFO => self.info,
-            Level::DEBUG => self.debug,
-            Level::TRACE => self.trace
+            LogLevel::ERROR => self.error,
+            LogLevel::WARN => self.warn,
+            LogLevel::INFO => self.info,
+            LogLevel::DEBUG => self.debug,
+            LogLevel::TRACE => self.trace
         }
     }
 }
@@ -98,23 +98,23 @@ fn draw_logs_panel(
         });
 }
 
-fn level_label(level: Level) -> &'static str {
+fn level_label(level: LogLevel) -> &'static str {
     match level {
-        Level::ERROR => "ERROR",
-        Level::WARN => "WARN",
-        Level::INFO => "INFO",
-        Level::DEBUG => "DEBUG",
-        Level::TRACE => "TRACE"
+        LogLevel::ERROR => "ERROR",
+        LogLevel::WARN => "WARN",
+        LogLevel::INFO => "INFO",
+        LogLevel::DEBUG => "DEBUG",
+        LogLevel::TRACE => "TRACE"
     }
 }
 
-fn level_color(level: Level) -> egui::Color32 {
+fn level_color(level: LogLevel) -> egui::Color32 {
     match level {
-        Level::ERROR => egui::Color32::from_rgb(220, 70, 70),
-        Level::WARN => egui::Color32::from_rgb(240, 180, 50),
-        Level::INFO => egui::Color32::from_rgb(130, 170, 255),
-        Level::DEBUG => egui::Color32::from_rgb(180, 180, 180),
-        Level::TRACE => egui::Color32::from_rgb(120, 120, 120)
+        LogLevel::ERROR => egui::Color32::from_rgb(220, 70, 70),
+        LogLevel::WARN => egui::Color32::from_rgb(240, 180, 50),
+        LogLevel::INFO => egui::Color32::from_rgb(130, 170, 255),
+        LogLevel::DEBUG => egui::Color32::from_rgb(180, 180, 180),
+        LogLevel::TRACE => egui::Color32::from_rgb(120, 120, 120)
     }
 }
 

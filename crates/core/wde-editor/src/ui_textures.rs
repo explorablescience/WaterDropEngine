@@ -17,7 +17,7 @@ use wde_logger::prelude::*;
 
 use bevy::prelude::*;
 use std::collections::HashMap;
-use wde_egui::prelude::*;
+use wde_egui::{prelude::*, render::EguiRenderPassHolder};
 use wde_renderer::prelude::*;
 
 pub type EguiTextureId = egui::TextureId;

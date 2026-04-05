@@ -208,7 +208,7 @@ plugin_group! {
     /// To modify and configure individual plugins, use:
     /// ```rust
     /// app.add_plugins(WdeDefaultPlugins.set(LogPlugin {
-    ///     level: Level::DEBUG,
+    ///     level: LogLevel::DEBUG,
     ///     ..Default::default()
     /// }));
     /// ```

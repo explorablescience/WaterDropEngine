@@ -118,7 +118,7 @@ impl Texture {
         layer_count: u32,
         mip_level_count: u32
     ) -> Self {
-        event!(Level::TRACE, "Creating wgpu texture {}.", label);
+        event!(LogLevel::TRACE, "Creating wgpu texture {}.", label);
 
         // Calculate max mip levels if requested
         let mip_level_count = if mip_level_count == 0 {
@@ -220,7 +220,7 @@ impl Texture {
         texture_format: TextureFormat,
         buffer: &[u8]
     ) {
-        event!(Level::TRACE, "Copying buffer to texture.");
+        event!(LogLevel::TRACE, "Copying buffer to texture.");
 
         // Retrieve size corresponding to the texture format
         let format_size = match texture_format.block_dimensions() {
@@ -268,7 +268,7 @@ impl Texture {
         array_layer: u32,
         buffer: &[u8]
     ) {
-        event!(Level::TRACE, "Copying texture to buffer.");
+        event!(LogLevel::TRACE, "Copying texture to buffer.");
 
         // Retrieve size corresponding to the texture format
         let format_size = match texture_format.block_dimensions() {
@@ -317,7 +317,7 @@ impl Texture {
         texture: &wgpu::Texture,
         size: (u32, u32)
     ) {
-        event!(Level::TRACE, "Copying texture to texture.");
+        event!(LogLevel::TRACE, "Copying texture to texture.");
 
         // Create command buffer
         let mut command = crate::command_buffer::CommandBuffer::new(instance, "Copy Texture");
@@ -382,7 +382,7 @@ impl Texture {
         array_layer: usize,
         size: (u32, u32)
     ) {
-        event!(Level::TRACE, "Copying texture to texture.");
+        event!(LogLevel::TRACE, "Copying texture to texture.");
 
         // Create command buffer
         let mut command = crate::command_buffer::CommandBuffer::new(instance, "Copy Texture");
@@ -426,7 +426,7 @@ impl Texture {
     pub fn generate_mipmaps(&self, instance: &RenderInstanceData<'_>) {
         if self.mip_level_count <= 1 {
             event!(
-                Level::TRACE,
+                LogLevel::TRACE,
                 "Texture {} has no mipmaps to generate.",
                 self.label
             );
@@ -434,7 +434,7 @@ impl Texture {
         }
 
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Generating {} mip levels for texture {}.",
             self.mip_level_count,
             self.label
@@ -631,7 +631,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 
         command.submit(instance);
         event!(
-            Level::TRACE,
+            LogLevel::TRACE,
             "Finished generating mipmaps for texture {}.",
             self.label
         );

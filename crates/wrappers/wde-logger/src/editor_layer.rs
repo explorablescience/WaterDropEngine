@@ -22,11 +22,10 @@ pub struct EditorLogEntry {
 
 static EDITOR_LOG_BUFFER: OnceLock<Mutex<VecDeque<EditorLogEntry>>> = OnceLock::new();
 
-pub fn editor_log_buffer() -> &'static Mutex<VecDeque<EditorLogEntry>> {
+fn editor_log_buffer() -> &'static Mutex<VecDeque<EditorLogEntry>> {
     EDITOR_LOG_BUFFER.get_or_init(|| Mutex::new(VecDeque::with_capacity(EDITOR_LOG_CAPACITY)))
 }
-
-pub fn push_editor_log(entry: EditorLogEntry) {
+fn push_editor_log(entry: EditorLogEntry) {
     let mut logs = editor_log_buffer()
         .lock()
         .expect("editor log buffer should not be poisoned");
@@ -35,7 +34,6 @@ pub fn push_editor_log(entry: EditorLogEntry) {
     }
     logs.push_back(entry);
 }
-
 pub fn editor_logs_snapshot() -> Vec<EditorLogEntry> {
     editor_log_buffer()
         .lock()
@@ -44,7 +42,6 @@ pub fn editor_logs_snapshot() -> Vec<EditorLogEntry> {
         .cloned()
         .collect()
 }
-
 pub fn editor_logs_clear() {
     editor_log_buffer()
         .lock()
@@ -53,7 +50,7 @@ pub fn editor_logs_clear() {
 }
 
 #[derive(Default)]
-pub struct EditorLogVisitor {
+pub(crate) struct EditorLogVisitor {
     message: Option<String>,
     fields: BTreeMap<String, String>
 }

@@ -22,58 +22,6 @@
 //! - **Vertex helpers**: [`vertex::Vertex`] provides a canonical position/uv/normal layout
 //!   and a ready-to-use `wgpu::VertexBufferLayout`.
 //!
-//! # Quickstart (hello clear)
-//! ```rust,no_run
-//! use bevy::window::RawHandleWrapperHolder;
-//! use wde_wgpu::{
-//!     command_buffer::{CommandBuffer, Operations, RenderPassBuilder, RenderPassColorAttachment},
-//!     instance::{create_instance, get_current_texture, present, setup_surface, PresentMode, RenderEvent},
-//! };
-//!
-//! # async fn demo(window_handle: RawHandleWrapperHolder, size: (u32, u32)) {
-//! let render = create_instance("hello-wde", Some(&window_handle)).await;
-//!
-//! // Configure the surface once the window is ready
-//! {
-//!     let mut data = render.data.write().unwrap();
-//!     let surface = data.surface.as_ref().unwrap();
-//!     data.surface_config = Some(setup_surface(
-//!         "main-surface",
-//!         size,
-//!         &data.device,
-//!         surface,
-//!         &data.adapter,
-//!         PresentMode::AutoNoVsync,
-//!     ));
-//! }
-//!
-//! // Acquire the next frame and record work
-//! let render_event = {
-//!     let data = render.data.read().unwrap();
-//!     get_current_texture(
-//!         data.surface.as_ref().unwrap(),
-//!         data.surface_config.as_ref().unwrap(),
-//!     )
-//! };
-//!
-//! if let RenderEvent::Redraw(frame) = render_event {
-//!     let data = render.data.read().unwrap();
-//!     let mut cmd = CommandBuffer::new(&data, "clear-pass");
-//!     {
-//!         cmd.create_render_pass("clear", |pass| {
-//!             pass.add_color_attachment(RenderPassColorAttachment {
-//!                 texture: Some(&frame.view),
-//!                 load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
-//!                 store: wgpu::StoreOp::Store,
-//!             });
-//!         });
-//!     }
-//!     cmd.submit(&data);
-//!     present(frame.texture).unwrap();
-//! }
-//! # }
-//! ```
-//!
 //! # Core usage patterns
 //! - Configure a surface once, then react to [`instance::RenderEvent::Resize`] with [`instance::resize`].
 //! - Build resources up-front (`Buffer`, `Texture`), then stage per-frame uploads via

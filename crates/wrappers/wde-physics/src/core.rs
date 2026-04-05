@@ -1,7 +1,3 @@
-//! Core physics world management.
-//!
-//! This module contains the main physics world resource and systems for managing
-//! colliders, rigid bodies, and spatial queries.
 use wde_logger::prelude::*;
 
 use bevy::prelude::*;
@@ -14,14 +10,11 @@ use crate::{
 };
 
 /// Internal handler for Rapier physics components.
-///
-/// This struct manages all the core Rapier data structures including colliders,
-/// rigid bodies, joints, and the query pipeline for spatial queries.
 #[derive(Default)]
 struct RapierHandler {
-    /// The set of all colliders in the physics world
+    /// Set of all colliders in the physics world
     collider_set: RwLock<ColliderSet>,
-    /// The set of all rigid bodies in the physics world
+    /// Set of all rigid bodies in the physics world
     rigid_body_set: RwLock<RigidBodySet>,
 
     /// Spatial query acceleration structure for raycasting and intersection tests.
@@ -37,23 +30,7 @@ struct RapierHandler {
 }
 
 /// The main physics world resource.
-///
-/// This resource manages the entire physics simulation, including all colliders,
-/// rigid bodies, and spatial queries. It provides methods for raycasting and
-/// automatically syncs with Bevy entities that have `Collider` components.
-///
-/// # Example
-///
-/// ```no_run
-/// # use bevy::prelude::*;
-/// # use wde_physics::prelude::*;
-/// fn raycast_system(physics_world: Res<PhysicsWorld>) {
-///     let ray = Ray::new(Vec3::ZERO, Vec3::Y);
-///     if let Some((entity, toi)) = physics_world.cast_ray(&ray, &RayCastConfig::default()) {
-///         println!("Hit entity {:?} at distance {}", entity, toi);
-///     }
-/// }
-/// ```
+/// This resource manages the entire physics simulation, including all colliders, rigid bodies, and spatial queries. It provides methods for raycasting and automatically syncs with entities that have a [`Collider`] components.
 #[derive(Resource, Default)]
 pub struct PhysicsWorld {
     /// Internal Rapier physics handler
@@ -69,11 +46,8 @@ pub struct PhysicsWorld {
     rigid_body_to_entity: HashMap<RigidBodyHandle, Entity>
 }
 impl PhysicsWorld {
-    /// Cast a ray in the physics world.
-    ///
-    /// # Arguments
-    /// * `ray` - The ray to cast.
-    /// * `params` - The ray cast configuration parameters.
+    /// Cast a ray in the physics world. See [`RayCastConfig`] for configuration options.
+    /// See [crate] documentation for example usage.
     ///
     /// # Returns
     /// An optional tuple containing the hit entity and the time of impact (toi) if a hit occurred.
@@ -98,9 +72,6 @@ impl PhysicsWorld {
 }
 
 /// System to handle changes in colliders, including additions, removals, and updates.
-///
-/// This system listens for added, removed, and changed colliders, as well as changed transforms,
-/// and updates the physics world accordingly.
 pub(crate) fn handle_changes(
     mut phworld: ResMut<PhysicsWorld>,
     colliders: Query<(Entity, &Transform, &Collider)>,

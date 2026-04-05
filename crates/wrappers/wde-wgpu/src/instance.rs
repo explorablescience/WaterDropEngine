@@ -346,7 +346,7 @@ pub fn get_current_texture(
     surface: &Surface,
     surface_config: &SurfaceConfiguration
 ) -> RenderEvent {
-    event!(Level::TRACE, "Getting current texture.");
+    event!(LogLevel::TRACE, "Getting current texture.");
 
     // Get current texture
     let _get_current_texture = info_span!("acquire_texture").entered();
@@ -355,7 +355,7 @@ pub fn get_current_texture(
 
     // Check if texture is acquired
     event!(
-        Level::TRACE,
+        LogLevel::TRACE,
         "Texture acquired. Creating render view and checking status."
     );
     match render_texture {
@@ -417,7 +417,7 @@ pub fn get_current_texture(
 ///
 /// Call this after encoding commands that render into the acquired surface texture.
 pub fn present(surface_texture: SurfaceTexture) -> Result<(), RenderError> {
-    event!(Level::TRACE, "Presenting render texture.");
+    event!(LogLevel::TRACE, "Presenting render texture.");
     surface_texture.present();
     Ok(())
 }
@@ -427,7 +427,7 @@ pub fn present(surface_texture: SurfaceTexture) -> Result<(), RenderError> {
 /// The caller must also update `surface_config.width/height` before invoking.
 pub fn resize(device: &Device, surface: &Surface, surface_config: &SurfaceConfiguration) {
     event!(
-        Level::TRACE,
+        LogLevel::TRACE,
         "Resizing surface to {}x{}.",
         surface_config.width,
         surface_config.height

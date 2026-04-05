@@ -271,7 +271,7 @@ impl RenderPipeline {
     ///
     /// * `Result<(), RenderError>` - The result of the initialization.
     pub fn init(&mut self, instance: &RenderInstanceData<'_>) -> Result<(), RenderError> {
-        event!(Level::TRACE, "Creating render pipeline {}.", self.label);
+        event!(LogLevel::TRACE, "Creating render pipeline {}.", self.label);
         let d = &self.config;
 
         // Security checks
