@@ -11,7 +11,7 @@ use wde_renderer::prelude::*;
 use crate::prelude::RenderTextureBindGroup;
 
 /// The render pass for resolving the multisampled [`crate::logic::render_texture::RenderTexture`], which is the color attachment of the deferred lighting pass, to the swapchain texture, which is then presented on the screen.
-/// 
+///
 /// Note:
 ///  - This render pass has a render index of 100. It should be executed after all the rendering passes that render to the multisampled render texture.
 pub(crate) struct RenderPassResolve;
@@ -40,13 +40,16 @@ impl RenderAsset for ResolveRenderPipeline {
         (assets_server, pipeline_manager): &mut bevy::ecs::system::SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(ResolveRenderPipeline(
-            pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
-                label: "resolve",
-                vert: Some(assets_server.load("core/render/resolve/vert.wgsl")),
-                frag: Some(assets_server.load("core/render/resolve/frag.wgsl")),
-                bind_group_layouts: vec![Some(RenderTextureBindGroup::layout())],
-                ..Default::default()
-            }, asset)?
+            pipeline_manager.create_render_pipeline(
+                RenderPipelineDescriptor {
+                    label: "resolve",
+                    vert: Some(assets_server.load("core/render/resolve/vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/resolve/frag.wgsl")),
+                    bind_group_layouts: vec![Some(RenderTextureBindGroup::layout())],
+                    ..Default::default()
+                },
+                asset
+            )?
         ))
     }
 }

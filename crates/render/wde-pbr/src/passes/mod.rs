@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use wde_renderer::prelude::*;
 use pass_resolve::*;
+use wde_renderer::prelude::*;
 
 mod pass_deferred_lighting;
 mod pass_gbuffer;
@@ -29,7 +29,7 @@ impl Plugin for PassesPlugin {
         // Add the pipelines
         app.add_plugins((
             RenderPipelinePluginRegister::<ResolveRenderPipeline>::default(),
-            RenderPipelinePluginRegister::<DeferredLightingPipeline>::default(),
+            RenderPipelinePluginRegister::<DeferredLightingPipeline>::default()
         ));
     }
 }

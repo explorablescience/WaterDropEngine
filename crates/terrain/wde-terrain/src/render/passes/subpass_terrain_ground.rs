@@ -88,7 +88,13 @@ impl RenderSubPass for SubRenderPassTerrainGround {
                     .as_ref()
                     .map(|mesh| mesh.id())
             ),
-            SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, camera)| camera.bind_group.clone())),
+            SubPassCommand::BindGroup(
+                0,
+                camera
+                    .iter()
+                    .next()
+                    .map(|(_, camera)| camera.bind_group.clone())
+            ),
             SubPassCommand::BindGroup(1, terrain_material_arrays.bind_group.clone()),
             SubPassCommand::BindGroup(2, terrain_buffer.bind_group.clone()),
             SubPassCommand::DrawBatches(batches),

@@ -1,16 +1,16 @@
+mod deferred_textures;
 mod depth;
 mod render_texture;
-mod deferred_textures;
 
-pub use render_texture::*;
-pub use depth::*;
 pub use deferred_textures::*;
+pub use depth::*;
+pub use render_texture::*;
 
 use wde_renderer::prelude::*;
 
 use bevy::prelude::*;
 
-use crate::textures::{depth::DepthTexturePlugin};
+use crate::textures::depth::DepthTexturePlugin;
 
 pub(crate) struct CorePlugin;
 impl Plugin for CorePlugin {
@@ -39,7 +39,7 @@ impl Plugin for CorePlugin {
             .add_systems(Extract, PbrDeferredTextures::extract_textures)
             .add_systems(
                 Render,
-                PbrDeferredTexturesLayout::build_bind_group.in_set(RenderSet::BindGroups),
+                PbrDeferredTexturesLayout::build_bind_group.in_set(RenderSet::BindGroups)
             );
     }
 }

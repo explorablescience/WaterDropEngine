@@ -245,7 +245,11 @@ fn load_render_pipelines(
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
-            let layout = match layout.as_ref().unwrap().build(&render_instance.0.read().unwrap()) {
+            let layout = match layout
+                .as_ref()
+                .unwrap()
+                .build(&render_instance.0.read().unwrap())
+            {
                 Ok(layout) => layout,
                 Err(e) => {
                     error!(
@@ -352,7 +356,11 @@ fn load_compute_pipelines(
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
-            let layout = match layout.as_ref().unwrap().build(&render_instance.0.read().unwrap()) {
+            let layout = match layout
+                .as_ref()
+                .unwrap()
+                .build(&render_instance.0.read().unwrap())
+            {
                 Ok(layout) => layout,
                 Err(e) => {
                     error!(

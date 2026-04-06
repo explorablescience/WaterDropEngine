@@ -1,9 +1,9 @@
 use bevy::{
     ecs::system::{
         SystemParamItem,
-        lifetimeless::{SRes, SResMut},
+        lifetimeless::{SRes, SResMut}
     },
-    prelude::*,
+    prelude::*
 };
 use wde_camera::prelude::*;
 use wde_renderer::prelude::{Color, *};
@@ -47,30 +47,33 @@ impl RenderAsset for DeferredLightingPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBinding<CameraRender>,
+        SBinding<CameraRender>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera): &mut SystemParamItem<Self::Params>,
+        (assets_server, pipeline_manager, camera): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(DeferredLightingPipeline(
-            pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
-                label: "deferred-lighting",
-                vert: Some(assets_server.load("core/render/pbr/lighting_vert.wgsl")),
-                frag: Some(assets_server.load("core/render/pbr/lighting_frag.wgsl")),
-                bind_group_layouts: vec![
-                    camera.iter().next().map(|(_, c)| c.layout.clone()),
-                    Some(PbrDeferredTexturesLayout::layout()),
-                    Some(LightsFeatureBuffer::layout()),
-                ],
-                depth: DepthDescriptor {
-                    enabled: false,
+            pipeline_manager.create_render_pipeline(
+                RenderPipelineDescriptor {
+                    label: "deferred-lighting",
+                    vert: Some(assets_server.load("core/render/pbr/lighting_vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/pbr/lighting_frag.wgsl")),
+                    bind_group_layouts: vec![
+                        camera.iter().next().map(|(_, c)| c.layout.clone()),
+                        Some(PbrDeferredTexturesLayout::layout()),
+                        Some(LightsFeatureBuffer::layout()),
+                    ],
+                    depth: DepthDescriptor {
+                        enabled: false,
+                        ..default()
+                    },
+                    sample_count: MSAA_SAMPLE_COUNT,
                     ..default()
                 },
-                sample_count: MSAA_SAMPLE_COUNT,
-                ..default()
-            }, asset)?
+                asset
+            )?
         ))
     }
 }
@@ -82,13 +85,13 @@ impl RenderSubPass for SubRenderPassLightingPbr {
         SRes<PostProcessingMesh>,
         SBinding<CameraRender>,
         SRes<PbrDeferredTexturesLayout>,
-        SRes<LightsFeatureBuffer>,
+        SRes<LightsFeatureBuffer>
     );
 
     fn describe(
         (pipeline, mesh, camera, deferred_textures_layout, lights_buffer): &SystemParamItem<
-            Self::Params,
-        >,
+            Self::Params
+        >
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
@@ -98,7 +101,7 @@ impl RenderSubPass for SubRenderPassLightingPbr {
                 1,
                 deferred_textures_layout
                     .deferred_bind_group_resolved
-                    .clone(),
+                    .clone()
             ),
             SubPassCommand::BindGroup(2, lights_buffer.bind_group.clone()),
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {

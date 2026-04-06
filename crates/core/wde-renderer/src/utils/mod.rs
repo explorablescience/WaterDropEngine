@@ -13,15 +13,15 @@ use crate::{
     core::{ExtractResourcePlugin, RenderApp}
 };
 
+mod color;
 mod post_process_mesh;
 mod ssbo_mesh;
 mod transform;
-mod color;
 
+pub use color::Color;
 pub use post_process_mesh::PostProcessingMesh;
 pub use ssbo_mesh::{SsboMesh, SsboMeshDescriptor};
 pub use transform::TransformUniform;
-pub use color::Color;
 
 /** Multisample anti-aliasing sample count used throughout the renderer. */
 pub const MSAA_SAMPLE_COUNT: u32 = 4;

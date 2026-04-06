@@ -8,7 +8,7 @@ use crate::prelude::*;
 
 /// The render pass for rendering transparent objects in the deferred rendering pipeline.
 /// It uses the depth texture rendered in the previous render pass [`crate::prelude::RenderPassGBuffer`] for depth testing, and writes to the final render texture, which is then presented on the screen.
-/// 
+///
 /// Note:
 ///  - This render pass is responsible for rendering transparent objects, which are rendered in a separate render pass[`crate::prelude::RenderPassDeferredLighting`].
 ///  - This render pass does not clear the color attachment, as it needs to blend with the opaque objects rendered in the previous render pass. It does not clear the depth attachment either, as it needs to use the depth information rendered in the previous render pass for depth testing.

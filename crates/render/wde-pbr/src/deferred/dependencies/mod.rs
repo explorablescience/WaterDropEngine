@@ -15,9 +15,7 @@ pub(crate) struct PbrDependenciesPlugin;
 impl Plugin for PbrDependenciesPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(PbrModelRegistryPlugin);
-        app
-            .add_plugins(PbrSsboPlugin)
-            .add_plugins(BatchesPlugin);
+        app.add_plugins(PbrSsboPlugin).add_plugins(BatchesPlugin);
         app.add_plugins(MaterialsPluginRegister::<PbrMaterial>::default());
     }
 }

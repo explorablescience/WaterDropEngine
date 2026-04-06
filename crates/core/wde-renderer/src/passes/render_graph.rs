@@ -1,6 +1,8 @@
-use wde_logger::prelude::*;
-use wde_wgpu::passes::{CommandBuffer, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth};
 use crate::prelude::*;
+use wde_logger::prelude::*;
+use wde_wgpu::passes::{
+    CommandBuffer, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth
+};
 
 use bevy::ecs::system::{ReadOnlySystemParam, SystemParamItem, SystemState};
 use bevy::prelude::*;
@@ -13,7 +15,7 @@ use crate::{
     core::SwapchainFrame
 };
 
-pub use wde_wgpu::command_buffer::{LoadOp, StoreOp, Operations};
+pub use wde_wgpu::command_buffer::{LoadOp, Operations, StoreOp};
 pub use wde_wgpu::render_pass::RenderPassInstance;
 
 /// Color attachment description for a render pass.

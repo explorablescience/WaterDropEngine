@@ -1,5 +1,5 @@
 //! Camera plugin for WaterDropEngine.
-//! 
+//!
 //! This plugin provides a camera component and a camera view component, as well as a system to extract the active camera and update the camera uniform each frame.
 //!
 //! # Example
@@ -14,7 +14,7 @@
 //!     ));
 //! }
 //! ```
-//! 
+//!
 //! The camera uniform will then be automatically updated each frame with the active camera's transform and view parameters.
 //! To consumes the camera uniform in a shader, you can use the [`crate::camera::CameraRender`] render binding.
 //! It is accessible by the resource `Res<RenderAssets<GpuRenderBinding<CameraRender>>>` in render systems, or `SBindings<CameraRender>` in shader code.
@@ -29,8 +29,8 @@ pub mod prelude {
     pub use crate::view::CameraView;
 }
 
-mod view;
 mod camera;
+mod view;
 
 #[cfg(debug_assertions)]
 mod editor;

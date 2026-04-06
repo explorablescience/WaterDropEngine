@@ -6,16 +6,15 @@ use crate::view::{CameraUniform, CameraView};
 pub(crate) struct CameraFeature;
 impl Plugin for CameraFeature {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(RenderBindingPluginRegister::<CameraRender>::default());
-        app.get_sub_app_mut(RenderApp).unwrap()
+        app.add_plugins(RenderBindingPluginRegister::<CameraRender>::default());
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
             .init_resource::<CameraUniform>()
             .add_systems(Extract, extract)
             .add_systems(Render, update_buffer);
 
         // Register types for reflection
-        app.register_type::<Camera>()
-            .register_type::<CameraView>();
+        app.register_type::<Camera>().register_type::<CameraView>();
     }
 }
 
@@ -35,12 +34,15 @@ pub struct ActiveCamera;
 pub struct CameraRender;
 impl RenderBinding for CameraRender {
     fn describe(&self, builder: &mut RenderBindingBuilder) {
-        builder.add_buffer(0, Buffer {
-            label: "camera".to_string(),
-            size: std::mem::size_of::<CameraUniform>(),
-            usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-            content: None
-        });
+        builder.add_buffer(
+            0,
+            Buffer {
+                label: "camera".to_string(),
+                size: std::mem::size_of::<CameraUniform>(),
+                usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                content: None
+            }
+        );
     }
 
     fn label(&self) -> &'static str {

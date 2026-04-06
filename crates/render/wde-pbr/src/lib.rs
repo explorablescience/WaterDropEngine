@@ -96,20 +96,19 @@ use bevy::prelude::*;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::textures::*;
     pub use crate::deferred::*;
     pub use crate::passes::*;
+    pub use crate::textures::*;
 }
 
-mod textures;
-mod passes;
 mod deferred;
+mod passes;
+mod textures;
 
 pub struct PbrPlugin;
 impl Plugin for PbrPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_plugins(CorePlugin)
+        app.add_plugins(CorePlugin)
             .add_plugins(PassesPlugin)
             .add_plugins(DeferredPlugin);
     }

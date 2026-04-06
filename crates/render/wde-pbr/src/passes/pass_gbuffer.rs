@@ -1,4 +1,4 @@
-use wde_renderer::prelude::{*, Color};
+use wde_renderer::prelude::{Color, *};
 
 use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
@@ -9,7 +9,7 @@ use crate::prelude::*;
 
 /// The render pass for rendering opaque objects into the G-buffer, in the deferred rendering pipeline.
 /// It writes to the depth texture, as well as the albedo, normal and depth textures of the G-buffer, which are then resolved for use in the lighting pass [`crate::prelude::RenderPassDeferredLighting`] (no MSAA in the lighting pass, so we need to resolve the multisampled textures).
-/// 
+///
 /// Note:
 ///  - This render pass is not responsible for rendering transparent objects, which are rendered in a separate render pass[`crate::prelude::RenderPassTransparent`].
 ///  - This render pass clears the depth texture to 1.0, and the color attachments to black.

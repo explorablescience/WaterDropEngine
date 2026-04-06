@@ -6,7 +6,9 @@ pub use gbuffer_pipeline::*;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{deferred::subpass::gbuffer_subpass_pbr::SubRenderPassGbufferPbr, prelude::RenderPassGBuffer};
+use crate::{
+    deferred::subpass::gbuffer_subpass_pbr::SubRenderPassGbufferPbr, prelude::RenderPassGBuffer
+};
 
 pub(crate) struct PbrRenderPlugin;
 impl Plugin for PbrRenderPlugin {
@@ -37,4 +39,3 @@ impl Plugin for PbrRenderPlugin {
             .spawn(PbrGBufferRenderPipeline(pipeline));
     }
 }
-

@@ -65,7 +65,7 @@ fn extract(
     render_dirty_transforms.0 = main_dirty_transforms.0.clone();
 
     // Extract every uuid from the entities
-    let mut render_entities= Vec::new();
+    let mut render_entities = Vec::new();
     for entity in raw_entities.iter() {
         if let Some(uuid_list) = model_registry.entity_to_model_uuids.get(&entity) {
             for uuid in uuid_list.iter() {

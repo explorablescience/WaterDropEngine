@@ -40,28 +40,31 @@ impl RenderAsset for GpuTerrainRenderPipeline {
         (assets_server, pipeline_manager, camera, material_arrays, terrain_buffer): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(GpuTerrainRenderPipeline(
-            pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
-                label: "terrain",
-                vert: Some(assets_server.load("core/render/terrain/render_terrain_vert.wgsl")),
-                frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
-                bind_group_layouts: vec![
-                    camera.iter().next().map(|(_, c)| c.layout.clone()),
-                    material_arrays.bind_group_layout.clone(),
-                    Some(terrain_buffer.layout.clone()),
-                    Some(TerrainRendererGPU::layout_render()),
-                ],
-                render_targets: Some(vec![
-                    TextureFormat::R16Float,       // Depth
-                    TextureFormat::Rgba8UnormSrgb, // Albedo
-                    TextureFormat::Rgba16Float,    // Normal
-                ]),
-                depth: DepthDescriptor {
-                    enabled: true,
+            pipeline_manager.create_render_pipeline(
+                RenderPipelineDescriptor {
+                    label: "terrain",
+                    vert: Some(assets_server.load("core/render/terrain/render_terrain_vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
+                    bind_group_layouts: vec![
+                        camera.iter().next().map(|(_, c)| c.layout.clone()),
+                        material_arrays.bind_group_layout.clone(),
+                        Some(terrain_buffer.layout.clone()),
+                        Some(TerrainRendererGPU::layout_render()),
+                    ],
+                    render_targets: Some(vec![
+                        TextureFormat::R16Float,       // Depth
+                        TextureFormat::Rgba8UnormSrgb, // Albedo
+                        TextureFormat::Rgba16Float,    // Normal
+                    ]),
+                    depth: DepthDescriptor {
+                        enabled: true,
+                        ..Default::default()
+                    },
+                    sample_count: MSAA_SAMPLE_COUNT,
                     ..Default::default()
                 },
-                sample_count: MSAA_SAMPLE_COUNT,
-                ..Default::default()
-            }, asset)?
+                asset
+            )?
         ))
     }
 

@@ -87,12 +87,22 @@ impl Color {
 impl From<Color> for WgpuColor {
     fn from(value: Color) -> Self {
         match value {
-            Color::LinearRgba(r, g, b, a) => WgpuColor { r: r.into(), g: g.into(), b: b.into(), a: a.into() },
+            Color::LinearRgba(r, g, b, a) => WgpuColor {
+                r: r.into(),
+                g: g.into(),
+                b: b.into(),
+                a: a.into()
+            },
             Color::Srgba(r, g, b, a) => {
                 let r = r.powf(2.2);
                 let g = g.powf(2.2);
                 let b = b.powf(2.2);
-                WgpuColor { r: r.into(), g: g.into(), b: b.into(), a: a.into() }
+                WgpuColor {
+                    r: r.into(),
+                    g: g.into(),
+                    b: b.into(),
+                    a: a.into()
+                }
             }
         }
     }

@@ -1,12 +1,15 @@
+use crate::deferred::{
+    dependencies::{Batches, PbrMaterial, SsboTransformPbr},
+    subpass::GpuPbrGBufferRenderPipeline
+};
 use wde_logger::prelude::*;
-use crate::deferred::{dependencies::{Batches, PbrMaterial, SsboTransformPbr}, subpass::GpuPbrGBufferRenderPipeline};
 
 use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
     prelude::*
 };
-use wde_renderer::prelude::*;
 use wde_camera::prelude::*;
+use wde_renderer::prelude::*;
 
 pub(crate) struct SubRenderPassGbufferPbr;
 impl RenderSubPass for SubRenderPassGbufferPbr {
@@ -31,7 +34,13 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
                     .next()
                     .map(|(_, mesh)| mesh.bind_group.clone())
             ),
-            SubPassCommand::BindGroup(1, camera.iter().next().map(|(_, camera)| camera.bind_group.clone())),
+            SubPassCommand::BindGroup(
+                1,
+                camera
+                    .iter()
+                    .next()
+                    .map(|(_, camera)| camera.bind_group.clone())
+            ),
             SubPassCommand::BindGroup(2, pbr_ssbo.bind_group.clone()),
             SubPassCommand::Custom(draw_custom),
         ])
