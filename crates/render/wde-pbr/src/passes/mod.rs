@@ -11,7 +11,7 @@ pub use pass_deferred_lighting::*;
 pub use pass_gbuffer::*;
 pub use pass_transparent::*;
 
-pub struct PassesPlugin;
+pub(crate) struct PassesPlugin;
 impl Plugin for PassesPlugin {
     fn build(&self, app: &mut App) {
         // Add the render graph nodes

@@ -77,7 +77,7 @@
 //! For example, to update the albedo color of the material, you would do something like this (on the render app):
 //! ```
 //! // Get the resource
-//! let gpu_materials: RenderAssets<GpuRenderBinding<PbrMaterial>> = /* ... */;
+//! let gpu_materials: Binding<PbrMaterial> = /* ... */;
 //! let material = match gpu_materials.iter().next() {
 //!    Some((_, mat)) => mat,
 //!    None => return

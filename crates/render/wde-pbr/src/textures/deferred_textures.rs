@@ -1,298 +1,182 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-#[derive(Resource, Default)]
-pub struct PbrDeferredTexturesLayout {
-    pub deferred_layout: Option<BindGroupLayout>,
-    pub deferred_bind_group: Option<BindGroup>,
-    pub deferred_layout_resolved: Option<BindGroupLayout>,
-    pub deferred_bind_group_resolved: Option<BindGroup>
-}
-impl PbrDeferredTexturesLayout {
-    /// Build the bind group for the deferred renderer.
-    pub fn build_bind_group(
-        textures: Res<RenderAssets<GpuTexture>>,
-        render_instance: Res<RenderInstance>,
-        mut textures_layout: ResMut<PbrDeferredTexturesLayout>,
-        deferred_textures: Res<PbrDeferredTextures>
-    ) {
-        // Check if the bind group is already created
-        if textures_layout.deferred_bind_group.is_some() & textures_layout.deferred_layout.is_some()
-        {
-            return;
-        }
+pub(crate) struct DeferredTexturesPlugin;
+impl Plugin for DeferredTexturesPlugin {
+    fn build(&self, app: &mut App) {
+        let init_plugin = RenderBindingPluginRegister::<DeferredTextures>::with_init(init, app);
+        app.add_plugins(init_plugin).add_systems(Update, resize);
 
-        // Get the textures
-        let (depth, depth_resolved, albedo, albedo_resolved, normal, normal_resolved) = match (
-            textures.get(&deferred_textures.depth),
-            textures.get(&deferred_textures.depth_resolved),
-            textures.get(&deferred_textures.albedo),
-            textures.get(&deferred_textures.albedo_resolved),
-            textures.get(&deferred_textures.normal),
-            textures.get(&deferred_textures.normal_resolved)
-        ) {
-            (
-                Some(depth),
-                Some(depth_resolved),
-                Some(albedo),
-                Some(albedo_resolved),
-                Some(normal),
-                Some(normal_resolved)
-            ) => (
-                depth,
-                depth_resolved,
-                albedo,
-                albedo_resolved,
-                normal,
-                normal_resolved
-            ),
-            _ => return
-        };
-
-        // Create the layouts
-        let deferred_layout = BindGroupLayout::new(
-            "deferred-textures-resolved",
-            |builder: &mut BindGroupLayoutBuilder| {
-                builder.add_texture_view(0, ShaderStages::FRAGMENT, true);
-                builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-                builder.add_texture_view(2, ShaderStages::FRAGMENT, true);
-                builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-                builder.add_texture_view(4, ShaderStages::FRAGMENT, true);
-                builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
-            }
-        );
-        let deferred_layout_resolved = Self::layout();
-
-        // Build the layout
-        let render_instance = render_instance.0.read().unwrap();
-        let deferred_layout_built =
-            BindGroupLayout::build(&deferred_layout, &render_instance).unwrap();
-        let deferred_layout_resolved_built =
-            BindGroupLayout::build(&deferred_layout_resolved, &render_instance).unwrap();
-
-        // Create the bind group
-        let deferred_bind_group = BindGroupBuilder::build(
-            "deferred-textures",
-            &render_instance,
-            &deferred_layout_built,
-            &vec![
-                BindGroupBuilder::texture_view(0, &depth.texture),
-                BindGroupBuilder::texture_sampler(1, &depth.texture),
-                BindGroupBuilder::texture_view(2, &albedo.texture),
-                BindGroupBuilder::texture_sampler(3, &albedo.texture),
-                BindGroupBuilder::texture_view(4, &normal.texture),
-                BindGroupBuilder::texture_sampler(5, &normal.texture),
-            ]
-        )
-        .unwrap();
-        let deferred_bind_group_resolved = BindGroupBuilder::build(
-            "deferred-textures-resolved",
-            &render_instance,
-            &deferred_layout_resolved_built,
-            &vec![
-                BindGroupBuilder::texture_view(0, &depth_resolved.texture),
-                BindGroupBuilder::texture_sampler(1, &depth_resolved.texture),
-                BindGroupBuilder::texture_view(2, &albedo_resolved.texture),
-                BindGroupBuilder::texture_sampler(3, &albedo_resolved.texture),
-                BindGroupBuilder::texture_view(4, &normal_resolved.texture),
-                BindGroupBuilder::texture_sampler(5, &normal_resolved.texture),
-            ]
-        )
-        .unwrap();
-
-        // Insert the resources
-        textures_layout.deferred_layout = Some(deferred_layout);
-        textures_layout.deferred_bind_group = Some(deferred_bind_group);
-        textures_layout.deferred_layout_resolved = Some(deferred_layout_resolved);
-        textures_layout.deferred_bind_group_resolved = Some(deferred_bind_group_resolved);
-    }
-
-    pub fn layout() -> BindGroupLayout {
-        BindGroupLayout::new(
-            "deferred-textures",
-            |builder: &mut BindGroupLayoutBuilder| {
-                builder.add_texture_view(0, ShaderStages::FRAGMENT, false);
-                builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-                builder.add_texture_view(2, ShaderStages::FRAGMENT, false);
-                builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-                builder.add_texture_view(4, ShaderStages::FRAGMENT, false);
-                builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
-            }
-        )
+        let init_resolved_plugin =
+            RenderBindingPluginRegister::<DeferredTexturesResolved>::with_init(init_resolved, app);
+        app.add_plugins(init_resolved_plugin)
+            .add_systems(Update, resize);
     }
 }
 
-#[derive(Resource)]
-pub struct PbrDeferredTextures {
+#[derive(Asset, Clone, TypePath, Default)]
+pub struct DeferredTextures {
     pub depth: Handle<Texture>,
-    pub depth_resolved: Handle<Texture>,
     pub albedo: Handle<Texture>,
-    pub albedo_resolved: Handle<Texture>,
-    pub normal: Handle<Texture>,
-    pub normal_resolved: Handle<Texture>,
-    pub resized: bool
+    pub normal: Handle<Texture>
 }
-impl PbrDeferredTextures {
-    /// Create the textures for the deferred renderer.
-    pub fn create_textures(
-        mut commands: Commands,
-        assets_server: Res<AssetServer>,
-        window: Query<&Window>
-    ) {
-        let resolution = &window.single().unwrap().resolution;
-
-        // Create the depth texture
-        let depth = assets_server.add(Texture {
-            label: "pbr-depth".to_string(),
-            size: (resolution.physical_width(), resolution.physical_height()),
-            format: TextureFormat::R16Float,
-            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            sample_count: MSAA_SAMPLE_COUNT,
-            ..Default::default()
-        });
-        let depth_resolved = assets_server.add(Texture {
-            label: "pbr-depth-resolved".to_string(),
-            size: (resolution.physical_width(), resolution.physical_height()),
-            format: TextureFormat::R16Float,
-            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            ..Default::default()
-        });
-
-        // Create the albedo texture
-        let albedo = assets_server.add(Texture {
-            label: "pbr-albedo".to_string(),
-            size: (resolution.physical_width(), resolution.physical_height()),
-            format: TextureFormat::Rgba8UnormSrgb,
-            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            sample_count: MSAA_SAMPLE_COUNT,
-            ..Default::default()
-        });
-        let albedo_resolved = assets_server.add(Texture {
-            label: "pbr-albedo-resolved".to_string(),
-            size: (resolution.physical_width(), resolution.physical_height()),
-            format: TextureFormat::Rgba8UnormSrgb,
-            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            ..Default::default()
-        });
-
-        // Create the normal texture
-        let normal = assets_server.add(Texture {
-            label: "pbr-normal".to_string(),
-            size: (resolution.physical_width(), resolution.physical_height()),
-            format: TextureFormat::Rgba16Float,
-            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            sample_count: MSAA_SAMPLE_COUNT,
-            ..Default::default()
-        });
-        let normal_resolved = assets_server.add(Texture {
-            label: "pbr-normal-resolved".to_string(),
-            size: (resolution.physical_width(), resolution.physical_height()),
-            format: TextureFormat::Rgba16Float,
-            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            ..Default::default()
-        });
-
-        // Insert the resources
-        commands.insert_resource(PbrDeferredTextures {
-            depth,
-            depth_resolved,
-            albedo,
-            albedo_resolved,
-            normal,
-            normal_resolved,
-            resized: false
-        });
+impl DeferredTextures {
+    pub const DEPTH_BINDING: u32 = 0;
+    pub const ALBEDO_BINDING: u32 = 2;
+    pub const NORMAL_BINDING: u32 = 4;
+}
+impl RenderBinding for DeferredTextures {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
+        builder.add_texture_view(DeferredTextures::DEPTH_BINDING, Some(self.depth.clone()));
+        builder.add_texture_sampler(
+            DeferredTextures::DEPTH_BINDING + 1,
+            Some(self.depth.clone())
+        );
+        builder.add_texture_view(DeferredTextures::ALBEDO_BINDING, Some(self.albedo.clone()));
+        builder.add_texture_sampler(
+            DeferredTextures::ALBEDO_BINDING + 1,
+            Some(self.albedo.clone())
+        );
+        builder.add_texture_view(DeferredTextures::NORMAL_BINDING, Some(self.normal.clone()));
+        builder.add_texture_sampler(
+            DeferredTextures::NORMAL_BINDING + 1,
+            Some(self.normal.clone())
+        );
     }
 
-    /// Resize the textures for the deferred renderer.
-    pub fn resize_textures(
-        mut window_resized_events: MessageReader<SurfaceResized>,
-        server: Res<AssetServer>,
-        mut deferred_textures: ResMut<PbrDeferredTextures>
-    ) {
-        deferred_textures.resized = false;
-        for event in window_resized_events.read() {
-            // Recreate the depth texture
-            let depth = server.add(Texture {
-                label: "pbr-depth".to_string(),
-                size: (event.width, event.height),
-                format: TextureFormat::R16Float,
-                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                sample_count: MSAA_SAMPLE_COUNT,
-                ..Default::default()
-            });
-            let depth_resolved = server.add(Texture {
-                label: "pbr-depth-resolved".to_string(),
-                size: (event.width, event.height),
-                format: TextureFormat::R16Float,
-                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                ..Default::default()
-            });
+    fn label(&self) -> &str {
+        "pbr-deferred-textures"
+    }
+}
 
-            // Recreate the albedo texture
-            let albedo = server.add(Texture {
-                label: "pbr-albedo".to_string(),
-                size: (event.width, event.height),
-                format: TextureFormat::Rgba8UnormSrgb,
-                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                sample_count: MSAA_SAMPLE_COUNT,
-                ..Default::default()
-            });
-            let albedo_resolved = server.add(Texture {
-                label: "pbr-albedo-resolved".to_string(),
-                size: (event.width, event.height),
-                format: TextureFormat::Rgba8UnormSrgb,
-                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                ..Default::default()
-            });
-
-            // Recreate the normal texture
-            let normal = server.add(Texture {
-                label: "pbr-normal".to_string(),
-                size: (event.width, event.height),
-                format: TextureFormat::Rgba16Float,
-                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                sample_count: MSAA_SAMPLE_COUNT,
-                ..Default::default()
-            });
-            let normal_resolved = server.add(Texture {
-                label: "pbr-normal-resolved".to_string(),
-                size: (event.width, event.height),
-                format: TextureFormat::Rgba16Float,
-                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                ..Default::default()
-            });
-
-            // Insert the resources
-            deferred_textures.depth = depth;
-            deferred_textures.depth_resolved = depth_resolved;
-            deferred_textures.albedo = albedo;
-            deferred_textures.albedo_resolved = albedo_resolved;
-            deferred_textures.normal = normal;
-            deferred_textures.normal_resolved = normal_resolved;
-            deferred_textures.resized = true;
-        }
+#[derive(Asset, Clone, TypePath, Default)]
+pub struct DeferredTexturesResolved {
+    pub depth: Handle<Texture>,
+    pub albedo: Handle<Texture>,
+    pub normal: Handle<Texture>
+}
+impl DeferredTexturesResolved {
+    pub const DEPTH_BINDING: u32 = 0;
+    pub const ALBEDO_BINDING: u32 = 2;
+    pub const NORMAL_BINDING: u32 = 4;
+}
+impl RenderBinding for DeferredTexturesResolved {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
+        builder.add_texture_view(
+            DeferredTexturesResolved::DEPTH_BINDING,
+            Some(self.depth.clone())
+        );
+        builder.add_texture_sampler(
+            DeferredTexturesResolved::DEPTH_BINDING + 1,
+            Some(self.depth.clone())
+        );
+        builder.add_texture_view(
+            DeferredTexturesResolved::ALBEDO_BINDING,
+            Some(self.albedo.clone())
+        );
+        builder.add_texture_sampler(
+            DeferredTexturesResolved::ALBEDO_BINDING + 1,
+            Some(self.albedo.clone())
+        );
+        builder.add_texture_view(
+            DeferredTexturesResolved::NORMAL_BINDING,
+            Some(self.normal.clone())
+        );
+        builder.add_texture_sampler(
+            DeferredTexturesResolved::NORMAL_BINDING + 1,
+            Some(self.normal.clone())
+        );
     }
 
-    /// Extract the textures for the deferred renderer.
-    pub fn extract_textures(
-        mut commands: Commands,
-        textures: ExtractWorld<Res<PbrDeferredTextures>>,
-        mut textures_layout: ResMut<PbrDeferredTexturesLayout>
-    ) {
-        if textures.resized {
-            textures_layout.deferred_layout = None;
-            textures_layout.deferred_bind_group = None;
-        }
+    fn label(&self) -> &str {
+        "pbr-deferred-textures-resolved"
+    }
+}
 
-        commands.insert_resource(PbrDeferredTextures {
-            depth: textures.depth.clone(),
-            depth_resolved: textures.depth_resolved.clone(),
-            albedo: textures.albedo.clone(),
-            albedo_resolved: textures.albedo_resolved.clone(),
-            normal: textures.normal.clone(),
-            normal_resolved: textures.normal_resolved.clone(),
-            resized: false
+fn init(mut commands: Commands, asset_server: Res<AssetServer>, window: Query<&Window>) {
+    let resolution = &window.single().unwrap().resolution;
+
+    // Create the textures
+    let (depth_texture, albedo_texture, normal_texture) = get_textures(
+        (resolution.physical_width(), resolution.physical_height()),
+        false
+    );
+    let deferred_textures = asset_server.add(DeferredTextures {
+        depth: asset_server.add(depth_texture),
+        albedo: asset_server.add(albedo_texture),
+        normal: asset_server.add(normal_texture)
+    });
+    commands.insert_resource(RenderBindingHolder(deferred_textures));
+}
+
+fn init_resolved(mut commands: Commands, asset_server: Res<AssetServer>, window: Query<&Window>) {
+    let resolution = &window.single().unwrap().resolution;
+
+    // Create the textures
+    let (depth_texture, albedo_texture, normal_texture) = get_textures(
+        (resolution.physical_width(), resolution.physical_height()),
+        true
+    );
+    let resolved_textures = asset_server.add(DeferredTexturesResolved {
+        depth: asset_server.add(depth_texture),
+        albedo: asset_server.add(albedo_texture),
+        normal: asset_server.add(normal_texture)
+    });
+    commands.insert_resource(RenderBindingHolder(resolved_textures));
+}
+
+fn resize(
+    mut commands: Commands,
+    mut window_resized_events: MessageReader<SurfaceResized>,
+    asset_server: Res<AssetServer>
+) {
+    for event in window_resized_events.read() {
+        // Recreate the textures with the new window size
+        let (depth_texture, albedo_texture, normal_texture) =
+            get_textures((event.width, event.height), false);
+        let deferred_textures = asset_server.add(DeferredTextures {
+            depth: asset_server.add(depth_texture),
+            albedo: asset_server.add(albedo_texture),
+            normal: asset_server.add(normal_texture)
         });
+        commands.insert_resource(RenderBindingHolder(deferred_textures));
+
+        let (depth_texture, albedo_texture, normal_texture) =
+            get_textures((event.width, event.height), true);
+        let resolved_textures = asset_server.add(DeferredTexturesResolved {
+            depth: asset_server.add(depth_texture),
+            albedo: asset_server.add(albedo_texture),
+            normal: asset_server.add(normal_texture)
+        });
+        commands.insert_resource(RenderBindingHolder(resolved_textures));
     }
+}
+
+fn get_textures(size: (u32, u32), is_resolved: bool) -> (Texture, Texture, Texture) {
+    let sample_count = if is_resolved { 1 } else { MSAA_SAMPLE_COUNT };
+    let depth_texture = Texture {
+        label: format!("pbr-depth{}", if is_resolved { "-resolved" } else { "" }),
+        size,
+        format: TextureFormat::R16Float,
+        usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+        sample_count,
+        ..Default::default()
+    };
+    let albedo_texture = Texture {
+        label: format!("pbr-albedo{}", if is_resolved { "-resolved" } else { "" }),
+        size,
+        format: TextureFormat::Rgba8UnormSrgb,
+        usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+        sample_count,
+        ..Default::default()
+    };
+    let normal_texture = Texture {
+        label: format!("pbr-normal{}", if is_resolved { "-resolved" } else { "" }),
+        size,
+        format: TextureFormat::Rgba16Float,
+        usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+        sample_count,
+        ..Default::default()
+    };
+    (depth_texture, albedo_texture, normal_texture)
 }

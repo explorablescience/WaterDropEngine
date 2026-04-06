@@ -8,6 +8,7 @@ use wgpu::ShaderStages;
 
 use crate::buffer::Buffer;
 use crate::instance::RenderError;
+use crate::pipelines::BindGroup;
 use crate::render_pipeline::RenderPipeline;
 
 // Alias struct for the draw indirect functions.
@@ -149,8 +150,14 @@ impl<'a> RenderPassInstance<'a> {
     ///
     /// * `binding` - The binding of the bind group.
     /// * `bind_group` - The bind group to set.
-    pub fn set_bind_group(&mut self, binding: u32, bind_group: &'a wgpu::BindGroup) -> &mut Self {
-        self.render_pass.set_bind_group(binding, bind_group, &[]);
+    pub fn set_bind_group(&mut self, binding: u32, bind_group: &'a BindGroup) -> &mut Self {
+        debug_assert!(
+            bind_group.0.is_some(),
+            "Bind group {} is not created yet.",
+            binding
+        );
+        self.render_pass
+            .set_bind_group(binding, bind_group.0.as_ref().unwrap(), &[]);
         self
     }
 

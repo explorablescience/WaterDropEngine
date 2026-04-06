@@ -22,6 +22,13 @@ pub use wde_wgpu::buffer::{BufferBindingType, BufferUsage};
 
 /// Alias for a `SRes<RenderAssets<GpuRenderBinding<M>>>`.
 pub type SBinding<M> = SRes<RenderAssets<GpuRenderBinding<M>>>;
+/// Alias for a `SResMut<RenderAssets<GpuRenderBinding<M>>>`.
+pub type SBindingMut<M> = SResMut<RenderAssets<GpuRenderBinding<M>>>;
+
+/// Alias for a `Res<RenderAssets<GpuRenderBinding<M>>>`.
+pub type Binding<'w, M> = Res<'w, RenderAssets<GpuRenderBinding<M>>>;
+/// Alias for a `ResMut<RenderAssets<GpuRenderBinding<M>>>`.
+pub type BindingMut<'w, M> = ResMut<'w, RenderAssets<GpuRenderBinding<M>>>;
 
 /// Utility resource to store a handle to a render binding asset [RenderBinding].
 #[allow(unused)]
@@ -226,6 +233,17 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
                     }
                 }
             }
+        }
+
+        // If no bind group needs to be created, return early
+        if bindings_builder.no_bind_group {
+            return Ok(GpuRenderBinding {
+                _phantom: std::marker::PhantomData,
+                layout: BindGroupLayout::empty(),
+                bind_group: BindGroup::empty(),
+                builder: bindings_builder,
+                builder_bindings_to_index: bindings_to_index
+            });
         }
 
         // Create bind group layout

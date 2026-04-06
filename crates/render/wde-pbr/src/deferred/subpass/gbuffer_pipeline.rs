@@ -9,39 +9,30 @@ use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::deferred::{
-    dependencies::{PbrMaterial, SsboTransformPbr},
+    dependencies::{PbrMaterial, SsboTransform},
     subpass::gbuffer_subpass_pbr::PushConstants
 };
 
-#[derive(Default, Asset, Clone, TypePath, Debug)]
-pub struct PbrGBufferRenderPipelineAsset;
-impl std::fmt::Display for PbrGBufferRenderPipelineAsset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PbrGBufferRenderPipelineAsset")
-    }
-}
-
-#[allow(unused)]
-#[derive(Component)]
-pub struct PbrGBufferRenderPipeline(pub Handle<PbrGBufferRenderPipelineAsset>);
-pub struct GpuPbrGBufferRenderPipeline(pub CachedPipelineIndex);
-impl RenderAsset for GpuPbrGBufferRenderPipeline {
-    type SourceAsset = PbrGBufferRenderPipelineAsset;
+#[derive(TypePath, Asset, Default, Clone)]
+pub(crate) struct GBufferRenderPipeline(pub CachedPipelineIndex);
+impl RenderAsset for GBufferRenderPipeline {
+    type SourceAsset = RenderPipelineAsset<GBufferRenderPipeline>;
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
         SBinding<CameraRender>,
         SBinding<SsboMesh>,
+        SBinding<SsboTransform>,
         SMaterial<PbrMaterial>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera, ssbo_mesh, pbr_materials): &mut SystemParamItem<
+        (assets_server, pipeline_manager, camera, ssbo_mesh, ssbo_transform, pbr_materials): &mut SystemParamItem<
             Self::Params
         >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        Ok(GpuPbrGBufferRenderPipeline(
+        Ok(GBufferRenderPipeline(
             pipeline_manager.create_render_pipeline(
                 RenderPipelineDescriptor {
                     label: "gbuffer-pbr",
@@ -50,7 +41,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
                     bind_group_layouts: vec![
                         ssbo_mesh.iter().next().map(|(_, m)| m.layout.clone()),
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
-                        Some(SsboTransformPbr::get_layout()),
+                        ssbo_transform.iter().next().map(|(_, t)| t.layout.clone()),
                         pbr_materials.iter().next().map(|(_, m)| m.layout.clone()),
                     ],
                     depth: DepthDescriptor {
@@ -58,6 +49,7 @@ impl RenderAsset for GpuPbrGBufferRenderPipeline {
                         ..default()
                     },
                     render_targets: Some(vec![
+                        // Same order as the PbrDeferredTextures
                         TextureFormat::R16Float,       // Depth
                         TextureFormat::Rgba8UnormSrgb, // Albedo
                         TextureFormat::Rgba16Float,    // Normal

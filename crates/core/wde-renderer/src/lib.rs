@@ -19,8 +19,7 @@ pub mod prelude {
 
     // TODO: Remove this
     pub use wde_wgpu::bind_group::{
-        BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup as BindGroup,
-        WgpuBindGroupLayout
+        BindGroup, BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroupLayout
     };
 }
 

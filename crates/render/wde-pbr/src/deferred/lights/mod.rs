@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-mod lights_buffer;
-mod lights_components;
+mod lights_binding;
+mod lights_types;
 
-pub use lights_buffer::*;
-pub use lights_components::*;
+pub use lights_binding::*;
+pub use lights_types::*;
 
 pub(crate) struct LightsPlugin;
 impl Plugin for LightsPlugin {
@@ -15,6 +15,6 @@ impl Plugin for LightsPlugin {
             .register_type::<SpotLight>();
 
         // Add the lights feature
-        app.add_plugins(LightsFeature);
+        app.add_plugins(LightsBindingPlugin);
     }
 }

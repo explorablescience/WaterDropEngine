@@ -1,6 +1,9 @@
-use crate::deferred::{
-    dependencies::{Batches, PbrMaterial, SsboTransformPbr},
-    subpass::GpuPbrGBufferRenderPipeline
+use crate::{
+    deferred::{
+        dependencies::{PbrMaterial, SsboTransform},
+        subpass::GBufferRenderPipeline
+    },
+    prelude::batches::Batches
 };
 use wde_logger::prelude::*;
 
@@ -14,9 +17,9 @@ use wde_renderer::prelude::*;
 pub(crate) struct SubRenderPassGbufferPbr;
 impl RenderSubPass for SubRenderPassGbufferPbr {
     type Params = (
-        SRes<RenderAssets<GpuPbrGBufferRenderPipeline>>,
+        SRes<RenderAssets<GBufferRenderPipeline>>,
         SBinding<CameraRender>,
-        SRes<SsboTransformPbr>,
+        SBinding<SsboTransform>,
         SRes<RenderAssets<GpuRenderBinding<SsboMesh>>>
     );
 
@@ -41,7 +44,7 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
                     .next()
                     .map(|(_, camera)| camera.bind_group.clone())
             ),
-            SubPassCommand::BindGroup(2, pbr_ssbo.bind_group.clone()),
+            SubPassCommand::BindGroup(2, pbr_ssbo.iter().next().map(|(_, t)| t.bind_group.clone())),
             SubPassCommand::Custom(draw_custom),
         ])
     }

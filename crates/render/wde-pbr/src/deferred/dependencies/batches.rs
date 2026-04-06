@@ -3,7 +3,10 @@ use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::deferred::dependencies::*;
+use crate::{
+    deferred::dependencies::*,
+    prelude::{model::*, pbr_ssbo_transforms::SsboTransformStaging}
+};
 
 type ModelMaterialPair = (AssetId<Mesh>, AssetId<PbrMaterial>);
 
@@ -13,7 +16,7 @@ struct ExtractedEntities(Option<Vec<(PbrModelElementUuid, ModelMaterialPair, u32
 
 /// Store the render batches for PBR models
 #[derive(Resource, Default, Debug)]
-pub struct Batches {
+pub(crate) struct Batches {
     /// The render batches
     pub render_batches: Vec<Batch>,
     /// Pointers to the transform IDs in the SSBO for each instance in the batches
@@ -22,14 +25,14 @@ pub struct Batches {
 
 /// A single render batch
 #[derive(Debug, Default)]
-pub struct Batch {
+pub(crate) struct Batch {
     pub mesh_id: AssetId<Mesh>,
     pub material_id: AssetId<PbrMaterial>,
     pub first_instance: u32,
     pub instance_count: u32
 }
 
-pub struct BatchesPlugin;
+pub(crate) struct BatchesPlugin;
 impl Plugin for BatchesPlugin {
     fn build(&self, app: &mut App) {
         app.get_sub_app_mut(RenderApp)
@@ -92,7 +95,8 @@ fn extract(
 
 fn update_ssbo_transforms(
     buffers: Res<RenderAssets<GpuBuffer>>,
-    ssbo: Res<SsboTransformPbr>,
+    ssbo: Binding<SsboTransform>,
+    ssbo_staging: Binding<SsboTransformStaging>,
     render_instance: Res<RenderInstance>,
     mut dirty_transforms: ResMut<DirtyTransforms>,
     registry: Res<ModelUuidToTransformUuidRender>
@@ -109,9 +113,17 @@ fn update_ssbo_transforms(
     }
 
     // Get the ssbo cpu buffer
+    let (ssbo, ssbo_staging) = match (ssbo.iter().next(), ssbo_staging.iter().next()) {
+        (Some((_, ssbo)), Some((_, ssbo_staging))) => (ssbo, ssbo_staging),
+        _ => return
+    };
     let (ssbo_staging, ssbo_gpu) = match (
-        buffers.get(&ssbo.buffer_staging),
-        buffers.get(&ssbo.buffer_gpu)
+        buffers.get(
+            ssbo_staging
+                .get_buffer(SsboTransformStaging::SSBO_STAGING_ID)
+                .unwrap()
+        ),
+        buffers.get(ssbo.get_buffer(SsboTransform::SSBO_ID).unwrap())
     ) {
         (Some(cpu), Some(gpu)) => (cpu, gpu),
         _ => return
@@ -196,16 +208,28 @@ fn build_batches(mut extracted_entities: ResMut<ExtractedEntities>, mut batches:
 
 fn set_batches_transforms(
     buffers: Res<RenderAssets<GpuBuffer>>,
-    ssbo: Res<SsboTransformPbr>,
+    ssbo: Binding<SsboTransform>,
+    ssbo_staging: Binding<SsboTransformStaging>,
     render_instance: Res<RenderInstance>,
     batches: Res<Batches>
 ) {
     let render_instance = render_instance.0.read().unwrap();
 
     // Get the ssbo cpu buffer
+    let (ssbo, ssbo_staging) = match (ssbo.iter().next(), ssbo_staging.iter().next()) {
+        (Some((_, ssbo)), Some((_, ssbo_staging))) => (ssbo, ssbo_staging),
+        _ => return
+    };
     let (ssbo_instance_to_transform_buffer, instance_to_transform_gpu) = match (
-        buffers.get(&ssbo.instance_to_transform_buffer),
-        buffers.get(&ssbo.instance_to_transform_buffer_gpu)
+        buffers.get(
+            ssbo_staging
+                .get_buffer(SsboTransformStaging::INSTANCE_TO_TRANSFORM_STAGING_ID)
+                .unwrap()
+        ),
+        buffers.get(
+            ssbo.get_buffer(SsboTransform::INSTANCE_TO_TRANSFORM_ID)
+                .unwrap()
+        )
     ) {
         (Some(instance_to_transform_buffer), Some(instance_to_transform_gpu)) => {
             (instance_to_transform_buffer, instance_to_transform_gpu)

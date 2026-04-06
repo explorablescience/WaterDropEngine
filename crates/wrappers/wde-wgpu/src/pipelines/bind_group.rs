@@ -63,11 +63,19 @@ use crate::{
     texture::{Texture, TextureFormat}
 };
 
-/// The wgpu bind group layout builder.
-pub type WgpuBindGroup = wgpu::BindGroup;
-
 // The wgpu bind group type.
-pub type BindGroup = wgpu::BindGroup;
+#[derive(Clone)]
+pub struct BindGroup(pub Option<wgpu::BindGroup>);
+impl BindGroup {
+    pub fn empty() -> Self {
+        BindGroup(None)
+    }
+}
+impl From<wgpu::BindGroup> for BindGroup {
+    fn from(value: wgpu::BindGroup) -> Self {
+        BindGroup(Some(value))
+    }
+}
 
 /// The buffer binding type.
 pub type BufferBindingType = wgpu::BufferBindingType;
@@ -265,7 +273,6 @@ pub struct BindGroupLayout {
     // Access to builder data
     pub builder: BindGroupLayoutBuilder
 }
-
 impl BindGroupLayout {
     /// Create a new bind group layout.
     ///
@@ -283,6 +290,16 @@ impl BindGroupLayout {
         BindGroupLayout {
             label: label.to_string(),
             builder
+        }
+    }
+
+    /// Create a dummy empty bind group layout. This can be used for render bindings that don't need a bind group.
+    pub fn empty() -> Self {
+        BindGroupLayout {
+            label: "".to_string(),
+            builder: BindGroupLayoutBuilder {
+                layout_entries: Vec::new()
+            }
         }
     }
 
@@ -358,7 +375,7 @@ impl BindGroupBuilder {
         instance: &RenderInstanceData,
         layout: &wgpu::BindGroupLayout,
         entries: &Vec<wgpu::BindGroupEntry>
-    ) -> Result<wgpu::BindGroup, RenderError> {
+    ) -> Result<BindGroup, RenderError> {
         event!(LogLevel::TRACE, "Creating bind group: {}.", label);
 
         // Add validation to intercept potential errors in bind group creation
@@ -402,7 +419,7 @@ impl BindGroupBuilder {
                 None => ()
             }
         });
-        res
+        res.map(BindGroup::from)
     }
 
     /// Add a buffer to the bind group.

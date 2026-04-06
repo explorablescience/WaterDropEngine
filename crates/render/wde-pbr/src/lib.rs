@@ -101,7 +101,7 @@ pub mod prelude {
     pub use crate::textures::*;
 }
 
-mod deferred;
+pub mod deferred;
 mod passes;
 mod textures;
 

@@ -1,7 +1,4 @@
-use bevy::{
-    ecs::system::{SystemParamItem, lifetimeless::SRes},
-    prelude::*
-};
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::prelude::*;
@@ -15,12 +12,16 @@ use crate::prelude::*;
 ///  - It has a render index of 50, which means it is executed after the deferred lighting pass, but before the resolve pass. This allows it to blend with the opaque objects rendered in the deferred lighting pass, and be resolved to the swapchain texture in the resolve pass.
 pub struct RenderPassTransparent;
 impl RenderPass for RenderPassTransparent {
-    type Params = (SBinding<DepthTexture>, SRes<RenderTexture>);
+    type Params = (SBinding<DepthTexture>, SBinding<RenderTexture>);
 
     fn describe((depth_texture, render_texture): &SystemParamItem<Self::Params>) -> RenderPassDesc {
         RenderPassDesc {
             attachments_colors: Some(vec![RenderPassDescColorAttachment {
-                texture: render_texture.texture.id(),
+                texture: render_texture
+                    .iter()
+                    .next()
+                    .map(|(_, t)| t.get_texture(0).unwrap())
+                    .unwrap(),
                 ..Default::default()
             }]),
             attachments_depth: Some(RenderPassDescDepthAttachment {

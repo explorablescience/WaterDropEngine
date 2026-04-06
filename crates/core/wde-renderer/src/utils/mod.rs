@@ -10,17 +10,18 @@ use bevy::prelude::*;
 
 use crate::{
     assets::RenderBindingPluginRegister,
-    core::{ExtractResourcePlugin, RenderApp}
+    core::{ExtractResourcePlugin, RenderApp},
+    utils::ssbo_mesh::SsboMeshDescriptor
 };
 
 mod color;
 mod post_process_mesh;
-mod ssbo_mesh;
+pub(crate) mod ssbo_mesh;
 mod transform;
 
 pub use color::Color;
 pub use post_process_mesh::PostProcessingMesh;
-pub use ssbo_mesh::{SsboMesh, SsboMeshDescriptor};
+pub use ssbo_mesh::SsboMesh;
 pub use transform::TransformUniform;
 
 /** Multisample anti-aliasing sample count used throughout the renderer. */

@@ -24,6 +24,7 @@ pub(crate) enum RenderBindingBuilderType {
 #[derive(Default)]
 pub struct RenderBindingBuilder {
     pub(crate) label: String,
+    pub(crate) no_bind_group: bool,
     pub(crate) elements: Vec<(RenderBindingBuilderType, u32)>,
 
     pub(crate) buffers: Vec<(u32, Buffer, Option<Handle<Buffer>>)>,
@@ -60,6 +61,10 @@ impl RenderBindingBuilder {
             RenderBindingBuilderType::TextureSampler,
             self.texture_samplers.len() as u32 - 1
         ));
+    }
+    /// Indicates that this render binding doesn't need to create a bind group.
+    pub fn no_bind_group(&mut self) {
+        self.no_bind_group = true;
     }
 }
 

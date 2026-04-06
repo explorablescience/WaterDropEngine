@@ -7,11 +7,10 @@ mod subpass;
 
 pub use dependencies::*;
 pub use lights::*;
-pub use subpass::*;
 
 use crate::{
     deferred::{
-        dependencies::PbrDependenciesPlugin, lights::LightsPlugin, subpass::PbrRenderPlugin
+        dependencies::DeferredDependenciesPlugin, lights::LightsPlugin, subpass::PbrRenderPlugin
     },
     passes::{RenderPassDeferredLighting, SubRenderPassLightingPbr}
 };
@@ -20,7 +19,7 @@ pub(crate) struct DeferredPlugin;
 impl Plugin for DeferredPlugin {
     fn build(&self, app: &mut App) {
         // Add the plugins
-        app.add_plugins((LightsPlugin, PbrDependenciesPlugin, PbrRenderPlugin));
+        app.add_plugins((LightsPlugin, DeferredDependenciesPlugin, PbrRenderPlugin));
 
         // Add the render graph nodes
         app.get_sub_app_mut(RenderApp)

@@ -4,23 +4,23 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 use wde_renderer::prelude::*;
 
-use crate::deferred::dependencies::{MAX_ENTITY_COUNT, PbrMaterial};
-
-/// A weak reference to a PbrModel, suitable for extraction to the render world
-pub type PbrModelElementUuid = u128; // Unique identifier for each model element in the world 
+use crate::deferred::dependencies::{PbrMaterial, SSBO_TRANSFORM_MAX_ENTITY};
 
 /// A PBR model component that holds references to meshes and their associated PBR materials.
 #[derive(Component, Debug, Clone)]
 #[require(Transform)]
 pub struct PbrModel(pub Vec<(Handle<Mesh>, Handle<PbrMaterial>)>);
 
+/// A weak reference to a PbrModel, suitable for extraction to the render world
+pub(crate) type PbrModelElementUuid = u128; // Unique identifier for each model element in the world 
+
 #[derive(Resource, Default)]
-pub struct ModelUuidToTransformUuidRender(pub HashMap<PbrModelElementUuid, u32>);
+pub(crate) struct ModelUuidToTransformUuidRender(pub HashMap<PbrModelElementUuid, u32>);
 
 /// Resource to manage PBR render entities and their UUIDs.
 /// This resource is used to keep track of the mapping between entities, their model element UUIDs, and the corresponding mesh and material handles. It also manages the mapping between model element UUIDs and their transform IDs in the SSBO.
 #[derive(Resource, Default, Clone)]
-pub struct PbrModelRegistry {
+pub(crate) struct PbrModelRegistry {
     /// Maps between entities and their model element UUIDs
     pub entity_to_model_uuids: HashMap<Entity, Vec<PbrModelElementUuid>>,
     /// Maps between each model element UUID and its mesh and material handles
@@ -60,7 +60,7 @@ impl PbrModelRegistry {
 }
 
 #[derive(Resource, Default)]
-pub struct PbrSsboIdHandler {
+pub(crate) struct PbrSsboIdHandler {
     /// Index of the last used transform ID
     last_transform_id: u32,
     /// List of free transform IDs
@@ -71,14 +71,14 @@ impl PbrSsboIdHandler {
     pub fn allocate_transform_id(&mut self) -> u32 {
         if let Some(free_id) = self.free_transform_ids.pop() {
             free_id
-        } else if (self.last_transform_id as usize) < MAX_ENTITY_COUNT {
+        } else if (self.last_transform_id as usize) < SSBO_TRANSFORM_MAX_ENTITY {
             let id = self.last_transform_id;
             self.last_transform_id += 1;
             id
         } else {
             warn!(
                 "PbrSsbo: Maximum number of transform IDs reached ({})",
-                MAX_ENTITY_COUNT
+                SSBO_TRANSFORM_MAX_ENTITY
             );
             0
         }
@@ -93,9 +93,9 @@ impl PbrSsboIdHandler {
 /// Resource to track dirty transforms that need to be updated in the SSBO.
 /// This automatically updates every frame with the modified transforms of entities with a PbrModel component, and is used to update the SSBO `SsboTransformPbr` with the new transforms.
 #[derive(Resource, Default)]
-pub struct DirtyTransforms(pub Option<Vec<(PbrModelElementUuid, TransformUniform)>>);
+pub(crate) struct DirtyTransforms(pub(crate) Option<Vec<(PbrModelElementUuid, TransformUniform)>>);
 
-pub struct PbrModelRegistryPlugin;
+pub(crate) struct PbrModelRegistryPlugin;
 impl Plugin for PbrModelRegistryPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PbrModelRegistry>()

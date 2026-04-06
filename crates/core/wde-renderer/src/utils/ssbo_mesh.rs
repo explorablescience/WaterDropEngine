@@ -9,26 +9,11 @@ const MAX_VERTICES: usize = 1_000_000;
 const MAX_INDICES: usize = 3_000_000;
 
 /// Resource describing the layout of [SsboMesh] data.
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct SsboMeshDescriptor {
     // Cursor to the current offset in the buffers (in elements, not bytes)
-    pub(crate) vertex_buffer_offset: u32,
-    pub(crate) index_buffer_offset: u32,
-
-    /// Binding index of the vertex buffer in the shader
-    pub ssbo_vertex_binding: u32,
-    /// Binding index of the index buffer in the shader
-    pub ssbo_index_binding: u32
-}
-impl Default for SsboMeshDescriptor {
-    fn default() -> Self {
-        Self {
-            vertex_buffer_offset: 0,
-            index_buffer_offset: 0,
-            ssbo_vertex_binding: 0,
-            ssbo_index_binding: 1
-        }
-    }
+    pub vertex_buffer_offset: u32,
+    pub index_buffer_offset: u32
 }
 
 /// Resource representing the SSBO mesh data.
@@ -36,10 +21,14 @@ impl Default for SsboMeshDescriptor {
 /// The position of the vertex and index data in the buffers is then stored in the GpuMesh resource.
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct SsboMesh;
+impl SsboMesh {
+    pub const VERTEX_BUFFER_ID: u32 = 0;
+    pub const INDEX_BUFFER_ID: u32 = 1;
+}
 impl RenderBinding for SsboMesh {
     fn describe(&self, builder: &mut RenderBindingBuilder) {
         builder.add_buffer(
-            0,
+            Self::VERTEX_BUFFER_ID,
             Buffer {
                 label: "ssbo-mesh-vertex-buffer-gpu".to_string(),
                 size: std::mem::size_of::<Vertex>() * MAX_VERTICES,
@@ -48,7 +37,7 @@ impl RenderBinding for SsboMesh {
             }
         );
         builder.add_buffer(
-            1,
+            Self::INDEX_BUFFER_ID,
             Buffer {
                 label: "ssbo-mesh-index-buffer-gpu".to_string(),
                 size: std::mem::size_of::<u32>() * MAX_INDICES,

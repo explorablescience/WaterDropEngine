@@ -8,7 +8,7 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 
-use crate::prelude::RenderTextureBindGroup;
+use crate::prelude::RenderTexture;
 
 /// The render pass for resolving the multisampled [`crate::logic::render_texture::RenderTexture`], which is the color attachment of the deferred lighting pass, to the swapchain texture, which is then presented on the screen.
 ///
@@ -33,11 +33,17 @@ impl RenderPass for RenderPassResolve {
 pub(crate) struct ResolveRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for ResolveRenderPipeline {
     type SourceAsset = RenderPipelineAsset<ResolveRenderPipeline>;
-    type Params = (SRes<AssetServer>, SResMut<PipelineManager>);
+    type Params = (
+        SRes<AssetServer>,
+        SResMut<PipelineManager>,
+        SBinding<RenderTexture>
+    );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager): &mut bevy::ecs::system::SystemParamItem<Self::Params>
+        (assets_server, pipeline_manager, render_texture): &mut bevy::ecs::system::SystemParamItem<
+            Self::Params
+        >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(ResolveRenderPipeline(
             pipeline_manager.create_render_pipeline(
@@ -45,7 +51,9 @@ impl RenderAsset for ResolveRenderPipeline {
                     label: "resolve",
                     vert: Some(assets_server.load("core/render/resolve/vert.wgsl")),
                     frag: Some(assets_server.load("core/render/resolve/frag.wgsl")),
-                    bind_group_layouts: vec![Some(RenderTextureBindGroup::layout())],
+                    bind_group_layouts: vec![
+                        render_texture.iter().next().map(|(_, t)| t.layout.clone()),
+                    ],
                     ..Default::default()
                 },
                 asset
@@ -59,16 +67,22 @@ impl RenderSubPass for SubRenderPassResolve {
     type Params = (
         SRes<RenderAssets<ResolveRenderPipeline>>,
         SRes<PostProcessingMesh>,
-        SRes<RenderTextureBindGroup>
+        SBinding<RenderTexture>
     );
 
     fn describe(
-        (pipeline, mesh, pbr_texture): &SystemParamItem<Self::Params>
+        (pipeline, mesh, render_texture): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::Mesh(mesh.0.as_ref().map(|h| h.id())),
-            SubPassCommand::BindGroup(0, pbr_texture.bind_group.clone()),
+            SubPassCommand::BindGroup(
+                0,
+                render_texture
+                    .iter()
+                    .next()
+                    .map(|(_, t)| t.bind_group.clone())
+            ),
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
                 index_range: 0..6,
                 ..Default::default()

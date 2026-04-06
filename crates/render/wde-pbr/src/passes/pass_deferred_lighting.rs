@@ -19,12 +19,16 @@ use crate::prelude::*;
 ///  - It has a render index of 20.
 pub struct RenderPassDeferredLighting;
 impl RenderPass for RenderPassDeferredLighting {
-    type Params = SRes<RenderTexture>;
+    type Params = SBinding<RenderTexture>;
 
     fn describe(render_texture: &SystemParamItem<Self::Params>) -> RenderPassDesc {
         RenderPassDesc {
             attachments_colors: Some(vec![RenderPassDescColorAttachment {
-                texture: render_texture.texture.id(),
+                texture: render_texture
+                    .iter()
+                    .next()
+                    .map(|(_, t)| t.get_texture(0).unwrap())
+                    .unwrap(),
                 load: LoadOp::Clear(Color::BLACK),
                 ..Default::default()
             }]),
@@ -47,12 +51,16 @@ impl RenderAsset for DeferredLightingPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBinding<CameraRender>
+        SBinding<CameraRender>,
+        SBinding<DeferredTexturesResolved>,
+        SBinding<LightsBinding>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera): &mut SystemParamItem<Self::Params>
+        (assets_server, pipeline_manager, camera, tex, lights_buffer): &mut SystemParamItem<
+            Self::Params
+        >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(DeferredLightingPipeline(
             pipeline_manager.create_render_pipeline(
@@ -62,8 +70,8 @@ impl RenderAsset for DeferredLightingPipeline {
                     frag: Some(assets_server.load("core/render/pbr/lighting_frag.wgsl")),
                     bind_group_layouts: vec![
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
-                        Some(PbrDeferredTexturesLayout::layout()),
-                        Some(LightsFeatureBuffer::layout()),
+                        tex.iter().next().map(|(_, d)| d.layout.clone()),
+                        lights_buffer.iter().next().map(|(_, b)| b.layout.clone()),
                     ],
                     depth: DepthDescriptor {
                         enabled: false,
@@ -84,26 +92,19 @@ impl RenderSubPass for SubRenderPassLightingPbr {
         SRes<RenderAssets<DeferredLightingPipeline>>,
         SRes<PostProcessingMesh>,
         SBinding<CameraRender>,
-        SRes<PbrDeferredTexturesLayout>,
-        SRes<LightsFeatureBuffer>
+        SBinding<DeferredTexturesResolved>,
+        SBinding<LightsBinding>
     );
 
     fn describe(
-        (pipeline, mesh, camera, deferred_textures_layout, lights_buffer): &SystemParamItem<
-            Self::Params
-        >
+        (pipeline, mesh, camera, textures, lights): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::Mesh(mesh.0.as_ref().map(|m| m.id())),
             SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
-            SubPassCommand::BindGroup(
-                1,
-                deferred_textures_layout
-                    .deferred_bind_group_resolved
-                    .clone()
-            ),
-            SubPassCommand::BindGroup(2, lights_buffer.bind_group.clone()),
+            SubPassCommand::BindGroup(1, textures.iter().next().map(|(_, d)| d.bind_group.clone())),
+            SubPassCommand::BindGroup(2, lights.iter().next().map(|(_, b)| b.bind_group.clone())),
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
                 index_range: 0..6,
                 ..Default::default()

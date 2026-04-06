@@ -1,5 +1,5 @@
 //! Compute pass abstraction.
-use crate::{compute_pipeline::ComputePipeline, instance::RenderError};
+use crate::{compute_pipeline::ComputePipeline, instance::RenderError, pipelines::BindGroup};
 use wde_logger::prelude::*;
 
 /// RAII wrapper around `wgpu::ComputePass` created by `CommandBuffer::create_compute_pass`.
@@ -96,8 +96,14 @@ impl<'a> WComputePass<'a> {
     ///
     /// * `binding` - The binding of the bind group.
     /// * `bind_group` - The bind group to set.
-    pub fn set_bind_group(&mut self, binding: u32, bind_group: &'a wgpu::BindGroup) -> &mut Self {
-        self.compute_pass.set_bind_group(binding, bind_group, &[]);
+    pub fn set_bind_group(&mut self, binding: u32, bind_group: &'a BindGroup) -> &mut Self {
+        debug_assert!(
+            bind_group.0.is_some(),
+            "Bind group {} is not created yet.",
+            binding
+        );
+        self.compute_pass
+            .set_bind_group(binding, bind_group.0.as_ref().unwrap(), &[]);
         self
     }
 
