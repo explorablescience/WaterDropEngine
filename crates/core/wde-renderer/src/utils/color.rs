@@ -1,11 +1,9 @@
 //! Lightweight color helpers used by render assets and materials.
 //!
-//! The enum wraps either linear or sRGB encoded values and provides cheap
-//! conversions so render code can stay explicit about color space. All values
-//! are expected to be in the 0.0–1.0 range and are left un-clamped so callers
-//! can decide how to handle HDR or out-of-gamut data.
+//! The enum wraps either linear or sRGB encoded values and provides cheap conversions so render code can stay explicit about color space. All values are expected to be in the 0.0–1.0 range and are left un-clamped so callers can decide how to handle HDR or out-of-gamut data.
 
 use bevy::reflect::Reflect;
+use wde_wgpu::passes::WgpuColor;
 
 #[derive(Clone, Copy, Debug, PartialEq, Reflect)]
 pub enum Color {
@@ -15,6 +13,14 @@ pub enum Color {
     Srgba(f32, f32, f32, f32)
 }
 impl Color {
+    // Default colors
+    pub const BLACK: Color = Color::LinearRgba(0.0, 0.0, 0.0, 1.0);
+    pub const WHITE: Color = Color::LinearRgba(1.0, 1.0, 1.0, 1.0);
+    pub const RED: Color = Color::LinearRgba(1.0, 0.0, 0.0, 1.0);
+    pub const GREEN: Color = Color::LinearRgba(0.0, 1.0, 0.0, 1.0);
+    pub const BLUE: Color = Color::LinearRgba(0.0, 0.0, 1.0, 1.0);
+    pub const TRANSPARENT: Color = Color::LinearRgba(0.0, 0.0, 0.0, 0.0);
+
     /// Create a linear RGBA color.
     pub fn from_linear_rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Color::LinearRgba(r, g, b, a)
@@ -75,6 +81,19 @@ impl Color {
         match self {
             Color::LinearRgba(_, _, _, a) => *a,
             Color::Srgba(_, _, _, a) => *a
+        }
+    }
+}
+impl From<Color> for WgpuColor {
+    fn from(value: Color) -> Self {
+        match value {
+            Color::LinearRgba(r, g, b, a) => WgpuColor { r: r.into(), g: g.into(), b: b.into(), a: a.into() },
+            Color::Srgba(r, g, b, a) => {
+                let r = r.powf(2.2);
+                let g = g.powf(2.2);
+                let b = b.powf(2.2);
+                WgpuColor { r: r.into(), g: g.into(), b: b.into(), a: a.into() }
+            }
         }
     }
 }

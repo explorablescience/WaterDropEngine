@@ -1,3 +1,4 @@
+//! The render pass for resolving the multisampled [`crate::logic::render_texture::RenderTexture`], which is the color attachment of the deferred lighting pass, to the swapchain texture, which is then presented on the screen.
 use bevy::{
     ecs::system::{
         SystemParamItem,
@@ -7,9 +8,13 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 
-use crate::logic::render_texture::PbrRenderTextureBindGroup;
+use crate::prelude::RenderTextureBindGroup;
 
-pub struct RenderPassResolve;
+/// The render pass for resolving the multisampled [`crate::logic::render_texture::RenderTexture`], which is the color attachment of the deferred lighting pass, to the swapchain texture, which is then presented on the screen.
+/// 
+/// Note:
+///  - This render pass has a render index of 100. It should be executed after all the rendering passes that render to the multisampled render texture.
+pub(crate) struct RenderPassResolve;
 impl RenderPass for RenderPassResolve {
     type Params = ();
 
@@ -20,12 +25,12 @@ impl RenderPass for RenderPassResolve {
         100
     }
     fn label() -> &'static str {
-        "pbr-resolve"
+        "resolve"
     }
 }
 
 #[derive(TypePath, Default, Clone)]
-pub struct ResolveRenderPipeline(pub CachedPipelineIndex);
+pub(crate) struct ResolveRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for ResolveRenderPipeline {
     type SourceAsset = RenderPipelineAsset<ResolveRenderPipeline>;
     type Params = (SRes<AssetServer>, SResMut<PipelineManager>);
@@ -36,22 +41,22 @@ impl RenderAsset for ResolveRenderPipeline {
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(ResolveRenderPipeline(
             pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
-                label: "pbr-resolve",
+                label: "resolve",
                 vert: Some(assets_server.load("core/render/resolve/vert.wgsl")),
                 frag: Some(assets_server.load("core/render/resolve/frag.wgsl")),
-                bind_group_layouts: vec![PbrRenderTextureBindGroup::layout()],
+                bind_group_layouts: vec![RenderTextureBindGroup::layout()],
                 ..Default::default()
             })
         ))
     }
 }
 
-pub struct SubRenderPassResolve;
+pub(crate) struct SubRenderPassResolve;
 impl RenderSubPass for SubRenderPassResolve {
     type Params = (
         SRes<RenderAssets<ResolveRenderPipeline>>,
         SRes<PostProcessingMesh>,
-        SRes<PbrRenderTextureBindGroup>
+        SRes<RenderTextureBindGroup>
     );
 
     fn describe(
@@ -69,6 +74,6 @@ impl RenderSubPass for SubRenderPassResolve {
     }
 
     fn label() -> &'static str {
-        "pbr-resolve-main"
+        "resolve"
     }
 }

@@ -1,6 +1,7 @@
 use wde_logger::prelude::*;
-
+use wde_wgpu::passes::{CommandBuffer, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth};
 use crate::prelude::*;
+
 use bevy::ecs::system::{ReadOnlySystemParam, SystemParamItem, SystemState};
 use bevy::prelude::*;
 use std::collections::HashMap;
@@ -12,7 +13,7 @@ use crate::{
     core::SwapchainFrame
 };
 
-pub use wde_wgpu::command_buffer::*;
+pub use wde_wgpu::command_buffer::{LoadOp, StoreOp, Operations};
 pub use wde_wgpu::render_pass::RenderPassInstance;
 
 /// Color attachment description for a render pass.
@@ -21,7 +22,7 @@ pub struct RenderPassDescColorAttachment {
     /// The texture to render to.
     pub texture: AssetId<Texture>,
     /// How to load the texture at the start of the pass (default: Load).
-    pub load: LoadOp<WgpuColor>,
+    pub load: LoadOp<crate::prelude::Color>,
     /// How to store the texture at the end of the pass (default: Store).
     pub store: StoreOp,
     /// Optional resolve target for multisampled textures. If set, the multisampled texture will be resolved into this texture at the end of the pass.
@@ -371,7 +372,10 @@ fn create_render_pass<'p>(
                     } else { None };
                     builder.add_color_attachment(RenderPassColorAttachment {
                         texture: Some(&texture.texture.view),
-                        load: color_attachment_desc.load,
+                        load: match color_attachment_desc.load {
+                            LoadOp::Load => LoadOp::Load,
+                            LoadOp::Clear(color) => LoadOp::Clear(color.into())
+                        },
                         store: color_attachment_desc.store,
                         resolve_target: resolve_target.map(|tex| &tex.texture.view)
                     });

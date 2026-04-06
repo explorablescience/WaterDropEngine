@@ -1,7 +1,7 @@
 //! Material handling for glTF models.
 
 use bevy::prelude::*;
-use wde_pbr::assets::PbrMaterial;
+use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
 /// Representation of a glTF material's data.

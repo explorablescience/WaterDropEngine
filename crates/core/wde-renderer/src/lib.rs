@@ -16,6 +16,16 @@ pub mod prelude {
     pub use crate::core::*;
     pub use crate::passes::*;
     pub use crate::utils::*;
+
+    // TODO: Remove this
+    pub use wde_wgpu::bind_group::{
+        BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup as BindGroup,
+        WgpuBindGroupLayout
+    };
+}
+
+pub mod wgpu_utils {
+    pub use wde_wgpu::command_buffer::{CommandBuffer, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth};
 }
 
 pub mod assets;

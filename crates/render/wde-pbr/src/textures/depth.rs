@@ -1,14 +1,5 @@
 use bevy::prelude::*;
-use wde_wgpu::texture::{DEPTH_FORMAT, TextureUsages};
-
-use crate::assets::Texture;
-use crate::{
-    assets::{
-        RenderBinding, RenderBindingBuilder, RenderBindingHolder, RenderBindingPluginRegister
-    },
-    core::SurfaceResized,
-    utils::MSAA_SAMPLE_COUNT
-};
+use wde_renderer::prelude::*;
 
 pub(crate) struct DepthTexturePlugin;
 impl Plugin for DepthTexturePlugin {

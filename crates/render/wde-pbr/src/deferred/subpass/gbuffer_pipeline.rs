@@ -8,10 +8,7 @@ use bevy::{
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{
-    assets::PbrMaterial, logic::ssbo::SsboTransformPbr,
-    passes::subpass::gbuffer_subpass_pbr::PushConstants
-};
+use crate::deferred::{dependencies::{PbrMaterial, SsboTransformPbr}, subpass::gbuffer_subpass_pbr::PushConstants};
 
 #[derive(Default, Asset, Clone, TypePath)]
 pub struct PbrGBufferRenderPipelineAsset;

@@ -91,53 +91,26 @@
 //! - Extend `Material3dAsset` with metallic/roughness maps by adding extra bindings in
 //!   `describe()` and mirroring them in WGSL.
 //! - For clustered/forward variants, reuse the light buffer format and swap the pipelines.
-#![allow(clippy::type_complexity)]
+use crate::prelude::*;
 use bevy::prelude::*;
-use wde_renderer::prelude::*;
 
-use crate::{
-    assets::{PbrAssetsPlugin, PbrMaterial},
-    components::PbrComponentsPlugin,
-    logic::PbrLogicPlugin,
-    passes::PbrFeaturesPlugin as PbrPassesPlugin
-};
-
+#[doc(hidden)]
 pub mod prelude {
-    pub use crate::PbrPlugin;
-    pub use crate::assets::PbrMaterial;
-    pub use crate::components::{color::*, lights::*, model::*};
-    pub use crate::logic::ssbo::SsboTransformPbr;
+    pub use crate::textures::*;
+    pub use crate::deferred::*;
     pub use crate::passes::*;
 }
 
-pub mod assets;
-pub mod components;
-mod logic;
+mod textures;
 mod passes;
+mod deferred;
 
 pub struct PbrPlugin;
 impl Plugin for PbrPlugin {
     fn build(&self, app: &mut App) {
-        // Add the different plugins
-        app.add_plugins(PbrAssetsPlugin)
-            .add_plugins(PbrComponentsPlugin)
-            .add_plugins(PbrPassesPlugin)
-            .add_plugins(PbrLogicPlugin);
-
-        // Always create a dummy resource such that the render pass extraction can run
-        app.add_systems(Startup, init_dummy_element);
+        app
+            .add_plugins(CorePlugin)
+            .add_plugins(PassesPlugin)
+            .add_plugins(DeferredPlugin);
     }
-}
-
-fn init_dummy_element(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn((
-        Transform::from_xyz(1000.0, 1000.0, 1000.0).with_scale(Vec3::ZERO),
-        Mesh3d(asset_server.add(CubeMesh::from("dummy", 1.0))),
-        Material3d(asset_server.add(PbrMaterial {
-            label: "dummy".to_string(),
-            albedo: (0.0, 0.0, 0.0, 0.0),
-            metallic: 0.0,
-            ..Default::default()
-        }))
-    ));
 }

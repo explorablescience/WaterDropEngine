@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use bevy::{ecs::system::SystemParamItem, prelude::*};
 use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
-use wde_renderer::prelude::*;
+use wde_renderer::{prelude::*, wgpu_utils::*};
 
 use crate::egui::egui_context::EguiFrameData;
 

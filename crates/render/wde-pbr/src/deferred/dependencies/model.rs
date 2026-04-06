@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 use wde_renderer::prelude::*;
 
-use crate::{assets::PbrMaterial, logic::ssbo::MAX_ENTITY_COUNT};
+use crate::deferred::dependencies::{MAX_ENTITY_COUNT, PbrMaterial};
 
 /// A weak reference to a PbrModel, suitable for extraction to the render world
 pub type PbrModelElementUuid = u128; // Unique identifier for each model element in the world 
@@ -109,6 +109,7 @@ impl Plugin for PbrModelRegistryPlugin {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn on_models_updates(
     modified_models_query: Query<(Entity, &Transform, &PbrModel), Changed<PbrModel>>,
     modified_transforms_query: Query<(Entity, &Transform), (Changed<Transform>, With<PbrModel>)>,

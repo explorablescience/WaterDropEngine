@@ -1,0 +1,40 @@
+mod gbuffer_pipeline;
+mod gbuffer_subpass_pbr;
+
+pub use gbuffer_pipeline::*;
+
+use bevy::prelude::*;
+use wde_renderer::prelude::*;
+
+use crate::{deferred::subpass::gbuffer_subpass_pbr::SubRenderPassGbufferPbr, prelude::RenderPassGBuffer};
+
+pub(crate) struct PbrRenderPlugin;
+impl Plugin for PbrRenderPlugin {
+    fn build(&self, app: &mut App) {
+        // Add the pbr pipelines
+        app.init_asset::<PbrGBufferRenderPipelineAsset>()
+            .add_plugins(RenderAssetsPlugin::<GpuPbrGBufferRenderPipeline>::default());
+
+        // Add the render graph nodes
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .world_mut()
+            .get_resource_mut::<RenderGraph>()
+            .unwrap()
+            .add_sub_pass::<SubRenderPassGbufferPbr, RenderPassGBuffer>();
+    }
+
+    fn finish(&self, app: &mut App) {
+        // Create the gbuffer pipeline
+        let pipeline = app
+            .world_mut()
+            .get_resource::<AssetServer>()
+            .unwrap()
+            .add(PbrGBufferRenderPipelineAsset);
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .world_mut()
+            .spawn(PbrGBufferRenderPipeline(pipeline));
+    }
+}
+

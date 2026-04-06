@@ -2,16 +2,16 @@ use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
 #[derive(Resource, Default)]
-pub struct PbrRenderTextureBindGroup {
+pub struct RenderTextureBindGroup {
     pub bind_group: Option<BindGroup>
 }
-impl PbrRenderTextureBindGroup {
+impl RenderTextureBindGroup {
     /// Build the bind group for the deferred renderer.
     pub fn build_bind_group(
         textures: Res<RenderAssets<GpuTexture>>,
         render_instance: Res<RenderInstance>,
-        mut tex_bind_group: ResMut<PbrRenderTextureBindGroup>,
-        texture: Res<PbrRenderTexture>
+        mut tex_bind_group: ResMut<RenderTextureBindGroup>,
+        texture: Res<RenderTexture>
     ) {
         // Check if the bind group is already created
         if tex_bind_group.bind_group.is_some() {
@@ -59,11 +59,11 @@ impl PbrRenderTextureBindGroup {
 /// This is where the lighting pass will render to.
 /// This texture uses MSAA and is resolved later to the swapchain texture.
 #[derive(Resource)]
-pub struct PbrRenderTexture {
+pub struct RenderTexture {
     pub texture: Handle<Texture>,
     pub resized: bool
 }
-impl PbrRenderTexture {
+impl RenderTexture {
     pub fn create_texture(
         mut commands: Commands,
         assets_server: Res<AssetServer>,
@@ -78,7 +78,7 @@ impl PbrRenderTexture {
             sample_count: MSAA_SAMPLE_COUNT,
             ..Default::default()
         });
-        commands.insert_resource(PbrRenderTexture {
+        commands.insert_resource(RenderTexture {
             texture,
             resized: false
         });
@@ -87,7 +87,7 @@ impl PbrRenderTexture {
     pub fn resize_texture(
         mut window_resized_events: MessageReader<SurfaceResized>,
         server: Res<AssetServer>,
-        mut deferred_textures: ResMut<PbrRenderTexture>
+        mut deferred_textures: ResMut<RenderTexture>
     ) {
         deferred_textures.resized = false;
         for event in window_resized_events.read() {
@@ -109,14 +109,14 @@ impl PbrRenderTexture {
     /// Extract the textures for the deferred renderer.
     pub fn extract_texture(
         mut commands: Commands,
-        textures: ExtractWorld<Res<PbrRenderTexture>>,
-        mut textures_layout: ResMut<PbrRenderTextureBindGroup>
+        textures: ExtractWorld<Res<RenderTexture>>,
+        mut textures_layout: ResMut<RenderTextureBindGroup>
     ) {
         if textures.resized {
             textures_layout.bind_group = None;
         }
 
-        commands.insert_resource(PbrRenderTexture {
+        commands.insert_resource(RenderTexture {
             texture: textures.texture.clone(),
             resized: false
         });

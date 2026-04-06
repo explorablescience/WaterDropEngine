@@ -1,4 +1,5 @@
 use wde_logger::prelude::*;
+use wde_wgpu::pipelines::{BindGroup, BindGroupBuilder, BindGroupLayout};
 
 use crate::{
     assets::bindings::{
@@ -17,10 +18,6 @@ use bevy::{
 use std::collections::HashMap;
 
 // Reexport wgpu types
-pub use wde_wgpu::bind_group::{
-    BindGroupBuilder, BindGroupLayout, BindGroupLayoutBuilder, WgpuBindGroup as BindGroup,
-    WgpuBindGroupLayout
-};
 pub use wde_wgpu::buffer::{BufferBindingType, BufferUsage};
 
 /// Alias for a `SRes<RenderAssets<GpuRenderBinding<M>>>`.

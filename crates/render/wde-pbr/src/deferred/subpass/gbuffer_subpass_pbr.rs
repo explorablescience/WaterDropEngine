@@ -1,4 +1,5 @@
 use wde_logger::prelude::*;
+use crate::deferred::{dependencies::{Batches, PbrMaterial, SsboTransformPbr}, subpass::GpuPbrGBufferRenderPipeline};
 
 use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
@@ -6,12 +7,6 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 use wde_camera::prelude::*;
-
-use crate::{
-    assets::PbrMaterial,
-    logic::{batches::Batches, ssbo::SsboTransformPbr},
-    passes::subpass::gbuffer_pipeline::GpuPbrGBufferRenderPipeline
-};
 
 pub(crate) struct SubRenderPassGbufferPbr;
 impl RenderSubPass for SubRenderPassGbufferPbr {

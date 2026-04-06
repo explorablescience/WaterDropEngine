@@ -3,7 +3,7 @@ use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::components::lights::*;
+use crate::deferred::lights::*;
 
 /// Maximum number of lights.
 pub const MAX_LIGHTS: usize = 64;
@@ -107,11 +107,9 @@ struct ExtractedLights {
 }
 
 fn extract(
-    (lights_directional, lights_point, lights_spot): (
-        ExtractWorld<Query<&DirectionalLight>>,
-        ExtractWorld<Query<&PointLight>>,
-        ExtractWorld<Query<&SpotLight>>
-    ),
+    lights_directional: ExtractWorld<Query<&DirectionalLight>>,
+    lights_point: ExtractWorld<Query<&PointLight>>,
+    lights_spot: ExtractWorld<Query<&SpotLight>>,
     mut extracted_lights: ResMut<ExtractedLights>
 ) {
     // Extract directional lights

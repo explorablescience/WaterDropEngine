@@ -3,14 +3,7 @@ use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{
-    assets::PbrMaterial,
-    logic::ssbo::SsboTransformPbr,
-    prelude::{
-        DirtyTransforms, ModelUuidToTransformUuidRender, PbrModel, PbrModelElementUuid,
-        PbrModelRegistry
-    }
-};
+use crate::deferred::dependencies::*;
 
 type ModelMaterialPair = (AssetId<Mesh>, AssetId<PbrMaterial>);
 
@@ -72,11 +65,7 @@ fn extract(
     render_dirty_transforms.0 = main_dirty_transforms.0.clone();
 
     // Extract every uuid from the entities
-    let mut render_entities: Vec<(
-        PbrModelElementUuid,
-        (AssetId<Mesh>, AssetId<PbrMaterial>),
-        u32
-    )> = Vec::new();
+    let mut render_entities= Vec::new();
     for entity in raw_entities.iter() {
         if let Some(uuid_list) = model_registry.entity_to_model_uuids.get(&entity) {
             for uuid in uuid_list.iter() {
