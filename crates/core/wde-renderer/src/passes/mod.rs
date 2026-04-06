@@ -36,7 +36,7 @@
 //! ## Render pipeline
 //! Then, as each sub-pass requires a render pipeline, you need to define a render pipeline asset that implements the [`crate::prelude::RenderAsset`] trait, which describes how to prepare the pipeline from a source asset. For example:
 //! ```rust
-//! #[derive(TypePath, Default, Clone)]
+//! #[derive(TypePath, Default, Clone, Debug)]
 //! pub struct DemoRenderPipeline(pub CachedPipelineIndex);
 //! impl RenderAsset for DemoRenderPipeline {
 //!     type SourceAsset = RenderPipelineAsset<DemoRenderPipeline>;
@@ -52,7 +52,7 @@
 //!             frag: Some(assets_server.load(".../frag.wgsl")),
 //!             bind_group_layouts: vec![DemoBindGroup::layout()],
 //!             ..Default::default()
-//!         })))
+//!         })?))
 //!     }
 //! }
 //! ```

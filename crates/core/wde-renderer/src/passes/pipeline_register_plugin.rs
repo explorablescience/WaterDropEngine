@@ -7,10 +7,15 @@ use crate::{
 
 /// Describes a render pipeline asset (used by [`RenderPipelinePluginRegister`]) which will be responsible of storing the render pipeline instance.
 /// Most of the time, you will use it as a type alias for the `SourceAsset` of your render pipeline.
-/// The render pipeline should derive the [`RenderAsset`], [`TypePath`], [`Default`] and [`Clone`] traits.
+/// The render pipeline should derive the [`RenderAsset`], [`TypePath`], [`Default`], [`Clone`] and [`Debug`] traits, and implement the `prepare` function to create the render pipeline instance from the asset data.
 /// See [crate::passes] for more details and examples.
-#[derive(Default, Asset, Clone, TypePath)]
+#[derive(Default, Asset, Clone, TypePath, Debug)]
 pub struct RenderPipelineAsset<P: RenderAsset + TypePath>(pub P);
+impl<P: RenderAsset + TypePath> std::fmt::Display for RenderPipelineAsset<P> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RenderPipelineAsset<{}>", std::any::type_name::<P>())
+    }
+}
 
 /// Component to hold a render pipeline asset handle, preventing it from being dropped and unloaded.
 #[allow(unused)]

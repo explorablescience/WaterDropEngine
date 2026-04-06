@@ -1,4 +1,5 @@
 use super::{ComputePipelineDescriptor, RenderPipelineDescriptor};
+use crate::assets::PrepareAssetError;
 use crate::core::RenderInstance;
 use crate::{
     assets::Shader,
@@ -66,27 +67,43 @@ pub struct PipelineManager {
 }
 impl PipelineManager {
     /// Push the creation of a render pipeline to the pipeline manager queue.
-    pub fn create_render_pipeline(
+    pub fn create_render_pipeline<E: Send + Sync + 'static>(
         &mut self,
-        descriptor: RenderPipelineDescriptor
-    ) -> CachedPipelineIndex {
+        descriptor: RenderPipelineDescriptor,
+        asset: E
+    ) -> Result<CachedPipelineIndex, PrepareAssetError<E>> {
+        // Check that every bind group layout is Some
+        for layout in descriptor.bind_group_layouts.iter() {
+            if layout.is_none() {
+                return Err(PrepareAssetError::RetryNextUpdate(asset));
+            }
+        }
+
         // Store the pipeline descriptor to the queued pipelines
         let id = self.pipeline_iter;
         self.processing_render_pipelines.insert(id, descriptor);
         self.pipeline_iter += 1;
-        id
+        Ok(id)
     }
 
     /// Push the creation of a compute pipeline to the pipeline manager queue.
-    pub fn create_compute_pipeline(
+    pub fn create_compute_pipeline<E: Send + Sync + 'static>(
         &mut self,
-        descriptor: ComputePipelineDescriptor
-    ) -> CachedPipelineIndex {
+        descriptor: ComputePipelineDescriptor,
+        asset: E
+    ) -> Result<CachedPipelineIndex, PrepareAssetError<E>> {
+        // Check that every bind group layout is Some
+        for layout in descriptor.bind_group_layouts.iter() {
+            if layout.is_none() {
+                return Err(PrepareAssetError::RetryNextUpdate(asset));
+            }
+        }
+
         // Store the pipeline descriptor to the queued pipelines
         let id = self.pipeline_iter;
         self.processing_compute_pipelines.insert(id, descriptor);
         self.pipeline_iter += 1;
-        id
+        Ok(id)
     }
 
     /// Get the status of a pipeline from its cached index.
@@ -228,7 +245,7 @@ fn load_render_pipelines(
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
-            let layout = match layout.build(&render_instance.0.read().unwrap()) {
+            let layout = match layout.as_ref().unwrap().build(&render_instance.0.read().unwrap()) {
                 Ok(layout) => layout,
                 Err(e) => {
                     error!(
@@ -335,7 +352,7 @@ fn load_compute_pipelines(
         // Build the layouts
         let mut bind_group_layouts = Vec::new();
         for layout in descriptor.bind_group_layouts.iter() {
-            let layout = match layout.build(&render_instance.0.read().unwrap()) {
+            let layout = match layout.as_ref().unwrap().build(&render_instance.0.read().unwrap()) {
                 Ok(layout) => layout,
                 Err(e) => {
                     error!(

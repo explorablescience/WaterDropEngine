@@ -33,7 +33,7 @@ pub struct RenderPipelineDescriptor {
     pub render_targets: Option<Vec<TextureFormat>>,
 
     /// Bind group layouts describing all resource bindings.
-    pub bind_group_layouts: Vec<BindGroupLayout>,
+    pub bind_group_layouts: Vec<Option<BindGroupLayout>>,
     /// Push constant ranges exposed to shaders.
     pub push_constants: Vec<PushConstantDescriptor>,
 
@@ -74,7 +74,7 @@ pub struct ComputePipelineDescriptor {
     pub comp: Option<Handle<Shader>>,
 
     /// Bind group layouts describing all resource bindings.
-    pub bind_group_layouts: Vec<BindGroupLayout>,
+    pub bind_group_layouts: Vec<Option<BindGroupLayout>>,
     /// Push constant ranges exposed to the compute shader.
     pub push_constants: Vec<PushConstantDescriptor>
 }

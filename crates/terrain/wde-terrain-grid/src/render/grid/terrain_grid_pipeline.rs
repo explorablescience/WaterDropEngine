@@ -10,8 +10,13 @@ use wde_renderer::prelude::*;
 
 use crate::render::grid::buffers::TerrainGridBuffer;
 
-#[derive(Default, Asset, Clone, TypePath)]
+#[derive(Default, Asset, Clone, TypePath, Debug)]
 pub struct TerrainGridRenderPipelineAsset;
+impl std::fmt::Display for TerrainGridRenderPipelineAsset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TerrainGridRenderPipelineAsset")
+    }
+}
 
 #[allow(unused)]
 #[derive(Component)]
@@ -27,14 +32,9 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
     );
 
     fn prepare(
-        _asset: Self::SourceAsset,
+        asset: Self::SourceAsset,
         (assets_server, pipeline_manager, camera, terrain_grid_buffer): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        let camera = match camera.iter().next() {
-            Some((_, camera)) => camera,
-            None => return Err(PrepareAssetError::RetryNextUpdate(_asset))
-        };
-
         Ok(GpuTerrainGridRenderPipeline(
             pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
                 label: "terrain-grid",
@@ -49,8 +49,8 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
                     alpha: BlendComponent::OVER
                 }),
                 bind_group_layouts: vec![
-                    camera.layout.clone(),
-                    terrain_grid_buffer.layout.clone(),
+                    camera.iter().next().map(|(_, c)| c.layout.clone()),
+                    Some(terrain_grid_buffer.layout.clone()),
                 ],
                 depth: DepthDescriptor {
                     enabled: true,
@@ -58,7 +58,7 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
                 },
                 sample_count: MSAA_SAMPLE_COUNT,
                 ..Default::default()
-            })
+            }, asset)?
         ))
     }
 

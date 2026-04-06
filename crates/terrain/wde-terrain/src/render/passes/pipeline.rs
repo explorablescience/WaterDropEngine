@@ -13,8 +13,13 @@ use crate::render::{
     renderer_gpu::TerrainRendererGPU
 };
 
-#[derive(Default, Asset, Clone, TypePath)]
+#[derive(Default, Asset, Clone, TypePath, Debug)]
 pub struct TerrainRenderPipelineAsset;
+impl std::fmt::Display for TerrainRenderPipelineAsset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TerrainRenderPipelineAsset")
+    }
+}
 
 #[allow(unused)]
 #[derive(Component)]
@@ -34,21 +39,16 @@ impl RenderAsset for GpuTerrainRenderPipeline {
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, camera, material_arrays, terrain_buffer): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        let (camera, materials_layout) = match (camera.iter().next(), &material_arrays.bind_group_layout) {
-            (Some((_, camera)), Some(layout)) => (camera, layout),
-            _ => return Err(PrepareAssetError::RetryNextUpdate(asset))
-        };
-
         Ok(GpuTerrainRenderPipeline(
             pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
                 label: "terrain",
                 vert: Some(assets_server.load("core/render/terrain/render_terrain_vert.wgsl")),
                 frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
                 bind_group_layouts: vec![
-                    camera.layout.clone(),
-                    materials_layout.clone(),
-                    terrain_buffer.layout.clone(),
-                    TerrainRendererGPU::layout_render(),
+                    camera.iter().next().map(|(_, c)| c.layout.clone()),
+                    material_arrays.bind_group_layout.clone(),
+                    Some(terrain_buffer.layout.clone()),
+                    Some(TerrainRendererGPU::layout_render()),
                 ],
                 render_targets: Some(vec![
                     TextureFormat::R16Float,       // Depth
@@ -61,7 +61,7 @@ impl RenderAsset for GpuTerrainRenderPipeline {
                 },
                 sample_count: MSAA_SAMPLE_COUNT,
                 ..Default::default()
-            })
+            }, asset)?
         ))
     }
 

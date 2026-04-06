@@ -28,7 +28,7 @@ impl RenderAsset for GpuPaintComputePipeline {
     );
 
     fn prepare(
-        _asset: Self::SourceAsset,
+        asset: Self::SourceAsset,
         (assets_server, pipeline_manager, commands_buffer): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(GpuPaintComputePipeline(
@@ -36,15 +36,15 @@ impl RenderAsset for GpuPaintComputePipeline {
                 label: "paint_compute",
                 comp: Some(assets_server.load("core/compute/terrain_editor/paint_compute.wgsl")),
                 bind_group_layouts: vec![
-                    commands_buffer.layout.clone(),
-                    TerrainRendererGPU::layout_compute(),
+                    Some(commands_buffer.layout.clone()),
+                    Some(TerrainRendererGPU::layout_compute()),
                 ],
                 push_constants: vec![PushConstantDescriptor {
                     stages: ShaderStages::COMPUTE,
                     offset: 0,
                     size: std::mem::size_of::<TileInfo>() as u32
                 }]
-            })
+            }, asset)?
         ))
     }
 

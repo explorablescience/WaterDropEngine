@@ -29,14 +29,14 @@ impl RenderPass for RenderPassResolve {
     }
 }
 
-#[derive(TypePath, Default, Clone)]
+#[derive(TypePath, Default, Clone, Debug)]
 pub(crate) struct ResolveRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for ResolveRenderPipeline {
     type SourceAsset = RenderPipelineAsset<ResolveRenderPipeline>;
     type Params = (SRes<AssetServer>, SResMut<PipelineManager>);
 
     fn prepare(
-        _asset: Self::SourceAsset,
+        asset: Self::SourceAsset,
         (assets_server, pipeline_manager): &mut bevy::ecs::system::SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(ResolveRenderPipeline(
@@ -44,9 +44,9 @@ impl RenderAsset for ResolveRenderPipeline {
                 label: "resolve",
                 vert: Some(assets_server.load("core/render/resolve/vert.wgsl")),
                 frag: Some(assets_server.load("core/render/resolve/frag.wgsl")),
-                bind_group_layouts: vec![RenderTextureBindGroup::layout()],
+                bind_group_layouts: vec![Some(RenderTextureBindGroup::layout())],
                 ..Default::default()
-            })
+            }, asset)?
         ))
     }
 }

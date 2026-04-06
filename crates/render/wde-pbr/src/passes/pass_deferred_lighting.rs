@@ -40,7 +40,7 @@ impl RenderPass for RenderPassDeferredLighting {
     }
 }
 
-#[derive(TypePath, Default, Clone)]
+#[derive(TypePath, Default, Clone, Debug)]
 pub(crate) struct DeferredLightingPipeline(pub CachedPipelineIndex);
 impl RenderAsset for DeferredLightingPipeline {
     type SourceAsset = RenderPipelineAsset<DeferredLightingPipeline>;
@@ -54,20 +54,15 @@ impl RenderAsset for DeferredLightingPipeline {
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, camera): &mut SystemParamItem<Self::Params>,
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        let camera = match camera.iter().next() {
-            Some((_, camera)) => camera,
-            _ => return Err(PrepareAssetError::RetryNextUpdate(asset)),
-        };
-
         Ok(DeferredLightingPipeline(
             pipeline_manager.create_render_pipeline(RenderPipelineDescriptor {
                 label: "deferred-lighting",
                 vert: Some(assets_server.load("core/render/pbr/lighting_vert.wgsl")),
                 frag: Some(assets_server.load("core/render/pbr/lighting_frag.wgsl")),
                 bind_group_layouts: vec![
-                    camera.layout.clone(),
-                    PbrDeferredTexturesLayout::layout(),
-                    LightsFeatureBuffer::layout(),
+                    camera.iter().next().map(|(_, c)| c.layout.clone()),
+                    Some(PbrDeferredTexturesLayout::layout()),
+                    Some(LightsFeatureBuffer::layout()),
                 ],
                 depth: DepthDescriptor {
                     enabled: false,
@@ -75,7 +70,7 @@ impl RenderAsset for DeferredLightingPipeline {
                 },
                 sample_count: MSAA_SAMPLE_COUNT,
                 ..default()
-            }),
+            }, asset)?
         ))
     }
 }
@@ -98,13 +93,7 @@ impl RenderSubPass for SubRenderPassLightingPbr {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::Mesh(mesh.0.as_ref().map(|m| m.id())),
-            SubPassCommand::BindGroup(
-                0,
-                camera
-                    .iter()
-                    .next()
-                    .map(|(_, camera)| camera.bind_group.clone()),
-            ),
+            SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
             SubPassCommand::BindGroup(
                 1,
                 deferred_textures_layout
