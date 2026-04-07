@@ -7,8 +7,8 @@
 // //! material model for per-gizmo color.
 // //!
 // //! # Architecture
-// //! - **Assets**: [`assets::cube_gizmo::CubeGizmoMesh`] builds a line-list cube mesh;
-// //!   [`assets::gizmo_material::GizmoMaterialAsset`] defines a single-color gizmo material with
+// //! - **Assets**: [`CubeGizmoMesh`](crate::assets::cube_gizmo::CubeGizmoMesh) builds a line-list cube mesh;
+// //!   [`assets::gizmo_material::GizmoMaterialAsset`](crate::assets::gizmo_material::GizmoMaterialAsset) defines a single-color gizmo material with
 // //!   a tiny uniform buffer.
 // //! - **SSBO**: `passes::gizmo_ssbo::GizmoSsbo` allocates CPU/GPU buffers for per-instance
 // //!   `TransformUniform` data and exposes a storage bind group (set 1).
@@ -17,7 +17,7 @@
 // //!   and material (set 2) layouts into a cached render pipeline.
 // //! - **Render pass**: `passes::gizmo_renderpass::GizmoRenderPass` batches gizmos by
 // //!   (mesh, material), uploads transforms, and draws after the main scene (pass index 1000).
-// //! - **Plugin wiring**: [`GizmosPlugin`] registers materials, SSBO, pipeline assets, and the
+// //! - **Plugin wiring**: [`GizmosPlugin`](crate::GizmosPlugin) registers materials, SSBO, pipeline assets, and the
 // //!   render pass so gizmos always render last.
 // //!
 // //! # Quickstart (draw a debug box)

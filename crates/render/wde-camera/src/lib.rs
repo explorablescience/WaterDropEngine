@@ -3,8 +3,8 @@
 //! This plugin provides a camera component and a camera view component, as well as a system to extract the active camera and update the camera uniform each frame.
 //!
 //! # Example
-//! To spawn the default active camera, add a [`crate::prelude::ActiveCamera`] component.
-//! This will automatically spawn a [`crate::prelude::Camera`] component and a [`crate::prelude::CameraView`] component with default parameters.
+//! To spawn the default active camera, add a [`ActiveCamera`](crate::camera::ActiveCamera) component.
+//! This will automatically spawn a [`Camera`](crate::camera::Camera) component and a [`CameraView`](crate::view::CameraView) component with default parameters.
 //! For example:
 //! ```rust
 //! commands.spawn((
@@ -24,9 +24,9 @@
 //! ```
 //!
 //! The camera uniform will then be automatically updated each frame with the active camera's transform and view parameters.
-//! To consumes the camera uniform in a shader, you can use the [`crate::camera::CameraRender`] render binding.
+//! To consumes the camera uniform in a shader, you can use the [`CameraRender`](crate::camera::CameraRender) render binding.
 //! It is accessible by the resource `Res<RenderAssets<GpuRenderBinding<CameraRender>>>` in render systems, or `SBindings<CameraRender>` in shader code.
-//! See [`wde_renderer::prelude::GpuRenderBinding`] for more details on how to use render bindings in shaders.
+//! See [`GpuRenderBinding`](wde_renderer::prelude::GpuRenderBinding) for more details on how to use render bindings in shaders.
 use bevy::prelude::*;
 
 use crate::camera::CameraFeature;

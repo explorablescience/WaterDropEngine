@@ -14,6 +14,9 @@ impl Plugin for ThirdPersonControllerPlugin {
     }
 }
 
+/// A third-person camera controller component.
+/// It allows the camera to orbit around a target point, zoom in and out, and move the target using keyboard input.
+/// The camera will always look at the target point.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct ThirdPersonController {

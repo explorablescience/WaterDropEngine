@@ -1,8 +1,8 @@
 //! Provides physics world management, colliders, and raycasting functionalities using the Rapier physics engine.
 //!
 //! # Features
-//! - **Colliders**: Add physics colliders to entities for collision detection (see [`crate::prelude::Collider`] for supported shapes)
-//! - **Raycasting**: Cast rays through the physics world to detect intersections (see [`crate::prelude::PhysicsWorld`] for raycasting methods)`
+//! - **Colliders**: Add physics colliders to entities for collision detection (see [`Collider`](crate::colliders::Collider) for supported shapes)
+//! - **Raycasting**: Cast rays through the physics world to detect intersections (see [`PhysicsWorld`](crate::prelude::PhysicsWorld) for raycasting methods)
 //! - **Automatic Updates**: Colliders automatically sync with entity transforms
 //!
 //! # Creating Colliders

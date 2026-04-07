@@ -1,14 +1,13 @@
 //! The main renderer plugin and related utilities.
 //!
 //! This crate provides the main rendering plugin for the engine, as well as core types and utilities for defining render pipelines, render passes and related resources. It is designed to be flexible and extensible, allowing users to define their own render pipelines and passes while providing a solid foundation of core functionality.
-//! It is an overlay over [`wde_wgpu`] that integrates it with the engine's asset system, ECS and render graph.
+//! It is an overlay over [`wde_wgpu`](wde_wgpu) that integrates it with the engine's asset system, ECS and render graph.
 //!
 //! The main components of this crate are:
-//! - The [`RenderPlugin`] that sets up the rendering system and adds the necessary plugins and resources. It is the main entry point for using the renderer and should be added to the app to enable rendering.
-//! - The [`assets`] module that defines the render pipeline asset system and related types.
-//! - The [`core`] module that defines core types and resources for the renderer, such as the render graph and pipeline manager.
-//! - The [`passes`] module that defines the traits and types for render passes and sub-passes, as well as a simple render graph implementation.
-//! - The [`utils`] module that provides utility resources and systems, such as the depth texture and meshes for rendering.
+//! - The [`assets`](crate::assets) module that defines the render pipeline asset system and related types.
+//! - The [`core`](crate::core) module that defines core types and resources for the renderer, such as the render graph and pipeline manager.
+//! - The [`passes`](crate::passes) module that defines the traits and types for render passes and sub-passes, as well as a simple render graph implementation.
+//! - The [`utils`](crate::utils) module that provides utility resources and systems, such as the depth texture and meshes for rendering.
 
 #[doc(hidden)]
 pub mod prelude {

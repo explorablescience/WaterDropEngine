@@ -1,13 +1,13 @@
-//! This module contains the definitions for a [RenderBinding] and its corresponding [GpuRenderBinding], as well as utilities to define custom renderer bindings, such as custom materials.
+//! This module contains the definitions for a [`RenderBinding`](crate::assets::bindings::RenderBinding) and its corresponding [`GpuRenderBinding`](crate::assets::bindings::GpuRenderBinding), as well as utilities to define custom renderer bindings, such as custom materials.
 //! It contains:
-//! - A [RenderBinding] is a representation of a binding group for a set of shader. It describe the resources that it provides (buffers, textures, samplers) and the shader stages that can access it. It is then extracted from the main world and prepared for the GPU as a [GpuRenderBinding], which contains the actual GPU resources (buffers, textures, samplers) and the bind group layout and bind group that can be used in the render pipeline.
-//! - A [Material] is a specific type of [RenderBinding] that is used to define the resources and shader stages for a material. It is then extracted and prepared as a [GpuMaterial], which can be used in the render pipeline to render objects with that material.
+//! - A [`RenderBinding`](crate::assets::bindings::RenderBinding) is a representation of a binding group for a set of shader. It describe the resources that it provides (buffers, textures, samplers) and the shader stages that can access it. It is then extracted from the main world and prepared for the GPU as a [`GpuRenderBinding`](crate::assets::bindings::GpuRenderBinding), which contains the actual GPU resources (buffers, textures, samplers) and the bind group layout and bind group that can be used in the render pipeline.
+//! - A [`Material`](crate::assets::bindings::Material) is a specific type of [`RenderBinding`](crate::assets::bindings::RenderBinding) that is used to define the resources and shader stages for a material. It is then extracted and prepared as a [`GpuMaterial`](crate::assets::bindings::GpuMaterial), which can be used in the render pipeline to render objects with that material.
 //!
 //! # Custom material example
 //! Here below is an example of a custom material that provides a uniform buffer with the albedo color and an optional albedo texture.
 //!
 //! ## Material definition
-//! The material is defined as a struct that implements the [Material] and [RenderBinding] traits. The `describe()` method of the [RenderBinding] trait is used to define the resources and shader stages for the material. In this example, we create a uniform buffer for the albedo color and add optional texture and sampler bindings for the albedo texture.
+//! The material is defined as a struct that implements the [`Material`](crate::assets::bindings::Material) and [`RenderBinding`](crate::assets::bindings::RenderBinding) traits. The `describe()` method of the [`RenderBinding`](crate::assets::bindings::RenderBinding) trait is used to define the resources and shader stages for the material. In this example, we create a uniform buffer for the albedo color and add optional texture and sampler bindings for the albedo texture.
 //! ```
 //! #[repr(C)]
 //! #[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -53,13 +53,13 @@
 //! @group(2) @binding(2) var albedo_sampler: sampler;                      /// Albedo texture sampler
 //! ```
 //!
-//! The material should then be registered in the app with the [MaterialsPluginRegister] to register its extract commands and GPU preparation systems:
+//! The material should then be registered in the app with the [`MaterialsPluginRegister`](crate::assets::bindings::MaterialsPluginRegister) to register its extract commands and GPU preparation systems:
 //! ```
 //! app.add_plugins(MaterialsPluginRegister::<PbrMaterial>::default());
 //! ```
 //!
 //! ## Material usage
-//! An entity can then be rendered with this material by adding a [Material3d] component with a handle to the material instance:
+//! An entity can then be rendered with this material by adding a [`Material3d`](crate::assets::bindings::Material3d) component with a handle to the material instance:
 //! ```
 //! let mat_handle = assets.add(PbrMaterial {
 //!     label: "my_pbr_material".to_string(),
@@ -73,7 +73,7 @@
 //! ```
 //!
 //! ## Updating material properties
-//! The properties of the buffers and textures of the material can be updated by accessing the [GpuMaterial] in the render world and updating the corresponding GPU resources. You then get access to the raw wde_wgpu buffers and textures (see [wde_wgpu::buffer::Buffer] and [wde_wgpu::texture::Texture]).
+//! The properties of the buffers and textures of the material can be updated by accessing the [`GpuMaterial`](crate::assets::bindings::GpuMaterial) in the render world and updating the corresponding GPU resources. You then get access to the raw wde_wgpu buffers and textures (see [`wde_wgpu::buffer::Buffer`](wde_wgpu::buffer::Buffer) and [`wde_wgpu::texture::Texture`](wde_wgpu::texture::Texture)).
 //! For example, to update the albedo color of the material, you would do something like this (on the render app):
 //! ```
 //! // Get the resource
@@ -105,14 +105,14 @@
 //! ```
 //!
 //! ## Custom pipeline and subpass
-//! See the documentation of [crate::passes] for more details on how to create custom render pipelines and subpasses that can use the material.
+//! See the documentation of [`crate::passes`](crate::passes) for more details on how to create custom render pipelines and subpasses that can use the material.
 //!
 //! # Generic render bindings
 //! ## Main differences with materials
-//! The [RenderBinding] and [GpuRenderBinding] system can also be used for generic render bindings that are not materials. In this case, the workflow is essentially the same as for materials, with the main differences being:
-//! - A generic render binding doesn't need to implement the [Material] trait, only the [RenderBinding] trait.
-//! - The GPU representation of a generic render binding is a [GpuRenderBinding] instead of a [GpuMaterial] (but it's essentially an alias).
-//! - The plugin to register the render binding is the [RenderBindingPluginRegister] instead of the [MaterialsPluginRegister]. Compared to the material plugin, the render binding plugin also creates a Resource containing a reference to the render binding.
+//! The [`RenderBinding`](crate::assets::bindings::RenderBinding) and [`GpuRenderBinding`](crate::assets::bindings::GpuRenderBinding) system can also be used for generic render bindings that are not materials. In this case, the workflow is essentially the same as for materials, with the main differences being:
+//! - A generic render binding doesn't need to implement the [`Material`](crate::assets::bindings::Material) trait, only the [`RenderBinding`](crate::assets::bindings::RenderBinding) trait.
+//! - The GPU representation of a generic render binding is a [`GpuRenderBinding`](crate::assets::bindings::GpuRenderBinding) instead of a [`GpuMaterial`](crate::assets::bindings::GpuMaterial) (but it's essentially an alias).
+//! - The plugin to register the render binding is the [`RenderBindingPluginRegister`](crate::assets::bindings::RenderBindingPluginRegister) instead of the [`MaterialsPluginRegister`](crate::assets::bindings::MaterialsPluginRegister). Compared to the material plugin, the render binding plugin also creates a [`Resource`](bevy::prelude::Resource) containing a reference to the render binding.
 //!   If you want to initialize yourself the render binding you can use:
 //! ```
 //! let render_binding_init_plugin = RenderBindingPluginRegister::<MyRenderBinding>::with_init(init, app);
@@ -129,8 +129,8 @@
 //! ```
 //!
 //! ## Updating generic render bindings
-//! The properties of the buffers and textures of a generic render binding can be updated in the same way as for materials, by accessing the [GpuRenderBinding] in the render world and updating the corresponding GPU resources.
-//! You can also recreate the instance with the new properties in the main world (using a function similar to the `init` function above) and replace the old [RenderBindingHolder] resource with the new one containing the new render binding instance.
+//! The properties of the buffers and textures of a generic render binding can be updated in the same way as for materials, by accessing the [`GpuRenderBinding`](crate::assets::bindings::GpuRenderBinding) in the render world and updating the corresponding GPU resources.
+//! You can also recreate the instance with the new properties in the main world (using a function similar to the `init` function above) and replace the old [`RenderBindingHolder`](crate::assets::bindings::RenderBindingHolder) resource with the new one containing the new render binding instance.
 
 use bevy::prelude::*;
 

@@ -4,24 +4,24 @@
 //! WaterDropEngine is a modular game engine built on top of Bevy's ECS. It provides a collection of plugins and tools.
 //! The engine is composed of several modules, organized from low-level to high-level:
 //! - High-Level:
-//!    - [`wde_terrain`]: A plugin for generating and rendering procedural terrain.
-//!    - [`wde_terrain_editor`]: A plugin for editing terrain in-game.
-//!    - [`wde_terrain_grid`]: A plugin for managing terrain grids and LOD.
+//!    - [`wde_terrain`](wde_terrain): A plugin for generating and rendering procedural terrain.
+//!    - [`wde_terrain_editor`](wde_terrain_editor): A plugin for editing terrain in-game.
+//!    - [`wde_terrain_grid`](wde_terrain_grid): A plugin for managing terrain grids and LOD.
 //! - Render:
-//!    - [`wde_pbr`]: A plugin for physically based rendering (PBR) materials and lighting.
-//!    - [`wde_camera`]: A plugin for managing cameras and viewports.
-//!    - [`wde_camera_controller`]: A plugin for controlling cameras with various input methods.
-//!    - [`wde_gltf`]: A plugin for loading and rendering glTF 3D models.
-//!    - [`wde_gizmos`]: A plugin for rendering debug gizmos and visualizations.
+//!    - [`wde_pbr`](wde_pbr): A plugin for physically based rendering (PBR) materials and lighting.
+//!    - [`wde_camera`](wde_camera): A plugin for managing cameras and viewports.
+//!    - [`wde_camera_controller`](wde_camera_controller): A plugin for controlling cameras with various input methods.
+//!    - [`wde_gltf`](wde_gltf): A plugin for loading and rendering glTF 3D models.
+//!    - [`wde_gizmos`](wde_gizmos): A plugin for rendering debug gizmos and visualizations.
 //! - Core:
-//!    - [`wde_renderer`]: A plugin for rendering 3D graphics using the `wgpu` graphics API.
-//!    - [`wde_scene`]: A plugin for managing scenes, entities, and components.
-//!    - [`wde_editor`]: A plugin for creating in-game editors and tools.
+//!    - [`wde_renderer`](wde_renderer): A plugin for rendering 3D graphics using the `wgpu` graphics API.
+//!    - [`wde_scene`](wde_scene): A plugin for managing scenes, entities, and components.
+//!    - [`wde_editor`](wde_editor): A plugin for creating in-game editors and tools.
 //! - Wrappers:
-//!    - `wde_wgpu`: A wrapper around the `wgpu` graphics API for rendering. It is superseeded by [`wde_renderer`].
-//!    - [`wde_physics`]: A wrapper around the `rapier` physics engine for 3D physics simulation.
-//!    - `wde_logger`: A wrapper around the `tracing` library for logging and diagnostics.
-//!    - `wde_egui`: A wrapper around the `egui` library for creating user interfaces. It is superseeded by [`wde_editor`].
+//!    - [`wde_wgpu`](wde_wgpu): A wrapper around the `wgpu` graphics API for rendering. It is superseeded by [`wde_renderer`](wde_renderer).
+//!    - [`wde_physics`](wde_physics): A wrapper around the `rapier` physics engine for 3D physics simulation.
+//!    - [`wde_logger`](wde_logger): A wrapper around the `tracing` library for logging and diagnostics.
+//!    - [`wde_egui`](wde_egui): A wrapper around the `egui` library for creating user interfaces. It is superseeded by [`wde_editor`](wde_editor).
 //!
 //! # Getting Started
 //! To get started with WaterDropEngine, add the `wde` crate to your `Cargo.toml`:

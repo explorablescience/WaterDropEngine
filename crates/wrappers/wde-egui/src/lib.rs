@@ -1,7 +1,7 @@
 //! Egui integration for WaterDropEngine.
 //!
 //! # Example
-//! To draw a new egui window, you can use the [`crate::prelude::EguiContext`] resource provided by the plugin:
+//! To draw a new egui window, you can use the [`EguiContext`](crate::egui::egui_context::EguiContext) resource provided by the plugin:
 //! ```rust
 //! fn draw_new_window(ctx: &EguiContext) {
 //!   egui::Window::new("My Egui Window")

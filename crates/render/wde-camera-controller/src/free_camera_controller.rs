@@ -21,6 +21,7 @@ impl Plugin for FreeCameraControllerPlugin {
     }
 }
 
+/// A simple free camera controller that allows you to fly around the scene using WASD for movement and mouse for looking around.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct FreeCameraController {

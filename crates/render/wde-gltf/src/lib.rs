@@ -3,7 +3,7 @@
 //! This crate provides functionality to load and parse glTF files, converting them into assets that can be used within the WaterDropEngine. It supports loading meshes, materials, and textures defined in glTF files and integrates them with the engine's rendering system.
 //!
 //! # Example
-//! To load a glTF model, you can use the [`GltfLoader`] in your `setup` system as follows:
+//! To load a glTF model, you can use the [`GltfLoader`](crate::GltfLoader) in your `setup` system as follows:
 //! ```rust
 //! if let Ok(gltf_model) = GltfLoader::load("models/model.gltf", &asset_server) {
 //!     commands.spawn((
@@ -12,7 +12,7 @@
 //!     ));
 //! }
 //! ```
-//! The rendering of the loaded model is then managed by the [`wde_pbr`] crate, which handles the materials and shaders for the meshes.
+//! The rendering of the loaded model is then managed by the [`wde_pbr`](wde_pbr) crate, which handles the materials and shaders for the meshes.
 #![allow(clippy::too_many_arguments)]
 use wde_logger::prelude::*;
 

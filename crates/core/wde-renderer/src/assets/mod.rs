@@ -1,12 +1,12 @@
 //! Renderer assets module.
 //!
 //! This module contains:
-//! - Definitions and loading logic for all assets used by the renderer, that is [`mesh::Mesh`], [`texture::Texture`], [`buffer::Buffer`], [`shader::Shader`] assets. Each asset type has its own loading logic and GPU preparation steps, defined in their respective submodules.
-//! - The [`bindings`] submodule, which provides utilities for defining custom renderer bindings, such as custom materials. See the documentation of the [`bindings`] module for more details.
-//! - A set of default utility meshes, defined in the [`meshes`] submodule.
+//! - Definitions and loading logic for all assets used by the renderer, that is [`Mesh`](crate::assets::Mesh), [`Texture`](crate::assets::Texture), [`Buffer`](crate::assets::Buffer), [`Shader`](crate::assets::Shader) assets. Each asset type has its own loading logic and GPU preparation steps, defined in their respective submodules.
+//! - The [`bindings`](crate::assets::bindings) submodule, which provides utilities for defining custom renderer bindings, such as custom materials. See the documentation of the [`bindings`](crate::assets::bindings) module for more details.
+//! - A set of default utility meshes, defined in the [`meshes`](crate::assets::meshes) submodule.
 //!
 //! # Custom renderer bindings
-//! For assets that require custom GPU bindings, such as custom materials [Material], the [`bindings`] module provides utilities to define the asset and its corresponding GPU asset, as a [`RenderBinding`] (or [`Material`]) and a [`GpuRenderBinding`] (or [`GpuMaterial`]) respectively. See the documentation of the [`bindings`] module for more details.
+//! For assets that require custom GPU bindings, such as custom materials [`Material`](crate::assets::bindings::Material), the [`bindings`](crate::assets::bindings) module provides utilities to define the asset and its corresponding GPU asset, as a [`RenderBinding`](crate::assets::bindings::RenderBinding) (or [`Material`](crate::assets::bindings::Material)) and a [`GpuRenderBinding`](crate::assets::bindings::GpuRenderBinding) (or [`GpuMaterial`](crate::assets::bindings::GpuMaterial)) respectively. See the documentation of the [`bindings`](crate::assets::bindings) module for more details.
 //!
 //! # Asset loading
 //! ## Default asset loading
