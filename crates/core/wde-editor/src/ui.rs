@@ -52,38 +52,7 @@ pub struct UIMenu {
 impl UIMenu {
     /// Add a menu item to the menu, given its path (e.g. "File/Open/Recent"). The path is split by '/' to determine the hierarchy of the menu items.
     /// If any of the intermediate items do not exist, they are created as non-leaf items. The final item is created as a leaf item.
-    ///
-    /// # Arguments
-    /// * `path` - The path of the menu item to add, with '/' as the separator between menu levels (e.g. "File/Open/Recent").
-    ///
-    /// # Example
-    /// To create a menu with a "File" menu that has an "Open" submenu, which in turn has a "Recent" submenu, you can call:
-    /// ```
-    /// let mut menu = UIMenu::default();
-    /// menu.push("File/Open/Recent");
-    /// assert!(menu.roots.contains_key("File"));
-    ///
-    /// let file_menu = menu.roots.get("File").unwrap();
-    /// assert!(!file_menu.leaf);
-    /// assert!(file_menu.items.is_some());
-    ///
-    /// let open_menu = file_menu.items.as_ref().unwrap().get("Open").unwrap();
-    /// assert!(!open_menu.leaf);
-    /// assert!(open_menu.items.is_some());
-    ///
-    /// let recent_menu = open_menu.items.as_ref().unwrap().get("Recent").unwrap();
-    /// assert!(recent_menu.leaf);
-    /// assert!(recent_menu.items.is_none());
-    /// ```
-    ///
-    /// Then, to open for example a window when the "Recent" menu item is clicked, you can check if it is clicked using the `is_clicked` method:
-    /// ```
-    /// if menu.is_clicked("File/Open/Recent") {
-    ///     // Open the "Recent" window
-    ///     // ...
-    /// }
-    /// ```
-    pub fn push(&mut self, path: &str) {
+    fn push(&mut self, path: &str) {
         let parts: Vec<&str> = path.split('/').collect();
         if parts.is_empty() {
             return;
@@ -128,12 +97,13 @@ impl UIMenu {
         self.clicked.get(path).cloned().unwrap_or(false)
     }
     /// Returns a mutable reference to the clicked state of the menu item at the given path
-    pub fn clicked_mut(&mut self, path: &str) -> Option<&mut bool> {
-        if self.clicked.contains_key(path) {
-            self.clicked.get_mut(path)
-        } else {
-            None
+    /// If the item does not exist, it is created as a leaf item and its clicked state is initialized to false.
+    pub fn clicked_mut(&mut self, path: &str) -> &mut bool {
+        if !self.clicked.contains_key(path) {
+            self.push(path);
+            self.clicked.insert(path.to_string(), false);
         }
+        self.clicked.get_mut(path).unwrap()
     }
 
     /// Draw the menu using egui

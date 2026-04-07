@@ -5,30 +5,20 @@ use wde_editor::prelude::*;
 pub(crate) struct CameraPropertiesEditor;
 impl Plugin for CameraPropertiesEditor {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_ui)
-            .add_systems(Update, edit_view_params);
+        app.add_systems(Update, edit_view_params);
     }
-}
-
-fn init_ui(mut ui_menu: ResMut<UIMenu>) {
-    ui_menu.push("Camera/View");
 }
 
 fn edit_view_params(
     ctx: Res<UIContext>,
     mut camera_query: Query<&mut CameraView, With<ActiveCamera>>,
-    ui_menu: Res<UIMenu>
+    mut ui_menu: ResMut<UIMenu>
 ) {
     if let Ok(mut view) = camera_query.single_mut() {
-        // Check if the menu item was clicked
-        if !ui_menu.is_clicked("Camera/View") {
-            return;
-        }
-
-        // Draw UI
         UIWindow::new("Camera View Properties")
             .resizable(false)
             .default_pos([100.0, 10.0])
+            .open(ui_menu.clicked_mut("Camera/View"))
             .show(&ctx.0, |ui| {
                 ui.add(
                     Slider::new(&mut view.fov, 1.0..=179.0)

@@ -26,6 +26,7 @@ pub struct Camera;
 
 /// Marker component for the active camera. The render feature reads this each frame to know which camera to use for rendering.
 #[derive(Component, Default, Clone, Debug)]
+#[require(Transform, CameraView, Camera)]
 pub struct ActiveCamera;
 
 /// Camera bind group that shaders can consume.

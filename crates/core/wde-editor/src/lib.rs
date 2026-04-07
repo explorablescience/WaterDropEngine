@@ -1,27 +1,21 @@
-//! A simple editor plugin that demonstrates how to create a UI menu system using egui in Bevy.
-//! The plugin defines a `UIMenu` resource that stores the structure of the menu and provides methods to add menu items and check their clicked state. The `EditorPlugin` initializes a demo menu with some common items and handles the "Help/About" menu item to show an about window when clicked.
+//! A simple editor plugin on top of `wde_egui` that provides an editor interface.
 //!
-//! # Example : The top-level menu
-//! You can define terrain-related entries and gate a debug window on a clicked item:
-//! ```rust,no_run
-//! use bevy::prelude::*;
-//! use wde_editor::prelude::*;
-//!
-//! fn init_ui(mut ui_menu: ResMut<UIMenu>) {
-//!     ui_menu.push("Terrain/Paint");
-//!     ui_menu.push("Terrain/Save");
-//! }
-//!
-//! fn ui_paint_terrain(ctx: Res<UIContext>, ui_menu: Res<UIMenu>) {
-//!     if !ui_menu.is_clicked("Terrain/Paint") {
-//!         return;
-//!     }
-//!
-//!     UIWindow::new("Paint Debug").show(&ctx.0, |_ui| {
-//!         // Terrain paint controls...
-//!     });
+//! # Example
+//! To create as an example a top-level menu item "Terrain" with a submenu "Paint", you can do the following:
+//! ```rust
+//! fn update(ctx: Res<UIContext>, ui_menu: Res<UIMenu>) {
+//!     UIWindow::new("Paint Debug")
+//!         .default_size([1100.0, 600.0])
+//!         .open(ui_menu.clicked_mut("Terrain/Paint"))
+//!         .show(&ctx.0, |_ui| {
+//!              // Terrain paint functionality goes here...
+//!         });
 //! }
 //! ```
+//! To see all the available UI components and how to use them, check out the [`egui`] documentation, which is the underlying UI library used by `wde_egui` and thus also by this editor plugin.
+//!
+//! # Default Panels
+//! This crate also provides basic panels such as ones for inspecting entities and assets, as well as a simple overlay system for drawing UI on top of the game viewport.
 
 use bevy::prelude::*;
 use wde_egui::EguiPlugin;
@@ -32,11 +26,8 @@ mod panels;
 mod ui;
 mod ui_textures;
 
+#[doc(hidden)]
 pub mod prelude {
-    pub mod ui {
-        pub use wde_egui::prelude::*;
-    }
-
     // Re-export egui types for easier access in editor code
     pub use wde_egui::prelude::EguiContext as UIContext;
     pub use wde_egui::prelude::egui::Window as UIWindow;
@@ -46,20 +37,18 @@ pub mod prelude {
         Button, Checkbox, CollapsingHeader, Color32, ColorImage, ComboBox, DragValue, FontId,
         Label, ScrollArea, Separator, Slider, TextEdit
     };
+    pub mod ui {
+        pub use wde_egui::prelude::*;
+    }
 
     // Re-export editor types
-    pub use super::EditorPlugin;
     pub use super::ui::UIMenu;
-
-    // Re-export texture handling types
     pub use super::ui_textures::{UITextureHandle, UITextures};
 }
 
 pub struct EditorPlugin;
 impl Plugin for EditorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EguiPlugin)
-            .add_plugins(EditorUIMenu)
-            .add_plugins(PanelsPlugin);
+        app.add_plugins((EguiPlugin, EditorUIMenu, PanelsPlugin));
     }
 }

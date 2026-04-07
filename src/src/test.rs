@@ -13,10 +13,8 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Name::new("Main Camera"),
         Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y),
-        Camera,
-        CameraView::default(),
-        ThirdPersonController::default(),
-        ActiveCamera
+        ActiveCamera,
+        ThirdPersonController::default()
     ));
 
     // Spawn the lights

@@ -15,31 +15,20 @@ use crate::{
 pub struct TerrainEditorUIPlugin;
 impl Plugin for TerrainEditorUIPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_ui)
-            .add_systems(Update, ui_paint_terrain)
+        app.add_systems(Update, ui_paint_terrain)
             .add_systems(Update, ui_save_terrain);
     }
-}
-
-fn init_ui(mut ui_menu: ResMut<UIMenu>) {
-    ui_menu.push("Terrain/Paint");
-    ui_menu.push("Terrain/Save");
 }
 
 fn ui_paint_terrain(
     ctx: Res<UIContext>,
     mut paint_manager: ResMut<PaintManager>,
     mut query: Query<&mut PaintBrush>,
-    ui_menu: Res<UIMenu>
+    mut ui_menu: ResMut<UIMenu>
 ) {
-    // Check if the menu item was clicked
-    if !ui_menu.is_clicked("Terrain/Paint") {
-        return;
-    }
-
-    // Draw UI
     UIWindow::new("Paint Debug")
         .default_pos([40.0, 20.0])
+        .open(ui_menu.clicked_mut("Terrain/Paint"))
         .show(&ctx.0, |ui| {
             ui.heading("Current Brush");
             if let Ok(mut brush) = query.single_mut() {
@@ -87,19 +76,15 @@ fn ui_save_terrain(
     terrain: Query<&Terrain>,
     mut extractor: ResMut<TerrainExtractor>,
     mut save_manager: ResMut<SaveManager>,
-    ui_menu: Res<UIMenu>
+    mut ui_menu: ResMut<UIMenu>
 ) {
-    // Check if the menu item was clicked
-    if !ui_menu.is_clicked("Terrain/Save") {
-        return;
-    }
-
     // Clear the previous list of tiles to extract
     extractor.clear_tiles_to_extract();
 
     // Draw UI
     UIWindow::new("Save Terrain")
         .default_pos([40.0, 200.0])
+        .open(ui_menu.clicked_mut("Terrain/Save"))
         .show(&ctx.0, |ui| {
             ui.heading("Save");
             if ui.button("Save Terrain").clicked() {

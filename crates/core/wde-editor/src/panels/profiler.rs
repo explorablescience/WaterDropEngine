@@ -11,25 +11,14 @@ impl Plugin for ProfilerPlugin {
         puffin::set_scopes_on(true);
 
         // Add profiler
-        app.add_systems(Startup, init_ui)
-            .add_systems(Update, draw_profiler_panel);
+        app.add_systems(Update, draw_profiler_panel);
     }
-}
-
-fn init_ui(mut ui_menu: ResMut<UIMenu>) {
-    ui_menu.push("Engine/Profiler");
 }
 
 fn draw_profiler_panel(ctx: Res<EguiContext>, mut ui_menu: ResMut<UIMenu>) {
-    let show_panel = ui_menu.is_clicked("Engine/Profiler");
-    if !show_panel {
-        return;
-    }
-
-    // Draw the profiler window using puffin_egui
     egui::Window::new("Profiler")
         .default_size([1100.0, 600.0])
-        .open(ui_menu.clicked_mut("Engine/Profiler").unwrap_or(&mut false))
+        .open(ui_menu.clicked_mut("Engine/Profiler"))
         .show(&ctx.0, |ui| {
             puffin_egui::profiler_ui(ui);
         });

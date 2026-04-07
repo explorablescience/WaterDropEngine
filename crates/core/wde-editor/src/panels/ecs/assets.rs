@@ -45,10 +45,6 @@ pub fn draw_assets_panel(
     asset_server: Res<AssetServer>,
     asset_catalog: Res<AssetCatalog>
 ) {
-    if !ui_menu.is_clicked("Engine/Assets") {
-        return;
-    }
-
     // Get list of loaded assets and all assets
     let loading_assets = get_assets(&asset_server, &asset_catalog, false);
     let loaded_assets = get_assets(&asset_server, &asset_catalog, true);
@@ -56,7 +52,7 @@ pub fn draw_assets_panel(
     // Show the assets panel
     egui::Window::new("Assets")
         .default_size([1100.0, 600.0])
-        .open(ui_menu.clicked_mut("Engine/Assets").unwrap_or(&mut false))
+        .open(ui_menu.clicked_mut("Engine/Assets"))
         .show(&ctx.0, |ui| {
             // Loaded assets
             ui.heading("Loaded Assets");

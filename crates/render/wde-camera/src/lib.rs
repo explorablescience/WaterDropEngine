@@ -3,16 +3,24 @@
 //! This plugin provides a camera component and a camera view component, as well as a system to extract the active camera and update the camera uniform each frame.
 //!
 //! # Example
-//! To spawn a camera, add a [`crate::prelude::Camera`] component, a [`crate::prelude::CameraView`] component. If you want the camera to be active, add the [`crate::prelude::ActiveCamera`] component as well. For example:
+//! To spawn the default active camera, add a [`crate::prelude::ActiveCamera`] component.
+//! This will automatically spawn a [`crate::prelude::Camera`] component and a [`crate::prelude::CameraView`] component with default parameters.
+//! For example:
 //! ```rust
-//! fn spawn_camera(mut commands: Commands) {
-//!     commands.spawn((
-//!         Transform::from_xyz(0.0, 2.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
-//!         Camera,
-//!         CameraView::default(),
-//!         ActiveCamera
-//!     ));
-//! }
+//! commands.spawn((
+//!    Transform::from_xyz(0.0, 2.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
+//!    ActiveCamera
+//! ));
+//! ```
+//!
+//! If you want to customize the camera view parameters, you can spawn the components separately and add the `ActiveCamera` marker:
+//! ```rust
+//! commands.spawn((
+//!    Transform::from_xyz(0.0, 2.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),
+//!    Camera,
+//!    CameraView::default(),
+//!    ActiveCamera
+//! ));
 //! ```
 //!
 //! The camera uniform will then be automatically updated each frame with the active camera's transform and view parameters.
@@ -30,10 +38,9 @@ pub mod prelude {
 }
 
 mod camera;
-mod view;
-
 #[cfg(debug_assertions)]
 mod editor;
+mod view;
 
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {

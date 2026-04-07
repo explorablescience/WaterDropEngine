@@ -7,10 +7,6 @@ use crate::{
     editor::{PlacementTool, PlacementUI}
 };
 
-pub fn init_ui(mut ui_menu: ResMut<UIMenu>) {
-    ui_menu.push("Terrain/Placement");
-}
-
 pub fn show_ui(
     mut commands: Commands,
     ctx: Res<UIContext>,
@@ -26,11 +22,8 @@ pub fn show_ui(
     }
 
     // Show UI
-    if !ui_menu.is_clicked("Terrain/Placement") {
-        return;
-    }
     UIWindow::new("Placement Debug")
-        .open(ui_menu.clicked_mut("Terrain/Placement").unwrap())
+        .open(ui_menu.clicked_mut("Terrain/Placement"))
         .show(&ctx.0, |ui| {
             ui.checkbox(&mut placement_ui.enabled, "Enabled");
 

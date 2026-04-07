@@ -1,3 +1,7 @@
+//! WaterDropEngine's `wde-gizmos` crate renders lightweight debug gizmos (lines/boxes) on top of the main scene.
+//!
+//! WIP.
+
 // //! WaterDropEngine's `wde-gizmos` crate renders lightweight debug gizmos (lines/boxes) on top of
 // //! the main scene. It adds a dedicated render pass, a simple line-list pipeline, and a minimal
 // //! material model for per-gizmo color.
@@ -52,7 +56,7 @@
 // //! # Core usage patterns
 // //! - Reuse `CubeGizmoMesh` for AABBs; author custom line meshes by supplying `MeshAsset` with
 // //!   `RenderTopology::LineList` indices.
-// ////! - Materials are per-entity; a single color uniform feeds all instances in the batch.
+// //! - Materials are per-entity; a single color uniform feeds all instances in the batch.
 // //! - Gizmos rely on the camera bind group from `wde-camera`; keep an active camera present.
 // //! - SSBO capacity defaults to 100k instances; adjust in code if you stream more gizmos.
 // //!
@@ -67,6 +71,7 @@
 // //!   group layout.
 use bevy::prelude::*;
 
+#[doc(hidden)]
 pub mod prelude {
     // pub use crate::GizmosPlugin;
     // pub use crate::assets::{cube_gizmo::CubeGizmoMesh, gizmo_material::{GizmoMaterial, GizmoMaterialAsset}};

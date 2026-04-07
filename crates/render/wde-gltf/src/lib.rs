@@ -1,23 +1,18 @@
-//! GLTF (GL Transmission Format) model loader and parser for WaterDropEngine.
-//! This crate provides functionality to load and parse glTF 2.0 files,
-//! converting them into Bevy-compatible mesh and material assets for rendering.
+//! GLTF Loader for WaterDropEngine
 //!
-//! # Features
-//! - Load glTF files from disk.
-//! - Parse glTF structures including buffers, meshes, accessors, and materials.
-//! - Convert glTF materials to PBR materials compatible with WaterDropEngine's PBR system.
-//! - Create mesh assets from glTF mesh data.
-//! - Spawn loaded models into the Bevy world with appropriate transforms.
+//! This crate provides functionality to load and parse glTF files, converting them into assets that can be used within the WaterDropEngine. It supports loading meshes, materials, and textures defined in glTF files and integrates them with the engine's rendering system.
 //!
 //! # Example
-//! The following example demonstrates how to load a glTF model and spawn it into the world.
-//! ```rust,no_run
-//! fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-//!     if let Ok(gltf_model) = GltfLoader::load("models/model.gltf", &asset_server) {
-//!         GltfLoader::spawn(Transform::from_scale(Vec3::ONE * 10.0), commands, &gltf_model);
-//!     }
+//! To load a glTF model, you can use the [`GltfLoader`] in your `setup` system as follows:
+//! ```rust
+//! if let Ok(gltf_model) = GltfLoader::load("models/model.gltf", &asset_server) {
+//!     commands.spawn((
+//!         Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(1.0)),
+//!         PbrModel(gltf_model.models)
+//!     ));
 //! }
 //! ```
+//! The rendering of the loaded model is then managed by the [`wde_pbr`] crate, which handles the materials and shaders for the meshes.
 #![allow(clippy::too_many_arguments)]
 use wde_logger::prelude::*;
 
@@ -25,6 +20,7 @@ use bevy::prelude::*;
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
+#[doc(hidden)]
 pub mod prelude {
     pub use crate::GltfAsset;
     pub use crate::GltfError;
@@ -41,49 +37,22 @@ mod parser;
 pub use error::GltfError;
 
 /// Representation of a 3D GLTF model asset.
-///
-/// # Fields
-/// - `path`: The path to the glTF file.
-/// - `models`: The list of parsed glTF models. Each model is represented by a mesh and its associated material.
-///   Node transforms are baked directly into the mesh vertices.
-///
-/// # Example
-/// ```rust,no_run
-/// let gltf_asset = GltfLoader::load("models/model.gltf", &asset_server).unwrap();
-/// let entity = gltf_asset.spawn(commands, Transform::from_scale(Vec3::ONE * 10.0));
-/// ```
 /// This will spawn the model and return the parent entity ID.
+/// See the [crate] documentation for usage examples.
 #[derive(Asset, TypePath, Clone)]
 pub struct GltfAsset {
-    /// The path to the glTF file.
     pub path: String,
-    /// The list of parsed glTF models. Each model is represented by a mesh and its associated material.
-    /// Node transforms are baked directly into the mesh vertices.
-    /// Format: (mesh_handle, material_handle)
+    /// The list of parsed glTF models.
+    /// Each model is represented by a mesh and its associated material.
     pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>
 }
 
 /// Manager to load glTF models into the Bevy world.
-///
-/// # Methods
-/// - `load`: Load a glTF file and register its models and materials into the Bevy world.
-///   Returns a loaded `GltfAsset` which contains handles to the meshes and materials.
-///
-/// # Example
-/// ```rust,no_run
-/// let gltf_asset = GltfLoader::load("models/model.gltf", &asset_server).unwrap();
-/// ```
+/// See the [crate] documentation for usage examples.
 pub struct GltfLoader;
 impl GltfLoader {
     /// Load a glTF file and register its models and materials into the Bevy world.
     /// Returns a loaded `GltfAsset` which contains handles to the meshes and materials.
-    ///
-    /// # Arguments
-    /// - `path`: Path to the glTF file.
-    /// - `asset_server`: Reference to the Bevy asset server for loading assets.
-    ///
-    /// # Returns
-    /// - `Result<GltfAsset, GltfError>`: On success, returns the loaded `GltfAsset`. On failure, returns a `GltfError`.
     pub fn load(path: &str, asset_server: &AssetServer) -> Result<GltfAsset, GltfError> {
         debug!("Loading glTF model {}.", path);
 

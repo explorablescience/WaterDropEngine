@@ -33,7 +33,6 @@ pub struct EditorPlugin;
 impl Plugin for EditorPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlacementUI>()
-            .add_systems(Startup, init_ui)
             .add_systems(Update, (show_ui, handle_placement_tool));
     }
 }

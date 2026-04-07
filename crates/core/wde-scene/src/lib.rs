@@ -1,7 +1,9 @@
+//! A plugin for loading and saving scenes and configuration files in the WDE format.
 use bevy::prelude::*;
 
 mod utils;
 
+#[doc(hidden)]
 pub mod prelude {
     pub mod serialize {
         pub use crate::utils::serialize::*;

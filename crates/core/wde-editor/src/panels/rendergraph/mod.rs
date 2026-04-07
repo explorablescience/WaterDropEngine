@@ -23,7 +23,7 @@ pub struct RenderGraphPanelPlugin;
 impl Plugin for RenderGraphPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ScreenshotRequest>()
-            .add_systems(Startup, (init_ui, init_render))
+            .add_systems(Startup, init_render)
             .add_systems(Update, (draw_ui, resize));
 
         app.get_sub_app_mut(RenderApp)
@@ -51,10 +51,6 @@ impl Plugin for RenderGraphPanelPlugin {
             ghost_swapchain_texture_handle: None
         });
     }
-}
-
-fn init_ui(mut ui_menu: ResMut<UIMenu>) {
-    ui_menu.push("Engine/Render Graph");
 }
 
 fn init_render(
@@ -107,18 +103,10 @@ fn draw_ui(
     mut render_messages: ResMut<ScreenshotRequest>,
     ui_textures: Res<UITextures>
 ) {
-    if !ui_menu.is_clicked("Engine/Render Graph") {
-        return;
-    }
-
     *render_messages = ScreenshotRequest { request: false };
     egui::Window::new("Render Graph")
         .default_size(egui::vec2(400.0, 300.0))
-        .open(
-            ui_menu
-                .clicked_mut("Engine/Render Graph")
-                .unwrap_or(&mut false)
-        )
+        .open(ui_menu.clicked_mut("Engine/Render Graph"))
         .show(&ctx.0, |ui| {
             ui.label("Registered Render Passes:");
             for name in &ui_state.names {

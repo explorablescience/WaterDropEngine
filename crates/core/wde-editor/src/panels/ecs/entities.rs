@@ -12,10 +12,6 @@ pub fn draw_entities_panel(
     entities: Query<(Entity, Option<&Name>, Option<&ChildOf>)>,
     mut selected: ResMut<SelectedEntity>
 ) {
-    if !ui_menu.is_clicked("Engine/Entities") {
-        return;
-    }
-
     // Build a tree structure of entities based on their parent-child relationships
     let mut rows = entities
         .iter()
@@ -54,7 +50,7 @@ pub fn draw_entities_panel(
     // Draw the UI panel with a tree view of entities
     egui::Window::new("Entities")
         .default_size([360.0, 440.0])
-        .open(ui_menu.clicked_mut("Engine/Entities").unwrap_or(&mut false))
+        .open(ui_menu.clicked_mut("Engine/Entities"))
         .show(&ctx.0, |ui| {
             ui.label(format!("Total active entities: {}", rows.len()));
             if let Some(entity) = selected.0 {
@@ -155,7 +151,6 @@ pub fn draw_selected_entity_components_panel(world: &mut World) {
     if !show_panel {
         return;
     }
-
     let selected = world.resource::<SelectedEntity>().0;
     let mut component_rows = Vec::<String>::new();
     let mut selected_label = None::<String>;

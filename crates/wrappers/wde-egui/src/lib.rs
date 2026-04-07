@@ -15,12 +15,9 @@
 pub mod prelude {
     pub use crate::egui::egui_context::EguiContext;
     pub mod egui {
+        pub use crate::egui::egui_pass::EguiRenderPassHolder;
         pub use egui::*;
     }
-}
-
-pub mod render {
-    pub use crate::egui::egui_pass::EguiRenderPassHolder;
 }
 
 mod egui;
@@ -31,8 +28,6 @@ use bevy::prelude::*;
 pub struct EguiPlugin;
 impl Plugin for EguiPlugin {
     fn build(&self, app: &mut App) {
-        // Initialize egui logic and rendering plugins
-        app.add_plugins(egui::EguiLogicPlugin)
-            .add_plugins(logic::EguiRenderPlugin);
+        app.add_plugins((egui::EguiLogicPlugin, logic::EguiRenderPlugin));
     }
 }

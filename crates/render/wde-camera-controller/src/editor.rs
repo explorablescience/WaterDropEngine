@@ -7,29 +7,20 @@ use crate::prelude::ThirdPersonController;
 pub struct CameraPropertiesEditor;
 impl Plugin for CameraPropertiesEditor {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_ui)
-            .add_systems(Update, edit_controller_params);
+        app.add_systems(Update, edit_controller_params);
     }
 }
 
-fn init_ui(mut ui_menu: ResMut<UIMenu>) {
-    ui_menu.push("Camera/Controller");
-}
 fn edit_controller_params(
     ctx: Res<UIContext>,
     mut camera_query: Query<&mut ThirdPersonController, With<ActiveCamera>>,
-    ui_menu: Res<UIMenu>
+    mut ui_menu: ResMut<UIMenu>
 ) {
     if let Ok(mut controller) = camera_query.single_mut() {
-        // Check if the menu item was clicked
-        if !ui_menu.is_clicked("Camera/Controller") {
-            return;
-        }
-
-        // Draw UI
         UIWindow::new("Camera Controller Properties")
             .resizable(false)
             .default_pos([100.0, 10.0])
+            .open(ui_menu.clicked_mut("Camera/Controller"))
             .show(&ctx.0, |ui| {
                 ui.add(Slider::new(&mut controller.sensitivity, 0.001..=1.0).text("Sensitivity"));
                 ui.add(Slider::new(&mut controller.friction, 0.0..=1.0).text("Friction"));

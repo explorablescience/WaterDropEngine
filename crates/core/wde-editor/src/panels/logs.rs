@@ -11,7 +11,6 @@ pub struct LogsPanelPlugin;
 impl Plugin for LogsPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<LogFilters>()
-            .add_systems(Startup, init_ui)
             .add_systems(Update, draw_logs_panel);
     }
 }
@@ -47,22 +46,14 @@ impl LogFilters {
     }
 }
 
-fn init_ui(mut ui_menu: ResMut<UIMenu>) {
-    ui_menu.push("Engine/Logs");
-}
-
 fn draw_logs_panel(
     ctx: Res<EguiContext>,
     mut ui_menu: ResMut<UIMenu>,
     mut filters: ResMut<LogFilters>
 ) {
-    if !ui_menu.is_clicked("Engine/Logs") {
-        return;
-    }
-
     egui::Window::new("Logs")
         .default_size(egui::vec2(800.0, 400.0))
-        .open(ui_menu.clicked_mut("Engine/Logs").unwrap_or(&mut false))
+        .open(ui_menu.clicked_mut("Engine/Logs"))
         .show(&ctx.0, |ui| {
             ui.horizontal(|ui| {
                 ui.label("Filter:");

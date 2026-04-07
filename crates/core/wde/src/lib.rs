@@ -1,111 +1,52 @@
-//! WaterDropEngine - A modular game engine built on top of Bevy.
+//! WaterDropEngine - A modular game engine.
 //!
-//! WaterDropEngine (WDE) is a collection of rendering, physics, and scene management systems
-//! designed to work seamlessly with the Bevy game engine. It provides high-level abstractions
-//! for common game development tasks while maintaining flexibility and performance.
+//! # Overview
+//! WaterDropEngine is a modular game engine built on top of Bevy's ECS. It provides a collection of plugins and tools.
+//! The engine is composed of several modules, organized from low-level to high-level:
+//! - High-Level:
+//!    - [`wde_terrain`]: A plugin for generating and rendering procedural terrain.
+//!    - [`wde_terrain_editor`]: A plugin for editing terrain in-game.
+//!    - [`wde_terrain_grid`]: A plugin for managing terrain grids and LOD.
+//! - Render:
+//!    - [`wde_pbr`]: A plugin for physically based rendering (PBR) materials and lighting.
+//!    - [`wde_camera`]: A plugin for managing cameras and viewports.
+//!    - [`wde_camera_controller`]: A plugin for controlling cameras with various input methods.
+//!    - [`wde_gltf`]: A plugin for loading and rendering glTF 3D models.
+//!    - [`wde_gizmos`]: A plugin for rendering debug gizmos and visualizations.
+//! - Core:
+//!    - [`wde_renderer`]: A plugin for rendering 3D graphics using the `wgpu` graphics API.
+//!    - [`wde_scene`]: A plugin for managing scenes, entities, and components.
+//!    - [`wde_editor`]: A plugin for creating in-game editors and tools.
+//! - Wrappers:
+//!    - `wde_wgpu`: A wrapper around the `wgpu` graphics API for rendering. It is superseeded by [`wde_renderer`].
+//!    - [`wde_physics`]: A wrapper around the `rapier` physics engine for 3D physics simulation.
+//!    - `wde_logger`: A wrapper around the `tracing` library for logging and diagnostics.
+//!    - `wde_egui`: A wrapper around the `egui` library for creating user interfaces. It is superseeded by [`wde_editor`].
+//!
+//! # Getting Started
+//! To get started with WaterDropEngine, add the `wde` crate to your `Cargo.toml`:
+//! ```toml
+//! [dependencies]
+//! wde = "0.1"
+//! ```
+//! Then, in your main Rust file, you can use the default plugins to set up a basic application:
+//! ```rust
+//! app.add_plugins(WdeDefaultPlugins);
+//! ```
+//!
+//! To modify and configure individual plugins, use:
+//! ```rust
+//! app.add_plugins(WdeDefaultPlugins.set(LogPlugin {
+//!     level: LogLevel::DEBUG,
+//!     ..Default::default()
+//! }));
+//! ```
 //!
 //! # Features
-//!
-//! - **Rendering**: Advanced rendering pipeline with support for custom materials and passes
-//! - **Camera System**: Flexible camera management with projection and view transformations
-//! - **Physics**: Rapier-based physics simulation with colliders and raycasting
-//! - **PBR Rendering**: Physically-based rendering materials and lighting (optional, feature-gated)
-//! - **Gizmos**: Debug visualization tools (optional, feature-gated)
-//! - **Scene Management**: Entity and component management for game scenes
-//!
-//! # Quick Start
-//!
-//! Add WaterDropEngine to your `Cargo.toml`:
-//!
+//! WaterDropEngine is designed to be modular and extensible. You can enable or disable features! using Cargo features. For example, to enable the `pbr` feature for physically based rendering, add the following to your `Cargo.toml`:
 //! ```toml
 //! [dependencies]
-//! wde = { path = "path/to/wde" }
-//! ```
-//!
-//! For a basic setup with all features:
-//!
-//! ```toml
-//! [dependencies]
-//! wde = { path = "path/to/wde", features = ["gizmos", "pbr"] }
-//! ```
-//!
-//! # Basic Example
-//!
-//! ```no_run
-//! use bevy::prelude::*;
-//! use wde::prelude::*;
-//!
-//! fn main() {
-//!     App::new()
-//!         .add_plugins(DefaultPlugins)
-//!         .add_plugins(WdeRendererPlugin)
-//!         .add_plugins(CameraPlugin)
-//!         .add_plugins(PhysicsPlugin)
-//!         .add_systems(Startup, setup)
-//!         .run();
-//! }
-//!
-//! fn setup(mut commands: Commands) {
-//!     // Spawn a camera
-//!     commands.spawn((
-//!         Camera,
-//!         Transform::from_xyz(0.0, 5.0, 10.0)
-//!             .looking_at(Vec3::ZERO, Vec3::Y),
-//!     ));
-//!
-//!     // Spawn an object with a collider
-//!     commands.spawn((
-//!         Transform::from_xyz(0.0, 0.0, 0.0),
-//!         Collider::cuboid(1.0, 1.0, 1.0),
-//!     ));
-//! }
-//! ```
-//!
-//! # Module Organization
-//!
-//! WDE is organized into several submodules:
-//!
-//! - [`render`]: Core rendering functionality and custom render passes
-//! - [`camera`]: Camera components and systems
-//! - [`gizmos`]: Debug visualization and gizmo rendering (requires `gizmos` feature)
-//! - [`pbr`]: Physically-based rendering materials (requires `pbr` feature)
-//!
-//! # Prelude
-//!
-//! The [`prelude`] module re-exports the most commonly used types and traits.
-//! Import it to get started quickly:
-//!
-//! ```
-//! use wde::prelude::*;
-//! ```
-//!
-//! # Feature Flags
-//!
-//! - `gizmos`: Enables debug visualization and gizmo rendering tools
-//! - `pbr`: Enables physically-based rendering materials and lighting systems
-//!
-//! # Physics Integration
-//!
-//! WDE includes a physics module powered by Rapier3D:
-//!
-//! ```no_run
-//! # use bevy::prelude::*;
-//! # use wde::prelude::*;
-//! fn spawn_physics_objects(mut commands: Commands) {
-//!     // Create a ground plane
-//!     commands.spawn((
-//!         Transform::from_xyz(0.0, -1.0, 0.0),
-//!         Collider::cuboid(50.0, 0.1, 50.0),
-//!     ));
-//!
-//!     // Cast a ray
-//!     # /*
-//!     let ray = Ray::new(Vec3::Y * 10.0, Vec3::NEG_Y);
-//!     if let Some((entity, toi)) = physics_world.cast_ray(&ray, &RayCastConfig::default()) {
-//!         println!("Hit entity {:?} at distance {}", entity, toi);
-//!     }
-//!     # */
-//! }
+//! wde = { version = "0.1", features = ["pbr"] }
 //! ```
 
 use bevy::{
@@ -121,48 +62,50 @@ use bevy::{
 struct CustomBevyPlugins;
 impl Plugin for CustomBevyPlugins {
     fn build(&self, app: &mut App) {
-        app.add_plugins(TaskPoolPlugin {
-            task_pool_options: TaskPoolOptions {
-                min_total_threads: 1,
-                max_total_threads: usize::MAX,
+        app.add_plugins((
+            TaskPoolPlugin {
+                task_pool_options: TaskPoolOptions {
+                    min_total_threads: 1,
+                    max_total_threads: usize::MAX,
 
-                // Use 1 core for IO
-                io: TaskPoolThreadAssignmentPolicy {
-                    min_threads: 1,
-                    max_threads: 2,
-                    percent: 0.25,
-                    on_thread_spawn: None,
-                    on_thread_destroy: None
-                },
+                    // Use 1 core for IO
+                    io: TaskPoolThreadAssignmentPolicy {
+                        min_threads: 1,
+                        max_threads: 2,
+                        percent: 0.25,
+                        on_thread_spawn: None,
+                        on_thread_destroy: None
+                    },
 
-                // Use 1 core for async compute
-                async_compute: TaskPoolThreadAssignmentPolicy {
-                    min_threads: 1,
-                    max_threads: 2,
-                    percent: 0.25,
-                    on_thread_spawn: None,
-                    on_thread_destroy: None
-                },
+                    // Use 1 core for async compute
+                    async_compute: TaskPoolThreadAssignmentPolicy {
+                        min_threads: 1,
+                        max_threads: 2,
+                        percent: 0.25,
+                        on_thread_spawn: None,
+                        on_thread_destroy: None
+                    },
 
-                // Use all remaining cores for compute (at least 1)
-                compute: TaskPoolThreadAssignmentPolicy {
-                    min_threads: 1,
-                    max_threads: usize::MAX,
-                    percent: 1.0, // This 1.0 here means "whatever is left over"
-                    on_thread_spawn: None,
-                    on_thread_destroy: None
+                    // Use all remaining cores for compute (at least 1)
+                    compute: TaskPoolThreadAssignmentPolicy {
+                        min_threads: 1,
+                        max_threads: usize::MAX,
+                        percent: 1.0, // This 1.0 here means "whatever is left over"
+                        on_thread_spawn: None,
+                        on_thread_destroy: None
+                    }
                 }
-            }
-        })
-        .add_plugins(FrameCountPlugin)
-        .add_plugins(TimePlugin)
-        .add_plugins(ScheduleRunnerPlugin::default())
-        .add_plugins(bevy::prelude::AssetPlugin {
-            mode: AssetMode::Unprocessed,
-            file_path: "res".to_string(),
-            ..Default::default()
-        })
-        .add_plugins(InputPlugin);
+            },
+            FrameCountPlugin,
+            TimePlugin,
+            ScheduleRunnerPlugin::default(),
+            bevy::prelude::AssetPlugin {
+                mode: AssetMode::Unprocessed,
+                file_path: "res".to_string(),
+                ..Default::default()
+            },
+            InputPlugin
+        ));
     }
 }
 
@@ -171,15 +114,16 @@ impl Plugin for CustomBevyPlugins {
 struct CustomWdePlugins;
 impl Plugin for CustomWdePlugins {
     fn build(&self, app: &mut App) {
-        app.add_plugins(wde_logger::LogPlugin::default().auto_level())
-            .add_plugins(wde_renderer::RenderPlugin)
-            .add_plugins(wde_camera::CameraPlugin)
-            .add_plugins(wde_camera_controller::CameraControllerPlugin)
-            .add_plugins(wde_physics::PhysicsPlugin)
-            .add_plugins(wde_terrain::TerrainPlugin)
-            .add_plugins(wde_terrain_grid::TerrainGridPlugin)
-            .add_plugins(wde_terrain_editor::TerrainEditorPlugin)
-            .add_plugins(wde_terrain_navigation::TerrainNavigationPlugin);
+        app.add_plugins((
+            wde_logger::LogPlugin::default().auto_level(),
+            wde_renderer::RenderPlugin,
+            wde_camera::CameraPlugin,
+            wde_camera_controller::CameraControllerPlugin,
+            wde_physics::PhysicsPlugin,
+            wde_terrain::TerrainPlugin,
+            wde_terrain_grid::TerrainGridPlugin,
+            wde_terrain_editor::TerrainEditorPlugin
+        ));
 
         #[cfg(feature = "gizmos")]
         app.add_plugins(wde_gizmos::GizmosPlugin);
@@ -195,43 +139,15 @@ impl Plugin for CustomWdePlugins {
 
 plugin_group! {
     /// Default plugins for WaterDropEngine.
-    ///
-    /// # Description
-    ///
-    /// To use, add the following to your app;
-    /// ```rust
-    /// app.add_plugins(WdeDefaultPlugins);
-    /// ```
-    ///
-    /// # Modifying Plugins
-    ///
-    /// To modify and configure individual plugins, use:
-    /// ```rust
-    /// app.add_plugins(WdeDefaultPlugins.set(LogPlugin {
-    ///     level: LogLevel::DEBUG,
-    ///     ..Default::default()
-    /// }));
-    /// ```
     pub struct WdeDefaultPlugins {
         :CustomBevyPlugins,
         :CustomWdePlugins,
     }
 }
 
-/// The prelude module.
-///
-/// Import this module to get access to the most commonly used types and traits:
-///
-/// ```
-/// use wde::prelude::*;
-/// ```
-///
-/// This includes:
-/// - Renderer core types and plugins
-/// - Camera components and systems
-/// - Physics types (colliders, raycasting)
-/// - Gizmo types (if `gizmos` feature is enabled)
-/// - PBR materials (if `pbr` feature is enabled)
+/// The prelude module of WaterDropEngine.
+/// Import this to get access to the most commonly used types and traits.
+#[doc(hidden)]
 pub mod prelude {
     // Default plugins
     pub use crate::WdeDefaultPlugins;
@@ -245,59 +161,11 @@ pub mod prelude {
     pub use wde_renderer::prelude::*;
     pub use wde_scene::prelude::*;
     pub use wde_terrain::prelude::*;
-    pub use wde_terrain_editor::prelude::*;
     pub use wde_terrain_grid::prelude::*;
-    pub use wde_terrain_navigation::prelude::*;
 
     // Optional feature modules
-
-    #[cfg(feature = "pbr")]
-    pub use wde_pbr::prelude::*;
-
     #[cfg(feature = "editor")]
     pub use wde_editor::prelude::*;
-}
-
-/// Rendering module.
-///
-/// Provides core rendering functionality:
-/// - Custom render passes
-/// - Material management
-/// - Shader handling
-pub mod render {
-    pub use wde_renderer::*;
-}
-
-/// Camera module.
-///
-/// Provides camera components and utilities:
-/// - Camera view and projection settings
-/// - Screen-space to world-space transformations
-/// - NDC coordinate conversions
-pub mod camera {
-    pub use wde_camera::*;
-}
-
-/// Gizmo rendering module (requires `gizmos` feature).
-///
-/// Provides debug visualization tools:
-/// - Lines and shapes
-/// - Grid rendering
-/// - Debug overlays
-/// - Visual debugging aids
-#[cfg(feature = "gizmos")]
-pub mod gizmos {
-    pub use wde_gizmos::*;
-}
-
-/// Physically-based rendering module (requires `pbr` feature).
-///
-/// Provides PBR materials and lighting:
-/// - Metallic-roughness workflow
-/// - Image-based lighting
-/// - Normal mapping
-/// - Advanced material properties
-#[cfg(feature = "pbr")]
-pub mod pbr {
-    pub use wde_pbr::*;
+    #[cfg(feature = "pbr")]
+    pub use wde_pbr::prelude::*;
 }

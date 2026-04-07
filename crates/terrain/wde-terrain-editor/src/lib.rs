@@ -1,3 +1,6 @@
+//! Terrain editor plugin for WaterDropEngine.
+//!
+//! WIP.
 use wde_logger::prelude::*;
 
 use bevy::prelude::*;
@@ -13,20 +16,18 @@ mod paint;
 mod processor;
 mod ui_painter;
 
-pub mod prelude {
-    pub use super::TerrainEditorPlugin;
-}
-
 pub struct TerrainEditorPlugin;
 impl Plugin for TerrainEditorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(PaintManagerPlugin)
-            .add_plugins(PaintProcessorPlugin)
-            .add_plugins(TerrainEditorUIPlugin)
-            .init_resource::<SaveManager>()
-            .add_systems(Startup, init)
-            .add_systems(Update, save_extracted_tiles)
-            .add_message::<ExtractedTileMessage>();
+        app.add_plugins((
+            PaintManagerPlugin,
+            PaintProcessorPlugin,
+            TerrainEditorUIPlugin
+        ))
+        .init_resource::<SaveManager>()
+        .add_systems(Startup, init)
+        .add_systems(Update, save_extracted_tiles)
+        .add_message::<ExtractedTileMessage>();
     }
 }
 
