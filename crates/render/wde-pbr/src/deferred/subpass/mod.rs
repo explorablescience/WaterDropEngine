@@ -8,7 +8,7 @@ use crate::{
     deferred::subpass::{
         gbuffer_pipeline::GBufferRenderPipeline, gbuffer_subpass_pbr::SubRenderPassGbufferPbr
     },
-    prelude::RenderPassGBuffer
+    prelude::RenderPassDeferredGBuffer
 };
 
 pub(crate) struct PbrRenderPlugin;
@@ -23,6 +23,6 @@ impl Plugin for PbrRenderPlugin {
             .world_mut()
             .get_resource_mut::<RenderGraph>()
             .unwrap()
-            .add_sub_pass::<SubRenderPassGbufferPbr, RenderPassGBuffer>();
+            .add_sub_pass::<SubRenderPassGbufferPbr, RenderPassDeferredGBuffer>();
     }
 }

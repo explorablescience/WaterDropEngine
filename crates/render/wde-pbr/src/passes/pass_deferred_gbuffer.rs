@@ -11,8 +11,8 @@ use crate::prelude::*;
 ///  - This render pass is not responsible for rendering transparent objects, which are rendered in a separate render pass[`crate::prelude::RenderPassTransparent`].
 ///  - This render pass clears the depth texture to 1.0, and the color attachments to black.
 ///  - It has a render index of 10.
-pub struct RenderPassGBuffer;
-impl RenderPass for RenderPassGBuffer {
+pub struct RenderPassDeferredGBuffer;
+impl RenderPass for RenderPassDeferredGBuffer {
     type Params = (
         SBinding<DeferredTextures>,
         SBinding<DeferredTexturesResolved>,

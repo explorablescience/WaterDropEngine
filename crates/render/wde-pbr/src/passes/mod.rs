@@ -2,13 +2,13 @@ use bevy::prelude::*;
 use pass_resolve::*;
 use wde_renderer::prelude::*;
 
+mod pass_deferred_gbuffer;
 mod pass_deferred_lighting;
-mod pass_gbuffer;
 mod pass_resolve;
 mod pass_transparent;
 
+pub use pass_deferred_gbuffer::*;
 pub use pass_deferred_lighting::*;
-pub use pass_gbuffer::*;
 pub use pass_transparent::*;
 
 pub(crate) struct PassesPlugin;
@@ -20,7 +20,7 @@ impl Plugin for PassesPlugin {
             .world_mut()
             .get_resource_mut::<RenderGraph>()
             .unwrap()
-            .add_pass::<RenderPassGBuffer>()
+            .add_pass::<RenderPassDeferredGBuffer>()
             .add_pass::<RenderPassDeferredLighting>()
             .add_pass::<RenderPassTransparent>()
             .add_pass::<RenderPassResolve>()
