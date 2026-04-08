@@ -113,7 +113,10 @@ impl Plugin for PbrModelRegistryPlugin {
 #[allow(clippy::type_complexity)]
 fn on_models_updates(
     modified_models_query: Query<(Entity, &GlobalTransform, &PbrModel), Changed<PbrModel>>,
-    modified_transforms_query: Query<(Entity, &GlobalTransform), (Changed<GlobalTransform>, With<PbrModel>)>,
+    modified_transforms_query: Query<
+        (Entity, &GlobalTransform),
+        (Changed<GlobalTransform>, With<PbrModel>)
+    >,
     mut removed: RemovedComponents<PbrModel>,
     mut registry: ResMut<PbrModelRegistry>,
     mut ssbo: ResMut<PbrSsboIdHandler>,
