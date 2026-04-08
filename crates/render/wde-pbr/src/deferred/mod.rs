@@ -51,16 +51,18 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-mod dependencies;
+mod batches;
 mod lights;
 mod subpass;
+mod transform;
 
-pub use dependencies::*;
+pub use batches::*;
 pub use lights::*;
 
 use crate::{
     deferred::{
-        dependencies::DeferredDependenciesPlugin, lights::LightsPlugin, subpass::PbrRenderPlugin
+        batches::DeferredDependenciesPlugin, lights::LightsPlugin, subpass::PbrRenderPlugin,
+        transform::PbrTransformPlugin
     },
     passes::{RenderPassDeferredLighting, SubRenderPassLightingPbr}
 };
@@ -69,7 +71,12 @@ pub(crate) struct DeferredPlugin;
 impl Plugin for DeferredPlugin {
     fn build(&self, app: &mut App) {
         // Add the plugins
-        app.add_plugins((LightsPlugin, DeferredDependenciesPlugin, PbrRenderPlugin));
+        app.add_plugins((
+            LightsPlugin,
+            DeferredDependenciesPlugin,
+            PbrRenderPlugin,
+            PbrTransformPlugin
+        ));
 
         // Add the render graph nodes
         app.get_sub_app_mut(RenderApp)

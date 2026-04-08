@@ -8,9 +8,12 @@ use bevy::{
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::deferred::{
-    dependencies::{PbrMaterial, SsboTransform},
-    subpass::gbuffer_subpass_pbr::PushConstants
+use crate::{
+    deferred::{
+        batches::PbrMaterial, subpass::gbuffer_subpass_pbr::PushConstants,
+        transform::PbrSsboTransform
+    },
+    prelude::ssbo_batches::PbrSsboBatches
 };
 
 #[derive(TypePath, Asset, Default, Clone)]
@@ -22,15 +25,22 @@ impl RenderAsset for GBufferRenderPipeline {
         SResMut<PipelineManager>,
         SBinding<CameraRender>,
         SBinding<SsboMesh>,
-        SBinding<SsboTransform>,
-        SMaterial<PbrMaterial>
+        SBinding<PbrSsboTransform>,
+        SMaterial<PbrMaterial>,
+        SBinding<PbrSsboBatches>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera, ssbo_mesh, ssbo_transform, pbr_materials): &mut SystemParamItem<
-            Self::Params
-        >
+        (
+            assets_server,
+            pipeline_manager,
+            camera,
+            ssbo_mesh,
+            ssbo_transform,
+            pbr_materials,
+            ssbo_batches
+        ): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(GBufferRenderPipeline(
             pipeline_manager.create_render_pipeline(
@@ -43,6 +53,7 @@ impl RenderAsset for GBufferRenderPipeline {
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
                         ssbo_transform.iter().next().map(|(_, t)| t.layout.clone()),
                         pbr_materials.iter().next().map(|(_, m)| m.layout.clone()),
+                        ssbo_batches.iter().next().map(|(_, b)| b.layout.clone()),
                     ],
                     depth: DepthDescriptor {
                         enabled: true,

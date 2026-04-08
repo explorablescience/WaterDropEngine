@@ -1,9 +1,6 @@
 use crate::{
-    deferred::{
-        dependencies::{PbrMaterial, SsboTransform},
-        subpass::GBufferRenderPipeline
-    },
-    prelude::batches::Batches
+    deferred::{batches::PbrMaterial, subpass::GBufferRenderPipeline, transform::PbrSsboTransform},
+    prelude::{build_batches::Batches, ssbo_batches::PbrSsboBatches}
 };
 use wde_logger::prelude::*;
 
@@ -19,12 +16,15 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
     type Params = (
         SRes<RenderAssets<GBufferRenderPipeline>>,
         SBinding<CameraRender>,
-        SBinding<SsboTransform>,
-        SRes<RenderAssets<GpuRenderBinding<SsboMesh>>>
+        SBinding<PbrSsboTransform>,
+        SBinding<SsboMesh>,
+        SBinding<PbrSsboBatches>
     );
 
     fn describe(
-        (render_pipeline, camera, pbr_ssbo, ssbo_mesh): &SystemParamItem<Self::Params>
+        (render_pipeline, camera, pbr_ssbo, ssbo_mesh, ssbo_batches): &SystemParamItem<
+            Self::Params
+        >
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(
@@ -45,6 +45,13 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
                     .map(|(_, camera)| camera.bind_group.clone())
             ),
             SubPassCommand::BindGroup(2, pbr_ssbo.iter().next().map(|(_, t)| t.bind_group.clone())),
+            SubPassCommand::BindGroup(
+                3,
+                ssbo_batches
+                    .iter()
+                    .next()
+                    .map(|(_, b)| b.bind_group.clone())
+            ),
             SubPassCommand::Custom(draw_custom),
         ])
     }
@@ -100,7 +107,7 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
             };
 
             // Set the material bind group
-            render_pass.set_bind_group(3, &material.bind_group);
+            render_pass.set_bind_group(4, &material.bind_group);
             current_material_id = Some(batch.material_id);
         }
 

@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::deferred::dependencies::{PbrMaterial, SSBO_TRANSFORM_MAX_ENTITY};
+use crate::deferred::{batches::PbrMaterial, transform::SSBO_TRANSFORM_MAX_ENTITY};
 
 /// A PBR model component that holds references to meshes and their associated PBR materials.
 #[derive(Component, Debug, Clone)]
