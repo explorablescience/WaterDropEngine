@@ -2,8 +2,11 @@ use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::render::{
-    dependencies::BuffersPlugin, extractor::TerrainExtractorPlugin, passes::TerrainPassesPlugin,
-    renderer::TerrainRenderer, renderer_gpu::TerrainRendererGPU
+    dependencies::BuffersPlugin,
+    extractor::TerrainExtractorPlugin,
+    passes::TerrainPassesPlugin,
+    renderer::TerrainRenderer,
+    renderer_gpu::{TerrainRendererGPU, TerrainTileBgCompute, TerrainTileBgRender}
 };
 
 pub mod dependencies;
@@ -22,6 +25,12 @@ impl Plugin for TerrainRenderPlugin {
         // Add the terrain renderer resource and its systems
         // Note that using Update, the dirty tiles will be extracted to the GPU renderer resource one frame after they are marked as dirty. This is to ensure that the main world is not locked for too long while the GPU renderer resource is being updated.
         app.add_systems(Update, TerrainRenderer::extract_dirty);
+        app.init_asset::<TerrainTileBgRender>()
+            .init_asset::<TerrainTileBgCompute>()
+            .add_plugins((
+                RenderAssetsPlugin::<GpuRenderBinding<TerrainTileBgRender>>::default(),
+                RenderAssetsPlugin::<GpuRenderBinding<TerrainTileBgCompute>>::default()
+            ));
 
         // Add the terrain renderer GPU resource and its systems
         app.get_sub_app_mut(RenderApp)

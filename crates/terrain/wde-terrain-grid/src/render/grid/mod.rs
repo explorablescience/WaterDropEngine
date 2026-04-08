@@ -4,10 +4,7 @@ use wde_renderer::prelude::*;
 use bevy::prelude::*;
 
 use crate::render::grid::{
-    buffers::TerrainGridBufferPlugin,
-    terrain_grid_pipeline::{
-        GpuTerrainGridRenderPipeline, TerrainGridRenderPipeline, TerrainGridRenderPipelineAsset
-    },
+    buffers::TerrainGridBuffer, terrain_grid_pipeline::TerrainGridRenderPipeline,
     terrain_grid_subpass::RenderSubPassTerrainGrid
 };
 
@@ -19,13 +16,13 @@ pub(crate) struct TerrainGridPassesPlugin;
 impl Plugin for TerrainGridPassesPlugin {
     fn build(&self, app: &mut App) {
         // Add the render buffers
+        app.add_plugins(RenderBindingPluginRegister::<TerrainGridBuffer>::default());
         app.get_sub_app_mut(RenderApp)
             .unwrap()
-            .add_plugins(TerrainGridBufferPlugin);
+            .add_systems(Render, buffers::update_render.in_set(RenderSet::Prepare));
 
-        // Add the pipelines
-        app.init_asset::<TerrainGridRenderPipelineAsset>()
-            .add_plugins(RenderAssetsPlugin::<GpuTerrainGridRenderPipeline>::default());
+        // Add the terrain grid render pipeline
+        app.add_plugins(RenderPipelinePluginRegister::<TerrainGridRenderPipeline>::default());
 
         // Add the mesh for the terrain grid
         app.init_resource::<RenderSubPassTerrainGrid>()
@@ -37,17 +34,6 @@ impl Plugin for TerrainGridPassesPlugin {
     }
 
     fn finish(&self, app: &mut App) {
-        // Create the pipeline
-        let pipeline = app
-            .world_mut()
-            .get_resource::<AssetServer>()
-            .unwrap()
-            .add(TerrainGridRenderPipelineAsset);
-        app.get_sub_app_mut(RenderApp)
-            .unwrap()
-            .world_mut()
-            .spawn(TerrainGridRenderPipeline(pipeline));
-
         // Add the render passes
         app.get_sub_app_mut(RenderApp)
             .unwrap()

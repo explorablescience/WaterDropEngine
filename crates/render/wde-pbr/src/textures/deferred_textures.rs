@@ -16,9 +16,9 @@ impl Plugin for DeferredTexturesPlugin {
 
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct DeferredTextures {
-    pub depth: Handle<Texture>,
-    pub albedo: Handle<Texture>,
-    pub normal: Handle<Texture>
+    depth: Handle<Texture>,
+    albedo: Handle<Texture>,
+    normal: Handle<Texture>
 }
 impl DeferredTextures {
     pub const DEPTH_BINDING: u32 = 0;
@@ -51,9 +51,9 @@ impl RenderBinding for DeferredTextures {
 
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct DeferredTexturesResolved {
-    pub depth: Handle<Texture>,
-    pub albedo: Handle<Texture>,
-    pub normal: Handle<Texture>
+    depth: Handle<Texture>,
+    albedo: Handle<Texture>,
+    normal: Handle<Texture>
 }
 impl DeferredTexturesResolved {
     pub const DEPTH_BINDING: u32 = 0;

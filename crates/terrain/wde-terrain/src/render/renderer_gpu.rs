@@ -9,6 +9,58 @@ use crate::{
     render::{extractor, renderer::TerrainRenderer}
 };
 
+#[derive(Asset, Clone, TypePath, Default)]
+pub struct TerrainTileBgRender {
+    tile_position: ChunkPos,
+    heightmap: Handle<Texture>,
+    splatmaps: Vec<Handle<Texture>>
+}
+impl RenderBinding for TerrainTileBgRender {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
+        builder.add_texture_view(0, Some(self.heightmap.clone()));
+        builder.add_texture_sampler(1, Some(self.heightmap.clone()));
+        for i in 0..SPLAT_MAP_COUNT / 4 {
+            builder.add_texture_view(2 + i * 2, Some(self.splatmaps[i as usize].clone()));
+            builder.add_texture_sampler(3 + i * 2, Some(self.splatmaps[i as usize].clone()));
+        }
+    }
+
+    fn label(&self) -> &str {
+        Box::leak(
+            format!(
+                "terrain-tile-{}-{}-render",
+                self.tile_position.x, self.tile_position.y
+            )
+            .into_boxed_str()
+        )
+    }
+}
+
+#[derive(Asset, Clone, TypePath, Default)]
+pub struct TerrainTileBgCompute {
+    tile_position: ChunkPos,
+    heightmap: Handle<Texture>,
+    splatmaps: Vec<Handle<Texture>>
+}
+impl RenderBinding for TerrainTileBgCompute {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
+        builder.add_storage_texture(0, Some(self.heightmap.clone()));
+        for i in 0..SPLAT_MAP_COUNT / 4 {
+            builder.add_storage_texture(1 + i, Some(self.splatmaps[i as usize].clone()));
+        }
+    }
+
+    fn label(&self) -> &str {
+        Box::leak(
+            format!(
+                "terrain-tile-{}-{}-compute",
+                self.tile_position.x, self.tile_position.y
+            )
+            .into_boxed_str()
+        )
+    }
+}
+
 /// Same as `TerrainRenderTile`, but with the texture handles replaced by their corresponding asset IDs. Only present on the GPU side.
 #[derive(Default, Clone)]
 pub struct TerrainRenderTileGPU {
@@ -16,12 +68,12 @@ pub struct TerrainRenderTileGPU {
     pub position: ChunkPos,
 
     /// The heightmap and splat maps for this tile
-    pub heightmap: AssetId<Texture>,
-    pub splatmaps: Vec<AssetId<Texture>>,
+    pub heightmap: Handle<Texture>,
+    pub splatmaps: Vec<Handle<Texture>>,
 
-    // The bind groups
-    pub render_bind_group: Option<BindGroup>,
-    pub compute_bind_group: Option<BindGroup>
+    // The associated render and compute bind groups
+    pub render_bind_group: Option<Handle<TerrainTileBgRender>>,
+    pub compute_bind_group: Option<Handle<TerrainTileBgCompute>>
 }
 
 /// Holds the tiles used for rendering. Note that all tiles are not necessarily rendered.
@@ -60,12 +112,8 @@ impl TerrainRendererGPU {
                 .iter()
                 .map(|tile| TerrainRenderTileGPU {
                     position: tile.position,
-                    heightmap: tile.heightmap.id(),
-                    splatmaps: tile
-                        .splatmaps
-                        .iter()
-                        .map(|splatmap| splatmap.id())
-                        .collect(),
+                    heightmap: tile.heightmap.clone(),
+                    splatmaps: tile.splatmaps.to_vec(),
                     render_bind_group: None,
                     compute_bind_group: None
                 })
@@ -101,7 +149,7 @@ impl TerrainRendererGPU {
                 match map_type {
                     0 => {
                         // Heightmap
-                        let heightmap = match textures.get(tile.heightmap) {
+                        let heightmap = match textures.get(&tile.heightmap) {
                             Some(texture) => texture,
                             None => continue
                         };
@@ -113,7 +161,7 @@ impl TerrainRendererGPU {
                     }
                     1 => {
                         // Splatmap
-                        let splatmap = match textures.get(tile.splatmaps[splat_map_index as usize])
+                        let splatmap = match textures.get(&tile.splatmaps[splat_map_index as usize])
                         {
                             Some(texture) => texture,
                             None => continue
@@ -132,9 +180,8 @@ impl TerrainRendererGPU {
 
     // Create the bind groups and layouts for tiles that are not ready
     pub fn prepare_bind_groups(
-        mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>,
-        textures: Res<RenderAssets<GpuTexture>>,
-        render_instance: Res<RenderInstance>
+        asset_server: Res<AssetServer>,
+        mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>
     ) {
         // Check if all tiles gpu data is read
         if gpu_terrain_renderer.ready {
@@ -142,79 +189,25 @@ impl TerrainRendererGPU {
         }
 
         // Create the bind groups for the dirty tiles
-        let render_instance = render_instance.0.read().unwrap();
         for tile in &mut gpu_terrain_renderer.tiles {
             // Check if already processed
             if tile.render_bind_group.is_some() {
                 continue;
             }
 
-            // Get the maps
-            let (heightmap, splatmaps) = match (
-                textures.get(tile.heightmap),
-                tile.splatmaps
-                    .iter()
-                    .map(|splatmap| textures.get(*splatmap))
-                    .collect::<Option<Vec<_>>>()
-            ) {
-                (Some(heightmap), Some(splatmaps)) => (heightmap, splatmaps),
-                _ => continue
-            };
-
             // Create the bind group layout for the render tile
-            let render_bind_group_layout_built =
-                BindGroupLayout::build(&Self::layout_render(), &render_instance).unwrap();
-            let render_bind_group = BindGroupBuilder::build(
-                &format!(
-                    "terrain-tile-{}-{}-render",
-                    tile.position.x, tile.position.y
-                ),
-                &render_instance,
-                &render_bind_group_layout_built,
-                &{
-                    let mut entries = vec![
-                        BindGroupBuilder::texture_view(0, &heightmap.texture),
-                        BindGroupBuilder::texture_sampler(1, &heightmap.texture),
-                    ];
-                    for i in 0..SPLAT_MAP_COUNT / 4 {
-                        entries.push(BindGroupBuilder::texture_view(
-                            2 + i * 2,
-                            &splatmaps[i as usize].texture
-                        ));
-                        entries.push(BindGroupBuilder::texture_sampler(
-                            3 + i * 2,
-                            &splatmaps[i as usize].texture
-                        ));
-                    }
-                    entries
-                }
-            )
-            .unwrap();
-            tile.render_bind_group = Some(render_bind_group);
+            tile.render_bind_group = Some(asset_server.add(TerrainTileBgRender {
+                tile_position: tile.position,
+                heightmap: tile.heightmap.clone(),
+                splatmaps: tile.splatmaps.to_vec()
+            }));
 
             // Create the bind group layout for the compute tile
-            let compute_bind_group_layout_built =
-                BindGroupLayout::build(&Self::layout_compute(), &render_instance).unwrap();
-            let compute_bind_group = BindGroupBuilder::build(
-                &format!(
-                    "terrain-tile-{}-{}-compute",
-                    tile.position.x, tile.position.y
-                ),
-                &render_instance,
-                &compute_bind_group_layout_built,
-                &{
-                    let mut entries = vec![BindGroupBuilder::texture_view(0, &heightmap.texture)];
-                    for i in 0..SPLAT_MAP_COUNT / 4 {
-                        entries.push(BindGroupBuilder::texture_view(
-                            1 + i,
-                            &splatmaps[i as usize].texture
-                        ));
-                    }
-                    entries
-                }
-            )
-            .unwrap();
-            tile.compute_bind_group = Some(compute_bind_group);
+            tile.compute_bind_group = Some(asset_server.add(TerrainTileBgCompute {
+                tile_position: tile.position,
+                heightmap: tile.heightmap.clone(),
+                splatmaps: tile.splatmaps.to_vec()
+            }));
         }
 
         // Check if all tiles are ready
@@ -222,32 +215,5 @@ impl TerrainRendererGPU {
             .tiles
             .iter()
             .all(|tile| tile.render_bind_group.is_some());
-    }
-
-    pub fn layout_render() -> BindGroupLayout {
-        let ss = ShaderStages::FRAGMENT | ShaderStages::VERTEX;
-        BindGroupLayout::new(
-            "terrain-tile-render",
-            |builder: &mut BindGroupLayoutBuilder| {
-                builder.add_texture_view(0, ss, false);
-                builder.add_texture_sampler(1, ss);
-                for i in 0..SPLAT_MAP_COUNT / 4 {
-                    builder.add_texture_view(2 + i * 2, ss, false);
-                    builder.add_texture_sampler(3 + i * 2, ss);
-                }
-            }
-        )
-    }
-
-    pub fn layout_compute() -> BindGroupLayout {
-        BindGroupLayout::new(
-            "terrain-tile-compute",
-            |builder: &mut BindGroupLayoutBuilder| {
-                builder.add_storage_texture_view(0, TextureFormat::R8Unorm);
-                for i in 0..SPLAT_MAP_COUNT / 4 {
-                    builder.add_storage_texture_view(1 + i, TextureFormat::Rgba8Unorm);
-                }
-            }
-        )
     }
 }

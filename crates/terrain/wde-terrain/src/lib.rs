@@ -22,7 +22,7 @@ use crate::{
 
 pub(crate) mod manager;
 pub(crate) mod physics;
-pub(crate) mod render;
+pub mod render;
 pub(crate) mod utils;
 
 #[doc(hidden)]

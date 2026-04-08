@@ -119,13 +119,13 @@ fn extract_tiles_from_gpu(
             // Get the right texture handle
             let render_tile = &gpu_terrain_renderer.tiles[gpu_terrain_renderer.pos_to_tile[&pos]];
             let texture_handle = match map_type {
-                0 => render_tile.heightmap,
-                1 => render_tile.splatmaps[splat_map_index as usize],
+                0 => render_tile.heightmap.clone(),
+                1 => render_tile.splatmaps[splat_map_index as usize].clone(),
                 _ => continue
             };
 
             // Get the GPU texture
-            let texture = match textures.get(texture_handle) {
+            let texture = match textures.get(&texture_handle) {
                 Some(texture) => texture,
                 None => continue
             };

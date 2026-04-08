@@ -2,10 +2,11 @@ use wde_logger::prelude::*;
 
 use bevy::prelude::*;
 use wde_renderer::{prelude::*, wgpu_utils::CommandBuffer};
-use wde_terrain::prelude::*;
+use wde_terrain::{prelude::*, render::renderer_gpu::TerrainTileBgCompute};
 
 use crate::processor::{
-    compute::pipeline::GpuPaintComputePipeline, resources::commands_buffer::CommandsBuffer
+    compute::pipeline::PaintComputePipeline,
+    resources::commands_buffer::{CommandsBuffer, CommandsBufferDescription}
 };
 
 #[repr(C)]
@@ -18,13 +19,15 @@ pub struct TileInfo {
 
 pub fn apply_paint_compute(
     render_instance: Res<RenderInstance>,
-    mut commands_buffer: ResMut<CommandsBuffer>,
+    commands_buffer: Binding<CommandsBuffer>,
+    mut commands_buffer_desc: ResMut<CommandsBufferDescription>,
     pipeline_manager: Res<PipelineManager>,
-    paint_pipeline: Res<RenderAssets<GpuPaintComputePipeline>>,
-    terrain_tiles: Res<TerrainRendererGPU>
+    paint_pipeline: Res<RenderAssets<PaintComputePipeline>>,
+    terrain_tiles: Res<TerrainRendererGPU>,
+    terrain_tile_bg_compute: Binding<TerrainTileBgCompute>
 ) {
     // Check if we should render
-    if commands_buffer.commands_count == 0 || commands_buffer.bind_group.is_none() {
+    if commands_buffer_desc.commands_count == 0 || commands_buffer_desc.dirty_chunks.is_empty() {
         return;
     }
 
@@ -40,17 +43,17 @@ pub fn apply_paint_compute(
     {
         let mut compute_pass = command_buffer.create_compute_pass("paint");
 
-        if let (CachedPipelineStatus::OkCompute(pipeline), Some(commands_bind_group)) = (
+        if let (CachedPipelineStatus::OkCompute(pipeline), Some((_, commands_buffer))) = (
             pipeline_manager.get_pipeline(pipeline.0),
-            &commands_buffer.bind_group
+            &commands_buffer.iter().next()
         ) {
             if compute_pass.set_pipeline(pipeline).is_ok() {
                 // Set the commands buffer bind group
-                compute_pass.set_bind_group(0, commands_bind_group);
+                compute_pass.set_bind_group(0, &commands_buffer.bind_group);
 
                 // Raw number of workgroups to dispatch
                 const MAX_PER_DISPATCH: u32 = 65535; // Max workgroups per dispatch for most GPUs
-                let count_raw = commands_buffer.commands_count as u32
+                let count_raw = commands_buffer_desc.commands_count as u32
                     * CHUNK_RENDER_SUBDIVISIONS
                     * CHUNK_RENDER_SUBDIVISIONS
                     / 64; // workgroup size
@@ -66,7 +69,7 @@ pub fn apply_paint_compute(
                     };
 
                     // Dispatch the compute shader
-                    for tile_id in &commands_buffer.dirty_chunks {
+                    for tile_id in &commands_buffer_desc.dirty_chunks {
                         // Get the tile index from the position
                         let tile_index = match terrain_tiles.pos_to_tile.get(tile_id) {
                             Some(index) => *index,
@@ -84,7 +87,10 @@ pub fn apply_paint_compute(
 
                         // Set the bind group for the tile
                         let tile_bind_group = match &tile.compute_bind_group {
-                            Some(bind_group) => bind_group,
+                            Some(bind_group) => match terrain_tile_bg_compute.get(bind_group) {
+                                Some(bg) => &bg.bind_group,
+                                None => continue
+                            },
                             None => continue
                         };
                         compute_pass.set_bind_group(1, tile_bind_group);
@@ -108,6 +114,6 @@ pub fn apply_paint_compute(
     command_buffer.submit(&render_instance);
 
     // Reset should_render to false and clear the commands buffer for the next frame
-    commands_buffer.dirty_chunks.clear();
-    commands_buffer.commands_count = 0;
+    commands_buffer_desc.dirty_chunks.clear();
+    commands_buffer_desc.commands_count = 0;
 }

@@ -9,37 +9,35 @@ use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::render::{
-    dependencies::{materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer},
-    renderer_gpu::TerrainRendererGPU
+    dependencies::{materials::TerrainMaterials, terrain_buffer::TerrainBuffer},
+    renderer_gpu::TerrainTileBgRender
 };
 
 #[derive(Default, Asset, Clone, TypePath, Debug)]
-pub struct TerrainRenderPipelineAsset;
-impl std::fmt::Display for TerrainRenderPipelineAsset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TerrainRenderPipelineAsset")
-    }
-}
-
-#[allow(unused)]
-#[derive(Component)]
-pub struct TerrainRenderPipeline(pub Handle<TerrainRenderPipelineAsset>);
-pub struct GpuTerrainRenderPipeline(pub CachedPipelineIndex);
-impl RenderAsset for GpuTerrainRenderPipeline {
-    type SourceAsset = TerrainRenderPipelineAsset;
+pub struct TerrainRenderPipeline(pub CachedPipelineIndex);
+impl RenderAsset for TerrainRenderPipeline {
+    type SourceAsset = RenderPipelineAsset<TerrainRenderPipeline>;
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
         SBinding<CameraRender>,
-        SRes<TerrainMaterialArrays>,
-        SRes<TerrainBuffer>
+        SBinding<TerrainMaterials>,
+        SBinding<TerrainBuffer>,
+        SBinding<TerrainTileBgRender>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera, material_arrays, terrain_buffer): &mut SystemParamItem<Self::Params>
+        (
+            assets_server,
+            pipeline_manager,
+            camera,
+            material_arrays,
+            terrain_buffer,
+            terrain_tile_bg_render
+        ): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        Ok(GpuTerrainRenderPipeline(
+        Ok(TerrainRenderPipeline(
             pipeline_manager.create_render_pipeline(
                 RenderPipelineDescriptor {
                     label: "terrain",
@@ -47,9 +45,12 @@ impl RenderAsset for GpuTerrainRenderPipeline {
                     frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
                     bind_group_layouts: vec![
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
-                        material_arrays.bind_group_layout.clone(),
-                        Some(terrain_buffer.layout.clone()),
-                        Some(TerrainRendererGPU::layout_render()),
+                        material_arrays.iter().next().map(|(_, m)| m.layout.clone()),
+                        terrain_buffer.iter().next().map(|(_, b)| b.layout.clone()),
+                        terrain_tile_bg_render
+                            .iter()
+                            .next()
+                            .map(|(_, b)| b.layout.clone()), // Take first one, they all have the same layout
                     ],
                     render_targets: Some(vec![
                         TextureFormat::R16Float,       // Depth

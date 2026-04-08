@@ -7,10 +7,7 @@ use wde_terrain::prelude::*;
 use crate::{
     paint::{brush::PaintCommand, paint_manager::PaintManager},
     processor::{
-        compute::{
-            computepass::apply_paint_compute,
-            pipeline::{GpuPaintComputePipeline, PaintComputePipeline, PaintComputePipelineAsset}
-        },
+        compute::{computepass::apply_paint_compute, pipeline::PaintComputePipeline},
         resources::commands_buffer::ComputeCommandsBufferPlugin
     }
 };
@@ -37,26 +34,12 @@ impl Plugin for PaintProcessorPlugin {
         app.add_plugins(ComputeCommandsBufferPlugin);
 
         // Add the pipelines
-        app.init_asset::<PaintComputePipelineAsset>()
-            .add_plugins(RenderAssetsPlugin::<GpuPaintComputePipeline>::default());
+        app.add_plugins(RenderPipelinePluginRegister::<PaintComputePipeline>::default());
 
         // Add the render pass
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .add_systems(Render, apply_paint_compute.in_set(RenderSet::Render));
-    }
-
-    fn finish(&self, app: &mut App) {
-        // Create the pipeline
-        let pipeline = app
-            .world_mut()
-            .get_resource::<AssetServer>()
-            .unwrap()
-            .add(PaintComputePipelineAsset);
-        app.get_sub_app_mut(RenderApp)
-            .unwrap()
-            .world_mut()
-            .spawn(PaintComputePipeline(pipeline));
     }
 }
 

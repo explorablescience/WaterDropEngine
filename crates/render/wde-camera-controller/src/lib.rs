@@ -7,7 +7,7 @@
 //!
 //! To use the camera controllers, simply add the corresponding controller component to your camera entity.
 //! For example, to use the [`ThirdPersonController`](third_person_controller::ThirdPersonController), you can spawn a camera entity like this:
-//! 
+//!
 //! ```rust
 //! commands.spawn((
 //!    Transform::from_xyz(0.0, 2.0, 6.0).looking_at(Vec3::ZERO, Vec3::Y),

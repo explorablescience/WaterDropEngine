@@ -6,32 +6,28 @@ use bevy::{
     prelude::*
 };
 use wde_renderer::prelude::*;
-use wde_terrain::prelude::TerrainRendererGPU;
+use wde_terrain::render::renderer_gpu::TerrainTileBgCompute;
 
 use crate::processor::{
     compute::computepass::TileInfo, resources::commands_buffer::CommandsBuffer
 };
 
 #[derive(Default, Asset, Clone, TypePath)]
-pub(crate) struct PaintComputePipelineAsset;
-
-#[allow(unused)]
-#[derive(Component)]
-pub(crate) struct PaintComputePipeline(pub Handle<PaintComputePipelineAsset>);
-pub(crate) struct GpuPaintComputePipeline(pub CachedPipelineIndex);
-impl RenderAsset for GpuPaintComputePipeline {
-    type SourceAsset = PaintComputePipelineAsset;
+pub(crate) struct PaintComputePipeline(pub CachedPipelineIndex);
+impl RenderAsset for PaintComputePipeline {
+    type SourceAsset = RenderPipelineAsset<Self>;
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SRes<CommandsBuffer>
+        SBinding<CommandsBuffer>,
+        SBinding<TerrainTileBgCompute>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, commands_buffer): &mut SystemParamItem<Self::Params>
+        (assets_server, pipeline_manager, commands_buffer, terrain_tile_bg_compute): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        Ok(GpuPaintComputePipeline(
+        Ok(PaintComputePipeline(
             pipeline_manager.create_compute_pipeline(
                 ComputePipelineDescriptor {
                     label: "paint_compute",
@@ -39,8 +35,11 @@ impl RenderAsset for GpuPaintComputePipeline {
                         assets_server.load("core/compute/terrain_editor/paint_compute.wgsl")
                     ),
                     bind_group_layouts: vec![
-                        Some(commands_buffer.layout.clone()),
-                        Some(TerrainRendererGPU::layout_compute()),
+                        commands_buffer.iter().next().map(|(_, b)| b.layout.clone()),
+                        terrain_tile_bg_compute
+                            .iter()
+                            .next()
+                            .map(|(_, b)| b.layout.clone()), // Take first one, they all have the same layout
                     ],
                     push_constants: vec![PushConstantDescriptor {
                         stages: ShaderStages::COMPUTE,

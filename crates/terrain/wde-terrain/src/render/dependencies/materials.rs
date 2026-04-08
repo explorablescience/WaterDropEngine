@@ -3,6 +3,20 @@ use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
+pub(crate) struct TerrainMaterialsPlugin;
+impl Plugin for TerrainMaterialsPlugin {
+    fn build(&self, app: &mut App) {
+        let terrain_plugin = RenderBindingPluginRegister::<TerrainMaterials>::with_init(init, app);
+        app.init_resource::<TerrainMaterialTextures>().add_plugins((
+            ExtractResourcePlugin::<TerrainMaterialTextures>::default(),
+            terrain_plugin
+        ));
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .add_systems(Render, fill_arrays.in_set(RenderSet::Prepare));
+    }
+}
+
 const TEX_SIZE: (u32, u32) = (1024, 1024);
 const MATERIALS: [&str; 4] = ["grass", "dirt", "rock", "sand"];
 const TEX_TYPES: [&str; 4] = ["albedo", "normal", "roughness", "ambient_occlusion"];
@@ -13,46 +27,79 @@ const TEX_FORMATS: [TextureFormat; 4] = [
     TextureFormat::R8Unorm
 ];
 
-/// Resource storing individual texture handles for each material
 #[derive(Resource, Default)]
-pub struct TerrainMaterials {
-    // Individual texture handles for each material and type
-    pub albedo_textures: Vec<Option<Handle<Texture>>>,
-    pub normal_textures: Vec<Option<Handle<Texture>>>,
-    pub roughness_textures: Vec<Option<Handle<Texture>>>,
-    pub ao_textures: Vec<Option<Handle<Texture>>>,
-
-    // Array textures
-    pub albedo_array: Option<Handle<Texture>>,
-    pub normal_array: Option<Handle<Texture>>,
-    pub roughness_array: Option<Handle<Texture>>,
-    pub ao_array: Option<Handle<Texture>>
+struct TerrainMaterialTextures {
+    albedo_textures: Vec<Option<Handle<Texture>>>,
+    normal_textures: Vec<Option<Handle<Texture>>>,
+    roughness_textures: Vec<Option<Handle<Texture>>>,
+    ao_textures: Vec<Option<Handle<Texture>>>
 }
+impl ExtractResource for TerrainMaterialTextures {
+    type Source = Self;
 
-/// Resource storing the GPU texture arrays and bind group
-#[derive(Resource, Default)]
-pub struct TerrainMaterialArrays {
-    pub bind_group_layout: Option<BindGroupLayout>,
-    pub bind_group: Option<BindGroup>
-}
-
-pub struct TerrainMaterialsPlugin;
-impl Plugin for TerrainMaterialsPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<TerrainMaterials>()
-            .add_systems(Startup, load_material_textures);
-
-        app.get_sub_app_mut(RenderApp)
-            .unwrap()
-            .init_resource::<TerrainMaterials>()
-            .init_resource::<TerrainMaterialArrays>()
-            .add_systems(Extract, extract_terrain_textures)
-            .add_systems(Render, build_material_arrays.in_set(RenderSet::BindGroups));
+    fn extract(source: &Self::Source) -> Self {
+        Self {
+            albedo_textures: source.albedo_textures.clone(),
+            normal_textures: source.normal_textures.clone(),
+            roughness_textures: source.roughness_textures.clone(),
+            ao_textures: source.ao_textures.clone()
+        }
     }
 }
 
-/// Load individual material textures
-fn load_material_textures(asset_server: Res<AssetServer>, mut materials: ResMut<TerrainMaterials>) {
+#[derive(Asset, Clone, Debug, TypePath, Default)]
+pub struct TerrainMaterials {
+    albedo_array: Handle<Texture>,
+    normal_array: Handle<Texture>,
+    roughness_array: Handle<Texture>,
+    ao_array: Handle<Texture>
+}
+impl TerrainMaterials {
+    pub const TERRAIN_ALBEDO_BINDING: u32 = 0;
+    pub const TERRAIN_NORMAL_BINDING: u32 = 2;
+    pub const TERRAIN_ROUGHNESS_BINDING: u32 = 4;
+    pub const TERRAIN_AO_BINDING: u32 = 6;
+}
+impl RenderBinding for TerrainMaterials {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
+        builder.add_texture_array_view(
+            Self::TERRAIN_ALBEDO_BINDING,
+            Some(self.albedo_array.clone())
+        );
+        builder.add_texture_sampler(
+            Self::TERRAIN_ALBEDO_BINDING + 1,
+            Some(self.albedo_array.clone())
+        );
+        builder.add_texture_array_view(
+            Self::TERRAIN_NORMAL_BINDING,
+            Some(self.normal_array.clone())
+        );
+        builder.add_texture_sampler(
+            Self::TERRAIN_NORMAL_BINDING + 1,
+            Some(self.normal_array.clone())
+        );
+        builder.add_texture_array_view(
+            Self::TERRAIN_ROUGHNESS_BINDING,
+            Some(self.roughness_array.clone())
+        );
+        builder.add_texture_sampler(
+            Self::TERRAIN_ROUGHNESS_BINDING + 1,
+            Some(self.roughness_array.clone())
+        );
+        builder.add_texture_array_view(Self::TERRAIN_AO_BINDING, Some(self.ao_array.clone()));
+        builder.add_texture_sampler(Self::TERRAIN_AO_BINDING + 1, Some(self.ao_array.clone()));
+    }
+
+    fn label(&self) -> &str {
+        "terrain_texture_arrays"
+    }
+}
+
+fn init(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<TerrainMaterialTextures>
+) {
     // Load textures for each material and type
     let usages = TextureUsages::COPY_SRC | TextureUsages::TEXTURE_BINDING;
     for material in MATERIALS {
@@ -116,107 +163,53 @@ fn load_material_textures(asset_server: Res<AssetServer>, mut materials: ResMut<
         mip_level_count: 0, // Auto-calculate max mip levels
         ..Default::default()
     });
-    materials.albedo_array = Some(albedo_array);
-    materials.normal_array = Some(normal_array);
-    materials.roughness_array = Some(roughness_array);
-    materials.ao_array = Some(ao_array);
+    commands.insert_resource(RenderBindingHolder(asset_server.add(TerrainMaterials {
+        albedo_array,
+        normal_array,
+        roughness_array,
+        ao_array
+    })));
 }
 
-/// Extract terrain tile textures and build bind groups for the terrain pass
-fn extract_terrain_textures(
-    terrain_materials_world: ExtractWorld<Res<TerrainMaterials>>,
-    mut terrain_materials: ResMut<TerrainMaterials>,
-    mut terrain_materials_bg: ResMut<TerrainMaterialArrays>
-) {
-    // Check if bind group is already built or if all textures are loaded
-    if terrain_materials_bg.bind_group.is_some() {
-        return;
-    }
-    // Check if all textures are loaded
-    if terrain_materials_world.albedo_textures.is_empty()
-        || terrain_materials_world.albedo_array.is_none()
-    {
-        return;
-    }
-
-    // Just clone the handles, the actual GPU texture arrays and bind groups will be built in the render world
-    terrain_materials.albedo_textures = {
-        let mut textures = Vec::new();
-        for i in 0..terrain_materials_world.albedo_textures.len() {
-            let tex = terrain_materials_world.albedo_textures[i].clone();
-            textures.push(tex);
-        }
-        textures
-    };
-    terrain_materials.normal_textures = {
-        let mut textures = Vec::new();
-        for i in 0..terrain_materials_world.normal_textures.len() {
-            let tex = terrain_materials_world.normal_textures[i].clone();
-            textures.push(tex);
-        }
-        textures
-    };
-    terrain_materials.roughness_textures = {
-        let mut textures = Vec::new();
-        for i in 0..terrain_materials_world.roughness_textures.len() {
-            let tex = terrain_materials_world.roughness_textures[i].clone();
-            textures.push(tex);
-        }
-        textures
-    };
-    terrain_materials.ao_textures = {
-        let mut textures = Vec::new();
-        for i in 0..terrain_materials_world.ao_textures.len() {
-            let tex = terrain_materials_world.ao_textures[i].clone();
-            textures.push(tex);
-        }
-        textures
-    };
-
-    // Also clone the array textures
-    terrain_materials.albedo_array = terrain_materials_world.albedo_array.clone();
-    terrain_materials.normal_array = terrain_materials_world.normal_array.clone();
-    terrain_materials.roughness_array = terrain_materials_world.roughness_array.clone();
-    terrain_materials.ao_array = terrain_materials_world.ao_array.clone();
-
-    // Extract the material arrays bind group
-    terrain_materials_bg.bind_group_layout = terrain_materials_bg.bind_group_layout.clone();
-    terrain_materials_bg.bind_group = terrain_materials_bg.bind_group.clone();
-}
-
-/// Copy individual textures into the arrays and build the bind group for the material arrays
-fn build_material_arrays(
+/// Copy individual textures into the arrays and create the mipmaps
+fn fill_arrays(
     render_instance: Res<RenderInstance>,
     textures: Res<RenderAssets<GpuTexture>>,
-    materials: Res<TerrainMaterials>,
-    mut material_arrays: ResMut<TerrainMaterialArrays>
+    materials: Binding<TerrainMaterials>,
+    material_textures: Res<TerrainMaterialTextures>,
+    mut is_done: Local<bool>
 ) {
-    // Check if bind group is already built or if all textures are loaded
-    if material_arrays.bind_group.is_some()
-        || (materials.albedo_textures.iter().any(|tex| tex.is_none())
-            || materials.albedo_array.is_none())
-    {
+    // Only run once when all textures are loaded
+    if *is_done {
         return;
     }
 
     // Get the array texture
+    let materials = match materials.iter().next() {
+        Some((_, materials)) => materials,
+        None => return
+    };
     let (albedo_array, normal_array, roughness_array, ao_array) = match (
-        (materials
-            .albedo_array
-            .as_ref()
-            .and_then(|handle| textures.get(handle))),
-        (materials
-            .normal_array
-            .as_ref()
-            .and_then(|handle| textures.get(handle))),
-        (materials
-            .roughness_array
-            .as_ref()
-            .and_then(|handle| textures.get(handle))),
-        (materials
-            .ao_array
-            .as_ref()
-            .and_then(|handle| textures.get(handle)))
+        textures.get(
+            materials
+                .get_texture(TerrainMaterials::TERRAIN_ALBEDO_BINDING)
+                .unwrap()
+        ),
+        textures.get(
+            materials
+                .get_texture(TerrainMaterials::TERRAIN_NORMAL_BINDING)
+                .unwrap()
+        ),
+        textures.get(
+            materials
+                .get_texture(TerrainMaterials::TERRAIN_ROUGHNESS_BINDING)
+                .unwrap()
+        ),
+        textures.get(
+            materials
+                .get_texture(TerrainMaterials::TERRAIN_AO_BINDING)
+                .unwrap()
+        )
     ) {
         (Some(albedo), Some(normal), Some(roughness), Some(ao)) => (albedo, normal, roughness, ao),
         _ => return
@@ -225,8 +218,9 @@ fn build_material_arrays(
     // Copy individual textures into the arrays
     let render_instance = render_instance.0.read().unwrap();
     let size = TEX_SIZE;
-    for i in 0..materials.albedo_textures.len() {
-        let albedo_tex = match textures.get(materials.albedo_textures[i].as_ref().unwrap()) {
+    for i in 0..material_textures.albedo_textures.len() {
+        let albedo_tex = match textures.get(material_textures.albedo_textures[i].as_ref().unwrap())
+        {
             Some(tex) => tex,
             None => return
         };
@@ -237,7 +231,8 @@ fn build_material_arrays(
             size
         );
 
-        let normal_tex = match textures.get(materials.normal_textures[i].as_ref().unwrap()) {
+        let normal_tex = match textures.get(material_textures.normal_textures[i].as_ref().unwrap())
+        {
             Some(tex) => tex,
             None => return
         };
@@ -248,10 +243,11 @@ fn build_material_arrays(
             size
         );
 
-        let roughness_tex = match textures.get(materials.roughness_textures[i].as_ref().unwrap()) {
-            Some(tex) => tex,
-            None => return
-        };
+        let roughness_tex =
+            match textures.get(material_textures.roughness_textures[i].as_ref().unwrap()) {
+                Some(tex) => tex,
+                None => return
+            };
         roughness_array.texture.copy_from_texture_layered(
             &render_instance,
             &roughness_tex.texture.texture,
@@ -259,7 +255,7 @@ fn build_material_arrays(
             size
         );
 
-        let ao_tex = match textures.get(materials.ao_textures[i].as_ref().unwrap()) {
+        let ao_tex = match textures.get(material_textures.ao_textures[i].as_ref().unwrap()) {
             Some(tex) => tex,
             None => return
         };
@@ -278,39 +274,5 @@ fn build_material_arrays(
     roughness_array.texture.generate_mipmaps(&render_instance);
     ao_array.texture.generate_mipmaps(&render_instance);
 
-    // Build the bind group for the material arrays
-    let bind_group_layout = BindGroupLayout::new(
-        "terrain_material_arrays",
-        |builder: &mut BindGroupLayoutBuilder| {
-            builder.add_texture_array_view(0, ShaderStages::FRAGMENT);
-            builder.add_texture_sampler(1, ShaderStages::FRAGMENT);
-            builder.add_texture_array_view(2, ShaderStages::FRAGMENT);
-            builder.add_texture_sampler(3, ShaderStages::FRAGMENT);
-            builder.add_texture_array_view(4, ShaderStages::FRAGMENT);
-            builder.add_texture_sampler(5, ShaderStages::FRAGMENT);
-            builder.add_texture_array_view(6, ShaderStages::FRAGMENT);
-            builder.add_texture_sampler(7, ShaderStages::FRAGMENT);
-        }
-    );
-
-    // Create the bind group
-    let bind_group = BindGroupBuilder::build(
-        "terrain_material_arrays",
-        &render_instance,
-        &BindGroupLayout::build(&bind_group_layout, &render_instance).unwrap(),
-        &vec![
-            BindGroupBuilder::texture_view(0, &albedo_array.texture),
-            BindGroupBuilder::texture_sampler(1, &albedo_array.texture),
-            BindGroupBuilder::texture_view(2, &normal_array.texture),
-            BindGroupBuilder::texture_sampler(3, &normal_array.texture),
-            BindGroupBuilder::texture_view(4, &roughness_array.texture),
-            BindGroupBuilder::texture_sampler(5, &roughness_array.texture),
-            BindGroupBuilder::texture_view(6, &ao_array.texture),
-            BindGroupBuilder::texture_sampler(7, &ao_array.texture),
-        ]
-    )
-    .unwrap();
-
-    material_arrays.bind_group = Some(bind_group);
-    material_arrays.bind_group_layout = Some(bind_group_layout);
+    *is_done = true;
 }

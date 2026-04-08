@@ -127,7 +127,25 @@ impl<M: RenderBinding> GpuRenderBinding<M> {
                         .as_ref()
                         .map(|handle| handle.id());
                 }
-                _ => {}
+                RenderBindingBuilderType::TextureArrayView => {
+                    return self.builder.texture_array_views[*index]
+                        .texture
+                        .as_ref()
+                        .map(|handle| handle.id());
+                }
+                RenderBindingBuilderType::StorageTexture => {
+                    return self.builder.storage_textures[*index]
+                        .texture
+                        .as_ref()
+                        .map(|handle| handle.id());
+                }
+                RenderBindingBuilderType::Buffer => {
+                    error!(
+                        "Trying to get texture for binding {} but it is a buffer binding.",
+                        binding
+                    );
+                    return None;
+                }
             }
         }
         None
@@ -210,6 +228,28 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
                         return Err(PrepareAssetError::RetryNextUpdate(asset));
                     }
                 }
+                RenderBindingBuilderType::TextureArrayView => {
+                    let texture = &bindings_builder.texture_array_views[*binding_index as usize];
+                    bindings_to_index.insert(texture.binding, *binding_index as usize);
+
+                    if let Some(ref texture_handle) = texture.texture {
+                        if let Some(tex) = textures.get(texture_handle) {
+                            bg_entries.push(BindGroupBuilder::texture_view(
+                                texture.binding,
+                                &tex.texture
+                            ));
+                        } else {
+                            renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
+                            return Err(PrepareAssetError::RetryNextUpdate(asset));
+                        }
+                    } else {
+                        // Set dummy texture
+                        bindings_builder.texture_array_views[*binding_index as usize].texture =
+                            Some(dummy_texture.0.clone());
+                        renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
+                        return Err(PrepareAssetError::RetryNextUpdate(asset));
+                    }
+                }
                 RenderBindingBuilderType::TextureSampler => {
                     let texture = &bindings_builder.texture_samplers[*binding_index as usize];
                     bindings_to_index.insert(texture.binding, *binding_index as usize);
@@ -227,6 +267,28 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
                     } else {
                         // Set dummy texture
                         bindings_builder.texture_samplers[*binding_index as usize].texture =
+                            Some(dummy_texture.0.clone());
+                        renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
+                        return Err(PrepareAssetError::RetryNextUpdate(asset));
+                    }
+                }
+                RenderBindingBuilderType::StorageTexture => {
+                    let texture = &bindings_builder.storage_textures[*binding_index as usize];
+                    bindings_to_index.insert(texture.binding, *binding_index as usize);
+
+                    if let Some(ref texture_handle) = texture.texture {
+                        if let Some(tex) = textures.get(texture_handle) {
+                            bg_entries.push(BindGroupBuilder::texture_view(
+                                texture.binding,
+                                &tex.texture
+                            ));
+                        } else {
+                            renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
+                            return Err(PrepareAssetError::RetryNextUpdate(asset));
+                        }
+                    } else {
+                        // Set dummy texture
+                        bindings_builder.storage_textures[*binding_index as usize].texture =
                             Some(dummy_texture.0.clone());
                         renderbinding_cache.insert(binding_label.to_string(), bindings_builder);
                         return Err(PrepareAssetError::RetryNextUpdate(asset));
@@ -280,9 +342,23 @@ impl<M: RenderBinding> RenderAsset for GpuRenderBinding<M> {
                             is_err = true;
                         }
                     }
+                    RenderBindingBuilderType::TextureArrayView => {
+                        let view = &bindings_builder.texture_array_views[*material_index as usize];
+                        builder.add_texture_array_view(view.binding, view.visibility);
+                    }
                     RenderBindingBuilderType::TextureSampler => {
                         let sampler = &bindings_builder.texture_samplers[*material_index as usize];
                         builder.add_texture_sampler(sampler.binding, sampler.visibility);
+                    }
+                    RenderBindingBuilderType::StorageTexture => {
+                        let view = &bindings_builder.storage_textures[*material_index as usize];
+                        if let Some(ref texture_handle) = view.texture
+                            && let Some(tex) = textures.get(texture_handle)
+                        {
+                            builder.add_storage_texture_view(view.binding, tex.texture.format);
+                        } else {
+                            is_err = true;
+                        }
                     }
                 }
             }

@@ -9,11 +9,11 @@ use crate::{
     prelude::{TerrainExtractor, TerrainRenderer},
     render::{
         dependencies::{
-            materials::TerrainMaterialArrays, terrain_buffer::TerrainBuffer,
+            materials::TerrainMaterials, terrain_buffer::TerrainBuffer,
             terrain_mesh::TerrainRenderPassMesh
         },
-        passes::pipeline::GpuTerrainRenderPipeline,
-        renderer_gpu::TerrainRendererGPU
+        passes::pipeline::TerrainRenderPipeline,
+        renderer_gpu::{TerrainRendererGPU, TerrainTileBgRender}
     }
 };
 
@@ -37,11 +37,12 @@ impl RenderSubPass for SubRenderPassTerrainGround {
     type Params = (
         SRes<TerrainRenderPassMesh>,
         SRes<RenderAssets<GpuMesh>>,
-        SRes<RenderAssets<GpuTerrainRenderPipeline>>,
+        SRes<RenderAssets<TerrainRenderPipeline>>,
         SBinding<CameraRender>,
-        SRes<TerrainMaterialArrays>,
-        SRes<TerrainBuffer>,
-        SRes<TerrainRendererGPU>
+        SBinding<TerrainMaterials>,
+        SBinding<TerrainBuffer>,
+        SRes<TerrainRendererGPU>,
+        SBinding<TerrainTileBgRender>
     );
 
     fn describe(
@@ -50,9 +51,10 @@ impl RenderSubPass for SubRenderPassTerrainGround {
             meshes,
             pipeline,
             camera,
-            terrain_material_arrays,
+            terrain_materials,
             terrain_buffer,
-            terrain_renderer
+            terrain_renderer,
+            terrain_tile_bg_render
         ): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         // Create the batches of draw commands
@@ -70,6 +72,10 @@ impl RenderSubPass for SubRenderPassTerrainGround {
         if terrain_renderer.ready {
             for (i, tile) in terrain_renderer.tiles.iter().enumerate() {
                 if let Some(bind_group) = &tile.render_bind_group {
+                    let bind_group = match terrain_tile_bg_render.get(bind_group) {
+                        Some(bg) => bg.bind_group.clone(),
+                        None => continue
+                    };
                     batches.push(DrawCommandsBatch {
                         bind_group: Some((3, bind_group.clone())),
                         index_range: 0..mesh.index_count,
@@ -95,8 +101,20 @@ impl RenderSubPass for SubRenderPassTerrainGround {
                     .next()
                     .map(|(_, camera)| camera.bind_group.clone())
             ),
-            SubPassCommand::BindGroup(1, terrain_material_arrays.bind_group.clone()),
-            SubPassCommand::BindGroup(2, terrain_buffer.bind_group.clone()),
+            SubPassCommand::BindGroup(
+                1,
+                terrain_materials
+                    .iter()
+                    .next()
+                    .map(|(_, m)| m.bind_group.clone())
+            ),
+            SubPassCommand::BindGroup(
+                2,
+                terrain_buffer
+                    .iter()
+                    .next()
+                    .map(|(_, b)| b.bind_group.clone())
+            ),
             SubPassCommand::DrawBatches(batches),
         ])
     }

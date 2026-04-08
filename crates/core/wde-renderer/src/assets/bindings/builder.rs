@@ -17,7 +17,9 @@ pub(crate) struct RenderBindingBuilderTextureSampler {
 pub(crate) enum RenderBindingBuilderType {
     Buffer,
     TextureView,
-    TextureSampler
+    TextureArrayView,
+    TextureSampler,
+    StorageTexture
 }
 
 /// Utility to collect buffers/textures and binding metadata for a RenderBinding.
@@ -29,7 +31,9 @@ pub struct RenderBindingBuilder {
 
     pub(crate) buffers: Vec<(u32, Buffer, Option<Handle<Buffer>>)>,
     pub(crate) texture_views: Vec<RenderBindingBuilderTextureView>,
-    pub(crate) texture_samplers: Vec<RenderBindingBuilderTextureSampler>
+    pub(crate) texture_array_views: Vec<RenderBindingBuilderTextureView>,
+    pub(crate) texture_samplers: Vec<RenderBindingBuilderTextureSampler>,
+    pub(crate) storage_textures: Vec<RenderBindingBuilderTextureView>
 }
 impl RenderBindingBuilder {
     pub fn add_buffer(&mut self, binding: u32, buffer: Buffer) {
@@ -50,6 +54,18 @@ impl RenderBindingBuilder {
             self.texture_views.len() as u32 - 1
         ));
     }
+    pub fn add_texture_array_view(&mut self, binding: u32, texture: Option<Handle<Texture>>) {
+        self.texture_array_views
+            .push(RenderBindingBuilderTextureView {
+                binding,
+                visibility: ShaderStages::all(),
+                texture
+            });
+        self.elements.push((
+            RenderBindingBuilderType::TextureArrayView,
+            self.texture_array_views.len() as u32 - 1
+        ));
+    }
     pub fn add_texture_sampler(&mut self, binding: u32, texture: Option<Handle<Texture>>) {
         self.texture_samplers
             .push(RenderBindingBuilderTextureSampler {
@@ -60,6 +76,17 @@ impl RenderBindingBuilder {
         self.elements.push((
             RenderBindingBuilderType::TextureSampler,
             self.texture_samplers.len() as u32 - 1
+        ));
+    }
+    pub fn add_storage_texture(&mut self, binding: u32, texture: Option<Handle<Texture>>) {
+        self.storage_textures.push(RenderBindingBuilderTextureView {
+            binding,
+            visibility: ShaderStages::all(),
+            texture
+        });
+        self.elements.push((
+            RenderBindingBuilderType::StorageTexture,
+            self.storage_textures.len() as u32 - 1
         ));
     }
     /// Indicates that this render binding doesn't need to create a bind group.

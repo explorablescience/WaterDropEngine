@@ -10,25 +10,15 @@ use wde_renderer::prelude::*;
 
 use crate::render::grid::buffers::TerrainGridBuffer;
 
-#[derive(Default, Asset, Clone, TypePath, Debug)]
-pub struct TerrainGridRenderPipelineAsset;
-impl std::fmt::Display for TerrainGridRenderPipelineAsset {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TerrainGridRenderPipelineAsset")
-    }
-}
-
-#[allow(unused)]
-#[derive(Component)]
-pub struct TerrainGridRenderPipeline(pub Handle<TerrainGridRenderPipelineAsset>);
-pub struct GpuTerrainGridRenderPipeline(pub CachedPipelineIndex);
-impl RenderAsset for GpuTerrainGridRenderPipeline {
-    type SourceAsset = TerrainGridRenderPipelineAsset;
+#[derive(Clone, Default, Debug, TypePath)]
+pub struct TerrainGridRenderPipeline(pub CachedPipelineIndex);
+impl RenderAsset for TerrainGridRenderPipeline {
+    type SourceAsset = RenderPipelineAsset<TerrainGridRenderPipeline>;
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
         SBinding<CameraRender>,
-        SRes<TerrainGridBuffer>
+        SBinding<TerrainGridBuffer>
     );
 
     fn prepare(
@@ -37,7 +27,7 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
             Self::Params
         >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        Ok(GpuTerrainGridRenderPipeline(
+        Ok(TerrainGridRenderPipeline(
             pipeline_manager.create_render_pipeline(
                 RenderPipelineDescriptor {
                     label: "terrain-grid",
@@ -53,7 +43,10 @@ impl RenderAsset for GpuTerrainGridRenderPipeline {
                     }),
                     bind_group_layouts: vec![
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
-                        Some(terrain_grid_buffer.layout.clone()),
+                        terrain_grid_buffer
+                            .iter()
+                            .next()
+                            .map(|(_, c)| c.layout.clone()),
                     ],
                     depth: DepthDescriptor {
                         enabled: true,

@@ -8,9 +8,7 @@ use wde_terrain::prelude::CHUNK_COUNT;
 
 use crate::{
     editor::PlacementUI,
-    render::grid::{
-        buffers::TerrainGridBuffer, terrain_grid_pipeline::GpuTerrainGridRenderPipeline
-    }
+    render::grid::{buffers::TerrainGridBuffer, terrain_grid_pipeline::TerrainGridRenderPipeline}
 };
 
 #[derive(Resource, Default)]
@@ -70,10 +68,10 @@ impl RenderSubPassTerrainGrid {
 }
 impl RenderSubPass for RenderSubPassTerrainGrid {
     type Params = (
-        SRes<RenderAssets<GpuTerrainGridRenderPipeline>>,
+        SRes<RenderAssets<TerrainGridRenderPipeline>>,
         SRes<RenderSubPassTerrainGrid>,
         SBinding<CameraRender>,
-        SRes<TerrainGridBuffer>
+        SBinding<TerrainGridBuffer>
     );
 
     fn describe(
@@ -86,7 +84,10 @@ impl RenderSubPass for RenderSubPassTerrainGrid {
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::Mesh(subpass.mesh.as_ref().map(|m| m.id())),
             SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
-            SubPassCommand::BindGroup(1, grid_buffer.bind_group.clone()),
+            SubPassCommand::BindGroup(
+                1,
+                grid_buffer.iter().next().map(|(_, b)| b.bind_group.clone())
+            ),
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
                 index_range: 0..6,
                 instance_range: 0..CHUNK_COUNT * CHUNK_COUNT,

@@ -1,17 +1,8 @@
-use bevy::{asset::io::embedded::GetAssetServer, prelude::*};
+use bevy::prelude::*;
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::*;
 
 use crate::{core::grid::GridChunkPos, prelude::Grid};
-
-pub struct TerrainGridBufferPlugin;
-impl Plugin for TerrainGridBufferPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<TerrainGridBuffer>()
-            .add_systems(Render, update_render.in_set(RenderSet::Prepare))
-            .add_systems(Render, build.in_set(RenderSet::BindGroups));
-    }
-}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -48,16 +39,24 @@ pub struct UGridChunkPos {
     pub xz: [f32; 2]
 }
 
-#[derive(Resource)]
-pub struct TerrainGridBuffer {
-    pub grid_desc_buffer: Handle<Buffer>,
-    pub grid_chunk_pos_buffer: Handle<Buffer>,
-    pub layout: BindGroupLayout,
-    pub layout_built: WgpuBindGroupLayout,
-    pub bind_group: Option<BindGroup>
+#[derive(Asset, Clone, Debug, Default, TypePath)]
+pub struct TerrainGridBuffer;
+impl TerrainGridBuffer {
+    pub const GRID_DESC_BIND: u32 = 0;
+    pub const GRID_CHUNK_POS_BIND: u32 = 1;
 }
-impl FromWorld for TerrainGridBuffer {
-    fn from_world(world: &mut World) -> Self {
+impl RenderBinding for TerrainGridBuffer {
+    fn describe(&self, builder: &mut RenderBindingBuilder) {
+        builder.add_buffer(
+            Self::GRID_DESC_BIND,
+            Buffer {
+                label: "terrain-grid-description".to_string(),
+                size: std::mem::size_of::<UGridDescription>(),
+                usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                content: Some(bytemuck::cast_slice(&[UGridDescription::default()]).into())
+            }
+        );
+
         // Create the list of chunk positions
         let mut chunks_pos = Vec::with_capacity((CHUNK_COUNT * CHUNK_COUNT) as usize);
         for y in -(CHUNK_COUNT as i32) / 2..CHUNK_COUNT as i32 / 2 {
@@ -66,84 +65,37 @@ impl FromWorld for TerrainGridBuffer {
                 chunks_pos.push(UGridChunkPos { xz: [pos.x, pos.y] });
             }
         }
+        builder.add_buffer(
+            Self::GRID_CHUNK_POS_BIND,
+            Buffer {
+                label: "terrain-grid-chunk-positions".to_string(),
+                size: std::mem::size_of::<UGridChunkPos>() * (CHUNK_COUNT * CHUNK_COUNT) as usize,
+                usage: BufferUsage::STORAGE,
+                content: Some(bytemuck::cast_slice(&chunks_pos).into())
+            }
+        );
+    }
 
-        // Create the buffers
-        let grid_desc = world.get_asset_server().add(Buffer {
-            label: "terrain-grid-description".to_string(),
-            size: std::mem::size_of::<UGridDescription>(),
-            usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-            content: Some(bytemuck::cast_slice(&[UGridDescription::default()]).into())
-        });
-        let grid_chunk_pos = world.get_asset_server().add(Buffer {
-            label: "terrain-grid-chunk-positions".to_string(),
-            size: std::mem::size_of::<UGridChunkPos>() * (CHUNK_COUNT * CHUNK_COUNT) as usize,
-            usage: BufferUsage::STORAGE,
-            content: Some(bytemuck::cast_slice(&chunks_pos).into())
-        });
-
-        // Create the layouts
-        let layout = BindGroupLayout::new("terrain-grid", |builder| {
-            builder.add_buffer(
-                0,
-                ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                BufferBindingType::Uniform
-            );
-            builder.add_buffer(
-                1,
-                ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                BufferBindingType::Storage { read_only: true }
-            );
-        });
-        let render_instance = world.get_resource::<RenderInstance>().unwrap();
-        let layout_built = layout.build(&render_instance.0.read().unwrap()).unwrap();
-
-        Self {
-            grid_desc_buffer: grid_desc,
-            grid_chunk_pos_buffer: grid_chunk_pos,
-            layout,
-            layout_built,
-            bind_group: None
-        }
+    fn label(&self) -> &str {
+        "terrain-grid"
     }
 }
 
-fn build(
-    render_instance: Res<RenderInstance>,
-    mut terrain_buffer: ResMut<TerrainGridBuffer>,
-    buffers: Res<RenderAssets<GpuBuffer>>
-) {
-    // Check if the bind group is already created
-    if terrain_buffer.bind_group.is_some() {
-        return;
-    }
-
-    // Create the bind group
-    if let (Some(grid_desc_buffer), Some(grid_chunk_pos_buffer)) = (
-        buffers.get(&terrain_buffer.grid_desc_buffer),
-        buffers.get(&terrain_buffer.grid_chunk_pos_buffer)
-    ) {
-        let render_instance = render_instance.0.read().unwrap();
-        let bind_group = BindGroupBuilder::build(
-            "terrain-grid",
-            &render_instance,
-            &terrain_buffer.layout_built,
-            &vec![
-                BindGroupBuilder::buffer(0, &grid_desc_buffer.buffer),
-                BindGroupBuilder::buffer(1, &grid_chunk_pos_buffer.buffer),
-            ]
-        )
-        .unwrap();
-        terrain_buffer.bind_group = Some(bind_group);
-    }
-}
-
-fn update_render(
+pub(crate) fn update_render(
     cursor_pos: Res<TerrainCursorPos>,
-    terrain_buffer: Res<TerrainGridBuffer>,
+    terrain_buffer: Binding<TerrainGridBuffer>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>
 ) {
-    if let Some(grid_desc_buffer) = buffers.get(&terrain_buffer.grid_desc_buffer) {
+    let terrain_buffer = match terrain_buffer.iter().next() {
+        Some((_, buffer)) => buffer,
+        None => return
+    };
+    if let Some(grid_desc_buffer) = buffers.get(
+        terrain_buffer
+            .get_buffer(TerrainGridBuffer::GRID_DESC_BIND)
+            .unwrap()
+    ) {
         let grid_desc = UGridDescription {
             fade_center: [cursor_pos.world_pos.x, cursor_pos.world_pos.z],
             ..Default::default()
