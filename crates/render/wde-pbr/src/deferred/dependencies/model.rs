@@ -2,6 +2,7 @@ use wde_logger::prelude::*;
 
 use bevy::prelude::*;
 use std::collections::HashMap;
+use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::deferred::dependencies::{PbrMaterial, SSBO_TRANSFORM_MAX_ENTITY};
@@ -111,8 +112,8 @@ impl Plugin for PbrModelRegistryPlugin {
 
 #[allow(clippy::type_complexity)]
 fn on_models_updates(
-    modified_models_query: Query<(Entity, &Transform, &PbrModel), Changed<PbrModel>>,
-    modified_transforms_query: Query<(Entity, &Transform), (Changed<Transform>, With<PbrModel>)>,
+    modified_models_query: Query<(Entity, &GlobalTransform, &PbrModel), Changed<PbrModel>>,
+    modified_transforms_query: Query<(Entity, &GlobalTransform), (Changed<GlobalTransform>, With<PbrModel>)>,
     mut removed: RemovedComponents<PbrModel>,
     mut registry: ResMut<PbrModelRegistry>,
     mut ssbo: ResMut<PbrSsboIdHandler>,

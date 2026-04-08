@@ -52,12 +52,12 @@ impl RenderBinding for CameraRender {
 }
 
 fn extract(
-    cameras: ExtractWorld<Query<(&Transform, &CameraView), With<ActiveCamera>>>,
+    cameras: ExtractWorld<Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>>,
     mut camera_uniform: ResMut<CameraUniform>,
     window: ExtractWorld<Query<&Window>>
 ) {
+    // Update the camera uniform
     if let (Ok((transform, view)), Ok(window)) = (cameras.single(), window.single()) {
-        // Update the camera uniform
         let aspect_ratio = window.width() / window.height();
         *camera_uniform = CameraUniform::new(transform, view, aspect_ratio);
     }

@@ -44,7 +44,7 @@ impl Ray {
     pub fn from_ndc(
         ndc_pos: Vec2,
         aspect_ratio: f32,
-        camera_transform: &Transform,
+        camera_transform: &GlobalTransform,
         camera_view: &CameraView
     ) -> Self {
         // Convert ndc to world direction
@@ -53,7 +53,7 @@ impl Ray {
         let dir = camera_view.ndc_to_world(ndc_pos, camera_transform, aspect_ratio);
 
         // Start the ray at the camera position
-        let origin = camera_transform.translation;
+        let origin = camera_transform.translation();
 
         // Return the ray
         Ray::new(origin, dir)

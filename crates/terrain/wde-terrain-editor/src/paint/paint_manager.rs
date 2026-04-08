@@ -69,7 +69,7 @@ impl PaintManager {
 fn add_paint_command(
     phworld: Res<PhysicsWorld>,
     window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Query<(&Transform, &CameraView), With<Camera>>,
+    camera_query: Query<(&GlobalTransform, &CameraView), With<Camera>>,
     mut mouse_input: MessageReader<MouseButtonInput>,
     mut paint_manager: ResMut<PaintManager>,
     brush_query: Query<&PaintBrush>,

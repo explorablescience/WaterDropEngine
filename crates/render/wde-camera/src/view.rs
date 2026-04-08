@@ -1,5 +1,6 @@
 use bevy::prelude::*;
-use wde_renderer::prelude::TransformUniform;
+
+use crate::prelude::TransformUniform;
 
 /// Camera view component with field of view, aspect ratio, near and far planes.
 #[derive(Component, Clone, Debug, Reflect)]
@@ -25,7 +26,7 @@ impl CameraView {
     }
 
     /// Convert a 2D ndc position to a 3D world direction.
-    pub fn ndc_to_world(&self, ndc_pos: Vec2, transform: &Transform, aspect_ratio: f32) -> Vec3 {
+    pub fn ndc_to_world(&self, ndc_pos: Vec2, transform: &GlobalTransform, aspect_ratio: f32) -> Vec3 {
         let proj = Mat4::perspective_rh(self.fov.to_radians(), aspect_ratio, self.znear, self.zfar);
         let view = TransformUniform::transform_world_to_obj(transform);
         let inv_vp = (proj * view).inverse();
@@ -60,7 +61,7 @@ pub(crate) struct CameraUniform {
 }
 impl CameraUniform {
     /// Create a new camera uniform buffer.
-    pub fn new(transform: &Transform, camera_view: &CameraView, aspect_ratio: f32) -> Self {
+    pub fn new(transform: &GlobalTransform, camera_view: &CameraView, aspect_ratio: f32) -> Self {
         let world_to_view = Self::get_world_to_view(transform).to_cols_array_2d();
         let view_to_ndc = Self::get_view_to_ndc(camera_view, aspect_ratio).to_cols_array_2d();
         let ndc_to_view = Mat4::from_cols_array_2d(&view_to_ndc)
@@ -76,9 +77,9 @@ impl CameraUniform {
             ndc_to_view,
             view_to_world,
             position: [
-                transform.translation.x,
-                transform.translation.y,
-                transform.translation.z,
+                transform.translation().x,
+                transform.translation().y,
+                transform.translation().z,
                 1.0
             ]
         }
@@ -88,7 +89,7 @@ impl CameraUniform {
     #[inline]
     #[allow(dead_code)]
     fn get_world_to_ndc(
-        transform: &Transform,
+        transform: &GlobalTransform,
         camera_view: &CameraView,
         aspect_ratio: f32
     ) -> Mat4 {
@@ -99,7 +100,7 @@ impl CameraUniform {
 
     /// Get the world to view matrix.
     #[inline]
-    fn get_world_to_view(transform: &Transform) -> Mat4 {
+    fn get_world_to_view(transform: &GlobalTransform) -> Mat4 {
         // World to camera
         TransformUniform::transform_world_to_obj(transform)
     }

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 /// The maximum number of entity transforms in the ssbo.

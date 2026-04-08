@@ -34,12 +34,14 @@ use crate::camera::CameraFeature;
 #[doc(hidden)]
 pub mod prelude {
     pub use crate::camera::{ActiveCamera, Camera, CameraRender};
+    pub use crate::transform::TransformUniform;
     pub use crate::view::CameraView;
 }
 
 mod camera;
 #[cfg(debug_assertions)]
 mod editor;
+mod transform;
 mod view;
 
 pub struct CameraPlugin;

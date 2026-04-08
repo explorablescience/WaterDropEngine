@@ -13,7 +13,7 @@ pub fn handle_placement_tool(
     placement_ui: Res<PlacementUI>,
     phworld: Res<PhysicsWorld>,
     window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Query<(&Transform, &CameraView), With<Camera>>,
+    camera_query: Query<(&GlobalTransform, &CameraView), With<Camera>>,
     mut grid: ResMut<Grid>,
     mut local_rot: Local<GridRotation>,
     mouse_input: Res<ButtonInput<MouseButton>>

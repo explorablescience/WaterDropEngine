@@ -38,7 +38,7 @@
 //!     mut commands: Commands,
 //!     phworld: Res<PhysicsWorld>,
 //!     window: Single<&Window, With<PrimaryWindow>>,
-//!     camera_query: Query<(&Transform, &CameraView), With<Camera>>,
+//!     camera_query: Query<(&GlobalTransform, &CameraView), With<Camera>>,
 //! ) {
 //!     // Get cursor position in NDC
 //!     let Some(cursor_pos) = window.cursor_position() else { return };

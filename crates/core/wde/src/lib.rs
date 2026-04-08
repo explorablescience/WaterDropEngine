@@ -104,7 +104,8 @@ impl Plugin for CustomBevyPlugins {
                 file_path: "res".to_string(),
                 ..Default::default()
             },
-            InputPlugin
+            InputPlugin,
+            TransformPlugin
         ));
     }
 }
