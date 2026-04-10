@@ -9,7 +9,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::RenderBindingPluginRegister,
+    assets::RenderBindingPluginRegisterOld,
     core::{ExtractResourcePlugin, RenderApp},
     utils::ssbo_mesh::SsboMeshDescriptor
 };
@@ -29,7 +29,7 @@ pub(crate) struct UtilsPlugin;
 impl Plugin for UtilsPlugin {
     fn build(&self, app: &mut App) {
         // Add the ssbo
-        app.add_plugins(RenderBindingPluginRegister::<SsboMesh>::default());
+        app.add_plugins(RenderBindingPluginRegisterOld::<SsboMesh>::default());
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<SsboMeshDescriptor>();

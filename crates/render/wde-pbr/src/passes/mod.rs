@@ -26,10 +26,11 @@ impl Plugin for PassesPlugin {
             .add_pass::<RenderPassResolve>()
             .add_sub_pass::<SubRenderPassResolve, RenderPassResolve>();
 
-        // Add the pipelines
+        // Add the pipelines and bindings
         app.add_plugins((
-            RenderPipelinePluginRegister::<ResolveRenderPipeline>::default(),
-            RenderPipelinePluginRegister::<DeferredLightingPipeline>::default()
+            RenderBindingRegisterPlugin::<RenderBindingResolved>::default(),
+            RenderPipelineRegisterPlugin::<ResolveRenderPipeline>::default(),
+            RenderPipelineRegisterPlugin::<DeferredLightingPipeline>::default()
         ));
     }
 }

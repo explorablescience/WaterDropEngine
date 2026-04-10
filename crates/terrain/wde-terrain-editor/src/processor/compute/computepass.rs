@@ -19,12 +19,12 @@ pub struct TileInfo {
 
 pub fn apply_paint_compute(
     render_instance: Res<RenderInstance>,
-    commands_buffer: Binding<CommandsBuffer>,
+    commands_buffer: BindingOld<CommandsBuffer>,
     mut commands_buffer_desc: ResMut<CommandsBufferDescription>,
     pipeline_manager: Res<PipelineManager>,
     paint_pipeline: Res<RenderAssets<PaintComputePipeline>>,
     terrain_tiles: Res<TerrainRendererGPU>,
-    terrain_tile_bg_compute: Binding<TerrainTileBgCompute>
+    terrain_tile_bg_compute: BindingOld<TerrainTileBgCompute>
 ) {
     // Check if we should render
     if commands_buffer_desc.commands_count == 0 || commands_buffer_desc.dirty_chunks.is_empty() {

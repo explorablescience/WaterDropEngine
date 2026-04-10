@@ -21,7 +21,7 @@ use wde_wgpu::{
 };
 
 use crate::{
-    assets::{GpuBuffer, RenderAssets, SBinding},
+    assets::{GpuBuffer, RenderAssets, SBindingOld},
     core::RenderInstance,
     utils::{SsboMesh, ssbo_mesh::SsboMeshDescriptor}
 };
@@ -77,7 +77,7 @@ impl RenderAsset for GpuMesh {
     type Params = (
         SRes<RenderInstance>,
         SResMut<SsboMeshDescriptor>,
-        SBinding<SsboMesh>,
+        SBindingOld<SsboMesh>,
         SRes<RenderAssets<GpuBuffer>>
     );
 

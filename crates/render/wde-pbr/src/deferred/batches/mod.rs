@@ -10,7 +10,8 @@ pub use model::PbrModel;
 pub use pbr_material::PbrMaterial;
 
 use crate::{
-    deferred::batches::build_batches::BatchesPlugin, prelude::ssbo_batches::SsboBatchesPlugin
+    deferred::batches::build_batches::BatchesPlugin,
+    prelude::ssbo_batches::SsboInstancesToTransformPlugin
 };
 
 pub(crate) struct DeferredDependenciesPlugin;
@@ -19,7 +20,7 @@ impl Plugin for DeferredDependenciesPlugin {
         app.add_plugins((
             BatchesPlugin,
             MaterialsPluginRegister::<PbrMaterial>::default(),
-            SsboBatchesPlugin
+            SsboInstancesToTransformPlugin
         ));
     }
 }

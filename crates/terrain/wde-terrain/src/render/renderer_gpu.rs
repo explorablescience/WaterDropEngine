@@ -15,8 +15,8 @@ pub struct TerrainTileBgRender {
     heightmap: Handle<Texture>,
     splatmaps: Vec<Handle<Texture>>
 }
-impl RenderBinding for TerrainTileBgRender {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for TerrainTileBgRender {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_texture_view(0, Some(self.heightmap.clone()));
         builder.add_texture_sampler(1, Some(self.heightmap.clone()));
         for i in 0..SPLAT_MAP_COUNT / 4 {
@@ -42,8 +42,8 @@ pub struct TerrainTileBgCompute {
     heightmap: Handle<Texture>,
     splatmaps: Vec<Handle<Texture>>
 }
-impl RenderBinding for TerrainTileBgCompute {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for TerrainTileBgCompute {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_storage_texture(0, Some(self.heightmap.clone()));
         for i in 0..SPLAT_MAP_COUNT / 4 {
             builder.add_storage_texture(1 + i, Some(self.splatmaps[i as usize].clone()));

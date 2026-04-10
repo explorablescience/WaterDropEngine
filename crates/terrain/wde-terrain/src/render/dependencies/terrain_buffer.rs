@@ -30,8 +30,8 @@ impl TerrainBuffer {
     pub const DESC_BIND: u32 = 0;
     pub const TILES_BIND: u32 = 1;
 }
-impl RenderBinding for TerrainBuffer {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for TerrainBuffer {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_buffer(
             Self::DESC_BIND,
             Buffer {
@@ -66,7 +66,7 @@ impl RenderBinding for TerrainBuffer {
 // System to update the terrain tiles buffer with the current visible tiles
 pub(crate) fn update_terrain_tiles_buffer(
     render_instance: Res<RenderInstance>,
-    terrain_buffer: Binding<TerrainBuffer>,
+    terrain_buffer: BindingOld<TerrainBuffer>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     terrain_tiles: Res<TerrainRendererGPU>,
     mut is_set: Local<bool>

@@ -4,7 +4,7 @@ use wde_renderer::prelude::*;
 pub(crate) struct DepthTexturePlugin;
 impl Plugin for DepthTexturePlugin {
     fn build(&self, app: &mut App) {
-        let init_plugin = RenderBindingPluginRegister::<DepthTexture>::with_init(init, app);
+        let init_plugin = RenderBindingPluginRegisterOld::<DepthTexture>::with_init(init, app);
         app.add_plugins(init_plugin).add_systems(Update, resize);
     }
 }
@@ -16,8 +16,8 @@ impl Plugin for DepthTexturePlugin {
 /// - It is created and resized automatically based on the window size
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct DepthTexture(pub Handle<Texture>);
-impl RenderBinding for DepthTexture {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for DepthTexture {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_texture_view(0, Some(self.0.clone()));
         builder.add_texture_sampler(1, Some(self.0.clone()));
     }
@@ -30,7 +30,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, window: Query<&W
         resolution.physical_height()
     )));
     let texture = asset_server.add(DepthTexture(texture));
-    commands.insert_resource(RenderBindingHolder(texture));
+    commands.insert_resource(RenderBindingHolderOld(texture));
 }
 
 fn resize(
@@ -41,7 +41,7 @@ fn resize(
     for event in window_resized_events.read() {
         let texture = asset_server.add(get_texture((event.width, event.height)));
         let texture = asset_server.add(DepthTexture(texture));
-        commands.insert_resource(RenderBindingHolder(texture));
+        commands.insert_resource(RenderBindingHolderOld(texture));
     }
 }
 

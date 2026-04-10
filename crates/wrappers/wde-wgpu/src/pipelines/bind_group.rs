@@ -339,16 +339,19 @@ impl BindGroupLayout {
                 }) => {
                     error!(
                         self.label,
-                        "Failed to create bind group layout with source error: {:#?}. Description: {}.",
+                        "Failed to create bind group layout with source error: {:#?}. Description: {}. Bind group layout description: {:#?}.",
                         source,
-                        description
+                        description,
+                        self.builder.layout_entries
                     );
                     res = Err(RenderError::CannotCreateBindGroupLayout);
                 }
                 Some(e) => {
                     error!(
                         self.label,
-                        "Failed to create bind group layout with unexpected error: {:#?}.", e
+                        "Failed to create bind group layout with unexpected error: {:#?}. Bind group layout description: {:#?}.",
+                        e,
+                        self.builder.layout_entries
                     );
                     res = Err(RenderError::CannotCreateBindGroupLayout);
                 }

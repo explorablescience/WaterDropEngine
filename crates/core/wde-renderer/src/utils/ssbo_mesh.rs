@@ -25,8 +25,8 @@ impl SsboMesh {
     pub const VERTEX_BUFFER_ID: u32 = 0;
     pub const INDEX_BUFFER_ID: u32 = 1;
 }
-impl RenderBinding for SsboMesh {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for SsboMesh {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_buffer(
             Self::VERTEX_BUFFER_ID,
             Buffer {

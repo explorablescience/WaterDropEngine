@@ -83,8 +83,8 @@ impl Default for PbrMaterial {
     }
 }
 impl Material for PbrMaterial {}
-impl RenderBinding for PbrMaterial {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for PbrMaterial {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         // Create the uniform buffer
         let uniform = PbrMaterialUniform {
             flags: [

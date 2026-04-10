@@ -22,7 +22,7 @@ pub use wde_wgpu::render_pass::RenderPassInstance;
 /// If `texture` is None, the pass will render to the swapchain texture.
 pub struct RenderPassDescColorAttachment {
     /// The texture to render to.
-    pub texture: AssetId<Texture>,
+    pub texture: Option<AssetId<Texture>>,
     /// How to load the texture at the start of the pass (default: Load).
     pub load: LoadOp<crate::prelude::Color>,
     /// How to store the texture at the end of the pass (default: Store).
@@ -33,7 +33,7 @@ pub struct RenderPassDescColorAttachment {
 impl Default for RenderPassDescColorAttachment {
     fn default() -> Self {
         Self {
-            texture: AssetId::default(),
+            texture: None,
             load: LoadOp::Load,
             store: StoreOp::Store,
             resolve_target: None
@@ -360,7 +360,8 @@ fn create_render_pass<'p>(
         if let Some(attachments_color) = &pass_desc.attachments_colors {
             // Set specified color attachments
             for color_attachment_desc in attachments_color.iter() {
-                if let Some(texture) = textures.get(color_attachment_desc.texture) {
+                if let Some(texture_id) = color_attachment_desc.texture
+                    && let Some(texture) = textures.get(texture_id) {
                     if !(surface_width == texture.texture.size.0 && surface_height == texture.texture.size.1) {
                         return Err(format!("Color attachment texture has invalid size: expected ({}, {}), got ({}, {})", surface_width, surface_height, texture.texture.size.0, texture.texture.size.1));
                     }

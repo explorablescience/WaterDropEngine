@@ -2,11 +2,8 @@
 //!
 //! This module contains:
 //! - Definitions and loading logic for all assets used by the renderer, that is [`Mesh`](crate::assets::Mesh), [`Texture`](crate::assets::Texture), [`Buffer`](crate::assets::Buffer), [`Shader`](crate::assets::Shader) assets. Each asset type has its own loading logic and GPU preparation steps, defined in their respective submodules.
-//! - The [`bindings`](crate::assets::bindings) submodule, which provides utilities for defining custom renderer bindings, such as custom materials. See the documentation of the [`bindings`](crate::assets::bindings) module for more details.
+//! - The [`bindings`](crate::assets::bindings) submodule, which provides utilities for defining custom render resources and bindings.
 //! - A set of default utility meshes, defined in the [`meshes`](crate::assets::meshes) submodule.
-//!
-//! # Custom renderer bindings
-//! For assets that require custom GPU bindings, such as custom materials [`Material`](crate::assets::bindings::Material), the [`bindings`](crate::assets::bindings) module provides utilities to define the asset and its corresponding GPU asset, as a [`RenderBinding`](crate::assets::bindings::RenderBinding) (or [`Material`](crate::assets::bindings::Material)) and a [`GpuRenderBinding`](crate::assets::bindings::GpuRenderBinding) (or [`GpuMaterial`](crate::assets::bindings::GpuMaterial)) respectively. See the documentation of the [`bindings`](crate::assets::bindings) module for more details.
 //!
 //! # Asset loading
 //! ## Default asset loading
@@ -38,9 +35,144 @@
 //!     ..Default::default()
 //! });
 //! ```
+//!
+//! # Render assets and render bindings
+//! Assets defined in this module can be used as GPU resources in render bindings/pipelines by referencing them in the corresponding preparation systems.
+//! The main types to be aware of are:
+//! - [`RenderData`](crate::assets::bindings::RenderData): declares GPU resources (buffers/textures) and how they are recreated.
+//! - [`RenderBinding`](crate::assets::bindings::RenderBinding): builds a bind group by referencing resources exposed by one or more [`RenderData`](crate::assets::bindings::RenderData) instances.
+//!
+//! ## RenderData
+//! A [`RenderData`](crate::assets::bindings::RenderData) is used to allocate reusable GPU resources.
+//! It is registered with [`RenderDataRegisterPlugin`](crate::assets::bindings::RenderDataRegisterPlugin), which:
+//! - creates and prepares the corresponding [`GpuRenderData`](crate::assets::bindings::GpuRenderData),
+//! - optionally recreates it when [`RenderData::recreate`](crate::assets::bindings::RenderData::recreate) returns `Some(true)`.
+//!
+//! Typical example (deferred textures):
+//! ```
+//! #[derive(Asset, Clone, TypePath, Default)]
+//! pub struct DeferredTextures;
+//! impl DeferredTextures {
+//!     pub const ALBEDO_RESOLVED_IDX: u32 = 1;
+//!     pub const DEMO_BUFFER: u32 = 2;
+//! }
+//!
+//! impl RenderData for DeferredTextures {
+//!     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
+//!
+//!     fn describe((window, _): &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+//!         let size = {
+//!             let window = window.single().unwrap();
+//!             (window.resolution.physical_width(), window.resolution.physical_height())
+//!         };
+//!         let usages = TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING;
+//!         builder
+//!             .add_texture(Self::ALBEDO_RESOLVED_IDX,
+//!                 Texture {
+//!                     label: "pbr-albedo-resolved".to_string(),
+//!                     size,
+//!                     format: TextureFormat::Rgba8UnormSrgb,
+//!                     usages,
+//!                     ..Default::default()
+//!                 },
+//!             )
+//!             .add_buffer(Self::DEMO_BUFFER,
+//!                 Buffer {
+//!                     label: "demo-buffer".to_string(),
+//!                     size: 1024,
+//!                     usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
+//!                     content: None,
+//!                 },
+//!             );
+//!     }
+//!
+//!     fn recreate((_, surface_resized): &SystemParamItem<Self::Params>) -> Option<bool> {
+//!         Some(surface_resized.get_cursor().read(surface_resized).next().is_some())
+//!     }
+//! }
+//!
+//! pub struct DeferredTexturesPlugin;
+//! impl Plugin for DeferredTexturesPlugin {
+//!     fn build(&self, app: &mut App) {
+//!         app.add_plugins(RenderDataRegisterPlugin::<DeferredTextures>::default());
+//!     }
+//! }
+//! ```
+//!
+//! To later update the content of a render data buffer/texture, request [`ResRenderData`](crate::assets::bindings::ResRenderData) in a system and use the corresponding getters to access the GPU resource:
+//! ```rust
+//! fn update_buffer(mut deferred_textures: ResRenderData<DeferredTextures>, mut buffers: ResMut<GpuBuffers>) {
+//!     let buffer = match buffer.iter().next() {
+//!         Some((_, buffer)) => match buffer.get_buffer(DeferredTextures::DEMO_BUFFER) {
+//!             Some(buffer) => buffer,
+//!             None => return
+//!         },
+//!         _ => return
+//!     };
+//!
+//!     // Update the buffer content with new data
+//!     // (...)
+//! }
+//! ```
+//!
+//! ## RenderBinding
+//! A [`RenderBinding`](crate::assets::bindings::RenderBinding) maps resources from [`GpuRenderData`](crate::assets::bindings::GpuRenderData) into a bind group layout + bind group pair ([`GpuRenderBinding`](crate::assets::bindings::GpuRenderBinding)).
+//! It is registered with [`RenderBindingRegisterPlugin`](crate::assets::bindings::RenderBindingRegisterPlugin).
+//!
+//! Example: build a bind group from the resolved deferred textures.
+//! ```
+//!
+//! #[derive(TypePath, Default, Clone, Asset)]
+//! struct RenderBindingResolved;
+//! impl RenderBinding for RenderBindingResolved {
+//!     type Params = SRenderData<DeferredTextures>;
+//!
+//!     fn describe(
+//!         deferred_textures: &SystemParamItem<Self::Params>,
+//!         builder: &mut RenderBindingBuilder,
+//!     ) {
+//!         builder
+//!             .add_texture_view(deferred_textures, DeferredTextures::ALBEDO_RESOLVED_IDX)
+//!             .add_texture_sampler(deferred_textures, DeferredTextures::ALBEDO_RESOLVED_IDX);
+//!     }
+//!
+//!     fn label(&self) -> &'static str { "deferred-textures-resolved-binding" }
+//! }
+//!
+//! pub struct DeferredBindingPlugin;
+//! impl Plugin for DeferredBindingPlugin {
+//!     fn build(&self, app: &mut App) {
+//!         app.add_plugins(RenderBindingRegisterPlugin::<RenderBindingResolved>::default());
+//!     }
+//! }
+//! ```
+//!
+//! ## Referencing In Pipelines
+//! To use a registered render binding in a pipeline preparation system, request [`SRenderBinding`](crate::assets::bindings::SRenderBinding) in the render asset params and use its `layout`/`bind_group`.
+//! ```
+//! type Params = (
+//!     SRenderBinding<RenderBindingResolved>
+//! );
+//!
+//! // In RenderPipelineDescriptor
+//! bind_group_layouts: vec![
+//!     // (...)
+//!     render_binding.iter().next().map(|(_, d)| d.layout.clone()),
+//! ],
+//! ```
+//!
+//! In the sub-pass, bind groups must match that same ordering:
+//! ```
+//! // (...)
+//! SubPassCommand::BindGroup(1, rbinding.iter().next().map(|(_, d)| d.bind_group.clone())),
+//! ```
+//!
+//! ## Plugin Order
+//! Register the underlying [`RenderData`](crate::assets::bindings::RenderData) plugin before the [`RenderBinding`](crate::assets::bindings::RenderBinding) plugin that depends on it.
+//! This allows the binding preparation to retry until all dependent GPU resources are ready, and to react correctly when data are recreated.
 
 mod asset;
-pub mod bindings;
+mod bindings;
 mod buffer;
 mod mesh;
 pub mod meshes;

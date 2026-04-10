@@ -13,17 +13,12 @@ use crate::prelude::*;
 ///  - It has a render index of 10.
 pub struct RenderPassDeferredGBuffer;
 impl RenderPass for RenderPassDeferredGBuffer {
-    type Params = (
-        SBinding<DeferredTextures>,
-        SBinding<DeferredTexturesResolved>,
-        SBinding<DepthTexture>
-    );
+    type Params = (SRenderData<DeferredTextures>, SBindingOld<DepthTexture>);
 
     fn describe(
-        (deferred_textures, deferred_textures_resolved, depth_texture): &SystemParamItem<
-            Self::Params
-        >
+        (deferred_textures, depth_texture): &SystemParamItem<Self::Params>
     ) -> RenderPassDesc {
+        let deferred_textures = deferred_textures.iter().next().map(|(_, t)| t).unwrap();
         RenderPassDesc {
             attachments_depth: Some(RenderPassDescDepthAttachment {
                 texture: depth_texture
@@ -36,40 +31,40 @@ impl RenderPass for RenderPassDeferredGBuffer {
             attachments_colors: Some(vec![
                 RenderPassDescColorAttachment {
                     texture: deferred_textures
-                        .iter()
-                        .next()
-                        .map(|(_, t)| t.get_texture(DeferredTextures::DEPTH_BINDING).unwrap())
-                        .unwrap(),
-                    resolve_target: deferred_textures_resolved.iter().next().map(|(_, t)| {
-                        t.get_texture(DeferredTexturesResolved::DEPTH_BINDING)
+                        .get_texture(DeferredTextures::DEPTH_IDX)
+                        .map(|t| t.id()),
+                    resolve_target: Some(
+                        deferred_textures
+                            .get_texture(DeferredTextures::DEPTH_RESOLVED_IDX)
                             .unwrap()
-                    }),
+                            .id()
+                    ),
                     load: LoadOp::Clear(Color::BLACK),
                     ..default()
                 },
                 RenderPassDescColorAttachment {
                     texture: deferred_textures
-                        .iter()
-                        .next()
-                        .map(|(_, t)| t.get_texture(DeferredTextures::ALBEDO_BINDING).unwrap())
-                        .unwrap(),
-                    resolve_target: deferred_textures_resolved.iter().next().map(|(_, t)| {
-                        t.get_texture(DeferredTexturesResolved::ALBEDO_BINDING)
+                        .get_texture(DeferredTextures::ALBEDO_IDX)
+                        .map(|t| t.id()),
+                    resolve_target: Some(
+                        deferred_textures
+                            .get_texture(DeferredTextures::ALBEDO_RESOLVED_IDX)
                             .unwrap()
-                    }),
+                            .id()
+                    ),
                     load: LoadOp::Clear(Color::BLACK),
                     ..default()
                 },
                 RenderPassDescColorAttachment {
                     texture: deferred_textures
-                        .iter()
-                        .next()
-                        .map(|(_, t)| t.get_texture(DeferredTextures::NORMAL_BINDING).unwrap())
-                        .unwrap(),
-                    resolve_target: deferred_textures_resolved.iter().next().map(|(_, t)| {
-                        t.get_texture(DeferredTexturesResolved::NORMAL_BINDING)
+                        .get_texture(DeferredTextures::NORMAL_IDX)
+                        .map(|t| t.id()),
+                    resolve_target: Some(
+                        deferred_textures
+                            .get_texture(DeferredTextures::NORMAL_RESOLVED_IDX)
                             .unwrap()
-                    }),
+                            .id()
+                    ),
                     load: LoadOp::Clear(Color::BLACK),
                     ..default()
                 },

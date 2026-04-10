@@ -14,7 +14,7 @@ pub(crate) struct TerrainPassesPlugin;
 impl Plugin for TerrainPassesPlugin {
     fn build(&self, app: &mut App) {
         // Add the pipelines
-        app.add_plugins(RenderPipelinePluginRegister::<TerrainRenderPipeline>::default());
+        app.add_plugins(RenderPipelineRegisterPlugin::<TerrainRenderPipeline>::default());
 
         // Add the extract system for the render pass
         app.get_sub_app_mut(RenderApp)

@@ -38,11 +38,11 @@ impl RenderSubPass for SubRenderPassTerrainGround {
         SRes<TerrainRenderPassMesh>,
         SRes<RenderAssets<GpuMesh>>,
         SRes<RenderAssets<TerrainRenderPipeline>>,
-        SBinding<CameraRender>,
-        SBinding<TerrainMaterials>,
-        SBinding<TerrainBuffer>,
+        SBindingOld<CameraRender>,
+        SBindingOld<TerrainMaterials>,
+        SBindingOld<TerrainBuffer>,
         SRes<TerrainRendererGPU>,
-        SBinding<TerrainTileBgRender>
+        SBindingOld<TerrainTileBgRender>
     );
 
     fn describe(

@@ -8,12 +8,9 @@ use bevy::{
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{
-    deferred::{
-        batches::PbrMaterial, subpass::gbuffer_subpass_pbr::PushConstants,
-        transform::PbrSsboTransform
-    },
-    prelude::ssbo_batches::PbrSsboBatches
+use crate::deferred::{
+    batches::PbrMaterial,
+    subpass::{gbuffer_bindgroup::GBufferBindGroup, gbuffer_subpass_pbr::PushConstants}
 };
 
 #[derive(TypePath, Asset, Default, Clone)]
@@ -23,11 +20,10 @@ impl RenderAsset for GBufferRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBinding<CameraRender>,
-        SBinding<SsboMesh>,
-        SBinding<PbrSsboTransform>,
-        SMaterial<PbrMaterial>,
-        SBinding<PbrSsboBatches>
+        SBindingOld<CameraRender>,
+        SBindingOld<SsboMesh>,
+        SRenderBinding<GBufferBindGroup>,
+        SMaterial<PbrMaterial>
     );
 
     fn prepare(
@@ -37,9 +33,8 @@ impl RenderAsset for GBufferRenderPipeline {
             pipeline_manager,
             camera,
             ssbo_mesh,
-            ssbo_transform,
-            pbr_materials,
-            ssbo_batches
+            gbuffer_bg,
+            pbr_materials
         ): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(GBufferRenderPipeline(
@@ -51,9 +46,8 @@ impl RenderAsset for GBufferRenderPipeline {
                     bind_group_layouts: vec![
                         ssbo_mesh.iter().next().map(|(_, m)| m.layout.clone()),
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
-                        ssbo_transform.iter().next().map(|(_, t)| t.layout.clone()),
+                        gbuffer_bg.iter().next().map(|(_, t)| t.layout.clone()),
                         pbr_materials.iter().next().map(|(_, m)| m.layout.clone()),
-                        ssbo_batches.iter().next().map(|(_, b)| b.layout.clone()),
                     ],
                     depth: DepthDescriptor {
                         enabled: true,

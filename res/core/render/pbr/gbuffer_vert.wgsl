@@ -44,9 +44,7 @@ struct ObjectToWorld {
     obj_to_world:  mat4x4<f32>
 }
 @group(2) @binding(0) var<storage, read> in_raw_transform: array<ObjectToWorld>;
-
-// Instance to transform mapping ssbo
-@group(3) @binding(0) var<storage, read> in_instance_to_transform: array<u32>;
+@group(2) @binding(1) var<storage, read> in_instance_to_transform: array<u32>;
 
 // Function to compute the inverse of a 3x3 matrix
 fn inverse(m: mat3x3<f32>) -> mat3x3<f32> {

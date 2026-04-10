@@ -24,7 +24,7 @@ pub(crate) enum RenderBindingBuilderType {
 
 /// Utility to collect buffers/textures and binding metadata for a RenderBinding.
 #[derive(Default)]
-pub struct RenderBindingBuilder {
+pub struct RenderBindingBuilderOld {
     pub(crate) label: String,
     pub(crate) no_bind_group: bool,
     pub(crate) elements: Vec<(RenderBindingBuilderType, u32)>,
@@ -35,7 +35,7 @@ pub struct RenderBindingBuilder {
     pub(crate) texture_samplers: Vec<RenderBindingBuilderTextureSampler>,
     pub(crate) storage_textures: Vec<RenderBindingBuilderTextureView>
 }
-impl RenderBindingBuilder {
+impl RenderBindingBuilderOld {
     pub fn add_buffer(&mut self, binding: u32, buffer: Buffer) {
         self.buffers.push((binding, buffer, None));
         self.elements.push((
@@ -98,13 +98,13 @@ impl RenderBindingBuilder {
 /// Cache of partially built render binding descriptions waiting for GPU resources.
 #[derive(Default, Resource)]
 pub struct RenderBindingsBuilderCache {
-    renderbindings: HashMap<String, RenderBindingBuilder>
+    renderbindings: HashMap<String, RenderBindingBuilderOld>
 }
 impl RenderBindingsBuilderCache {
-    pub fn remove(&mut self, label: &str) -> Option<RenderBindingBuilder> {
+    pub fn remove(&mut self, label: &str) -> Option<RenderBindingBuilderOld> {
         self.renderbindings.remove(label)
     }
-    pub fn insert(&mut self, label: String, material: RenderBindingBuilder) {
+    pub fn insert(&mut self, label: String, material: RenderBindingBuilderOld) {
         self.renderbindings.insert(label, material);
     }
 }

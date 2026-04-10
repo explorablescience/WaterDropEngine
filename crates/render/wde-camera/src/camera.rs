@@ -6,7 +6,7 @@ use crate::view::{CameraUniform, CameraView};
 pub(crate) struct CameraFeature;
 impl Plugin for CameraFeature {
     fn build(&self, app: &mut App) {
-        app.add_plugins(RenderBindingPluginRegister::<CameraRender>::default());
+        app.add_plugins(RenderBindingPluginRegisterOld::<CameraRender>::default());
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<CameraUniform>()
@@ -33,8 +33,8 @@ pub struct ActiveCamera;
 /// This is the data that will be sent to the GPU each frame for the active camera. It contains the world-to-view and view-to-ndc matrices, as well as the camera position.
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct CameraRender;
-impl RenderBinding for CameraRender {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for CameraRender {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_buffer(
             0,
             Buffer {
@@ -66,7 +66,7 @@ fn extract(
 fn update_buffer(
     render_instance: Res<RenderInstance>,
     camera_uniform: Res<CameraUniform>,
-    camera_buffer: Res<RenderAssets<GpuRenderBinding<CameraRender>>>,
+    camera_buffer: Res<RenderAssets<GpuRenderBindingOld<CameraRender>>>,
     mut buffers: ResMut<RenderAssets<GpuBuffer>>
 ) {
     let camera_binding = match camera_buffer.iter().next() {

@@ -36,7 +36,7 @@ impl RenderAsset for ResolveRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBinding<RenderTexture>
+        SBindingOld<RenderTexture>
     );
 
     fn prepare(
@@ -67,7 +67,7 @@ impl RenderSubPass for SubRenderPassResolve {
     type Params = (
         SRes<RenderAssets<ResolveRenderPipeline>>,
         SRes<PostProcessingMesh>,
-        SBinding<RenderTexture>
+        SBindingOld<RenderTexture>
     );
 
     fn describe(

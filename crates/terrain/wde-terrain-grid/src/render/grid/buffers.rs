@@ -45,8 +45,8 @@ impl TerrainGridBuffer {
     pub const GRID_DESC_BIND: u32 = 0;
     pub const GRID_CHUNK_POS_BIND: u32 = 1;
 }
-impl RenderBinding for TerrainGridBuffer {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for TerrainGridBuffer {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_buffer(
             Self::GRID_DESC_BIND,
             Buffer {
@@ -83,7 +83,7 @@ impl RenderBinding for TerrainGridBuffer {
 
 pub(crate) fn update_render(
     cursor_pos: Res<TerrainCursorPos>,
-    terrain_buffer: Binding<TerrainGridBuffer>,
+    terrain_buffer: BindingOld<TerrainGridBuffer>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>
 ) {

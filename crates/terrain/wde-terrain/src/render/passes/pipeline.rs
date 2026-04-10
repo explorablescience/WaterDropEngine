@@ -20,10 +20,10 @@ impl RenderAsset for TerrainRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBinding<CameraRender>,
-        SBinding<TerrainMaterials>,
-        SBinding<TerrainBuffer>,
-        SBinding<TerrainTileBgRender>
+        SBindingOld<CameraRender>,
+        SBindingOld<TerrainMaterials>,
+        SBindingOld<TerrainBuffer>,
+        SBindingOld<TerrainTileBgRender>
     );
 
     fn prepare(

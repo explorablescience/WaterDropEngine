@@ -4,7 +4,7 @@ use wde_renderer::prelude::*;
 pub(crate) struct RenderTexturePlugin;
 impl Plugin for RenderTexturePlugin {
     fn build(&self, app: &mut App) {
-        let init_plugin = RenderBindingPluginRegister::<RenderTexture>::with_init(init, app);
+        let init_plugin = RenderBindingPluginRegisterOld::<RenderTexture>::with_init(init, app);
         app.add_plugins(init_plugin).add_systems(Update, resize);
     }
 }
@@ -18,8 +18,8 @@ impl Plugin for RenderTexturePlugin {
 /// - It is rendered to the swapchain in the final pass.
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct RenderTexture(pub Handle<Texture>);
-impl RenderBinding for RenderTexture {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for RenderTexture {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_texture_view(0, Some(self.0.clone()));
         builder.add_texture_sampler(1, Some(self.0.clone()));
     }
@@ -36,7 +36,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, window: Query<&W
         resolution.physical_height()
     )));
     let texture = asset_server.add(RenderTexture(texture));
-    commands.insert_resource(RenderBindingHolder(texture));
+    commands.insert_resource(RenderBindingHolderOld(texture));
 }
 
 fn resize(
@@ -47,7 +47,7 @@ fn resize(
     for event in window_resized_events.read() {
         let texture = asset_server.add(get_texture((event.width, event.height)));
         let texture = asset_server.add(RenderTexture(texture));
-        commands.insert_resource(RenderBindingHolder(texture));
+        commands.insert_resource(RenderBindingHolderOld(texture));
     }
 }
 

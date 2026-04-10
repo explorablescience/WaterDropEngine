@@ -16,13 +16,13 @@ pub(crate) struct TerrainGridPassesPlugin;
 impl Plugin for TerrainGridPassesPlugin {
     fn build(&self, app: &mut App) {
         // Add the render buffers
-        app.add_plugins(RenderBindingPluginRegister::<TerrainGridBuffer>::default());
+        app.add_plugins(RenderBindingPluginRegisterOld::<TerrainGridBuffer>::default());
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .add_systems(Render, buffers::update_render.in_set(RenderSet::Prepare));
 
         // Add the terrain grid render pipeline
-        app.add_plugins(RenderPipelinePluginRegister::<TerrainGridRenderPipeline>::default());
+        app.add_plugins(RenderPipelineRegisterPlugin::<TerrainGridRenderPipeline>::default());
 
         // Add the mesh for the terrain grid
         app.init_resource::<RenderSubPassTerrainGrid>()

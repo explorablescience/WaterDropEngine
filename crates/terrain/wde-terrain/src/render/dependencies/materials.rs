@@ -6,7 +6,8 @@ use wde_renderer::prelude::*;
 pub(crate) struct TerrainMaterialsPlugin;
 impl Plugin for TerrainMaterialsPlugin {
     fn build(&self, app: &mut App) {
-        let terrain_plugin = RenderBindingPluginRegister::<TerrainMaterials>::with_init(init, app);
+        let terrain_plugin =
+            RenderBindingPluginRegisterOld::<TerrainMaterials>::with_init(init, app);
         app.init_resource::<TerrainMaterialTextures>().add_plugins((
             ExtractResourcePlugin::<TerrainMaterialTextures>::default(),
             terrain_plugin
@@ -60,8 +61,8 @@ impl TerrainMaterials {
     pub const TERRAIN_ROUGHNESS_BINDING: u32 = 4;
     pub const TERRAIN_AO_BINDING: u32 = 6;
 }
-impl RenderBinding for TerrainMaterials {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for TerrainMaterials {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_texture_array_view(
             Self::TERRAIN_ALBEDO_BINDING,
             Some(self.albedo_array.clone())
@@ -163,7 +164,7 @@ fn init(
         mip_level_count: 0, // Auto-calculate max mip levels
         ..Default::default()
     });
-    commands.insert_resource(RenderBindingHolder(asset_server.add(TerrainMaterials {
+    commands.insert_resource(RenderBindingHolderOld(asset_server.add(TerrainMaterials {
         albedo_array,
         normal_array,
         roughness_array,
@@ -175,7 +176,7 @@ fn init(
 fn fill_arrays(
     render_instance: Res<RenderInstance>,
     textures: Res<RenderAssets<GpuTexture>>,
-    materials: Binding<TerrainMaterials>,
+    materials: BindingOld<TerrainMaterials>,
     material_textures: Res<TerrainMaterialTextures>,
     mut is_done: Local<bool>
 ) {

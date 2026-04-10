@@ -34,7 +34,7 @@ impl Plugin for PaintProcessorPlugin {
         app.add_plugins(ComputeCommandsBufferPlugin);
 
         // Add the pipelines
-        app.add_plugins(RenderPipelinePluginRegister::<PaintComputePipeline>::default());
+        app.add_plugins(RenderPipelineRegisterPlugin::<PaintComputePipeline>::default());
 
         // Add the render pass
         app.get_sub_app_mut(RenderApp)

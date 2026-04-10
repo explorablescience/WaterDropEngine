@@ -13,8 +13,8 @@ impl Plugin for LightsBindingPlugin {
     fn build(&self, app: &mut App) {
         // Add the render bindings
         app.add_plugins((
-            RenderBindingPluginRegister::<LightsBinding>::default(),
-            RenderBindingPluginRegister::<LightsBindingStaging>::default()
+            RenderBindingPluginRegisterOld::<LightsBinding>::default(),
+            RenderBindingPluginRegisterOld::<LightsBindingStaging>::default()
         ));
 
         // Add the systems to extract the lights from the world, and to update the lights buffer
@@ -28,8 +28,8 @@ impl Plugin for LightsBindingPlugin {
 
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct LightsBinding;
-impl RenderBinding for LightsBinding {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for LightsBinding {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_buffer(
             0,
             Buffer {
@@ -48,8 +48,8 @@ impl RenderBinding for LightsBinding {
 
 #[derive(Asset, Clone, TypePath, Default)]
 struct LightsBindingStaging;
-impl RenderBinding for LightsBindingStaging {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for LightsBindingStaging {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_buffer(
             0,
             Buffer {
@@ -89,8 +89,8 @@ fn extract(
 }
 
 fn update_lights_buffer(
-    lights_buffer: Binding<LightsBinding>,
-    lights_buffer_staging: Binding<LightsBindingStaging>,
+    lights_buffer: BindingOld<LightsBinding>,
+    lights_buffer_staging: BindingOld<LightsBindingStaging>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>,
     extracted_lights: Res<ExtractedLights>,

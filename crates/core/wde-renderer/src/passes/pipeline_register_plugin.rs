@@ -33,17 +33,17 @@ struct RenderPipelineAssetHolder<P: RenderAsset + TypePath>(pub Handle<RenderPip
 /// It should use the [`RenderPipelineAsset`] as its `SourceAsset` type.
 ///
 /// See [crate::passes] for more details and examples.
-pub struct RenderPipelinePluginRegister<P: RenderAsset + TypePath + Default> {
+pub struct RenderPipelineRegisterPlugin<P: RenderAsset + TypePath + Default> {
     _phantom: std::marker::PhantomData<P>
 }
-impl<P: RenderAsset + TypePath + Default> Default for RenderPipelinePluginRegister<P> {
+impl<P: RenderAsset + TypePath + Default> Default for RenderPipelineRegisterPlugin<P> {
     fn default() -> Self {
         Self {
             _phantom: std::marker::PhantomData
         }
     }
 }
-impl<P: RenderAsset + TypePath + Default> Plugin for RenderPipelinePluginRegister<P> {
+impl<P: RenderAsset + TypePath + Default> Plugin for RenderPipelineRegisterPlugin<P> {
     fn build(&self, app: &mut App) {
         // Add the render pipeline asset and its preparation plugin
         app.init_asset::<RenderPipelineAsset<P>>()

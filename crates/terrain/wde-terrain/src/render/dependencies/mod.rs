@@ -21,7 +21,7 @@ impl Plugin for BuffersPlugin {
 
         // Init the terrain material arrays
         app.add_plugins(TerrainMaterialsPlugin)
-            .add_plugins(RenderBindingPluginRegister::<TerrainBuffer>::default());
+            .add_plugins(RenderBindingPluginRegisterOld::<TerrainBuffer>::default());
         app.get_sub_app_mut(RenderApp).unwrap().add_systems(
             Render,
             update_terrain_tiles_buffer.in_set(RenderSet::Prepare)

@@ -19,8 +19,8 @@ impl RenderAsset for PaintComputePipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBinding<CommandsBuffer>,
-        SBinding<TerrainTileBgCompute>
+        SBindingOld<CommandsBuffer>,
+        SBindingOld<TerrainTileBgCompute>
     );
 
     fn prepare(

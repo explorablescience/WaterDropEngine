@@ -13,7 +13,7 @@ const MAX_COMMANDS: usize = 1000;
 pub struct ComputeCommandsBufferPlugin;
 impl Plugin for ComputeCommandsBufferPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(RenderBindingPluginRegister::<CommandsBuffer>::default());
+        app.add_plugins(RenderBindingPluginRegisterOld::<CommandsBuffer>::default());
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<CommandsBufferDescription>()
@@ -40,8 +40,8 @@ pub struct CommandsBufferDescription {
 
 #[derive(Asset, Clone, Debug, TypePath, Default)]
 pub struct CommandsBuffer;
-impl RenderBinding for CommandsBuffer {
-    fn describe(&self, builder: &mut RenderBindingBuilder) {
+impl RenderBindingOld for CommandsBuffer {
+    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
         builder.add_buffer(
             0,
             Buffer {
@@ -61,7 +61,7 @@ impl RenderBinding for CommandsBuffer {
 // System to update the terrain tiles buffer with the current visible tiles
 fn update_commands_buffer(
     render_instance: Res<RenderInstance>,
-    commands_buffer: Binding<CommandsBuffer>,
+    commands_buffer: BindingOld<CommandsBuffer>,
     mut commands_buffer_desc: ResMut<CommandsBufferDescription>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     mut extracted_commands: ResMut<ExtractedPaintCommands>,

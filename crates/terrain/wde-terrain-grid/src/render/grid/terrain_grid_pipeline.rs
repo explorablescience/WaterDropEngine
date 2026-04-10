@@ -17,8 +17,8 @@ impl RenderAsset for TerrainGridRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBinding<CameraRender>,
-        SBinding<TerrainGridBuffer>
+        SBindingOld<CameraRender>,
+        SBindingOld<TerrainGridBuffer>
     );
 
     fn prepare(

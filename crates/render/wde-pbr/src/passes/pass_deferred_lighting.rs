@@ -10,6 +10,29 @@ use wde_renderer::prelude::{Color, *};
 
 use crate::prelude::*;
 
+#[derive(TypePath, Default, Clone, Asset)]
+pub(crate) struct RenderBindingResolved;
+impl RenderBinding for RenderBindingResolved {
+    type Params = SRenderData<DeferredTextures>;
+
+    fn describe(
+        deferred_textures: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
+        builder
+            .add_texture_view(deferred_textures, DeferredTextures::DEPTH_RESOLVED_IDX)
+            .add_texture_sampler(deferred_textures, DeferredTextures::DEPTH_RESOLVED_IDX)
+            .add_texture_view(deferred_textures, DeferredTextures::ALBEDO_RESOLVED_IDX)
+            .add_texture_sampler(deferred_textures, DeferredTextures::ALBEDO_RESOLVED_IDX)
+            .add_texture_view(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX)
+            .add_texture_sampler(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX);
+    }
+
+    fn label(&self) -> &'static str {
+        "deferred-textures-resolved-binding"
+    }
+}
+
 /// The render pass for rendering the lighting of opaque objects in the deferred rendering pipeline.
 /// It uses the G-buffer textures rendered in the previous render pass [`crate::prelude::RenderPassGBuffer`] to calculate the lighting, and writes to the final render texture, which is then presented on the screen.
 ///
@@ -19,7 +42,7 @@ use crate::prelude::*;
 ///  - It has a render index of 20.
 pub struct RenderPassDeferredLighting;
 impl RenderPass for RenderPassDeferredLighting {
-    type Params = SBinding<RenderTexture>;
+    type Params = SBindingOld<RenderTexture>;
 
     fn describe(render_texture: &SystemParamItem<Self::Params>) -> RenderPassDesc {
         RenderPassDesc {
@@ -27,8 +50,7 @@ impl RenderPass for RenderPassDeferredLighting {
                 texture: render_texture
                     .iter()
                     .next()
-                    .map(|(_, t)| t.get_texture(0).unwrap())
-                    .unwrap(),
+                    .map(|(_, t)| t.get_texture(0).unwrap()),
                 load: LoadOp::Clear(Color::BLACK),
                 ..Default::default()
             }]),
@@ -51,15 +73,15 @@ impl RenderAsset for DeferredLightingPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBinding<CameraRender>,
-        SBinding<DeferredTexturesResolved>,
-        SBinding<LightsBinding>
+        SBindingOld<CameraRender>,
+        SRenderBinding<RenderBindingResolved>,
+        SBindingOld<LightsBinding>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera, tex, lights_buffer): &mut SystemParamItem<
-            Self::Params
+        (assets_server, pipeline_manager, camera, render_binding, lights_buffer): &mut SystemParamItem<
+            Self::Params,
         >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(DeferredLightingPipeline(
@@ -70,7 +92,7 @@ impl RenderAsset for DeferredLightingPipeline {
                     frag: Some(assets_server.load("core/render/pbr/lighting_frag.wgsl")),
                     bind_group_layouts: vec![
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
-                        tex.iter().next().map(|(_, d)| d.layout.clone()),
+                        render_binding.iter().next().map(|(_, d)| d.layout.clone()),
                         lights_buffer.iter().next().map(|(_, b)| b.layout.clone()),
                     ],
                     depth: DepthDescriptor {
@@ -91,19 +113,19 @@ impl RenderSubPass for SubRenderPassLightingPbr {
     type Params = (
         SRes<RenderAssets<DeferredLightingPipeline>>,
         SRes<PostProcessingMesh>,
-        SBinding<CameraRender>,
-        SBinding<DeferredTexturesResolved>,
-        SBinding<LightsBinding>
+        SBindingOld<CameraRender>,
+        SRenderBinding<RenderBindingResolved>,
+        SBindingOld<LightsBinding>
     );
 
     fn describe(
-        (pipeline, mesh, camera, textures, lights): &SystemParamItem<Self::Params>
+        (pipeline, mesh, camera, rbinding, lights): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::Mesh(mesh.0.as_ref().map(|m| m.id())),
             SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
-            SubPassCommand::BindGroup(1, textures.iter().next().map(|(_, d)| d.bind_group.clone())),
+            SubPassCommand::BindGroup(1, rbinding.iter().next().map(|(_, d)| d.bind_group.clone())),
             SubPassCommand::BindGroup(2, lights.iter().next().map(|(_, b)| b.bind_group.clone())),
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
                 index_range: 0..6,
