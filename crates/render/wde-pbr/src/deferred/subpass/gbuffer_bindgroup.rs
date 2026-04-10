@@ -15,7 +15,8 @@ impl RenderBinding for GBufferBindGroup {
         SRenderData<PbrSsboInstanceToTransform>
     );
 
-    fn describe(&mut self,
+    fn describe(
+        &mut self,
         (ssbo_transform, ssbo_instance_to_transform): &SystemParamItem<Self::Params>,
         builder: &mut wde_renderer::assets::RenderBindingBuilder
     ) {

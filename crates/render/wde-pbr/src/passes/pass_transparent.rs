@@ -24,7 +24,10 @@ impl RenderPass for RenderPassTransparent {
                 ..Default::default()
             }]),
             attachments_depth: Some(RenderPassDescDepthAttachment {
-                texture: depth_texture.iter().next().map(|(_, t)| t.get_texture(DepthTexture::DEPTH_IDX).unwrap().id()),
+                texture: depth_texture
+                    .iter()
+                    .next()
+                    .map(|(_, t)| t.get_texture(DepthTexture::DEPTH_IDX).unwrap().id()),
                 ..Default::default()
             })
         }

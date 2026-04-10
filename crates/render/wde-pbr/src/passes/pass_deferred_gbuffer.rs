@@ -21,7 +21,10 @@ impl RenderPass for RenderPassDeferredGBuffer {
         let deferred_textures = deferred_textures.iter().next().map(|(_, t)| t).unwrap();
         RenderPassDesc {
             attachments_depth: Some(RenderPassDescDepthAttachment {
-                texture: depth_texture.iter().next().map(|(_, t)| t.get_texture(DepthTexture::DEPTH_IDX).unwrap().id()),
+                texture: depth_texture
+                    .iter()
+                    .next()
+                    .map(|(_, t)| t.get_texture(DepthTexture::DEPTH_IDX).unwrap().id()),
                 load: LoadOp::Clear(1.0),
                 ..default()
             }),

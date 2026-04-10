@@ -6,7 +6,10 @@ use crate::view::{CameraUniform, CameraView};
 pub(crate) struct CameraFeature;
 impl Plugin for CameraFeature {
     fn build(&self, app: &mut App) {
-        app.add_plugins((RenderDataRegisterPlugin::<CameraRender>::default(), RenderBindingRegisterPlugin::<CameraBinding>::default()));
+        app.add_plugins((
+            RenderDataRegisterPlugin::<CameraRender>::default(),
+            RenderBindingRegisterPlugin::<CameraBinding>::default()
+        ));
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<CameraUniform>()
@@ -57,7 +60,11 @@ pub struct CameraBinding;
 impl RenderBinding for CameraBinding {
     type Params = SRenderData<CameraRender>;
 
-    fn describe(&mut self, camera_render: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        camera_render: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         builder.add_buffer(camera_render, CameraRender::CAMERA_IDX);
     }
 
@@ -85,10 +92,12 @@ fn update_buffer(
     mut buffers: ResMut<RenderAssets<GpuBuffer>>
 ) {
     let camera_buffer = match camera_buffer.iter().next() {
-        Some((_, binding)) => match buffers.get_mut(&binding.get_buffer(CameraRender::CAMERA_IDX).unwrap()) {
-            Some(buffer) => buffer,
-            None => return
-        },
+        Some((_, binding)) => {
+            match buffers.get_mut(&binding.get_buffer(CameraRender::CAMERA_IDX).unwrap()) {
+                Some(buffer) => buffer,
+                None => return
+            }
+        }
         None => return
     };
     let render_instance = render_instance.0.read().unwrap();

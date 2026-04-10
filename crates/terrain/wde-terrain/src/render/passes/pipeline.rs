@@ -9,7 +9,7 @@ use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::render::{
-    dependencies::{materials::TerrainMaterialsBinding, terrain_buffer::{TerrainBufferBinding}},
+    dependencies::{materials::TerrainMaterialsBinding, terrain_buffer::TerrainBufferBinding},
     renderer_gpu::TerrainTileBgRender
 };
 

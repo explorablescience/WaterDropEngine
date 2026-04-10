@@ -31,7 +31,7 @@ impl Plugin for PassesPlugin {
             RenderBindingRegisterPlugin::<RenderBindingResolved>::default(),
             RenderBindingRegisterPlugin::<LightsDataBinding>::default(),
             RenderPipelineRegisterPlugin::<ResolveRenderPipeline>::default(),
-            RenderPipelineRegisterPlugin::<DeferredLightingPipeline>::default(),
+            RenderPipelineRegisterPlugin::<DeferredLightingPipeline>::default()
         ));
     }
 }

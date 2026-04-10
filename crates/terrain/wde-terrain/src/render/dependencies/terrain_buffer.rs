@@ -66,7 +66,11 @@ pub struct TerrainBufferBinding;
 impl RenderBinding for TerrainBufferBinding {
     type Params = SRenderData<TerrainBuffer>;
 
-    fn describe(&mut self, buffer: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        buffer: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         builder.add_buffer(buffer, TerrainBuffer::DESC_BIND);
         builder.add_buffer(buffer, TerrainBuffer::TILES_BIND);
     }

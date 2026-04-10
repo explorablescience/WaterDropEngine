@@ -13,7 +13,10 @@ const MAX_COMMANDS: usize = 1000;
 pub struct ComputeCommandsBufferPlugin;
 impl Plugin for ComputeCommandsBufferPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((RenderDataRegisterPlugin::<CommandsBuffer>::default(), RenderBindingRegisterPlugin::<CommandsBufferBinding>::default()));
+        app.add_plugins((
+            RenderDataRegisterPlugin::<CommandsBuffer>::default(),
+            RenderBindingRegisterPlugin::<CommandsBufferBinding>::default()
+        ));
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<CommandsBufferDescription>()
@@ -38,13 +41,16 @@ pub struct CommandsBufferDescription {
     pub dirty_chunks: HashSet<ChunkPos>
 }
 
-
 #[derive(Asset, Clone, Debug, TypePath, Default)]
 pub struct CommandsBufferBinding;
 impl RenderBinding for CommandsBufferBinding {
     type Params = SRenderData<CommandsBuffer>;
 
-    fn describe(&mut self, command_buffer: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        command_buffer: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         builder.add_buffer(command_buffer, CommandsBuffer::BINDING);
     }
 
@@ -94,7 +100,11 @@ fn update_commands_buffer(
     }
 
     // Get the buffer
-    let commands_buffer = match commands_buffer.iter().next().and_then(|(_, b)| buffers.get(&b.get_buffer(CommandsBuffer::BINDING).unwrap())) {
+    let commands_buffer = match commands_buffer
+        .iter()
+        .next()
+        .and_then(|(_, b)| buffers.get(&b.get_buffer(CommandsBuffer::BINDING).unwrap()))
+    {
         Some(buffer) => buffer,
         None => return
     };

@@ -18,7 +18,11 @@ pub struct TerrainTileBgRender {
 impl RenderBinding for TerrainTileBgRender {
     type Params = ();
 
-    fn describe(&mut self, _params: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        _params: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         builder.add_texture_view_from_id(Some(self.heightmap.id()));
         builder.add_texture_sampler_from_id(Some(self.heightmap.id()));
         for i in 0..SPLAT_MAP_COUNT / 4 {
@@ -50,7 +54,11 @@ pub struct TerrainTileBgCompute {
 impl RenderBinding for TerrainTileBgCompute {
     type Params = ();
 
-    fn describe(&mut self, _params: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        _params: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         builder.add_storage_texture_from_id(Some(self.heightmap.id()));
         for i in 0..SPLAT_MAP_COUNT / 4 {
             if i as usize >= self.splatmaps.len() {

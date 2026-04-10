@@ -195,7 +195,10 @@ impl RenderBindingBuilder {
         )
     }
     /// Adds a texture array view directly from an asset id.
-    pub fn add_texture_array_view_from_id(&mut self, texture: Option<AssetId<Texture>>) -> &mut Self {
+    pub fn add_texture_array_view_from_id(
+        &mut self,
+        texture: Option<AssetId<Texture>>
+    ) -> &mut Self {
         self.add_texture_from_id(texture, RenderBindingType::TextureArrayView)
     }
     /// Adds a texture sampler to the render binding. The `render_data` parameter is the [`RenderData`](RenderData) that contains the texture, and the `render_data_idx` parameter is the index of the texture in this render data.
@@ -260,7 +263,11 @@ impl RenderBindingBuilder {
             .push((binding_type, self.textures.len() as u32 - 1));
         self
     }
-    fn add_texture_from_id(&mut self, texture: Option<AssetId<Texture>>, binding_type: RenderBindingType) -> &mut Self {
+    fn add_texture_from_id(
+        &mut self,
+        texture: Option<AssetId<Texture>>,
+        binding_type: RenderBindingType
+    ) -> &mut Self {
         if texture.is_none() {
             self.is_none = true;
         }
@@ -281,7 +288,11 @@ pub trait RenderBinding {
     type Params: ReadOnlySystemParam;
 
     /// Describes the render binding. This is used to specify the [`RenderData`](RenderData) that should be used to create the bind group layout and bind group entries, and to specify the binding index for each buffer and texture.
-    fn describe(&mut self, params: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder);
+    fn describe(
+        &mut self,
+        params: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    );
     /// Whether the gpu asset should be recreated. This is called every frame. The default is to never recreate (None).
     fn label(&self) -> &str;
 }

@@ -1,9 +1,9 @@
 use bevy::{
     ecs::system::{
         SystemParamItem,
-        lifetimeless::{SQuery, SRes},
+        lifetimeless::{SQuery, SRes}
     },
-    prelude::*,
+    prelude::*
 };
 use wde_renderer::prelude::*;
 
@@ -12,7 +12,7 @@ impl Plugin for RenderTexturePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
             RenderDataRegisterPlugin::<RenderTexture>::default(),
-            RenderBindingRegisterPlugin::<RenderTextureBinding>::default(),
+            RenderBindingRegisterPlugin::<RenderTextureBinding>::default()
         ));
     }
 }
@@ -37,7 +37,7 @@ impl RenderData for RenderTexture {
             let window = window.single().unwrap();
             (
                 window.resolution.physical_width(),
-                window.resolution.physical_height(),
+                window.resolution.physical_height()
             )
         };
         builder.add_texture(
@@ -49,7 +49,7 @@ impl RenderData for RenderTexture {
                 usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 sample_count: MSAA_SAMPLE_COUNT,
                 ..Default::default()
-            },
+            }
         );
     }
 
@@ -59,7 +59,7 @@ impl RenderData for RenderTexture {
                 .get_cursor()
                 .read(surface_resized)
                 .next()
-                .is_some(),
+                .is_some()
         )
     }
 }
@@ -73,7 +73,7 @@ impl RenderBinding for RenderTextureBinding {
     fn describe(
         &mut self,
         tex: &SystemParamItem<Self::Params>,
-        builder: &mut RenderBindingBuilder,
+        builder: &mut RenderBindingBuilder
     ) {
         builder.add_texture_view(tex, RenderTexture::BINDING);
         builder.add_texture_sampler(tex, RenderTexture::BINDING);

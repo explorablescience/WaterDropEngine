@@ -1,5 +1,5 @@
 use bevy::prelude::{App, Plugin};
-use wde_renderer::assets::{RenderBindingRegisterPlugin};
+use wde_renderer::assets::RenderBindingRegisterPlugin;
 
 pub(crate) mod build_batches;
 pub(crate) mod model;

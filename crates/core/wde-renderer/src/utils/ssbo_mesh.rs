@@ -55,7 +55,11 @@ pub struct SsboMeshBinding;
 impl RenderBinding for SsboMeshBinding {
     type Params = SRenderData<SsboMesh>;
 
-    fn describe(&mut self, render_binding: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        render_binding: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         builder.add_buffer(render_binding, SsboMesh::VERTEX_BUFFER_ID);
         builder.add_buffer(render_binding, SsboMesh::INDEX_BUFFER_ID);
     }
@@ -64,4 +68,3 @@ impl RenderBinding for SsboMeshBinding {
         "ssbo_mesh_binding"
     }
 }
-

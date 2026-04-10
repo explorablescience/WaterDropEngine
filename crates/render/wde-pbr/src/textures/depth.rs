@@ -1,4 +1,10 @@
-use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SQuery, SRes}}, prelude::*};
+use bevy::{
+    ecs::system::{
+        SystemParamItem,
+        lifetimeless::{SQuery, SRes}
+    },
+    prelude::*
+};
 use wde_renderer::prelude::*;
 
 /// Describes a depth texture that can be used in rendering.
@@ -22,14 +28,17 @@ impl RenderData for DepthTexture {
                 window.resolution.physical_height()
             )
         };
-        builder.add_texture(Self::DEPTH_IDX, Texture {
-            label: "depth".to_string(),
-            size,
-            format: DEPTH_FORMAT,
-            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-            sample_count: MSAA_SAMPLE_COUNT,
-            ..Default::default()
-        });
+        builder.add_texture(
+            Self::DEPTH_IDX,
+            Texture {
+                label: "depth".to_string(),
+                size,
+                format: DEPTH_FORMAT,
+                usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+                sample_count: MSAA_SAMPLE_COUNT,
+                ..Default::default()
+            }
+        );
     }
 
     fn recreate((_, surface_resized): &SystemParamItem<Self::Params>) -> Option<bool> {

@@ -3,14 +3,12 @@ use wde_logger::prelude::*;
 use crate::prelude::*;
 use bevy::{
     ecs::system::{
-        StaticSystemParam, SystemParam, SystemParamItem, SystemState, lifetimeless::{SRes, SResMut}
+        StaticSystemParam, SystemParam, SystemParamItem, SystemState,
+        lifetimeless::{SRes, SResMut}
     },
     prelude::*
 };
-use std::{
-    any::TypeId,
-    collections::HashMap
-};
+use std::{any::TypeId, collections::HashMap};
 
 #[derive(Message)]
 pub(crate) struct RenderDataRecreated(pub TypeId);
@@ -160,7 +158,7 @@ struct RenderDataHolderHandle<R: RenderData + TypePath + Sync + Send>(Handle<Ren
 #[derive(Asset, Clone, TypePath)]
 pub struct RenderDataHolder<R: RenderData + TypePath + Sync + Send> {
     _phantom: std::marker::PhantomData<R>,
-    builder: RenderDataBuilder,
+    builder: RenderDataBuilder
 }
 
 // ============= RENDER DATA RENDER ASSET GPU CREATION =============

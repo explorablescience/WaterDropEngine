@@ -40,8 +40,8 @@ impl RenderData for LightsData {
                     label: "lights-buffer-gpu".to_string(),
                     size: std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
                     usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
-                    content: None,
-                },
+                    content: None
+                }
             )
             .add_buffer(
                 Self::LIGHTS_BUFFER_STAGING_IDX,
@@ -49,8 +49,8 @@ impl RenderData for LightsData {
                     label: "lights-buffer-staging".to_string(),
                     size: std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
                     usage: BufferUsage::COPY_SRC | BufferUsage::COPY_DST,
-                    content: None,
-                },
+                    content: None
+                }
             );
     }
 }
@@ -59,14 +59,14 @@ impl RenderData for LightsData {
 struct ExtractedLights {
     pub directional_lights: Vec<DirectionalLight>,
     pub point_lights: Vec<PointLight>,
-    pub spot_lights: Vec<SpotLight>,
+    pub spot_lights: Vec<SpotLight>
 }
 
 fn extract(
     lights_directional: ExtractWorld<Query<&DirectionalLight>>,
     lights_point: ExtractWorld<Query<&PointLight>>,
     lights_spot: ExtractWorld<Query<&SpotLight>>,
-    mut extracted_lights: ResMut<ExtractedLights>,
+    mut extracted_lights: ResMut<ExtractedLights>
 ) {
     // Extract lights each frame. This is necessary to keep the lights buffer up to date, and to handle dynamic lights.
     extracted_lights.directional_lights = lights_directional.iter().copied().collect();
@@ -79,7 +79,7 @@ fn update_lights_buffer(
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>,
     extracted_lights: Res<ExtractedLights>,
-    mut local_frame_counter: Local<bool>,
+    mut local_frame_counter: Local<bool>
 ) {
     // If even frame, skip updating to reduce overhead
     if *local_frame_counter {
@@ -91,11 +91,15 @@ fn update_lights_buffer(
 
     // Get the lights buffer
     let lights_buffer_cpu = match lights_buffer.iter().next() {
-        Some((_, buffer)) => match buffers.get(&buffer.get_buffer(LightsData::LIGHTS_BUFFER_STAGING_IDX).unwrap()) {
+        Some((_, buffer)) => match buffers.get(
+            &buffer
+                .get_buffer(LightsData::LIGHTS_BUFFER_STAGING_IDX)
+                .unwrap()
+        ) {
             Some(lights_buffer) => lights_buffer,
-            None => return,
+            None => return
         },
-        None => return,
+        None => return
     };
 
     let render_instance = render_instance.0.read().unwrap();
@@ -105,7 +109,7 @@ fn update_lights_buffer(
         lights_buffer_cpu.buffer.write(
             &render_instance,
             bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>(),
+            offset * std::mem::size_of::<LightsStorageElement>()
         );
         offset += 1;
     }
@@ -114,7 +118,7 @@ fn update_lights_buffer(
         lights_buffer_cpu.buffer.write(
             &render_instance,
             bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>(),
+            offset * std::mem::size_of::<LightsStorageElement>()
         );
         offset += 1;
     }
@@ -123,7 +127,7 @@ fn update_lights_buffer(
         lights_buffer_cpu.buffer.write(
             &render_instance,
             bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>(),
+            offset * std::mem::size_of::<LightsStorageElement>()
         );
         offset += 1;
     }
@@ -135,9 +139,17 @@ fn update_lights_buffer(
     }
 
     // Update the buffer
-    let lights_buffer_gpu = match buffers.get(&lights_buffer.iter().next().unwrap().1.get_buffer(LightsData::LIGHTS_BUFFER_IDX).unwrap()) {
+    let lights_buffer_gpu = match buffers.get(
+        &lights_buffer
+            .iter()
+            .next()
+            .unwrap()
+            .1
+            .get_buffer(LightsData::LIGHTS_BUFFER_IDX)
+            .unwrap()
+    ) {
         Some(buffer) => buffer,
-        None => return,
+        None => return
     };
     lights_buffer_gpu
         .buffer

@@ -15,7 +15,8 @@ pub(crate) struct RenderBindingResolved;
 impl RenderBinding for RenderBindingResolved {
     type Params = SRenderData<DeferredTextures>;
 
-    fn describe(&mut self,
+    fn describe(
+        &mut self,
         deferred_textures: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
@@ -38,7 +39,11 @@ pub(crate) struct LightsDataBinding;
 impl RenderBinding for LightsDataBinding {
     type Params = SRenderData<LightsData>;
 
-    fn describe(&mut self, lights_data: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        lights_data: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         builder.add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX);
     }
 

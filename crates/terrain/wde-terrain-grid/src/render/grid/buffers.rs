@@ -79,13 +79,16 @@ impl RenderData for TerrainGridBuffer {
     }
 }
 
-
 #[derive(Asset, Clone, Debug, Default, TypePath)]
 pub struct TerrainGridBufferBinding;
 impl RenderBinding for TerrainGridBufferBinding {
     type Params = SRenderData<TerrainGridBuffer>;
 
-    fn describe(&mut self, buffer: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        buffer: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         builder.add_buffer(buffer, TerrainGridBuffer::GRID_DESC_BIND);
         builder.add_buffer(buffer, TerrainGridBuffer::GRID_CHUNK_POS_BIND);
     }

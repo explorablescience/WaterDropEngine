@@ -1,4 +1,7 @@
-use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
+use bevy::{
+    ecs::system::{SystemParamItem, lifetimeless::SRes},
+    prelude::*
+};
 use wde_renderer::prelude::*;
 
 /// Uniform structure for PBR material data.
@@ -66,7 +69,7 @@ pub struct PbrMaterial {
     pub occlusion_t: Option<Handle<Texture>>,
 
     /// The buffer containing the material data. It is automatically created and updated if not set.
-    pub uniform_buffer: Option<Handle<Buffer>>,
+    pub uniform_buffer: Option<Handle<Buffer>>
 }
 impl Default for PbrMaterial {
     fn default() -> Self {
@@ -90,7 +93,11 @@ impl Default for PbrMaterial {
 impl RenderBinding for PbrMaterial {
     type Params = (SRes<AssetServer>, SRes<PlaceholderTexture>);
 
-    fn describe(&mut self, (asset_server, placeholder_tex): &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+    fn describe(
+        &mut self,
+        (asset_server, placeholder_tex): &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
         // Create the uniform buffer
         let uniform = PbrMaterialUniform {
             flags: [

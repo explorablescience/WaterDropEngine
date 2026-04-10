@@ -9,7 +9,7 @@ use wde_renderer::prelude::*;
 use wde_terrain::render::renderer_gpu::TerrainTileBgCompute;
 
 use crate::processor::{
-    compute::computepass::TileInfo, resources::commands_buffer::{CommandsBufferBinding}
+    compute::computepass::TileInfo, resources::commands_buffer::CommandsBufferBinding
 };
 
 #[derive(Default, Asset, Clone, TypePath)]

@@ -9,7 +9,7 @@ use crate::{
     prelude::{TerrainExtractor, TerrainRenderer},
     render::{
         dependencies::{
-            materials::TerrainMaterialsBinding, terrain_buffer::{TerrainBufferBinding},
+            materials::TerrainMaterialsBinding, terrain_buffer::TerrainBufferBinding,
             terrain_mesh::TerrainRenderPassMesh
         },
         passes::pipeline::TerrainRenderPipeline,

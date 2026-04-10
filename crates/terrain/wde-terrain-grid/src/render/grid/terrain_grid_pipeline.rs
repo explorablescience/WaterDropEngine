@@ -8,7 +8,7 @@ use bevy::{
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::render::grid::buffers::{TerrainGridBufferBinding};
+use crate::render::grid::buffers::TerrainGridBufferBinding;
 
 #[derive(Clone, Default, Debug, TypePath)]
 pub struct TerrainGridRenderPipeline(pub CachedPipelineIndex);

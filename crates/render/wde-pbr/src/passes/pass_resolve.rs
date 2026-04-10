@@ -8,7 +8,7 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 
-use crate::prelude::{RenderTextureBinding};
+use crate::prelude::RenderTextureBinding;
 
 /// The render pass for resolving the multisampled [`crate::logic::render_texture::RenderTexture`], which is the color attachment of the deferred lighting pass, to the swapchain texture, which is then presented on the screen.
 ///
