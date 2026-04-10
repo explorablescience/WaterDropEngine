@@ -136,12 +136,8 @@ pub struct Extract;
 pub enum RenderSet {
     /// Run the extract commands registered during the extract schedule. This set is executed automatically and should not be used directly. Instead, use the Extract schedule.
     ExtractAuto,
-    /// Initialize the newly created assets.
-    PrepareAssets,
-    /// Prepare resources before rendering. This includes updating buffers, textures, etc.
+    /// Prepare resources before rendering. This includes updating buffers, textures, assets, bind groups, etc.
     Prepare,
-    /// Prepare the bind groups.
-    BindGroups,
     /// Render commands.
     Render,
     /// Submit commands.
@@ -160,13 +156,11 @@ impl Render {
         schedule.configure_sets(
             (
                 ExtractAuto,
-                PrepareAssets,
                 Prepare,
-                BindGroups,
                 Render,
                 Submit
             )
-                .chain()
+            .chain()
         );
 
         schedule

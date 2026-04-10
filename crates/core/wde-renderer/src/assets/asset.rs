@@ -91,7 +91,7 @@ impl<A: RenderAsset> Plugin for RenderAssetsPlugin<A> {
             .add_systems(Extract, extract_render_assets::<A>);
 
         // Add the prepare system to the renderer app
-        renderer_app.add_systems(Render, prepare_assets::<A>.in_set(RenderSet::PrepareAssets));
+        renderer_app.add_systems(Render, prepare_assets::<A>.in_set(RenderSet::Prepare));
     }
 }
 
