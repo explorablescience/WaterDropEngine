@@ -1,9 +1,6 @@
 use crate::{
-    deferred::{
-        batches::PbrMaterial,
-        subpass::{GBufferRenderPipeline, gbuffer_bindgroup::GBufferBindGroup}
-    },
-    prelude::build_batches::Batches
+    deferred::subpass::{GBufferRenderPipeline, gbuffer_bindgroup::GBufferBindGroup},
+    prelude::{PbrMaterial, build_batches::Batches}
 };
 use wde_logger::prelude::*;
 

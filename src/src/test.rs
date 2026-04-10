@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*};
 use wde::prelude::{Color as WdeColor, *};
 
 pub struct TestPlugin;
@@ -58,7 +58,8 @@ fn init_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
     )
     .unwrap();
     commands.spawn((
-        Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(1.0)),
-        PbrModel(model.models)
+        Transform::from_translation(Vec3::ZERO),
+        Mesh3d(model.models[0].0.clone()),
+        PbrMaterial3d(model.models[0].1.clone())
     ));
 }

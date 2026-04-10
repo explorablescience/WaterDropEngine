@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use wde_editor::prelude::*;
 use wde_pbr::prelude::*;
+use wde_renderer::prelude::*;
 
 use crate::{
     core::placement_config::PlacementConfig,
@@ -68,10 +69,15 @@ pub fn show_ui(
                                 .placement_entity
                                 .unwrap_or_else(|| commands.spawn_empty().id());
                             placement_ui.placement_entity = Some(entity);
-                            commands.entity(entity).insert((
+                            let mut entity = match commands.get_entity(entity) {
+                                Ok(entity) => entity,
+                                Err(_) => commands.entity(entity)
+                            };
+                            entity.insert((
                                 Transform::default()
                                     .with_translation(Vec3::new(10000.0, -10000.0, 10000.0)),
-                                PbrModel(entry.asset.models.clone())
+                                Mesh3d(entry.asset.models[0].0.clone()),
+                                PbrMaterial3d(entry.asset.models[0].1.clone()),
                             ));
                         } else {
                             reset_tool(
@@ -102,7 +108,7 @@ fn reset_tool(commands: &mut Commands, tool: PlacementTool, placement_ui: &mut P
         placement_ui.placement_entry_label = None;
         placement_ui.placement_entry = None;
         if let Some(entity) = placement_ui.placement_entity {
-            commands.entity(entity).remove::<PbrModel>();
+            commands.entity(entity).despawn();
             placement_ui.placement_entity = None;
         }
     }

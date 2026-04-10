@@ -78,17 +78,8 @@ fn update_lights_buffer(
     lights_buffer: ResRenderData<LightsData>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>,
-    extracted_lights: Res<ExtractedLights>,
-    mut local_frame_counter: Local<bool>
+    extracted_lights: Res<ExtractedLights>
 ) {
-    // If even frame, skip updating to reduce overhead
-    if *local_frame_counter {
-        *local_frame_counter = false;
-        return;
-    } else {
-        *local_frame_counter = true;
-    }
-
     // Get the lights buffer
     let lights_buffer_cpu = match lights_buffer.iter().next() {
         Some((_, buffer)) => match buffers.get(

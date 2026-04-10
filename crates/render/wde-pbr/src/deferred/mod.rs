@@ -55,9 +55,12 @@ mod batches;
 mod lights;
 mod subpass;
 mod transform;
+mod pbr_material;
 
 pub use batches::*;
 pub use lights::*;
+pub use transform::*;
+pub use pbr_material::{PbrMaterial, PbrMaterial3d};
 
 use crate::{
     deferred::{
@@ -75,7 +78,8 @@ impl Plugin for DeferredPlugin {
             LightsPlugin,
             DeferredDependenciesPlugin,
             PbrRenderPlugin,
-            PbrTransformPlugin
+            PbrTransformPlugin,
+            RenderBindingRegisterPlugin::<PbrMaterial>::default(),
         ));
 
         // Add the render graph nodes

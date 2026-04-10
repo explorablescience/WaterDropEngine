@@ -4,6 +4,14 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 
+use crate::prelude::PbrSsboTransformMarker;
+
+/// Marker component to indicate that an entity's transform should be included in the [PbrSsboTransform] updates.
+/// This automatically adds the [PbrSsboTransformMarker] to the entity.
+#[derive(Component)]
+#[require(PbrSsboTransformMarker)]
+pub struct PbrMaterial3d(pub Handle<PbrMaterial>);
+
 /// Uniform structure for PBR material data.
 ///
 /// The structure sent to the GPU is the following :
@@ -42,6 +50,8 @@ pub(crate) struct PbrMaterialUniform {
 }
 
 /// Describes a physically based rendering material.
+/// It contains the material properties such as albedo color, metallic and roughness intensity, as well as the textures for these properties. It also contains a uniform buffer that is automatically created and updated with the material data, which can be used in the shader to access the material properties.
+/// The [PbrMaterial3d] component is a wrapper around a handle to a [PbrMaterial] asset, which also adds the [PbrSsboTransformMarker] to the entity, indicating that its transform should be included in the [PbrSsboTransform](crate::prelude::PbrSsboTransform) updates.
 #[derive(Asset, Clone, TypePath)]
 pub struct PbrMaterial {
     pub label: String,
