@@ -21,7 +21,7 @@ use wde_wgpu::{
 };
 
 use crate::{
-    assets::{GpuBuffer, RenderAssets, SBindingOld},
+    assets::{GpuBuffer, RenderAssets, SRenderData},
     core::RenderInstance,
     utils::{SsboMesh, ssbo_mesh::SsboMeshDescriptor}
 };
@@ -77,7 +77,7 @@ impl RenderAsset for GpuMesh {
     type Params = (
         SRes<RenderInstance>,
         SResMut<SsboMeshDescriptor>,
-        SBindingOld<SsboMesh>,
+        SRenderData<SsboMesh>,
         SRes<RenderAssets<GpuBuffer>>
     );
 
@@ -97,8 +97,8 @@ impl RenderAsset for GpuMesh {
 
         // Get the ssbo buffers
         let (ssbo_vertex_buffer, ssbo_index_buffer) = match (
-            gpu_buffers.get(ssbo.get_buffer(SsboMesh::VERTEX_BUFFER_ID).unwrap()),
-            gpu_buffers.get(ssbo.get_buffer(SsboMesh::INDEX_BUFFER_ID).unwrap())
+            gpu_buffers.get(&ssbo.get_buffer(SsboMesh::VERTEX_BUFFER_ID).unwrap()),
+            gpu_buffers.get(&ssbo.get_buffer(SsboMesh::INDEX_BUFFER_ID).unwrap())
         ) {
             (Some(vb), Some(ib)) => (vb, ib),
             _ => return Err(PrepareAssetError::RetryNextUpdate(asset))

@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::bindings::{builder::RenderBindingsBuilderCache, dummy_texture::DummyTexturePlugin},
+    assets::bindings::{builder::RenderBindingsBuilderCache, placeholder_texture::DummyTexturePlugin},
     core::RenderApp
 };
 
 mod builder;
-mod dummy_texture;
+mod placeholder_texture;
 mod material;
 mod render_binding;
 mod render_binding_old;
@@ -20,6 +20,7 @@ pub use render_data::{
     GpuRenderData, RenderData, RenderDataBuilder, RenderDataRegisterPlugin, ResMutRenderData,
     ResRenderData, SRenderData, SRenderDataMut
 };
+pub use placeholder_texture::PlaceholderTexture;
 
 pub(crate) struct MaterialsPlugin;
 impl Plugin for MaterialsPlugin {

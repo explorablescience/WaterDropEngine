@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
 use wde_renderer::prelude::*;
 
 /// Uniform structure for PBR material data.
@@ -63,7 +63,10 @@ pub struct PbrMaterial {
     pub normal_t: Option<Handle<Texture>>,
     /// The occlusion texture of the material instance.
     /// The occlusion value is stored in the red channel.
-    pub occlusion_t: Option<Handle<Texture>>
+    pub occlusion_t: Option<Handle<Texture>>,
+
+    /// The buffer containing the material data. It is automatically created and updated if not set.
+    pub uniform_buffer: Option<Handle<Buffer>>,
 }
 impl Default for PbrMaterial {
     fn default() -> Self {
@@ -78,13 +81,16 @@ impl Default for PbrMaterial {
             metallic_roughness_t: None,
 
             normal_t: None,
-            occlusion_t: None
+            occlusion_t: None,
+
+            uniform_buffer: None
         }
     }
 }
-impl Material for PbrMaterial {}
-impl RenderBindingOld for PbrMaterial {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
+impl RenderBinding for PbrMaterial {
+    type Params = (SRes<AssetServer>, SRes<PlaceholderTexture>);
+
+    fn describe(&mut self, (asset_server, placeholder_tex): &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
         // Create the uniform buffer
         let uniform = PbrMaterialUniform {
             flags: [
@@ -102,25 +108,46 @@ impl RenderBindingOld for PbrMaterial {
             roughness: self.roughness,
             _padding: [0.0, 0.0]
         };
-
-        // Build the material
-        builder.add_buffer(
-            0,
-            Buffer {
+        if self.uniform_buffer.is_none() {
+            let uniform_handle = asset_server.add(Buffer {
                 label: format!("{}-uniform-buffer", self.label),
                 size: std::mem::size_of::<PbrMaterialUniform>(),
                 usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
                 content: Some(bytemuck::cast_slice(&[uniform]).to_vec())
-            }
-        );
-        builder.add_texture_view(1, self.albedo_t.clone());
-        builder.add_texture_sampler(2, self.albedo_t.clone());
-        builder.add_texture_view(3, self.metallic_roughness_t.clone());
-        builder.add_texture_sampler(4, self.metallic_roughness_t.clone());
-        builder.add_texture_view(5, self.normal_t.clone());
-        builder.add_texture_sampler(6, self.normal_t.clone());
-        builder.add_texture_view(7, self.occlusion_t.clone());
-        builder.add_texture_sampler(8, self.occlusion_t.clone());
+            });
+            self.uniform_buffer = Some(uniform_handle);
+        }
+
+        // Build the material
+        builder.add_buffer_from_id(Some(self.uniform_buffer.as_ref().unwrap().id()));
+        if let Some(albedo_t) = &self.albedo_t {
+            builder.add_texture_view_from_id(Some(albedo_t.id()));
+            builder.add_texture_sampler_from_id(Some(albedo_t.id()));
+        } else {
+            builder.add_texture_view_from_id(Some(placeholder_tex.0.id()));
+            builder.add_texture_sampler_from_id(Some(placeholder_tex.0.id()));
+        }
+        if let Some(metallic_roughness_t) = &self.metallic_roughness_t {
+            builder.add_texture_view_from_id(Some(metallic_roughness_t.id()));
+            builder.add_texture_sampler_from_id(Some(metallic_roughness_t.id()));
+        } else {
+            builder.add_texture_view_from_id(Some(placeholder_tex.0.id()));
+            builder.add_texture_sampler_from_id(Some(placeholder_tex.0.id()));
+        }
+        if let Some(normal_t) = &self.normal_t {
+            builder.add_texture_view_from_id(Some(normal_t.id()));
+            builder.add_texture_sampler_from_id(Some(normal_t.id()));
+        } else {
+            builder.add_texture_view_from_id(Some(placeholder_tex.0.id()));
+            builder.add_texture_sampler_from_id(Some(placeholder_tex.0.id()));
+        }
+        if let Some(occlusion_t) = &self.occlusion_t {
+            builder.add_texture_view_from_id(Some(occlusion_t.id()));
+            builder.add_texture_sampler_from_id(Some(occlusion_t.id()));
+        } else {
+            builder.add_texture_view_from_id(Some(placeholder_tex.0.id()));
+            builder.add_texture_sampler_from_id(Some(placeholder_tex.0.id()));
+        }
     }
 
     fn label(&self) -> &str {

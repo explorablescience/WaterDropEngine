@@ -18,9 +18,9 @@ pub(crate) struct SubRenderPassGbufferPbr;
 impl RenderSubPass for SubRenderPassGbufferPbr {
     type Params = (
         SRes<RenderAssets<GBufferRenderPipeline>>,
-        SBindingOld<CameraRender>,
+        SRenderBinding<CameraBinding>,
         SRenderBinding<GBufferBindGroup>,
-        SBindingOld<SsboMesh>
+        SRenderBinding<SsboMeshBinding>
     );
 
     fn describe(
@@ -58,7 +58,7 @@ pub(crate) struct PushConstants {
 fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
     let batches = world.get_resource::<Batches>().unwrap();
     let materials = world
-        .get_resource::<RenderAssets<GpuMaterial<PbrMaterial>>>()
+        .get_resource::<RenderAssets<GpuRenderBinding<PbrMaterial>>>()
         .unwrap();
     let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
 

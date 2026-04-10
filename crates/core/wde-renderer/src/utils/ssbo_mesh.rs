@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_wgpu::{buffer::BufferUsage, utils::Vertex};
 
 use crate::prelude::*;
@@ -25,8 +25,10 @@ impl SsboMesh {
     pub const VERTEX_BUFFER_ID: u32 = 0;
     pub const INDEX_BUFFER_ID: u32 = 1;
 }
-impl RenderBindingOld for SsboMesh {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
+impl RenderData for SsboMesh {
+    type Params = ();
+
+    fn describe(_params: &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder.add_buffer(
             Self::VERTEX_BUFFER_ID,
             Buffer {
@@ -47,3 +49,19 @@ impl RenderBindingOld for SsboMesh {
         );
     }
 }
+
+#[derive(Asset, Clone, TypePath, Default)]
+pub struct SsboMeshBinding;
+impl RenderBinding for SsboMeshBinding {
+    type Params = SRenderData<SsboMesh>;
+
+    fn describe(&mut self, render_binding: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+        builder.add_buffer(render_binding, SsboMesh::VERTEX_BUFFER_ID);
+        builder.add_buffer(render_binding, SsboMesh::INDEX_BUFFER_ID);
+    }
+
+    fn label(&self) -> &'static str {
+        "ssbo_mesh_binding"
+    }
+}
+

@@ -4,7 +4,7 @@ use wde_wgpu::pipelines::{BindGroup, BindGroupBuilder, BindGroupLayout};
 use crate::{
     assets::bindings::{
         builder::{RenderBindingBuilderType, RenderBindingsBuilderCache},
-        dummy_texture::DummyTexture
+        placeholder_texture::PlaceholderTexture
     },
     prelude::*
 };
@@ -157,7 +157,7 @@ impl<M: RenderBindingOld> RenderAsset for GpuRenderBindingOld<M> {
         SRes<RenderInstance>,
         SResMut<RenderBindingsBuilderCache>,
         SRes<AssetServer>,
-        SRes<DummyTexture>,
+        SRes<PlaceholderTexture>,
         SRes<RenderAssets<GpuBuffer>>,
         SRes<RenderAssets<GpuTexture>>
     );

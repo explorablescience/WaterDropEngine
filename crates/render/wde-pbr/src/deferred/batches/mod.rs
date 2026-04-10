@@ -1,5 +1,5 @@
 use bevy::prelude::{App, Plugin};
-use wde_renderer::assets::MaterialsPluginRegister;
+use wde_renderer::assets::{RenderBindingRegisterPlugin};
 
 pub(crate) mod build_batches;
 pub(crate) mod model;
@@ -19,7 +19,7 @@ impl Plugin for DeferredDependenciesPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
             BatchesPlugin,
-            MaterialsPluginRegister::<PbrMaterial>::default(),
+            RenderBindingRegisterPlugin::<PbrMaterial>::default(),
             SsboInstancesToTransformPlugin
         ));
     }

@@ -9,9 +9,9 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::RenderBindingPluginRegisterOld,
+    assets::{RenderBindingRegisterPlugin, RenderDataRegisterPlugin},
     core::{ExtractResourcePlugin, RenderApp},
-    utils::ssbo_mesh::SsboMeshDescriptor
+    utils::ssbo_mesh::{SsboMeshDescriptor}
 };
 
 mod color;
@@ -20,7 +20,7 @@ pub(crate) mod ssbo_mesh;
 
 pub use color::Color;
 pub use post_process_mesh::PostProcessingMesh;
-pub use ssbo_mesh::SsboMesh;
+pub use ssbo_mesh::{SsboMesh, SsboMeshBinding};
 
 /** Multisample anti-aliasing sample count used throughout the renderer. */
 pub const MSAA_SAMPLE_COUNT: u32 = 4;
@@ -29,7 +29,7 @@ pub(crate) struct UtilsPlugin;
 impl Plugin for UtilsPlugin {
     fn build(&self, app: &mut App) {
         // Add the ssbo
-        app.add_plugins(RenderBindingPluginRegisterOld::<SsboMesh>::default());
+        app.add_plugins((RenderDataRegisterPlugin::<SsboMesh>::default(), RenderBindingRegisterPlugin::<SsboMeshBinding>::default()));
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<SsboMeshDescriptor>();

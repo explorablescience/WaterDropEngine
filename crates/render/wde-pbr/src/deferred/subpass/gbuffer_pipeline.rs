@@ -20,10 +20,10 @@ impl RenderAsset for GBufferRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBindingOld<CameraRender>,
-        SBindingOld<SsboMesh>,
+        SRenderBinding<CameraBinding>,
+        SRenderBinding<SsboMeshBinding>,
         SRenderBinding<GBufferBindGroup>,
-        SMaterial<PbrMaterial>
+        SRenderBinding<PbrMaterial>
     );
 
     fn prepare(

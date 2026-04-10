@@ -20,7 +20,7 @@ impl RenderAsset for TerrainRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBindingOld<CameraRender>,
+        SRenderBinding<CameraBinding>,
         SBindingOld<TerrainMaterials>,
         SBindingOld<TerrainBuffer>,
         SBindingOld<TerrainTileBgRender>

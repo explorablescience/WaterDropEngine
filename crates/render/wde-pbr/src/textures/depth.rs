@@ -1,13 +1,5 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SQuery, SRes}}, prelude::*};
 use wde_renderer::prelude::*;
-
-pub(crate) struct DepthTexturePlugin;
-impl Plugin for DepthTexturePlugin {
-    fn build(&self, app: &mut App) {
-        let init_plugin = RenderBindingPluginRegisterOld::<DepthTexture>::with_init(init, app);
-        app.add_plugins(init_plugin).add_systems(Update, resize);
-    }
-}
 
 /// Describes a depth texture that can be used in rendering.
 ///
@@ -16,42 +8,37 @@ impl Plugin for DepthTexturePlugin {
 /// - It is created and resized automatically based on the window size
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct DepthTexture(pub Handle<Texture>);
-impl RenderBindingOld for DepthTexture {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
-        builder.add_texture_view(0, Some(self.0.clone()));
-        builder.add_texture_sampler(1, Some(self.0.clone()));
+impl DepthTexture {
+    pub const DEPTH_IDX: u32 = 0;
+}
+impl RenderData for DepthTexture {
+    type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
+
+    fn describe((window, _): &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+        let size = {
+            let window = window.single().unwrap();
+            (
+                window.resolution.physical_width(),
+                window.resolution.physical_height()
+            )
+        };
+        builder.add_texture(Self::DEPTH_IDX, Texture {
+            label: "depth".to_string(),
+            size,
+            format: DEPTH_FORMAT,
+            usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+            sample_count: MSAA_SAMPLE_COUNT,
+            ..Default::default()
+        });
     }
-}
 
-fn init(mut commands: Commands, asset_server: Res<AssetServer>, window: Query<&Window>) {
-    let resolution = &window.single().unwrap().resolution;
-    let texture = asset_server.add(get_texture((
-        resolution.physical_width(),
-        resolution.physical_height()
-    )));
-    let texture = asset_server.add(DepthTexture(texture));
-    commands.insert_resource(RenderBindingHolderOld(texture));
-}
-
-fn resize(
-    mut commands: Commands,
-    mut window_resized_events: MessageReader<SurfaceResized>,
-    asset_server: Res<AssetServer>
-) {
-    for event in window_resized_events.read() {
-        let texture = asset_server.add(get_texture((event.width, event.height)));
-        let texture = asset_server.add(DepthTexture(texture));
-        commands.insert_resource(RenderBindingHolderOld(texture));
-    }
-}
-
-fn get_texture(size: (u32, u32)) -> Texture {
-    Texture {
-        label: "depth".to_string(),
-        size,
-        format: DEPTH_FORMAT,
-        usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-        sample_count: MSAA_SAMPLE_COUNT,
-        ..Default::default()
+    fn recreate((_, surface_resized): &SystemParamItem<Self::Params>) -> Option<bool> {
+        Some(
+            surface_resized
+                .get_cursor()
+                .read(surface_resized)
+                .next()
+                .is_some()
+        )
     }
 }

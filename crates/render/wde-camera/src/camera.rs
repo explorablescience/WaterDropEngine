@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::view::{CameraUniform, CameraView};
@@ -6,7 +6,7 @@ use crate::view::{CameraUniform, CameraView};
 pub(crate) struct CameraFeature;
 impl Plugin for CameraFeature {
     fn build(&self, app: &mut App) {
-        app.add_plugins(RenderBindingPluginRegisterOld::<CameraRender>::default());
+        app.add_plugins((RenderDataRegisterPlugin::<CameraRender>::default(), RenderBindingRegisterPlugin::<CameraBinding>::default()));
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<CameraUniform>()
@@ -29,14 +29,18 @@ pub struct Camera;
 #[require(Transform, CameraView, Camera)]
 pub struct ActiveCamera;
 
-/// Camera bind group that shaders can consume.
-/// This is the data that will be sent to the GPU each frame for the active camera. It contains the world-to-view and view-to-ndc matrices, as well as the camera position.
+/// Camera render data buffer. This is used to store the camera uniform data that will be sent to the GPU each frame.
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct CameraRender;
-impl RenderBindingOld for CameraRender {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
+impl CameraRender {
+    pub const CAMERA_IDX: u32 = 0;
+}
+impl RenderData for CameraRender {
+    type Params = ();
+
+    fn describe(_params: &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder.add_buffer(
-            0,
+            Self::CAMERA_IDX,
             Buffer {
                 label: "camera".to_string(),
                 size: std::mem::size_of::<CameraUniform>(),
@@ -44,6 +48,17 @@ impl RenderBindingOld for CameraRender {
                 content: None
             }
         );
+    }
+}
+
+/// Render binding containing only the camera buffer. This is used to bind the camera buffer to the GPU pipeline.
+#[derive(Asset, Clone, TypePath, Default)]
+pub struct CameraBinding;
+impl RenderBinding for CameraBinding {
+    type Params = SRenderData<CameraRender>;
+
+    fn describe(&mut self, camera_render: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+        builder.add_buffer(camera_render, CameraRender::CAMERA_IDX);
     }
 
     fn label(&self) -> &'static str {
@@ -66,19 +81,20 @@ fn extract(
 fn update_buffer(
     render_instance: Res<RenderInstance>,
     camera_uniform: Res<CameraUniform>,
-    camera_buffer: Res<RenderAssets<GpuRenderBindingOld<CameraRender>>>,
+    camera_buffer: ResRenderData<CameraRender>,
     mut buffers: ResMut<RenderAssets<GpuBuffer>>
 ) {
-    let camera_binding = match camera_buffer.iter().next() {
-        Some((_, binding)) => binding,
+    let camera_buffer = match camera_buffer.iter().next() {
+        Some((_, binding)) => match buffers.get_mut(&binding.get_buffer(CameraRender::CAMERA_IDX).unwrap()) {
+            Some(buffer) => buffer,
+            None => return
+        },
         None => return
     };
-    if let Some(camera_buffer) = buffers.get_mut(camera_binding.get_buffer(0).unwrap()) {
-        let render_instance = render_instance.0.read().unwrap();
-        camera_buffer.buffer.write(
-            &render_instance,
-            bytemuck::cast_slice(&[camera_uniform.to_owned()]),
-            0
-        );
-    }
+    let render_instance = render_instance.0.read().unwrap();
+    camera_buffer.buffer.write(
+        &render_instance,
+        bytemuck::cast_slice(&[camera_uniform.to_owned()]),
+        0
+    );
 }

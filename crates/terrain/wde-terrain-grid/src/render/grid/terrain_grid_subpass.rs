@@ -70,7 +70,7 @@ impl RenderSubPass for RenderSubPassTerrainGrid {
     type Params = (
         SRes<RenderAssets<TerrainGridRenderPipeline>>,
         SRes<RenderSubPassTerrainGrid>,
-        SBindingOld<CameraRender>,
+        SRenderBinding<CameraBinding>,
         SBindingOld<TerrainGridBuffer>
     );
 

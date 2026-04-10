@@ -3,7 +3,7 @@ use bevy::prelude::*;
 
 /// Placeholder texture used while real texture handles finish loading.
 #[derive(Resource)]
-pub struct DummyTexture(pub Handle<Texture>);
+pub struct PlaceholderTexture(pub Handle<Texture>);
 pub(crate) struct DummyTexturePlugin;
 impl Plugin for DummyTexturePlugin {
     fn build(&self, _app: &mut App) {}
@@ -20,6 +20,6 @@ impl Plugin for DummyTexturePlugin {
         );
         app.get_sub_app_mut(RenderApp)
             .unwrap()
-            .insert_resource(DummyTexture(dummy_texture));
+            .insert_resource(PlaceholderTexture(dummy_texture));
     }
 }

@@ -15,7 +15,7 @@ pub(crate) struct RenderBindingResolved;
 impl RenderBinding for RenderBindingResolved {
     type Params = SRenderData<DeferredTextures>;
 
-    fn describe(
+    fn describe(&mut self,
         deferred_textures: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
@@ -28,8 +28,22 @@ impl RenderBinding for RenderBindingResolved {
             .add_texture_sampler(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX);
     }
 
-    fn label(&self) -> &'static str {
+    fn label(&self) -> &str {
         "deferred-textures-resolved-binding"
+    }
+}
+
+#[derive(TypePath, Default, Clone, Asset)]
+pub(crate) struct LightsDataBinding;
+impl RenderBinding for LightsDataBinding {
+    type Params = SRenderData<LightsData>;
+
+    fn describe(&mut self, lights_data: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+        builder.add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX);
+    }
+
+    fn label(&self) -> &str {
+        "lights-data-binding"
     }
 }
 
@@ -73,9 +87,9 @@ impl RenderAsset for DeferredLightingPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBindingOld<CameraRender>,
+        SRenderBinding<CameraBinding>,
         SRenderBinding<RenderBindingResolved>,
-        SBindingOld<LightsBinding>
+        SRenderBinding<LightsDataBinding>
     );
 
     fn prepare(
@@ -113,9 +127,9 @@ impl RenderSubPass for SubRenderPassLightingPbr {
     type Params = (
         SRes<RenderAssets<DeferredLightingPipeline>>,
         SRes<PostProcessingMesh>,
-        SBindingOld<CameraRender>,
+        SRenderBinding<CameraBinding>,
         SRenderBinding<RenderBindingResolved>,
-        SBindingOld<LightsBinding>
+        SRenderBinding<LightsDataBinding>
     );
 
     fn describe(

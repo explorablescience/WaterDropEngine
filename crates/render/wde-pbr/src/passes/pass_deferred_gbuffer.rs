@@ -13,7 +13,7 @@ use crate::prelude::*;
 ///  - It has a render index of 10.
 pub struct RenderPassDeferredGBuffer;
 impl RenderPass for RenderPassDeferredGBuffer {
-    type Params = (SRenderData<DeferredTextures>, SBindingOld<DepthTexture>);
+    type Params = (SRenderData<DeferredTextures>, SRenderData<DepthTexture>);
 
     fn describe(
         (deferred_textures, depth_texture): &SystemParamItem<Self::Params>
@@ -21,10 +21,7 @@ impl RenderPass for RenderPassDeferredGBuffer {
         let deferred_textures = deferred_textures.iter().next().map(|(_, t)| t).unwrap();
         RenderPassDesc {
             attachments_depth: Some(RenderPassDescDepthAttachment {
-                texture: depth_texture
-                    .iter()
-                    .next()
-                    .and_then(|(_, t)| t.get_texture(0)),
+                texture: depth_texture.iter().next().map(|(_, t)| t.get_texture(DepthTexture::DEPTH_IDX).unwrap().id()),
                 load: LoadOp::Clear(1.0),
                 ..default()
             }),

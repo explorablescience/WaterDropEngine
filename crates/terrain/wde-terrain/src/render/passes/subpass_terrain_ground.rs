@@ -38,7 +38,7 @@ impl RenderSubPass for SubRenderPassTerrainGround {
         SRes<TerrainRenderPassMesh>,
         SRes<RenderAssets<GpuMesh>>,
         SRes<RenderAssets<TerrainRenderPipeline>>,
-        SBindingOld<CameraRender>,
+        SRenderBinding<CameraBinding>,
         SBindingOld<TerrainMaterials>,
         SBindingOld<TerrainBuffer>,
         SRes<TerrainRendererGPU>,

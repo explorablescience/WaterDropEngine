@@ -58,9 +58,7 @@ impl<R: RenderBinding + TypePath + Sync + Send + Clone + Asset + Default> Plugin
     }
 
     fn finish(&self, app: &mut App) {
-        let binding: Handle<R> = app.world_mut().add_asset(R::default());
-        app.world_mut()
-            .insert_resource(RenderBindingHolder(binding));
+        let mut default_res = R::default();
 
         // Register dependencies
         let builder = {
@@ -68,7 +66,7 @@ impl<R: RenderBinding + TypePath + Sync + Send + Clone + Asset + Default> Plugin
             let mut builder = RenderBindingBuilder::default();
             let mut state: SystemState<R::Params> = SystemState::new(world);
             let params = state.get_mut(world);
-            R::describe(&params, &mut builder);
+            R::describe(&mut default_res, &params, &mut builder);
             builder
         };
         app.world_mut()
@@ -76,6 +74,11 @@ impl<R: RenderBinding + TypePath + Sync + Send + Clone + Asset + Default> Plugin
                 _phantom: PhantomData,
                 dependencies: builder.dependencies
             });
+
+        // Create the asset and insert the handle in the resource
+        let binding: Handle<R> = app.world_mut().add_asset(default_res);
+        app.world_mut()
+            .insert_resource(RenderBindingHolder(binding));
     }
 }
 
@@ -162,6 +165,16 @@ impl RenderBindingBuilder {
             .push((RenderBindingType::Buffer, self.buffers.len() as u32 - 1));
         self
     }
+    /// Adds a buffer directly from an asset id.
+    pub fn add_buffer_from_id(&mut self, buffer: Option<AssetId<Buffer>>) -> &mut Self {
+        if buffer.is_none() {
+            self.is_none = true;
+        }
+        self.buffers.push(buffer);
+        self.elements
+            .push((RenderBindingType::Buffer, self.buffers.len() as u32 - 1));
+        self
+    }
     /// Adds a texture view to the render binding. The `render_data` parameter is the [`RenderData`](RenderData) that contains the texture, and the `render_data_idx` parameter is the index of the texture in this render data.
     pub fn add_texture_view<R>(
         &mut self,
@@ -172,6 +185,10 @@ impl RenderBindingBuilder {
         R: RenderData + Clone + Asset + 'static
     {
         self.add_texture(render_data, render_data_idx, RenderBindingType::TextureView)
+    }
+    /// Adds a texture view directly from an asset id.
+    pub fn add_texture_view_from_id(&mut self, texture: Option<AssetId<Texture>>) -> &mut Self {
+        self.add_texture_from_id(texture, RenderBindingType::TextureView)
     }
     /// Adds a texture array view to the render binding. The `render_data` parameter is the [`RenderData`](RenderData) that contains the texture, and the `render_data_idx` parameter is the index of the texture in this render data.
     pub fn add_texture_array_view<R>(
@@ -188,6 +205,10 @@ impl RenderBindingBuilder {
             RenderBindingType::TextureArrayView
         )
     }
+    /// Adds a texture array view directly from an asset id.
+    pub fn add_texture_array_view_from_id(&mut self, texture: Option<AssetId<Texture>>) -> &mut Self {
+        self.add_texture_from_id(texture, RenderBindingType::TextureArrayView)
+    }
     /// Adds a texture sampler to the render binding. The `render_data` parameter is the [`RenderData`](RenderData) that contains the texture, and the `render_data_idx` parameter is the index of the texture in this render data.
     pub fn add_texture_sampler<R>(
         &mut self,
@@ -203,6 +224,10 @@ impl RenderBindingBuilder {
             RenderBindingType::TextureSampler
         )
     }
+    /// Adds a texture sampler directly from an asset id.
+    pub fn add_texture_sampler_from_id(&mut self, texture: Option<AssetId<Texture>>) -> &mut Self {
+        self.add_texture_from_id(texture, RenderBindingType::TextureSampler)
+    }
     /// Adds a storage texture view to the render binding. The `render_data` parameter is the [`RenderData`](RenderData) that contains the texture, and the `render_data_idx` parameter is the index of the texture in this render data.
     pub fn add_storage_texture<R>(
         &mut self,
@@ -217,6 +242,10 @@ impl RenderBindingBuilder {
             render_data_idx,
             RenderBindingType::StorageTexture
         )
+    }
+    /// Adds a storage texture view directly from an asset id.
+    pub fn add_storage_texture_from_id(&mut self, texture: Option<AssetId<Texture>>) -> &mut Self {
+        self.add_texture_from_id(texture, RenderBindingType::StorageTexture)
     }
 
     fn add_texture<R>(
@@ -242,6 +271,15 @@ impl RenderBindingBuilder {
             .push((binding_type, self.textures.len() as u32 - 1));
         self
     }
+    fn add_texture_from_id(&mut self, texture: Option<AssetId<Texture>>, binding_type: RenderBindingType) -> &mut Self {
+        if texture.is_none() {
+            self.is_none = true;
+        }
+        self.textures.push(texture);
+        self.elements
+            .push((binding_type, self.textures.len() as u32 - 1));
+        self
+    }
 }
 
 /// A trait for describing a render binding.
@@ -254,9 +292,9 @@ pub trait RenderBinding {
     type Params: ReadOnlySystemParam;
 
     /// Describes the render binding. This is used to specify the [`RenderData`](RenderData) that should be used to create the bind group layout and bind group entries, and to specify the binding index for each buffer and texture.
-    fn describe(params: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder);
+    fn describe(&mut self, params: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder);
     /// Whether the gpu asset should be recreated. This is called every frame. The default is to never recreate (None).
-    fn label(&self) -> &'static str;
+    fn label(&self) -> &str;
 }
 
 // ============= RENDER BINDING RENDER ASSET GPU CREATION =============
@@ -290,9 +328,12 @@ where
             Self::Params
         >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        // Clone the asset to be able to modify it in the description
+        let mut asset = asset.clone();
+
         // Describe the asset
         let mut asset_builder = RenderBindingBuilder::default();
-        T::describe(binding_params, &mut asset_builder);
+        T::describe(&mut asset, binding_params, &mut asset_builder);
         if asset_builder.is_none {
             // If any of the buffers or textures were not ready, retry in the next update
             trace!(

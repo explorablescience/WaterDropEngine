@@ -90,7 +90,8 @@ impl GltfMaterial {
             metallic_roughness_t: metallic_roughness_texture_handle,
 
             normal_t: normal_texture_handle,
-            occlusion_t: occlusion_texture_handle
+            occlusion_t: occlusion_texture_handle,
+            ..Default::default()
         })
     }
 }
