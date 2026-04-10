@@ -8,7 +8,7 @@ use bevy::{
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::render::grid::buffers::TerrainGridBuffer;
+use crate::render::grid::buffers::{TerrainGridBufferBinding};
 
 #[derive(Clone, Default, Debug, TypePath)]
 pub struct TerrainGridRenderPipeline(pub CachedPipelineIndex);
@@ -17,8 +17,8 @@ impl RenderAsset for TerrainGridRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SRenderBinding<CameraBinding>,
-        SBindingOld<TerrainGridBuffer>
+        SBinding<CameraBinding>,
+        SBinding<TerrainGridBufferBinding>
     );
 
     fn prepare(

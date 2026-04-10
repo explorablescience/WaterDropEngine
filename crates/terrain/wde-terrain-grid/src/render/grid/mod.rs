@@ -4,7 +4,7 @@ use wde_renderer::prelude::*;
 use bevy::prelude::*;
 
 use crate::render::grid::{
-    buffers::TerrainGridBuffer, terrain_grid_pipeline::TerrainGridRenderPipeline,
+    buffers::{TerrainGridBuffer, TerrainGridBufferBinding}, terrain_grid_pipeline::TerrainGridRenderPipeline,
     terrain_grid_subpass::RenderSubPassTerrainGrid
 };
 
@@ -16,7 +16,7 @@ pub(crate) struct TerrainGridPassesPlugin;
 impl Plugin for TerrainGridPassesPlugin {
     fn build(&self, app: &mut App) {
         // Add the render buffers
-        app.add_plugins(RenderBindingPluginRegisterOld::<TerrainGridBuffer>::default());
+        app.add_plugins((RenderDataRegisterPlugin::<TerrainGridBuffer>::default(), RenderBindingRegisterPlugin::<TerrainGridBufferBinding>::default()));
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .add_systems(Render, buffers::update_render.in_set(RenderSet::Prepare));

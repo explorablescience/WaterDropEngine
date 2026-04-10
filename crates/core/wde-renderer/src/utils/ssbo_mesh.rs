@@ -28,7 +28,7 @@ impl SsboMesh {
 impl RenderData for SsboMesh {
     type Params = ();
 
-    fn describe(_params: &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+    fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder.add_buffer(
             Self::VERTEX_BUFFER_ID,
             Buffer {

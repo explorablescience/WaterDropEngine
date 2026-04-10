@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::render::dependencies::{
-    materials::TerrainMaterialsPlugin,
-    terrain_buffer::{TerrainBuffer, update_terrain_tiles_buffer},
-    terrain_mesh::TerrainRenderPassMesh
+    materials::{TerrainMaterialsPlugin},
+    terrain_buffer::{TerrainBuffer, TerrainBufferBinding, update_terrain_tiles_buffer},
+    terrain_mesh::TerrainRenderPassMesh,
 };
 
 pub mod materials;
@@ -20,11 +20,14 @@ impl Plugin for BuffersPlugin {
             .add_systems(Extract, TerrainRenderPassMesh::extract_terrain_mesh);
 
         // Init the terrain material arrays
-        app.add_plugins(TerrainMaterialsPlugin)
-            .add_plugins(RenderBindingPluginRegisterOld::<TerrainBuffer>::default());
+        app.add_plugins((
+            TerrainMaterialsPlugin,
+            RenderDataRegisterPlugin::<TerrainBuffer>::default(),
+            RenderBindingRegisterPlugin::<TerrainBufferBinding>::default(),
+        ));
         app.get_sub_app_mut(RenderApp).unwrap().add_systems(
             Render,
-            update_terrain_tiles_buffer.in_set(RenderSet::Prepare)
+            update_terrain_tiles_buffer.in_set(RenderSet::Prepare),
         );
 
         // Init the render pass meshes

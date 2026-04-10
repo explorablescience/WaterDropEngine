@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::{
@@ -15,13 +15,18 @@ pub struct TerrainTileBgRender {
     heightmap: Handle<Texture>,
     splatmaps: Vec<Handle<Texture>>
 }
-impl RenderBindingOld for TerrainTileBgRender {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
-        builder.add_texture_view(0, Some(self.heightmap.clone()));
-        builder.add_texture_sampler(1, Some(self.heightmap.clone()));
+impl RenderBinding for TerrainTileBgRender {
+    type Params = ();
+
+    fn describe(&mut self, _params: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+        builder.add_texture_view_from_id(Some(self.heightmap.id()));
+        builder.add_texture_sampler_from_id(Some(self.heightmap.id()));
         for i in 0..SPLAT_MAP_COUNT / 4 {
-            builder.add_texture_view(2 + i * 2, Some(self.splatmaps[i as usize].clone()));
-            builder.add_texture_sampler(3 + i * 2, Some(self.splatmaps[i as usize].clone()));
+            if i as usize >= self.splatmaps.len() {
+                continue;
+            }
+            builder.add_texture_view_from_id(Some(self.splatmaps[i as usize].id()));
+            builder.add_texture_sampler_from_id(Some(self.splatmaps[i as usize].id()));
         }
     }
 
@@ -42,11 +47,16 @@ pub struct TerrainTileBgCompute {
     heightmap: Handle<Texture>,
     splatmaps: Vec<Handle<Texture>>
 }
-impl RenderBindingOld for TerrainTileBgCompute {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
-        builder.add_storage_texture(0, Some(self.heightmap.clone()));
+impl RenderBinding for TerrainTileBgCompute {
+    type Params = ();
+
+    fn describe(&mut self, _params: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+        builder.add_storage_texture_from_id(Some(self.heightmap.id()));
         for i in 0..SPLAT_MAP_COUNT / 4 {
-            builder.add_storage_texture(1 + i, Some(self.splatmaps[i as usize].clone()));
+            if i as usize >= self.splatmaps.len() {
+                continue;
+            }
+            builder.add_storage_texture_from_id(Some(self.splatmaps[i as usize].id()));
         }
     }
 

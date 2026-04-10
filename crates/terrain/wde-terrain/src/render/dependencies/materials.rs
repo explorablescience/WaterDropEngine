@@ -1,16 +1,15 @@
 use wde_logger::prelude::*;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::{SystemParamItem, lifetimeless::{SRes, SResMut}}, prelude::*};
 use wde_renderer::prelude::*;
 
 pub(crate) struct TerrainMaterialsPlugin;
 impl Plugin for TerrainMaterialsPlugin {
     fn build(&self, app: &mut App) {
-        let terrain_plugin =
-            RenderBindingPluginRegisterOld::<TerrainMaterials>::with_init(init, app);
         app.init_resource::<TerrainMaterialTextures>().add_plugins((
             ExtractResourcePlugin::<TerrainMaterialTextures>::default(),
-            terrain_plugin
+            RenderBindingRegisterPlugin::<TerrainMaterialsBinding>::default(),
+            RenderDataRegisterPlugin::<TerrainMaterials>::default(),
         ));
         app.get_sub_app_mut(RenderApp)
             .unwrap()
@@ -25,15 +24,15 @@ const TEX_FORMATS: [TextureFormat; 4] = [
     TextureFormat::Rgba8UnormSrgb,
     TextureFormat::Rgba8Unorm,
     TextureFormat::R8Unorm,
-    TextureFormat::R8Unorm
+    TextureFormat::R8Unorm,
 ];
 
 #[derive(Resource, Default)]
-struct TerrainMaterialTextures {
+pub(crate) struct TerrainMaterialTextures {
     albedo_textures: Vec<Option<Handle<Texture>>>,
     normal_textures: Vec<Option<Handle<Texture>>>,
     roughness_textures: Vec<Option<Handle<Texture>>>,
-    ao_textures: Vec<Option<Handle<Texture>>>
+    ao_textures: Vec<Option<Handle<Texture>>>,
 }
 impl ExtractResource for TerrainMaterialTextures {
     type Source = Self;
@@ -43,52 +42,120 @@ impl ExtractResource for TerrainMaterialTextures {
             albedo_textures: source.albedo_textures.clone(),
             normal_textures: source.normal_textures.clone(),
             roughness_textures: source.roughness_textures.clone(),
-            ao_textures: source.ao_textures.clone()
+            ao_textures: source.ao_textures.clone(),
         }
     }
 }
 
 #[derive(Asset, Clone, Debug, TypePath, Default)]
-pub struct TerrainMaterials {
-    albedo_array: Handle<Texture>,
-    normal_array: Handle<Texture>,
-    roughness_array: Handle<Texture>,
-    ao_array: Handle<Texture>
-}
+pub(crate) struct TerrainMaterials;
 impl TerrainMaterials {
-    pub const TERRAIN_ALBEDO_BINDING: u32 = 0;
-    pub const TERRAIN_NORMAL_BINDING: u32 = 2;
-    pub const TERRAIN_ROUGHNESS_BINDING: u32 = 4;
-    pub const TERRAIN_AO_BINDING: u32 = 6;
+    pub const TERRAIN_ALBEDO_IDX: u32 = 0;
+    pub const TERRAIN_NORMAL_IDX: u32 = 1;
+    pub const TERRAIN_ROUGHNESS_IDX: u32 = 2;
+    pub const TERRAIN_AO_IDX: u32 = 3;
 }
-impl RenderBindingOld for TerrainMaterials {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
-        builder.add_texture_array_view(
-            Self::TERRAIN_ALBEDO_BINDING,
-            Some(self.albedo_array.clone())
-        );
-        builder.add_texture_sampler(
-            Self::TERRAIN_ALBEDO_BINDING + 1,
-            Some(self.albedo_array.clone())
-        );
-        builder.add_texture_array_view(
-            Self::TERRAIN_NORMAL_BINDING,
-            Some(self.normal_array.clone())
-        );
-        builder.add_texture_sampler(
-            Self::TERRAIN_NORMAL_BINDING + 1,
-            Some(self.normal_array.clone())
-        );
-        builder.add_texture_array_view(
-            Self::TERRAIN_ROUGHNESS_BINDING,
-            Some(self.roughness_array.clone())
-        );
-        builder.add_texture_sampler(
-            Self::TERRAIN_ROUGHNESS_BINDING + 1,
-            Some(self.roughness_array.clone())
-        );
-        builder.add_texture_array_view(Self::TERRAIN_AO_BINDING, Some(self.ao_array.clone()));
-        builder.add_texture_sampler(Self::TERRAIN_AO_BINDING + 1, Some(self.ao_array.clone()));
+impl RenderData for TerrainMaterials {
+    type Params = (SResMut<TerrainMaterialTextures>, SRes<AssetServer>);
+
+    fn describe((materials, asset_server): &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+        // Load textures for each material and type
+        let usages = TextureUsages::COPY_SRC | TextureUsages::TEXTURE_BINDING;
+        for material in MATERIALS {
+            for (i, tex_type) in TEX_TYPES.iter().enumerate() {
+                let path = format!("core/models/terrain/{}/{}.png", material, tex_type);
+                let handle = asset_server.load_with_settings(
+                    path,
+                    move |settings: &mut TextureLoaderSettings| {
+                        settings.label = format!("terrain-{}-{}", material, tex_type);
+                        settings.format = TEX_FORMATS[i];
+                        settings.usages = usages;
+                    },
+                );
+                match i {
+                    0 => materials.albedo_textures.push(Some(handle)),
+                    1 => materials.normal_textures.push(Some(handle)),
+                    2 => materials.roughness_textures.push(Some(handle)),
+                    3 => materials.ao_textures.push(Some(handle)),
+                    _ => unreachable!(),
+                }
+            }
+        }
+
+        // Build texture arrays for each type
+        let size = TEX_SIZE; // Assume all textures have the same size
+        let usages = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::RENDER_ATTACHMENT;
+        builder
+            .add_texture(
+                Self::TERRAIN_ALBEDO_IDX,
+                Texture {
+                    label: "terrain_material_albedo_array".to_string(),
+                    size,
+                    format: TextureFormat::Rgba8UnormSrgb,
+                    usages,
+                    layer_count: materials.albedo_textures.len() as u32,
+                    mip_level_count: 0, // Auto-calculate max mip levels
+                    ..Default::default()
+                },
+            )
+            .add_texture(
+                Self::TERRAIN_NORMAL_IDX,
+                Texture {
+                    label: "terrain_material_normal_array".to_string(),
+                    size,
+                    format: TextureFormat::Rgba8Unorm,
+                    usages,
+                    layer_count: materials.normal_textures.len() as u32,
+                    mip_level_count: 0, // Auto-calculate max mip levels
+                    ..Default::default()
+                },
+            )
+            .add_texture(
+                Self::TERRAIN_ROUGHNESS_IDX,
+                Texture {
+                    label: "terrain_material_roughness_array".to_string(),
+                    size,
+                    format: TextureFormat::R8Unorm,
+                    usages,
+                    layer_count: materials.roughness_textures.len() as u32,
+                    mip_level_count: 0, // Auto-calculate max mip levels
+                    ..Default::default()
+                },
+            )
+            .add_texture(
+                Self::TERRAIN_AO_IDX,
+                Texture {
+                    label: "terrain_material_ao_array".to_string(),
+                    size,
+                    format: TextureFormat::R8Unorm,
+                    usages,
+                    layer_count: materials.ao_textures.len() as u32,
+                    mip_level_count: 0, // Auto-calculate max mip levels
+                    ..Default::default()
+                },
+            );
+    }
+}
+
+#[derive(Asset, Clone, Debug, TypePath, Default)]
+pub(crate) struct TerrainMaterialsBinding;
+impl RenderBinding for TerrainMaterialsBinding {
+    type Params = SRenderData<TerrainMaterials>;
+
+    fn describe(
+        &mut self,
+        mat: &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder,
+    ) {
+        builder
+            .add_texture_array_view(mat, TerrainMaterials::TERRAIN_ALBEDO_IDX)
+            .add_texture_sampler(mat, TerrainMaterials::TERRAIN_ALBEDO_IDX)
+            .add_texture_array_view(mat, TerrainMaterials::TERRAIN_NORMAL_IDX)
+            .add_texture_sampler(mat, TerrainMaterials::TERRAIN_NORMAL_IDX)
+            .add_texture_array_view(mat, TerrainMaterials::TERRAIN_ROUGHNESS_IDX)
+            .add_texture_sampler(mat, TerrainMaterials::TERRAIN_ROUGHNESS_IDX)
+            .add_texture_array_view(mat, TerrainMaterials::TERRAIN_AO_IDX)
+            .add_texture_sampler(mat, TerrainMaterials::TERRAIN_AO_IDX);
     }
 
     fn label(&self) -> &str {
@@ -96,89 +163,13 @@ impl RenderBindingOld for TerrainMaterials {
     }
 }
 
-fn init(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut materials: ResMut<TerrainMaterialTextures>
-) {
-    // Load textures for each material and type
-    let usages = TextureUsages::COPY_SRC | TextureUsages::TEXTURE_BINDING;
-    for material in MATERIALS {
-        for (i, tex_type) in TEX_TYPES.iter().enumerate() {
-            let path = format!("core/models/terrain/{}/{}.png", material, tex_type);
-            let handle = asset_server.load_with_settings(
-                path,
-                move |settings: &mut TextureLoaderSettings| {
-                    settings.label = format!("terrain-{}-{}", material, tex_type);
-                    settings.format = TEX_FORMATS[i];
-                    settings.usages = usages;
-                }
-            );
-            match i {
-                0 => materials.albedo_textures.push(Some(handle)),
-                1 => materials.normal_textures.push(Some(handle)),
-                2 => materials.roughness_textures.push(Some(handle)),
-                3 => materials.ao_textures.push(Some(handle)),
-                _ => unreachable!()
-            }
-        }
-    }
-
-    // Build texture arrays for each type
-    let size = TEX_SIZE; // Assume all textures have the same size
-    let usages =
-        TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST | TextureUsages::RENDER_ATTACHMENT;
-    let albedo_array = asset_server.add(Texture {
-        label: "terrain_material_albedo_array".to_string(),
-        size,
-        format: TextureFormat::Rgba8UnormSrgb,
-        usages,
-        layer_count: materials.albedo_textures.len() as u32,
-        mip_level_count: 0, // Auto-calculate max mip levels
-        ..Default::default()
-    });
-    let normal_array = asset_server.add(Texture {
-        label: "terrain_material_normal_array".to_string(),
-        size,
-        format: TextureFormat::Rgba8Unorm,
-        usages,
-        layer_count: materials.normal_textures.len() as u32,
-        mip_level_count: 0, // Auto-calculate max mip levels
-        ..Default::default()
-    });
-    let roughness_array = asset_server.add(Texture {
-        label: "terrain_material_roughness_array".to_string(),
-        size,
-        format: TextureFormat::R8Unorm,
-        usages,
-        layer_count: materials.roughness_textures.len() as u32,
-        mip_level_count: 0, // Auto-calculate max mip levels
-        ..Default::default()
-    });
-    let ao_array = asset_server.add(Texture {
-        label: "terrain_material_ao_array".to_string(),
-        size,
-        format: TextureFormat::R8Unorm,
-        usages,
-        layer_count: materials.ao_textures.len() as u32,
-        mip_level_count: 0, // Auto-calculate max mip levels
-        ..Default::default()
-    });
-    commands.insert_resource(RenderBindingHolderOld(asset_server.add(TerrainMaterials {
-        albedo_array,
-        normal_array,
-        roughness_array,
-        ao_array
-    })));
-}
-
 /// Copy individual textures into the arrays and create the mipmaps
 fn fill_arrays(
     render_instance: Res<RenderInstance>,
     textures: Res<RenderAssets<GpuTexture>>,
-    materials: BindingOld<TerrainMaterials>,
+    materials: ResRenderData<TerrainMaterials>,
     material_textures: Res<TerrainMaterialTextures>,
-    mut is_done: Local<bool>
+    mut is_done: Local<bool>,
 ) {
     // Only run once when all textures are loaded
     if *is_done {
@@ -188,32 +179,32 @@ fn fill_arrays(
     // Get the array texture
     let materials = match materials.iter().next() {
         Some((_, materials)) => materials,
-        None => return
+        None => return,
     };
     let (albedo_array, normal_array, roughness_array, ao_array) = match (
         textures.get(
-            materials
-                .get_texture(TerrainMaterials::TERRAIN_ALBEDO_BINDING)
-                .unwrap()
+            &materials
+                .get_texture(TerrainMaterials::TERRAIN_ALBEDO_IDX)
+                .unwrap(),
         ),
         textures.get(
-            materials
-                .get_texture(TerrainMaterials::TERRAIN_NORMAL_BINDING)
-                .unwrap()
+            &materials
+                .get_texture(TerrainMaterials::TERRAIN_NORMAL_IDX)
+                .unwrap(),
         ),
         textures.get(
-            materials
-                .get_texture(TerrainMaterials::TERRAIN_ROUGHNESS_BINDING)
-                .unwrap()
+            &materials
+                .get_texture(TerrainMaterials::TERRAIN_ROUGHNESS_IDX)
+                .unwrap(),
         ),
         textures.get(
-            materials
-                .get_texture(TerrainMaterials::TERRAIN_AO_BINDING)
-                .unwrap()
-        )
+            &materials
+                .get_texture(TerrainMaterials::TERRAIN_AO_IDX)
+                .unwrap(),
+        ),
     ) {
         (Some(albedo), Some(normal), Some(roughness), Some(ao)) => (albedo, normal, roughness, ao),
-        _ => return
+        _ => return,
     };
 
     // Copy individual textures into the arrays
@@ -223,48 +214,48 @@ fn fill_arrays(
         let albedo_tex = match textures.get(material_textures.albedo_textures[i].as_ref().unwrap())
         {
             Some(tex) => tex,
-            None => return
+            None => return,
         };
         albedo_array.texture.copy_from_texture_layered(
             &render_instance,
             &albedo_tex.texture.texture,
             i,
-            size
+            size,
         );
 
         let normal_tex = match textures.get(material_textures.normal_textures[i].as_ref().unwrap())
         {
             Some(tex) => tex,
-            None => return
+            None => return,
         };
         normal_array.texture.copy_from_texture_layered(
             &render_instance,
             &normal_tex.texture.texture,
             i,
-            size
+            size,
         );
 
         let roughness_tex =
             match textures.get(material_textures.roughness_textures[i].as_ref().unwrap()) {
                 Some(tex) => tex,
-                None => return
+                None => return,
             };
         roughness_array.texture.copy_from_texture_layered(
             &render_instance,
             &roughness_tex.texture.texture,
             i,
-            size
+            size,
         );
 
         let ao_tex = match textures.get(material_textures.ao_textures[i].as_ref().unwrap()) {
             Some(tex) => tex,
-            None => return
+            None => return,
         };
         ao_array.texture.copy_from_texture_layered(
             &render_instance,
             &ao_tex.texture.texture,
             i,
-            size
+            size,
         );
     }
 

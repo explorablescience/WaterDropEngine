@@ -3,12 +3,14 @@ use wde_logger::prelude::*;
 use crate::prelude::*;
 use bevy::{
     ecs::system::{
-        ReadOnlySystemParam, StaticSystemParam, SystemParamItem, SystemState,
-        lifetimeless::{SRes, SResMut}
+        StaticSystemParam, SystemParam, SystemParamItem, SystemState, lifetimeless::{SRes, SResMut}
     },
     prelude::*
 };
-use std::{any::TypeId, collections::HashMap};
+use std::{
+    any::TypeId,
+    collections::HashMap
+};
 
 #[derive(Message)]
 pub(crate) struct RenderDataRecreated(pub TypeId);
@@ -49,8 +51,8 @@ impl<R: RenderData + TypePath + Sync + Send + Clone + Asset> Plugin
         let builder = {
             let mut builder = RenderDataBuilder::default();
             let mut state: SystemState<R::Params> = SystemState::new(app.world_mut());
-            let params = state.get_mut(app.world_mut());
-            R::describe(&params, &mut builder);
+            let mut params = state.get_mut(app.world_mut());
+            R::describe(&mut params, &mut builder);
             builder
         };
         let handle = app
@@ -77,7 +79,7 @@ impl<R: RenderData + TypePath + Sync + Send + Clone + Asset> Plugin
 }
 
 fn recreate_system<R: RenderData + TypePath + Sync + Send + 'static>(
-    params: StaticSystemParam<R::Params>,
+    mut params: StaticSystemParam<R::Params>,
     asset_server: Res<AssetServer>,
     mut commands: Commands,
     mut recreate_version: MessageWriter<RenderDataRecreated>
@@ -88,7 +90,7 @@ fn recreate_system<R: RenderData + TypePath + Sync + Send + 'static>(
         // Create new render data and update the asset
         let builder = {
             let mut builder = RenderDataBuilder::default();
-            R::describe(&params, &mut builder);
+            R::describe(&mut params, &mut builder);
             builder
         };
         let new_handle = asset_server.add(RenderDataHolder::<R> {
@@ -137,13 +139,13 @@ impl RenderDataBuilder {
 /// The prepared GPU side can then be retrieved in render systems through [`GpuRenderData`],
 /// using the binding indices specified in [`RenderData::describe`].
 pub trait RenderData {
-    type Params: ReadOnlySystemParam;
+    type Params: SystemParam;
 
     /// Describes the render data by adding buffers and textures to the builder.
     ///
     /// This is called during initialization, and when [`recreate`](Self::recreate)
     /// returns `Some(true)`.
-    fn describe(params: &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder);
+    fn describe(params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder);
     /// Whether the gpu asset should be recreated. This is called every frame. The default is to never recreate (None).
     fn recreate(_params: &SystemParamItem<Self::Params>) -> Option<bool> {
         None
@@ -158,7 +160,7 @@ struct RenderDataHolderHandle<R: RenderData + TypePath + Sync + Send>(Handle<Ren
 #[derive(Asset, Clone, TypePath)]
 pub struct RenderDataHolder<R: RenderData + TypePath + Sync + Send> {
     _phantom: std::marker::PhantomData<R>,
-    builder: RenderDataBuilder
+    builder: RenderDataBuilder,
 }
 
 // ============= RENDER DATA RENDER ASSET GPU CREATION =============

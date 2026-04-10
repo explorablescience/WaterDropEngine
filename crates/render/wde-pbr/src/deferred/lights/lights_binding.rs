@@ -32,7 +32,7 @@ impl LightsData {
 impl RenderData for LightsData {
     type Params = ();
 
-    fn describe(_params: &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+    fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder
             .add_buffer(
                 Self::LIGHTS_BUFFER_IDX,

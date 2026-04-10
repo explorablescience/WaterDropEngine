@@ -6,7 +6,7 @@ use wde_terrain::{prelude::*, render::renderer_gpu::TerrainTileBgCompute};
 
 use crate::processor::{
     compute::pipeline::PaintComputePipeline,
-    resources::commands_buffer::{CommandsBuffer, CommandsBufferDescription}
+    resources::commands_buffer::{CommandsBufferBinding, CommandsBufferDescription}
 };
 
 #[repr(C)]
@@ -19,12 +19,12 @@ pub struct TileInfo {
 
 pub fn apply_paint_compute(
     render_instance: Res<RenderInstance>,
-    commands_buffer: BindingOld<CommandsBuffer>,
+    commands_buffer: Binding<CommandsBufferBinding>,
     mut commands_buffer_desc: ResMut<CommandsBufferDescription>,
     pipeline_manager: Res<PipelineManager>,
     paint_pipeline: Res<RenderAssets<PaintComputePipeline>>,
     terrain_tiles: Res<TerrainRendererGPU>,
-    terrain_tile_bg_compute: BindingOld<TerrainTileBgCompute>
+    terrain_tile_bg_compute: Binding<TerrainTileBgCompute>
 ) {
     // Check if we should render
     if commands_buffer_desc.commands_count == 0 || commands_buffer_desc.dirty_chunks.is_empty() {

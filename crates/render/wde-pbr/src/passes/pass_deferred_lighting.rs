@@ -56,7 +56,7 @@ impl RenderBinding for LightsDataBinding {
 ///  - It has a render index of 20.
 pub struct RenderPassDeferredLighting;
 impl RenderPass for RenderPassDeferredLighting {
-    type Params = SBindingOld<RenderTexture>;
+    type Params = SRenderData<RenderTexture>;
 
     fn describe(render_texture: &SystemParamItem<Self::Params>) -> RenderPassDesc {
         RenderPassDesc {
@@ -64,7 +64,7 @@ impl RenderPass for RenderPassDeferredLighting {
                 texture: render_texture
                     .iter()
                     .next()
-                    .map(|(_, t)| t.get_texture(0).unwrap()),
+                    .map(|(_, t)| t.get_texture(RenderTexture::BINDING).unwrap().id()),
                 load: LoadOp::Clear(Color::BLACK),
                 ..Default::default()
             }]),
@@ -87,9 +87,9 @@ impl RenderAsset for DeferredLightingPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SRenderBinding<CameraBinding>,
-        SRenderBinding<RenderBindingResolved>,
-        SRenderBinding<LightsDataBinding>
+        SBinding<CameraBinding>,
+        SBinding<RenderBindingResolved>,
+        SBinding<LightsDataBinding>
     );
 
     fn prepare(
@@ -127,9 +127,9 @@ impl RenderSubPass for SubRenderPassLightingPbr {
     type Params = (
         SRes<RenderAssets<DeferredLightingPipeline>>,
         SRes<PostProcessingMesh>,
-        SRenderBinding<CameraBinding>,
-        SRenderBinding<RenderBindingResolved>,
-        SRenderBinding<LightsDataBinding>
+        SBinding<CameraBinding>,
+        SBinding<RenderBindingResolved>,
+        SBinding<LightsDataBinding>
     );
 
     fn describe(

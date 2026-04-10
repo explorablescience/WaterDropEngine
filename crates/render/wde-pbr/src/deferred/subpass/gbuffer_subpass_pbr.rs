@@ -18,9 +18,9 @@ pub(crate) struct SubRenderPassGbufferPbr;
 impl RenderSubPass for SubRenderPassGbufferPbr {
     type Params = (
         SRes<RenderAssets<GBufferRenderPipeline>>,
-        SRenderBinding<CameraBinding>,
-        SRenderBinding<GBufferBindGroup>,
-        SRenderBinding<SsboMeshBinding>
+        SBinding<CameraBinding>,
+        SBinding<GBufferBindGroup>,
+        SBinding<SsboMeshBinding>
     );
 
     fn describe(

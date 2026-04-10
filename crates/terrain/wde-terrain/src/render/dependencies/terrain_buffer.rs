@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::{
@@ -30,8 +30,10 @@ impl TerrainBuffer {
     pub const DESC_BIND: u32 = 0;
     pub const TILES_BIND: u32 = 1;
 }
-impl RenderBindingOld for TerrainBuffer {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
+impl RenderData for TerrainBuffer {
+    type Params = ();
+
+    fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder.add_buffer(
             Self::DESC_BIND,
             Buffer {
@@ -57,16 +59,27 @@ impl RenderBindingOld for TerrainBuffer {
             }
         );
     }
+}
+
+#[derive(Asset, Clone, TypePath, Default)]
+pub struct TerrainBufferBinding;
+impl RenderBinding for TerrainBufferBinding {
+    type Params = SRenderData<TerrainBuffer>;
+
+    fn describe(&mut self, buffer: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+        builder.add_buffer(buffer, TerrainBuffer::DESC_BIND);
+        builder.add_buffer(buffer, TerrainBuffer::TILES_BIND);
+    }
 
     fn label(&self) -> &str {
-        "terrain"
+        "terrain_buffer_binding"
     }
 }
 
 // System to update the terrain tiles buffer with the current visible tiles
 pub(crate) fn update_terrain_tiles_buffer(
     render_instance: Res<RenderInstance>,
-    terrain_buffer: BindingOld<TerrainBuffer>,
+    terrain_buffer: ResRenderData<TerrainBuffer>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     terrain_tiles: Res<TerrainRendererGPU>,
     mut is_set: Local<bool>
@@ -82,7 +95,7 @@ pub(crate) fn update_terrain_tiles_buffer(
         None => return
     };
     let tile_buffer = match buffers.get(
-        terrain_buffer
+        &terrain_buffer
             .get_buffer(TerrainBuffer::TILES_BIND)
             .unwrap()
     ) {

@@ -9,21 +9,21 @@ use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::render::{
-    dependencies::{materials::TerrainMaterials, terrain_buffer::TerrainBuffer},
+    dependencies::{materials::TerrainMaterialsBinding, terrain_buffer::{TerrainBufferBinding}},
     renderer_gpu::TerrainTileBgRender
 };
 
 #[derive(Default, Asset, Clone, TypePath, Debug)]
-pub struct TerrainRenderPipeline(pub CachedPipelineIndex);
+pub(crate) struct TerrainRenderPipeline(pub CachedPipelineIndex);
 impl RenderAsset for TerrainRenderPipeline {
     type SourceAsset = RenderPipelineAsset<TerrainRenderPipeline>;
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SRenderBinding<CameraBinding>,
-        SBindingOld<TerrainMaterials>,
-        SBindingOld<TerrainBuffer>,
-        SBindingOld<TerrainTileBgRender>
+        SBinding<CameraBinding>,
+        SBinding<TerrainMaterialsBinding>,
+        SBinding<TerrainBufferBinding>,
+        SBinding<TerrainTileBgRender>
     );
 
     fn prepare(

@@ -8,7 +8,7 @@ use wde_terrain::prelude::CHUNK_COUNT;
 
 use crate::{
     editor::PlacementUI,
-    render::grid::{buffers::TerrainGridBuffer, terrain_grid_pipeline::TerrainGridRenderPipeline}
+    render::grid::{buffers::{TerrainGridBufferBinding}, terrain_grid_pipeline::TerrainGridRenderPipeline}
 };
 
 #[derive(Resource, Default)]
@@ -70,8 +70,8 @@ impl RenderSubPass for RenderSubPassTerrainGrid {
     type Params = (
         SRes<RenderAssets<TerrainGridRenderPipeline>>,
         SRes<RenderSubPassTerrainGrid>,
-        SRenderBinding<CameraBinding>,
-        SBindingOld<TerrainGridBuffer>
+        SBinding<CameraBinding>,
+        SBinding<TerrainGridBufferBinding>
     );
 
     fn describe(

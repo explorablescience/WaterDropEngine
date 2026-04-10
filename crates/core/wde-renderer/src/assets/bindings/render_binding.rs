@@ -11,10 +11,12 @@ use bevy::{
 use std::{any::TypeId, collections::HashSet, marker::PhantomData};
 use wde_wgpu::pipelines::{BindGroup, BindGroupBuilder, BindGroupLayout};
 
+// Reexport wgpu types
+pub use wde_wgpu::buffer::{BufferBindingType, BufferUsage};
+
 // ============= RENDER DATA PLUGIN REGISTER =============
-#[allow(unused)]
 #[derive(Resource)]
-struct RenderBindingHolder<R: RenderBinding + TypePath + Sync + Send + Asset>(Handle<R>);
+pub struct RenderBindingHolder<R: RenderBinding + TypePath + Sync + Send + Asset>(pub Handle<R>);
 impl<R: RenderBinding + TypePath + Sync + Send + Asset> Clone for RenderBindingHolder<R> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
@@ -91,23 +93,10 @@ fn on_dependency_recreate<R: RenderBinding + Asset + Default>(
     asset_server: Res<AssetServer>,
     mut dependency_update: MessageReader<RenderDataRecreated>,
     mut render_binding_holder: ResMut<RenderBindingHolder<R>>,
-    mut update_next_tick: Local<Option<TypeId>>,
     dependencies: Res<RenderBindingDependencies<R>>
 ) {
     for message in dependency_update.read() {
         let type_id = message.0;
-
-        // Only update next tick
-        // This is as first tick, the render data asset will be recreated
-        // So only second tick can be update the render binding asset, to be sure the render data asset is ready
-        if update_next_tick.is_none() {
-            *update_next_tick = Some(type_id);
-            return;
-        }
-    }
-
-    if let Some(type_id) = *update_next_tick {
-        *update_next_tick = None;
 
         // Check if the render binding depends on the render data that have been recreated
         if !dependencies.dependencies.contains(&type_id) {
@@ -299,9 +288,13 @@ pub trait RenderBinding {
 
 // ============= RENDER BINDING RENDER ASSET GPU CREATION =============
 /// The gpu asset that is created from the render binding holder. This is the asset that is actually used in the render pass.
-pub type SRenderBinding<T> = SRes<RenderAssets<GpuRenderBinding<T>>>;
+pub type SBinding<T> = SRes<RenderAssets<GpuRenderBinding<T>>>;
 /// The gpu asset that is created from the render binding holder. This is the asset that is actually used in the render pass.
-pub type SRenderBindingMut<T> = SResMut<RenderAssets<GpuRenderBinding<T>>>;
+pub type SBindingMut<T> = SResMut<RenderAssets<GpuRenderBinding<T>>>;
+/// The gpu asset that is created from the render binding holder. This is the asset that is actually used in the render pass.
+pub type Binding<'w, T> = Res<'w, RenderAssets<GpuRenderBinding<T>>>;
+/// The gpu asset that is created from the render binding holder. This is the asset that is actually used in the render pass.
+pub type BindingMut<'w, T> = ResMut<'w, RenderAssets<GpuRenderBinding<T>>>;
 
 /// The gpu asset that is created from the render binding holder. This is the asset that is actually used in the render pass.
 /// It contains the bind group and bind group layout that are created according to the description in the [`RenderBinding`](RenderBinding) implementation, and can be retrieved using the binding index specified in the description.
@@ -328,7 +321,6 @@ where
             Self::Params
         >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        // Clone the asset to be able to modify it in the description
         let mut asset = asset.clone();
 
         // Describe the asset

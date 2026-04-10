@@ -9,7 +9,7 @@ use crate::{
     prelude::{TerrainExtractor, TerrainRenderer},
     render::{
         dependencies::{
-            materials::TerrainMaterials, terrain_buffer::TerrainBuffer,
+            materials::TerrainMaterialsBinding, terrain_buffer::{TerrainBufferBinding},
             terrain_mesh::TerrainRenderPassMesh
         },
         passes::pipeline::TerrainRenderPipeline,
@@ -17,7 +17,7 @@ use crate::{
     }
 };
 
-pub struct SubRenderPassTerrainGround;
+pub(crate) struct SubRenderPassTerrainGround;
 impl SubRenderPassTerrainGround {
     pub fn extract(
         main_terrain_extractor: ExtractWorld<Res<TerrainExtractor>>,
@@ -38,11 +38,11 @@ impl RenderSubPass for SubRenderPassTerrainGround {
         SRes<TerrainRenderPassMesh>,
         SRes<RenderAssets<GpuMesh>>,
         SRes<RenderAssets<TerrainRenderPipeline>>,
-        SRenderBinding<CameraBinding>,
-        SBindingOld<TerrainMaterials>,
-        SBindingOld<TerrainBuffer>,
+        SBinding<CameraBinding>,
+        SBinding<TerrainMaterialsBinding>,
+        SBinding<TerrainBufferBinding>,
         SRes<TerrainRendererGPU>,
-        SBindingOld<TerrainTileBgRender>
+        SBinding<TerrainTileBgRender>
     );
 
     fn describe(

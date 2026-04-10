@@ -8,7 +8,7 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 
-use crate::prelude::RenderTexture;
+use crate::prelude::{RenderTextureBinding};
 
 /// The render pass for resolving the multisampled [`crate::logic::render_texture::RenderTexture`], which is the color attachment of the deferred lighting pass, to the swapchain texture, which is then presented on the screen.
 ///
@@ -36,7 +36,7 @@ impl RenderAsset for ResolveRenderPipeline {
     type Params = (
         SRes<AssetServer>,
         SResMut<PipelineManager>,
-        SBindingOld<RenderTexture>
+        SBinding<RenderTextureBinding>
     );
 
     fn prepare(
@@ -67,7 +67,7 @@ impl RenderSubPass for SubRenderPassResolve {
     type Params = (
         SRes<RenderAssets<ResolveRenderPipeline>>,
         SRes<PostProcessingMesh>,
-        SBindingOld<RenderTexture>
+        SBinding<RenderTextureBinding>
     );
 
     fn describe(

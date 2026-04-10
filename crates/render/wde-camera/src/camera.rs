@@ -38,7 +38,7 @@ impl CameraRender {
 impl RenderData for CameraRender {
     type Params = ();
 
-    fn describe(_params: &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+    fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder.add_buffer(
             Self::CAMERA_IDX,
             Buffer {

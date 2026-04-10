@@ -1,6 +1,6 @@
 use wde_logger::prelude::*;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use std::collections::HashSet;
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::ChunkPos;
@@ -13,7 +13,7 @@ const MAX_COMMANDS: usize = 1000;
 pub struct ComputeCommandsBufferPlugin;
 impl Plugin for ComputeCommandsBufferPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(RenderBindingPluginRegisterOld::<CommandsBuffer>::default());
+        app.add_plugins((RenderDataRegisterPlugin::<CommandsBuffer>::default(), RenderBindingRegisterPlugin::<CommandsBufferBinding>::default()));
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<CommandsBufferDescription>()
@@ -38,12 +38,32 @@ pub struct CommandsBufferDescription {
     pub dirty_chunks: HashSet<ChunkPos>
 }
 
+
+#[derive(Asset, Clone, Debug, TypePath, Default)]
+pub struct CommandsBufferBinding;
+impl RenderBinding for CommandsBufferBinding {
+    type Params = SRenderData<CommandsBuffer>;
+
+    fn describe(&mut self, command_buffer: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+        builder.add_buffer(command_buffer, CommandsBuffer::BINDING);
+    }
+
+    fn label(&self) -> &str {
+        "commands-buffer-binding"
+    }
+}
+
 #[derive(Asset, Clone, Debug, TypePath, Default)]
 pub struct CommandsBuffer;
-impl RenderBindingOld for CommandsBuffer {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
+impl CommandsBuffer {
+    pub const BINDING: u32 = 0;
+}
+impl RenderData for CommandsBuffer {
+    type Params = ();
+
+    fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder.add_buffer(
-            0,
+            Self::BINDING,
             Buffer {
                 label: "commands-buffer".to_string(),
                 size: std::mem::size_of::<CommandDescription>() * MAX_COMMANDS,
@@ -52,16 +72,12 @@ impl RenderBindingOld for CommandsBuffer {
             }
         );
     }
-
-    fn label(&self) -> &str {
-        "terrain_commands_buffer"
-    }
 }
 
 // System to update the terrain tiles buffer with the current visible tiles
 fn update_commands_buffer(
     render_instance: Res<RenderInstance>,
-    commands_buffer: BindingOld<CommandsBuffer>,
+    commands_buffer: ResRenderData<CommandsBuffer>,
     mut commands_buffer_desc: ResMut<CommandsBufferDescription>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     mut extracted_commands: ResMut<ExtractedPaintCommands>,
@@ -78,11 +94,7 @@ fn update_commands_buffer(
     }
 
     // Get the buffer
-    let commands_buffer = match commands_buffer.iter().next() {
-        Some((_, buffer)) => buffer,
-        None => return
-    };
-    let commands_bf = match buffers.get(commands_buffer.get_buffer(0).unwrap()) {
+    let commands_buffer = match commands_buffer.iter().next().and_then(|(_, b)| buffers.get(&b.get_buffer(CommandsBuffer::BINDING).unwrap())) {
         Some(buffer) => buffer,
         None => return
     };
@@ -111,7 +123,7 @@ fn update_commands_buffer(
 
     // Update the buffer and clear the commands
     let render_instance = render_instance.0.read().unwrap();
-    commands_bf
+    commands_buffer
         .buffer
         .write(&render_instance, bytemuck::cast_slice(&data), 0);
 

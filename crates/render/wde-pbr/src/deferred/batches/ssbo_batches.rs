@@ -22,7 +22,7 @@ impl PbrSsboInstanceToTransform {
 impl RenderData for PbrSsboInstanceToTransform {
     type Params = ();
 
-    fn describe(_params: &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+    fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder
             .add_buffer(
                 Self::INSTANCE_TO_TRANSFORM_IDX,

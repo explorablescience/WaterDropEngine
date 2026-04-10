@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::*;
 
@@ -45,8 +45,10 @@ impl TerrainGridBuffer {
     pub const GRID_DESC_BIND: u32 = 0;
     pub const GRID_CHUNK_POS_BIND: u32 = 1;
 }
-impl RenderBindingOld for TerrainGridBuffer {
-    fn describe(&self, builder: &mut RenderBindingBuilderOld) {
+impl RenderData for TerrainGridBuffer {
+    type Params = ();
+
+    fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
         builder.add_buffer(
             Self::GRID_DESC_BIND,
             Buffer {
@@ -75,15 +77,27 @@ impl RenderBindingOld for TerrainGridBuffer {
             }
         );
     }
+}
+
+
+#[derive(Asset, Clone, Debug, Default, TypePath)]
+pub struct TerrainGridBufferBinding;
+impl RenderBinding for TerrainGridBufferBinding {
+    type Params = SRenderData<TerrainGridBuffer>;
+
+    fn describe(&mut self, buffer: &SystemParamItem<Self::Params>, builder: &mut RenderBindingBuilder) {
+        builder.add_buffer(buffer, TerrainGridBuffer::GRID_DESC_BIND);
+        builder.add_buffer(buffer, TerrainGridBuffer::GRID_CHUNK_POS_BIND);
+    }
 
     fn label(&self) -> &str {
-        "terrain-grid"
+        "terrain_grid_buffer_binding"
     }
 }
 
 pub(crate) fn update_render(
     cursor_pos: Res<TerrainCursorPos>,
-    terrain_buffer: BindingOld<TerrainGridBuffer>,
+    terrain_buffer: ResRenderData<TerrainGridBuffer>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>
 ) {
@@ -92,7 +106,7 @@ pub(crate) fn update_render(
         None => return
     };
     if let Some(grid_desc_buffer) = buffers.get(
-        terrain_buffer
+        &terrain_buffer
             .get_buffer(TerrainGridBuffer::GRID_DESC_BIND)
             .unwrap()
     ) {

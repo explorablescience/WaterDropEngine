@@ -60,7 +60,7 @@
 //! impl RenderData for DeferredTextures {
 //!     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
 //!
-//!     fn describe((window, _): &SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+//!     fn describe((window, _): &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
 //!         let size = {
 //!             let window = window.single().unwrap();
 //!             (window.resolution.physical_width(), window.resolution.physical_height())

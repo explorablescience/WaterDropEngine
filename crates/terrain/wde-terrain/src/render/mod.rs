@@ -28,8 +28,8 @@ impl Plugin for TerrainRenderPlugin {
         app.init_asset::<TerrainTileBgRender>()
             .init_asset::<TerrainTileBgCompute>()
             .add_plugins((
-                RenderAssetsPlugin::<GpuRenderBindingOld<TerrainTileBgRender>>::default(),
-                RenderAssetsPlugin::<GpuRenderBindingOld<TerrainTileBgCompute>>::default()
+                RenderBindingRegisterPlugin::<TerrainTileBgRender>::default(),
+                RenderBindingRegisterPlugin::<TerrainTileBgCompute>::default()
             ));
 
         // Add the terrain renderer GPU resource and its systems
