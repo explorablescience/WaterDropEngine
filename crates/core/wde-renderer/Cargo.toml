@@ -4,6 +4,7 @@ version = "0.2.0"
 edition = "2024"
 
 [dependencies]
+wde-renderer-macros = { path = "../wde-renderer/macros" }
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-wgpu = { path = "../../wrappers/wde-wgpu" }
 bevy = { workspace = true }

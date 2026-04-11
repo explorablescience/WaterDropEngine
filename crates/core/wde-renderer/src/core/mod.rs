@@ -45,16 +45,9 @@
 //!    /* (...) */
 //! }
 //! ```
-//!
-//! ## Extracting plugins
-//! If you have a plugin that has resources that need to be extracted, you can implement the [`ExtractResource`] trait for those resources and add the corresponding [`ExtractResourcePlugin`] to your plugin. For example, if you have a plugin with a resource `MyResource`, you can do:
-//! ```
-//! app
-//!     .insert_resource(MyResource { /* ... */ })
-//!     .add_plugins(ExtractResourcePlugin::<MyResource>::default());
-//! ```
-//! This will automatically add a system to extract `MyResource` from the main world to the render world, as long as you implement the `ExtractResource` trait for `MyResource`.
-//!
+//! 
+//! ## Extracting resources and entities
+//! To extract resources and entities from the main world, see the [`sync`](crate::sync) module, which provides utilities to automatically extract resources, query and entities from the main to the render world.
 //!
 //! # Window events
 //! The renderer also handles window events, such as resizing. If the window is resized, an event of type [`SurfaceResized`] is sent to the main and render app, which contains the new width and height of the window in physical pixels.
@@ -72,13 +65,11 @@
 
 mod extract;
 mod extract_macros;
-mod extract_plugin_resource;
 mod render_manager;
 mod render_multithread;
 mod window;
 
 pub use extract_macros::ExtractWorld;
-pub use extract_plugin_resource::*;
 pub use window::SurfaceResized;
 
 use bevy::{

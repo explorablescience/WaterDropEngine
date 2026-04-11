@@ -1,6 +1,6 @@
 use wde_logger::prelude::*;
 
-use crate::{assets::bindings::render_data::RenderDataRecreated, prelude::*};
+use crate::{assets::bindings::render_data::RenderDataRecreated, prelude::*, sync::{ExtractResource, ExtractResourcePlugin}};
 use bevy::{
     ecs::system::{
         ReadOnlySystemParam, SystemParamItem, SystemState,

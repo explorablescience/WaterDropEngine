@@ -33,24 +33,12 @@ const TEX_FORMATS: [TextureFormat; 4] = [
     TextureFormat::R8Unorm
 ];
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, ExtractResource, Clone)]
 pub(crate) struct TerrainMaterialTextures {
     albedo_textures: Vec<Option<Handle<Texture>>>,
     normal_textures: Vec<Option<Handle<Texture>>>,
     roughness_textures: Vec<Option<Handle<Texture>>>,
     ao_textures: Vec<Option<Handle<Texture>>>
-}
-impl ExtractResource for TerrainMaterialTextures {
-    type Source = Self;
-
-    fn extract(source: &Self::Source) -> Self {
-        Self {
-            albedo_textures: source.albedo_textures.clone(),
-            normal_textures: source.normal_textures.clone(),
-            roughness_textures: source.roughness_textures.clone(),
-            ao_textures: source.ao_textures.clone()
-        }
-    }
 }
 
 #[derive(Asset, Clone, Debug, TypePath, Default)]

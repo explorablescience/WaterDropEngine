@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::prelude::*;
+use crate::{prelude::*, sync::ExtractResource};
 
 /// Resource storing the handle to the full-screen quad mesh used for post-processing passes.
 /// This mesh is a simple quad covering the entire screen, with UVs for sampling the rendered texture.

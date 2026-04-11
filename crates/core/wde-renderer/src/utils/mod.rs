@@ -9,9 +9,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{RenderBindingRegisterPlugin, RenderDataRegisterPlugin},
-    core::{ExtractResourcePlugin, RenderApp},
-    utils::ssbo_mesh::SsboMeshDescriptor
+    assets::{RenderBindingRegisterPlugin, RenderDataRegisterPlugin}, core::RenderApp, sync::ExtractResourcePlugin, utils::ssbo_mesh::SsboMeshDescriptor
 };
 
 mod color;
