@@ -114,31 +114,10 @@ pub use extract_component_plugin::*;
 pub use sync_worlds::*;
 pub use sync_entities::*;
 pub use sync_component::*;
-use wde_renderer_macros::ExtractComponent;
 
 pub(crate) struct SyncPlugin;
 impl Plugin for SyncPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(SyncWorldPlugin)
-        .add_plugins(ExtractComponentPlugin::<TestComponent>::default());
+        app.add_plugins(SyncWorldPlugin);
     }
 }
-
-
-#[derive(Component, Clone, ExtractComponent)]
-#[extract_component_filter(Changed<Self>)]
-pub struct TestComponent {
-    pub value: i32,
-}
-// impl SyncComponent for TestComponent {
-//     type Target = Self;
-// }
-// impl ExtractComponent for TestComponent {
-//     type QueryData = &'static Self;
-//     type QueryFilter = Changed<Self>;
-//     type Out = Self;
-
-//     fn extract_component(item: QueryItem<'_, '_, Self::QueryData>) -> Option<Self::Out> {
-//         Some(item.clone())
-//     }
-// }
