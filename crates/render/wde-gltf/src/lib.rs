@@ -70,4 +70,22 @@ impl GltfLoader {
         );
         Ok(gltf_asset)
     }
+
+    /// Spawn the loaded glTF model into the Bevy world, returning the parent entity ID.
+    pub fn spawn(commands: &mut Commands, gltf_asset: &GltfAsset) -> Entity {
+        let parent_entity = commands.spawn((
+            Name::new(format!("GLTF Model {}", gltf_asset.path)),
+            Transform::default()
+        )).id();
+        for (i, (mesh_handle, material_handle)) in gltf_asset.models.iter().enumerate() {
+            commands.spawn((
+                Name::new(format!("Mesh Entity {} for GLTF Model {}", i, gltf_asset.path)),
+                Transform::default(),
+                Mesh3d(mesh_handle.clone()),
+                PbrMaterial3d(material_handle.clone()),
+                ChildOf(parent_entity)
+            ));
+        }
+        parent_entity
+    }
 }

@@ -4,7 +4,7 @@ use bevy::ecs::system::SystemParamItem;
 use wde_renderer::prelude::*;
 
 use crate::{
-    deferred::transform::PbrSsboTransform, prelude::ssbo_batches::PbrSsboInstanceToTransform
+    deferred::transform::PbrSsboTransform, prelude::PbrSsboInstanceToTransform
 };
 
 #[derive(Default, Clone, TypePath, Asset)]

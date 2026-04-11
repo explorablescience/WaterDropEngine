@@ -7,7 +7,7 @@ use wde_renderer::prelude::*;
 
 use crate::prelude::{PbrSsboTransform, SSBO_TRANSFORM_MAX_ENTITY};
 
-/// Marker component to indicate that an entity has a PBR material and should be included in the SSBO transform updates.
+/// Marker component to indicate that an entity should be included in the SSBO transform updates.
 #[derive(Component, Default)]
 pub struct PbrSsboTransformMarker;
 
@@ -16,10 +16,11 @@ impl Plugin for SsboTransformRegistryPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<PbrSsboTransformRegistry>()
-            .add_plugins(ExtractResourcePlugin::<PbrSsboTransformRegistry>::default())
             .add_systems(Update, set_dirty_transforms);
         app.get_sub_app_mut(RenderApp)
             .unwrap()
+            .init_resource::<PbrSsboTransformRegistry>()
+            .add_systems(Extract, extract_registry)
             .add_systems(Render, update_ssbo_transforms.in_set(RenderSet::Prepare));
     }
 }
@@ -31,17 +32,6 @@ pub struct PbrSsboTransformRegistry {
     pub available_transform_ids: Vec<u32>,         // List of available transform IDs in the SSBO
     pub next_transform_id: u32,                    // Next available transform ID in the SSBO
     pub dirty_transforms: Vec<(u32, TransformUniform)>, // List of dirty transforms that need to be updated in the SSBO
-}
-impl ExtractResource for PbrSsboTransformRegistry {
-    type Source = Self;
-    fn extract(source: &Self::Source) -> Self {
-        Self {
-            entity_to_transform: source.entity_to_transform.clone(),
-            available_transform_ids: vec![], // Don't need it on the render thread
-            next_transform_id: 0,            // Don't need it on the render thread
-            dirty_transforms: source.dirty_transforms.clone(),
-        }
-    }
 }
 impl PbrSsboTransformRegistry {
     /// Register an entity with its transform in the registry, returning the assigned transform ID in the SSBO. If the entity is already registered, returns the existing transform ID.
@@ -120,11 +110,19 @@ fn set_dirty_transforms(
     }
 }
 
+fn extract_registry(
+    main_registry: ExtractWorld<Res<PbrSsboTransformRegistry>>,
+    mut registry: ResMut<PbrSsboTransformRegistry>
+) {
+    registry.entity_to_transform = main_registry.entity_to_transform.clone();
+    registry.dirty_transforms.extend(main_registry.dirty_transforms.clone());
+}
+
 // Update the ssbo with the dirty transforms from the registry
 fn update_ssbo_transforms(
     ssbo: ResRenderData<PbrSsboTransform>,
     buffers: Res<RenderAssets<GpuBuffer>>,
-    registry: Res<PbrSsboTransformRegistry>,
+    mut registry: ResMut<PbrSsboTransformRegistry>,
     render_instance: Res<RenderInstance>,
 ) {
     // Return early if there are no dirty transforms to update
@@ -150,4 +148,7 @@ fn update_ssbo_transforms(
 
     // Copy the staging buffer to the GPU buffer
     ssbo_gpu.copy_from_buffer(&render_instance, ssbo_staging);
+
+    // Only then, clear the list of dirty transforms
+    registry.dirty_transforms.clear();
 }

@@ -1,6 +1,6 @@
 use crate::{
     deferred::subpass::{GBufferRenderPipeline, gbuffer_bindgroup::GBufferBindGroup},
-    prelude::{PbrMaterial, build_batches::Batches}
+    prelude::{BatchList, PbrMaterial}
 };
 use wde_logger::prelude::*;
 
@@ -53,7 +53,7 @@ pub(crate) struct PushConstants {
 }
 
 fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
-    let batches = world.get_resource::<Batches>().unwrap();
+    let batches = world.get_resource::<BatchList>().unwrap();
     let materials = world
         .get_resource::<RenderAssets<GpuRenderBinding<PbrMaterial>>>()
         .unwrap();
@@ -63,15 +63,19 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
     let mut current_mesh_id = None;
     let mut current_index_count = 0;
     let mut current_material_id = None;
-    for batch in &batches.render_batches {
+    for batch_key in batches.sorted_batches.iter() {
+        let batch = match batches.batches.get(batch_key) {
+            Some(batch) => batch,
+            None => continue
+        };
         // Set the mesh
-        if current_mesh_id != Some(batch.mesh_id) {
-            let mesh = match meshes.get(batch.mesh_id) {
+        if current_mesh_id != Some(batch_key.mesh) {
+            let mesh = match meshes.get(batch_key.mesh) {
                 Some(mesh) => mesh,
                 None => continue
             };
             current_index_count = mesh.index_count;
-            current_mesh_id = Some(batch.mesh_id);
+            current_mesh_id = Some(batch_key.mesh);
 
             // Set push constants
             render_pass.set_push_constants(
@@ -84,21 +88,21 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
         }
 
         // Set the material
-        if current_material_id != Some(batch.material_id) {
-            let material = match materials.get(batch.material_id) {
+        if current_material_id != Some(batch_key.material) {
+            let material = match materials.get(batch_key.material) {
                 Some(material) => material,
                 None => continue
             };
 
             // Set the material bind group
             render_pass.set_bind_group(3, &material.bind_group);
-            current_material_id = Some(batch.material_id);
+            current_material_id = Some(batch_key.material);
         }
 
         // Draw the mesh
         if let Err(e) = render_pass.draw(
             0..current_index_count,
-            batch.first_instance..(batch.first_instance + batch.instance_count)
+            batch.instances_offset..(batch.instances_offset + batch.transform_ssbo_ids.len() as u32)
         ) {
             error!("Failed to draw: {:?}.", e);
         }
