@@ -74,6 +74,7 @@ pub fn show_ui(
                                 Err(_) => commands.entity(entity)
                             };
                             entity.insert((
+                                Name::new(format!("Placement Entity: {}", entry.label)),
                                 Transform::default()
                                     .with_translation(Vec3::new(10000.0, -10000.0, 10000.0)),
                                 Mesh3d(entry.asset.models[0].0.clone()),

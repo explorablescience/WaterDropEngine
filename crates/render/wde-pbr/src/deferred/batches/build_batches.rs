@@ -1,10 +1,9 @@
-use wde_logger::prelude::*;
 use std::collections::HashMap;
 
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::prelude::{PbrMaterial, PbrMaterial3d, PbrSsboTransformMarker, PbrSsboTransformRegistry};
+use crate::prelude::{PbrMaterial, PbrMaterial3d, PbrSsboTransformUuid, PbrUuidRegistry};
 
 #[derive(Component)]
 pub struct ExtractedPbrInstance {
@@ -12,10 +11,13 @@ pub struct ExtractedPbrInstance {
     material_id: AssetId<PbrMaterial>
 }
 
+#[derive(Component)]
+pub(crate) struct ExtractedPbrInstanceToRetryMarker;
+
 /// Marker component to indicate that an entity should be included in the PBR render batches.
 /// This will automatically add the [PbrSsboTransformMarker] to the entity, so that its transform will be included in the SSBO updates for rendering.
 #[derive(Component, Default)]
-#[require(PbrSsboTransformMarker)]
+#[require(PbrSsboTransformUuid)]
 pub struct PbrBatchesMarker;
 impl SyncComponent for PbrBatchesMarker {
     type Target = Self;
@@ -68,16 +70,20 @@ impl std::fmt::Debug for BatchList {
 }
 
 pub(crate) fn build_batches(
+    mut commands: Commands,
     mut batches: ResMut<BatchList>,
-    extracted_instances: Query<(MainEntity, &ExtractedPbrInstance), Changed<ExtractedPbrInstance>>,
-    transform_registry: Res<PbrSsboTransformRegistry>
+    extracted_instances: Query<(Entity, &PbrSsboTransformUuid, &ExtractedPbrInstance), Changed<ExtractedPbrInstance>>,
+    extracted_instances_to_retry: Query<(Entity, &PbrSsboTransformUuid, &ExtractedPbrInstance), With<ExtractedPbrInstanceToRetryMarker>>,
+    transform_registry: Res<PbrUuidRegistry>
 ) {
-    for (entity, instance) in &extracted_instances {
-        let transform_id = if let Some(&id) = transform_registry.entity_to_transform.get(&entity) {
+    // Add new or changed instances to the batches, and remove the retry marker if it exists
+    for (entity, transform_uuid, instance) in extracted_instances.into_iter().chain(extracted_instances_to_retry) {
+        let transform_id = if let Some(id) = transform_registry.get(&transform_uuid.0) {
             id
         } else {
-            warn!("Entity {:?} with mesh {:?} and material {:?} is not registered in the PbrSsboTransformRegistry, skipping it for batching", entity, instance.mesh_id, instance.material_id);
-            continue; // If the entity doesn't have a transform ID, skip it
+            // Retry next frame
+            commands.entity(entity).insert(ExtractedPbrInstanceToRetryMarker);
+            continue;
         };
 
         let key = BatchKey {
@@ -91,6 +97,7 @@ pub(crate) fn build_batches(
         }).transform_ssbo_ids.push(transform_id);
         batches.sorted_batches.push(key);
         batches.dirty_batches.push(key);
+        commands.entity(entity).remove::<ExtractedPbrInstanceToRetryMarker>();
     }
 
     // Sort batches first by material and then by mesh
