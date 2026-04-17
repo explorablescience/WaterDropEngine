@@ -102,7 +102,8 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
         // Draw the mesh
         if let Err(e) = render_pass.draw(
             0..current_index_count,
-            batch.instances_offset..(batch.instances_offset + batch.transform_ssbo_ids.len() as u32)
+            batch.instances_offset
+                ..(batch.instances_offset + batch.transform_ssbo_ids.len() as u32)
         ) {
             error!("Failed to draw: {:?}.", e);
         }

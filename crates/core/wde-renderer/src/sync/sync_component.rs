@@ -5,12 +5,14 @@ use bevy::{ecs::bundle::NoBundleEffect, prelude::*};
 use crate::sync::{EntityRecord, PendingSyncEntity, SyncToRenderWorld};
 
 /// Plugin that registers a component for automatic sync to the render world.
-/// 
+///
 /// If an entity ([MainEntity](crate::sync::MainEntity)) has a component that implements [`SyncComponent`] it will automatically have the [`SyncToRenderWorld`] component added, which will trigger the synchronization of that entity to the render world ([RenderEntity](crate::sync::RenderEntity))).
 /// See [`sync`](crate::sync) for more details.
 pub struct SyncComponentPlugin<C, F = ()>(PhantomData<(C, F)>);
 impl<C: SyncComponent<F>, F> Default for SyncComponentPlugin<C, F> {
-    fn default() -> Self { Self(PhantomData) }
+    fn default() -> Self {
+        Self(PhantomData)
+    }
 }
 
 /// Trait that links components from the main world with output components in the render world. It is used by [`SyncComponentPlugin`].
@@ -31,7 +33,7 @@ impl<C: SyncComponent<F>, F: Send + Sync + 'static> Plugin for SyncComponentPlug
                     context.entity,
                     |mut entity| {
                         entity.remove::<C::Target>();
-                    },
+                    }
                 ));
             });
     }

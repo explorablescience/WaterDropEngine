@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::sync::{MainEntity, RenderEntity};
 
 /// Marker component that indicates that its entity needs to be synchronized to the render world.
-/// 
+///
 /// It is added automatically to entities that have components that implement [`SyncComponent`](crate::sync::sync_component::SyncComponent) (see [`SyncComponentPlugin`](crate::sync::sync_component::SyncComponentPlugin)), and can be added manually to entities that need to be synchronized without any specific component requirements.
 /// See [`sync`](crate::sync) for more details.
 #[derive(Component, Copy, Clone, Debug, Default, Reflect)]
@@ -18,7 +18,7 @@ impl Plugin for SyncWorldPlugin {
             .add_observer(
                 |add: On<Add, SyncToRenderWorld>, mut pending: ResMut<PendingSyncEntity>| {
                     pending.push(EntityRecord::Added(add.entity)); // Push the added main world entity to the pending sync list
-                },
+                }
             )
             .add_observer(
                 |remove: On<Remove, SyncToRenderWorld>,
@@ -27,7 +27,7 @@ impl Plugin for SyncWorldPlugin {
                     if let Ok(e) = query.get(remove.entity) {
                         pending.push(EntityRecord::Removed(*e)); // Push the removed main world entity to the pending sync list
                     };
-                },
+                }
             );
     }
 }
@@ -40,13 +40,13 @@ pub(crate) enum EntityRecord {
     /// Entity despawned on the main world.
     Removed(RenderEntity),
     /// Component removed on an entity in the main world.
-    ComponentRemoved(Entity, fn(EntityWorldMut<'_>)),
+    ComponentRemoved(Entity, fn(EntityWorldMut<'_>))
 }
 
 // Entity Record in Main World pending to Sync to the Render World.
 #[derive(Resource, Default, Deref, DerefMut)]
 pub(crate) struct PendingSyncEntity {
-    records: Vec<EntityRecord>,
+    records: Vec<EntityRecord>
 }
 
 pub(crate) fn sync_worlds(main_world: &mut World, render_world: &mut World) {

@@ -38,7 +38,12 @@ impl Plugin for TerrainRenderPlugin {
             .init_resource::<TerrainRendererGPU>()
             .add_systems(
                 Render,
-                (TerrainRendererGPU::upload_dirty, TerrainRendererGPU::prepare_bind_groups).chain().in_set(RenderSet::Prepare)
+                (
+                    TerrainRendererGPU::upload_dirty,
+                    TerrainRendererGPU::prepare_bind_groups
+                )
+                    .chain()
+                    .in_set(RenderSet::Prepare)
             );
     }
 }

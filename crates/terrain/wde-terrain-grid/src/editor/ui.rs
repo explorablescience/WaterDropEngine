@@ -78,7 +78,7 @@ pub fn show_ui(
                                 Transform::default()
                                     .with_translation(Vec3::new(10000.0, -10000.0, 10000.0)),
                                 Mesh3d(entry.asset.models[0].0.clone()),
-                                PbrMaterial3d(entry.asset.models[0].1.clone()),
+                                PbrMaterial3d(entry.asset.models[0].1.clone())
                             ));
                         } else {
                             reset_tool(

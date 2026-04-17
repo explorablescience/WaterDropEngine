@@ -3,9 +3,7 @@ use bevy::prelude::*;
 use bevy::ecs::system::SystemParamItem;
 use wde_renderer::prelude::*;
 
-use crate::{
-    deferred::transform::PbrSsboTransform, prelude::PbrSsboInstanceToTransform
-};
+use crate::{deferred::transform::PbrSsboTransform, prelude::PbrSsboInstanceToTransform};
 
 #[derive(Default, Clone, TypePath, Asset)]
 pub struct GBufferBindGroup;

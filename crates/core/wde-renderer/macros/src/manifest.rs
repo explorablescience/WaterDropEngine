@@ -4,7 +4,7 @@ use std::sync::{PoisonError, RwLock};
 use std::{
     env,
     path::{Path, PathBuf},
-    time::SystemTime,
+    time::SystemTime
 };
 use toml_edit::{Document, Item};
 
@@ -12,7 +12,7 @@ use toml_edit::{Document, Item};
 #[derive(Debug)]
 pub struct WdeManifest {
     manifest: Document<Box<str>>,
-    modified_time: SystemTime,
+    modified_time: SystemTime
 }
 
 const WDE: &str = "wde";
@@ -36,7 +36,7 @@ impl WdeManifest {
 
         let manifest = WdeManifest {
             manifest: Self::read_manifest(&manifest_path),
-            modified_time,
+            modified_time
         };
 
         let key = manifest_path.clone();
@@ -68,7 +68,7 @@ impl WdeManifest {
     }
 
     fn get_manifest_modified_time(
-        cargo_manifest_path: &Path,
+        cargo_manifest_path: &Path
     ) -> Result<SystemTime, std::io::Error> {
         std::fs::metadata(cargo_manifest_path).and_then(|metadata| metadata.modified())
     }

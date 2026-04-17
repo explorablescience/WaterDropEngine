@@ -1,6 +1,5 @@
 use bevy::{ecs::entity::EntityEquivalent, prelude::*};
 
-
 /// Component added on the Main world entities that are synced to the Render World in order to keep track of the corresponding render world entity.
 /// It points to the corresponding entity in the render world.
 #[derive(Component, Deref, Copy, Clone, Debug, Eq, Hash, PartialEq, Reflect)]
@@ -25,7 +24,6 @@ impl ContainsEntity for RenderEntity {
 }
 unsafe impl EntityEquivalent for RenderEntity {}
 
-
 /// Component added on the Render world entities that are synced from the Main World in order to keep track of the corresponding main world entity.
 /// It points to the corresponding entity in the main world.
 #[derive(Component, Deref, Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Reflect)]
@@ -49,8 +47,6 @@ impl ContainsEntity for MainEntity {
 }
 unsafe impl EntityEquivalent for MainEntity {}
 
-
-
 /// This module exists to keep the complex unsafe code out of the main module.
 ///
 /// The implementations for both [`MainEntity`] and [`RenderEntity`] should stay in sync,
@@ -65,10 +61,10 @@ mod render_entities_world_query_impls {
         entity::Entity,
         query::{
             ArchetypeQueryData, FilteredAccess, QueryData, ReadOnlyQueryData,
-            ReleaseStateQueryData, WorldQuery,
+            ReleaseStateQueryData, WorldQuery
         },
         storage::{Table, TableRow},
-        world::{World, unsafe_world_cell::UnsafeWorldCell},
+        world::{World, unsafe_world_cell::UnsafeWorldCell}
     };
 
     // SAFETY: defers completely to `&RenderEntity` implementation,
@@ -78,7 +74,7 @@ mod render_entities_world_query_impls {
         type State = <&'static RenderEntity as WorldQuery>::State;
 
         fn shrink_fetch<'wlong: 'wshort, 'wshort>(
-            fetch: Self::Fetch<'wlong>,
+            fetch: Self::Fetch<'wlong>
         ) -> Self::Fetch<'wshort> {
             fetch
         }
@@ -88,7 +84,7 @@ mod render_entities_world_query_impls {
             world: UnsafeWorldCell<'w>,
             component_id: &ComponentId,
             last_run: Tick,
-            this_run: Tick,
+            this_run: Tick
         ) -> Self::Fetch<'w> {
             // SAFETY: defers to the `&T` implementation, with T set to `RenderEntity`.
             unsafe {
@@ -103,7 +99,7 @@ mod render_entities_world_query_impls {
             fetch: &mut Self::Fetch<'w>,
             component_id: &ComponentId,
             archetype: &'w Archetype,
-            table: &'w Table,
+            table: &'w Table
         ) {
             // SAFETY: defers to the `&T` implementation, with T set to `RenderEntity`.
             unsafe {
@@ -115,7 +111,7 @@ mod render_entities_world_query_impls {
         unsafe fn set_table<'w>(
             fetch: &mut Self::Fetch<'w>,
             &component_id: &ComponentId,
-            table: &'w Table,
+            table: &'w Table
         ) {
             // SAFETY: defers to the `&T` implementation, with T set to `RenderEntity`.
             unsafe { <&RenderEntity as WorldQuery>::set_table(fetch, &component_id, table) }
@@ -135,7 +131,7 @@ mod render_entities_world_query_impls {
 
         fn matches_component_set(
             &state: &ComponentId,
-            set_contains_id: &impl Fn(ComponentId) -> bool,
+            set_contains_id: &impl Fn(ComponentId) -> bool
         ) -> bool {
             <&RenderEntity as WorldQuery>::matches_component_set(&state, set_contains_id)
         }
@@ -150,7 +146,7 @@ mod render_entities_world_query_impls {
         type Item<'w, 's> = Entity;
 
         fn shrink<'wlong: 'wshort, 'wshort, 's>(
-            item: Self::Item<'wlong, 's>,
+            item: Self::Item<'wlong, 's>
         ) -> Self::Item<'wshort, 's> {
             item
         }
@@ -160,7 +156,7 @@ mod render_entities_world_query_impls {
             state: &'s Self::State,
             fetch: &mut Self::Fetch<'w>,
             entity: Entity,
-            table_row: TableRow,
+            table_row: TableRow
         ) -> Option<Self::Item<'w, 's>> {
             // SAFETY: defers to the `&T` implementation, with T set to `RenderEntity`.
             let component =
@@ -169,7 +165,7 @@ mod render_entities_world_query_impls {
         }
 
         fn iter_access(
-            state: &Self::State,
+            state: &Self::State
         ) -> impl Iterator<Item = bevy::ecs::query::EcsAccessType<'_>> {
             <&RenderEntity as QueryData>::iter_access(state)
         }
@@ -193,7 +189,7 @@ mod render_entities_world_query_impls {
         type State = <&'static MainEntity as WorldQuery>::State;
 
         fn shrink_fetch<'wlong: 'wshort, 'wshort>(
-            fetch: Self::Fetch<'wlong>,
+            fetch: Self::Fetch<'wlong>
         ) -> Self::Fetch<'wshort> {
             fetch
         }
@@ -203,7 +199,7 @@ mod render_entities_world_query_impls {
             world: UnsafeWorldCell<'w>,
             component_id: &ComponentId,
             last_run: Tick,
-            this_run: Tick,
+            this_run: Tick
         ) -> Self::Fetch<'w> {
             // SAFETY: defers to the `&T` implementation, with T set to `MainEntity`.
             unsafe {
@@ -218,7 +214,7 @@ mod render_entities_world_query_impls {
             fetch: &mut Self::Fetch<'w>,
             component_id: &ComponentId,
             archetype: &'w Archetype,
-            table: &'w Table,
+            table: &'w Table
         ) {
             // SAFETY: defers to the `&T` implementation, with T set to `MainEntity`.
             unsafe {
@@ -230,7 +226,7 @@ mod render_entities_world_query_impls {
         unsafe fn set_table<'w>(
             fetch: &mut Self::Fetch<'w>,
             &component_id: &ComponentId,
-            table: &'w Table,
+            table: &'w Table
         ) {
             // SAFETY: defers to the `&T` implementation, with T set to `MainEntity`.
             unsafe { <&MainEntity as WorldQuery>::set_table(fetch, &component_id, table) }
@@ -250,7 +246,7 @@ mod render_entities_world_query_impls {
 
         fn matches_component_set(
             &state: &ComponentId,
-            set_contains_id: &impl Fn(ComponentId) -> bool,
+            set_contains_id: &impl Fn(ComponentId) -> bool
         ) -> bool {
             <&MainEntity as WorldQuery>::matches_component_set(&state, set_contains_id)
         }
@@ -265,7 +261,7 @@ mod render_entities_world_query_impls {
         type Item<'w, 's> = Entity;
 
         fn shrink<'wlong: 'wshort, 'wshort, 's>(
-            item: Self::Item<'wlong, 's>,
+            item: Self::Item<'wlong, 's>
         ) -> Self::Item<'wshort, 's> {
             item
         }
@@ -275,7 +271,7 @@ mod render_entities_world_query_impls {
             state: &'s Self::State,
             fetch: &mut Self::Fetch<'w>,
             entity: Entity,
-            table_row: TableRow,
+            table_row: TableRow
         ) -> Option<Self::Item<'w, 's>> {
             // SAFETY: defers to the `&T` implementation, with T set to `MainEntity`.
             let component =
@@ -284,7 +280,7 @@ mod render_entities_world_query_impls {
         }
 
         fn iter_access(
-            state: &Self::State,
+            state: &Self::State
         ) -> impl Iterator<Item = bevy::ecs::query::EcsAccessType<'_>> {
             <&MainEntity as QueryData>::iter_access(state)
         }

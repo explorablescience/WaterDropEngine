@@ -3,14 +3,14 @@ use std::marker::PhantomData;
 use bevy::{
     ecs::{
         bundle::NoBundleEffect,
-        query::{QueryFilter, ReadOnlyQueryData},
+        query::{QueryFilter, ReadOnlyQueryData}
     },
-    prelude::*,
+    prelude::*
 };
 
 use crate::{
     core::{Extract, ExtractWorld, RenderApp},
-    sync::{RenderEntity, SyncComponent, SyncComponentPlugin},
+    sync::{RenderEntity, SyncComponent, SyncComponentPlugin}
 };
 
 pub use bevy::ecs::query::QueryItem;
@@ -59,7 +59,7 @@ impl<C: ExtractComponent<F>, F: 'static + Send + Sync> Plugin for ExtractCompone
 fn extract_components<C: ExtractComponent<F>, F>(
     mut commands: Commands,
     mut previous_len: Local<usize>,
-    query: ExtractWorld<Query<(RenderEntity, C::QueryData), C::QueryFilter>>,
+    query: ExtractWorld<Query<(RenderEntity, C::QueryData), C::QueryFilter>>
 ) {
     let mut values = Vec::with_capacity(*previous_len);
     for (entity, query_item) in &query {

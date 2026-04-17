@@ -8,7 +8,10 @@ use bevy::{
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::{deferred::subpass::{gbuffer_bindgroup::GBufferBindGroup, gbuffer_subpass_pbr::PushConstants}, prelude::PbrMaterial};
+use crate::{
+    deferred::subpass::{gbuffer_bindgroup::GBufferBindGroup, gbuffer_subpass_pbr::PushConstants},
+    prelude::PbrMaterial
+};
 
 #[derive(TypePath, Asset, Default, Clone)]
 pub(crate) struct GBufferRenderPipeline(pub CachedPipelineIndex);

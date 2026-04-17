@@ -1,4 +1,4 @@
-use proc_macro::{TokenStream};
+use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input, parse_quote};
 
@@ -21,7 +21,7 @@ pub fn derive_extract_component(input: TokenStream) -> TokenStream {
     {
         let filter = match attr.parse_args::<syn::Type>() {
             Ok(filter) => filter,
-            Err(e) => return e.to_compile_error().into(),
+            Err(e) => return e.to_compile_error().into()
         };
 
         quote! {
@@ -40,7 +40,7 @@ pub fn derive_extract_component(input: TokenStream) -> TokenStream {
     {
         let sync_target = match attr.parse_args::<syn::Type>() {
             Ok(sync_target) => sync_target,
-            Err(e) => return e.to_compile_error().into(),
+            Err(e) => return e.to_compile_error().into()
         };
 
         quote! {
@@ -68,4 +68,3 @@ pub fn derive_extract_component(input: TokenStream) -> TokenStream {
         }
     })
 }
-

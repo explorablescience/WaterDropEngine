@@ -45,7 +45,7 @@
 //!    /* (...) */
 //! }
 //! ```
-//! 
+//!
 //! ## Extracting resources and entities
 //! To extract resources and entities from the main world, see the [`sync`](crate::sync) module, which provides utilities to automatically extract resources, query and entities from the main to the render world.
 //!
@@ -144,15 +144,7 @@ impl Render {
         use RenderSet::*;
 
         let mut schedule = Schedule::new(Self);
-        schedule.configure_sets(
-            (
-                ExtractAuto,
-                Prepare,
-                Render,
-                Submit
-            )
-            .chain()
-        );
+        schedule.configure_sets((ExtractAuto, Prepare, Render, Submit).chain());
 
         schedule
     }

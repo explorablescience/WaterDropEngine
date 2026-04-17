@@ -7,9 +7,7 @@ mod ssbo_batches;
 pub use build_batches::*;
 pub use ssbo_batches::*;
 
-use crate::{
-    deferred::batches::build_batches::BatchesPlugin
-};
+use crate::deferred::batches::build_batches::BatchesPlugin;
 
 pub(crate) struct DeferredDependenciesPlugin;
 impl Plugin for DeferredDependenciesPlugin {
@@ -20,10 +18,10 @@ impl Plugin for DeferredDependenciesPlugin {
             Render,
             (
                 build_batches::build_batches,
-                ssbo_batches::set_instances_to_transform,
+                ssbo_batches::set_instances_to_transform
             )
                 .chain()
-                .in_set(RenderSet::Prepare),
+                .in_set(RenderSet::Prepare)
         );
     }
 }

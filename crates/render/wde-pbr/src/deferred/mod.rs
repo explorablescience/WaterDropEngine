@@ -53,14 +53,14 @@ use wde_renderer::prelude::*;
 
 mod batches;
 mod lights;
+mod pbr_material;
 mod subpass;
 mod transform;
-mod pbr_material;
 
 pub use batches::*;
 pub use lights::*;
-pub use transform::*;
 pub use pbr_material::{PbrMaterial, PbrMaterial3d};
+pub use transform::*;
 
 use crate::{
     deferred::{
@@ -79,7 +79,7 @@ impl Plugin for DeferredPlugin {
             DeferredDependenciesPlugin,
             PbrRenderPlugin,
             PbrTransformPlugin,
-            RenderBindingRegisterPlugin::<PbrMaterial>::default(),
+            RenderBindingRegisterPlugin::<PbrMaterial>::default()
         ));
 
         // Add the render graph nodes

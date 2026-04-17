@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 
-pub(crate) mod ssbo_transforms;
 mod registry;
+pub(crate) mod ssbo_transforms;
 
-pub use ssbo_transforms::{PbrSsboTransform, SSBO_TRANSFORM_MAX_ENTITY};
 pub use registry::*;
+pub use ssbo_transforms::{PbrSsboTransform, SSBO_TRANSFORM_MAX_ENTITY};
 
-use crate::{
-    deferred::transform::{registry::SsboTransformRegistryPlugin, ssbo_transforms::SsboTransformPlugin}
+use crate::deferred::transform::{
+    registry::SsboTransformRegistryPlugin, ssbo_transforms::SsboTransformPlugin
 };
 
 pub(crate) struct PbrTransformPlugin;
