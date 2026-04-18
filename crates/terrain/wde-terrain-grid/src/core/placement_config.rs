@@ -11,7 +11,7 @@ const PLACEMENT_CONFIG_PATH: &str = "core/config/placement.json";
 #[derive(Clone)]
 pub struct PlacementConfigEntry {
     pub label: String,
-    pub asset: GltfAsset,
+    pub asset: Handle<GltfAsset>,
     pub extent: UVec2
 }
 
@@ -83,17 +83,9 @@ fn init_placement(
         };
 
         // Load model
-        let gltf_model = match GltfLoader::load(&model_path, &asset_server) {
-            Ok(model) => model,
-            Err(err) => {
-                error!("Failed to load model for entity '{}': {}", label, err);
-                continue;
-            }
-        };
-
         entities.push(PlacementConfigEntry {
             label: label.clone(),
-            asset: gltf_model,
+            asset: asset_server.load(&model_path),
             extent
         });
         labels.push(label);

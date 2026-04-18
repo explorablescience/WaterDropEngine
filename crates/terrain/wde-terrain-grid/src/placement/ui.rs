@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use wde_editor::prelude::*;
+use wde_gltf::prelude::*;
 
 use crate::{
     core::placement_config::PlacementConfig,
@@ -11,7 +12,8 @@ pub fn show_ui(
     ctx: Res<UIContext>,
     mut ui_menu: ResMut<UIMenu>,
     mut manager: ResMut<TerrainPlacementManager>,
-    config: Res<PlacementConfig>
+    config: Res<PlacementConfig>,
+    gltf_models: Res<Assets<GltfAsset>>,
 ) {
     UIWindow::new("Terrain Placement")
         .open(ui_menu.clicked_mut("Terrain/Placement"))
@@ -33,7 +35,7 @@ pub fn show_ui(
             ui.separator();
             match manager.mode {
                 TerrainPlacementMode::Place => {
-                    ui_place_entity(commands, ui, &mut manager, &config);
+                    ui_place_entity(commands, ui, &mut manager, &config, &gltf_models);
                 }
                 TerrainPlacementMode::Remove => {} // TODO
                 TerrainPlacementMode::None => {

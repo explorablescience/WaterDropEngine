@@ -118,6 +118,7 @@ impl Plugin for CustomWdePlugins {
         app.add_plugins((
             wde_logger::LogPlugin::default().auto_level(),
             wde_renderer::RenderPlugin,
+            wde_gltf::GltfPlugin,
             wde_camera::CameraPlugin,
             wde_camera_controller::CameraControllerPlugin,
             wde_physics::PhysicsPlugin,

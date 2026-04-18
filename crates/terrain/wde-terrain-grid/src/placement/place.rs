@@ -6,6 +6,7 @@ use wde_editor::prelude::*;
 use wde_pbr::prelude::*;
 use wde_physics::prelude::*;
 use wde_renderer::prelude::*;
+use wde_gltf::prelude::*;
 
 use crate::{
     core::placement_config::PlacementConfig,
@@ -17,7 +18,8 @@ pub fn ui_place_entity(
     mut commands: Commands,
     ui: &mut ui::egui::Ui,
     manager: &mut TerrainPlacementManager,
-    config: &PlacementConfig
+    config: &PlacementConfig,
+    gltf_models: &Assets<GltfAsset>,
 ) {
     // Select entity to place
     ui.label("Placement Entity:");
@@ -46,9 +48,14 @@ pub fn ui_place_entity(
         {
             manager.place_selected_entry = Some(entry.clone());
 
+            // Get the model to place
+            let model = match gltf_models.get(&entry.asset) {
+                Some(model) => model,
+                None => return, // Model not loaded yet, will try again in the next frame
+            };
+
             // Add the elements as children of the placement entity
-            let children = entry
-                .asset
+            let children = model
                 .models
                 .iter()
                 .map(|(mesh, material)| {

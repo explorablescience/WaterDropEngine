@@ -11,7 +11,7 @@ use base64::{Engine, engine::general_purpose};
 use serde_json::Value;
 
 /// Parse a glTF 2.0 JSON file from `res/` and build an in-memory `GltfModel`.
-pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
+pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
     // Extract filename and folder path
     let std_path = std::path::Path::new(path);
     let filename = std_path
@@ -26,9 +26,8 @@ pub fn parse_gltf(path: &str) -> Result<GltfModel, GltfError> {
         .to_string();
     trace!("Parsing glTF file '{}'.", path);
 
-    // Read the file content and parse JSON
-    let content = std::fs::read_to_string(format!("./res/{}", path))?;
-    let json: Value = serde_json::from_str(&content)?;
+    // Parse the JSON
+    let json: Value = serde_json::from_slice(&bytes)?;
 
     // Assert asset version
     let asset = &json["asset"];

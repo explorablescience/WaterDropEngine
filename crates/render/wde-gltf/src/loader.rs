@@ -1,10 +1,8 @@
 use wde_logger::prelude::*;
 
 use bevy::prelude::*;
-use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::GltfAsset;
 use crate::accessor::{parse_attribute_as_f32, parse_indices};
 use crate::error::GltfError;
 use crate::material::GltfMaterial;
@@ -16,55 +14,6 @@ type MeshDataSet = (Vec<u32>, Vec<Vertex>, usize);
 /// Result type for form_models function
 type FormedModelsResult =
     Result<(Vec<GltfMaterial>, Vec<MeshDataSet>, Vec<(Vec3, Vec3)>), GltfError>;
-
-/// Register meshes and materials from the parsed glTF model into the Bevy world.
-/// Returns a GltfAsset representing the loaded model.
-pub fn load_models(
-    folder_path: &str,
-    raw_materials: &[GltfMaterial],
-    raw_meshes: &[MeshDataSet],
-    bounding_boxes: &[(Vec3, Vec3)],
-    asset_server: &AssetServer
-) -> GltfAsset {
-    trace!("Loading {} models into Bevy world", raw_meshes.len());
-
-    // Construct materials
-    let materials_handles: Vec<Handle<PbrMaterial>> = raw_materials
-        .iter()
-        .map(|material| material.to_pbr(asset_server))
-        .collect();
-
-    // Add meshes to the asset server
-    let mut models = Vec::new();
-    for (i, (indices_data, vertices, material_id)) in raw_meshes.iter().enumerate() {
-        let label = format!("gltf_mesh_{}", i);
-        let (bb_min, bb_max) = bounding_boxes[i];
-        let mesh_asset = Mesh {
-            label: label.clone(),
-            vertices: vertices.clone(),
-            indices: indices_data.clone(),
-            bbox: MeshBbox {
-                min: bb_min,
-                max: bb_max
-            },
-            use_ssbo: true
-        };
-        models.push((
-            asset_server.add(mesh_asset),
-            materials_handles[*material_id].clone()
-        ));
-        trace!(
-            "Added mesh: {} (bbox min={:?}, max={:?})",
-            label, bb_min, bb_max
-        );
-    }
-
-    // Create a gltf asset to hold references to meshes and materials
-    GltfAsset {
-        path: folder_path.to_string(),
-        models
-    }
-}
 
 /// Transform a parsed `GltfModel` into engine `Vertex` arrays and indices.
 pub fn form_models(model: &GltfModel) -> FormedModelsResult {
