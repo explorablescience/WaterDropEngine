@@ -1,25 +1,32 @@
-mod ghost_material;
+pub(crate) mod ghost_material;
 mod ghost_pipeline;
 mod ghost_subpass;
 
 use bevy::prelude::*;
+use wde_renderer::prelude::*;
+use wde_pbr::prelude::*;
+
+use crate::render::ghost::{ghost_material::GhostMaterial, ghost_pipeline::GhostRenderPipeline, ghost_subpass::{SubRenderPassGhost, extract_entities}};
 
 pub(crate) struct GhostPlugin;
 impl Plugin for GhostPlugin {
-    fn build(&self, _app: &mut App) {
-        // // Register the material
-        // app.add_plugins(MaterialsPluginRegister::<GhostMaterial>::default());
+    fn build(&self, app: &mut App) {
+        // Register the material
+        app.init_asset::<GhostMaterial>()
+            .add_plugins(RenderBindingRegisterPlugin::<GhostMaterial>::default());
+        
+        // Add the pbr pipeline
+        app.add_plugins(RenderPipelineRegisterPlugin::<GhostRenderPipeline>::default());
+    }
 
-        // app.add_systems(Startup, init);
+    fn finish(&self, app: &mut App) {
+        // Add the render graph nodes
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .add_systems(Extract, extract_entities)
+            .world_mut()
+            .get_resource_mut::<RenderGraph>()
+            .unwrap()
+            .add_sub_pass::<SubRenderPassGhost, RenderPassTransparent>();
     }
 }
-
-// fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
-//     let mat = GhostMaterial {
-//         albedo: (0.0, 1.0, 0.0, 0.5)
-//      };
-//     commands.spawn((
-//         Material3d(asset_server.add(mat)),
-//         /* other components */
-//     ));
-// }

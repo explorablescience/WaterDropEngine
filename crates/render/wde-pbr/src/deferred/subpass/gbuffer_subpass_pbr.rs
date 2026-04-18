@@ -1,5 +1,5 @@
 use crate::{
-    deferred::subpass::{GBufferRenderPipeline, gbuffer_bindgroup::GBufferBindGroup},
+    deferred::subpass::{GBufferRenderPipeline, gbuffer_bindgroup::SsboTransformBinding},
     prelude::{BatchList, PbrMaterial}
 };
 use wde_logger::prelude::*;
@@ -16,7 +16,7 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
     type Params = (
         SRes<RenderAssets<GBufferRenderPipeline>>,
         SBinding<CameraBinding>,
-        SBinding<GBufferBindGroup>,
+        SBinding<SsboTransformBinding>,
         SBinding<SsboMeshBinding>
     );
 

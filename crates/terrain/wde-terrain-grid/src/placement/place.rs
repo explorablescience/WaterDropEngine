@@ -3,15 +3,16 @@ use wde_logger::prelude::*;
 use bevy::{prelude::*, window::PrimaryWindow};
 use wde_camera::prelude::*;
 use wde_editor::prelude::*;
+use wde_gltf::prelude::*;
 use wde_pbr::prelude::*;
 use wde_physics::prelude::*;
-use wde_renderer::prelude::*;
-use wde_gltf::prelude::*;
+use wde_renderer::prelude::{Color, *};
 
 use crate::{
     core::placement_config::PlacementConfig,
     placement::{TerrainPlacementManager, TerrainPlacementMode, ui::reset_tool},
-    prelude::{GridEntity, GridRotation}
+    prelude::{GridEntity, GridRotation},
+    render::ghost::ghost_material::GhostMaterial,
 };
 
 pub fn ui_place_entity(
@@ -20,6 +21,7 @@ pub fn ui_place_entity(
     manager: &mut TerrainPlacementManager,
     config: &PlacementConfig,
     gltf_models: &Assets<GltfAsset>,
+    asset_server: &AssetServer,
 ) {
     // Select entity to place
     ui.label("Placement Entity:");
@@ -30,7 +32,7 @@ pub fn ui_place_entity(
             ui.selectable_value(
                 &mut manager.place_selected_entry_label,
                 Some(entry.label.clone()),
-                entry.label.clone()
+                entry.label.clone(),
             );
         }
     });
@@ -64,7 +66,11 @@ pub fn ui_place_entity(
                             Name::new(format!("Placement Entity - {}", entry.label)),
                             Transform::default(),
                             Mesh3d(mesh.clone()),
-                            PbrMaterial3d(material.clone())
+                            PbrMaterial3d(asset_server.add(GhostMaterial {
+                                overlay: Color::LinearRgba(0.2, 0.8, 0.2, 0.5),
+                                pbr_material: Some(material.clone()),
+                                buffer: None,
+                            }))
                         ))
                         .id()
                 })
@@ -88,7 +94,7 @@ pub fn place_update(
     window: Single<&Window, With<PrimaryWindow>>,
     camera_query: Query<(&GlobalTransform, &CameraView), With<Camera>>,
     mut local_rot: Local<GridRotation>,
-    mouse_input: Res<ButtonInput<MouseButton>>
+    mouse_input: Res<ButtonInput<MouseButton>>,
 ) {
     if manager.mode != TerrainPlacementMode::Place || manager.place_selected_entry.is_none() {
         return;
@@ -100,14 +106,14 @@ pub fn place_update(
             GridRotation::R0 => GridRotation::R90,
             GridRotation::R90 => GridRotation::R180,
             GridRotation::R180 => GridRotation::R270,
-            GridRotation::R270 => GridRotation::R0
+            GridRotation::R270 => GridRotation::R0,
         };
     }
 
     // Create the ray from ndc position
     let cursor_ndc_position = match window.cursor_position() {
         Some(pos) => pos / window.size(),
-        None => return
+        None => return,
     };
     let (camera_transform, camera_view) = camera_query
         .single()
@@ -117,7 +123,7 @@ pub fn place_update(
         cursor_ndc_position,
         window.size().x / window.size().y,
         camera_transform,
-        camera_view
+        camera_view,
     );
 
     // Cast the ray in the physics world
@@ -128,12 +134,12 @@ pub fn place_update(
         let grid_entity = GridEntity::new(
             Vec2::new(hit_point.x, hit_point.z),
             manager.place_selected_entry.as_ref().unwrap().extent,
-            *local_rot
+            *local_rot,
         );
         commands.entity(manager.entity).insert(
             Transform::from_rotation(Quat::from_rotation_y(local_rot.rotation())).with_translation(
-                Vec3::new(grid_entity.center().x, 0.0, grid_entity.center().y)
-            )
+                Vec3::new(grid_entity.center().x, 0.0, grid_entity.center().y),
+            ),
         );
     }
 }

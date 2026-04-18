@@ -22,7 +22,8 @@ pub mod prelude {
 pub struct TerrainGridPlugin;
 impl Plugin for TerrainGridPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PlacementPlugin, CorePlugin, RenderPlugin))
+        app.add_plugins(RenderPlugin)
+            .add_plugins((PlacementPlugin, CorePlugin))
             .init_resource::<Grid>();
     }
 }

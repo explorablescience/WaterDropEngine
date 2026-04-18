@@ -30,11 +30,11 @@ impl SyncComponent for PbrBatchesMarker {
     type Target = Self;
 }
 impl ExtractComponent for PbrBatchesMarker {
-    type QueryData = (&'static Mesh3d, &'static PbrMaterial3d);
+    type QueryData = (&'static Mesh3d, &'static PbrMaterial3d<PbrMaterial>);
     type QueryFilter = (
         With<PbrBatchesMarker>,
         With<Transform>,
-        Or<(Changed<Mesh3d>, Changed<PbrMaterial3d>)>
+        Or<(Changed<Mesh3d>, Changed<PbrMaterial3d<PbrMaterial>>)>
     );
     type Out = ExtractedPbrInstance;
 

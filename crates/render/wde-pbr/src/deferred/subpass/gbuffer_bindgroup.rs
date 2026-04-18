@@ -6,8 +6,8 @@ use wde_renderer::prelude::*;
 use crate::{deferred::transform::PbrSsboTransform, prelude::PbrSsboInstanceToTransform};
 
 #[derive(Default, Clone, TypePath, Asset)]
-pub struct GBufferBindGroup;
-impl RenderBinding for GBufferBindGroup {
+pub struct SsboTransformBinding;
+impl RenderBinding for SsboTransformBinding {
     type Params = (
         SRenderData<PbrSsboTransform>,
         SRenderData<PbrSsboInstanceToTransform>
@@ -27,6 +27,6 @@ impl RenderBinding for GBufferBindGroup {
     }
 
     fn label(&self) -> &str {
-        "gbuffer-bindgroup"
+        "ssbo-transform-bindgroup"
     }
 }

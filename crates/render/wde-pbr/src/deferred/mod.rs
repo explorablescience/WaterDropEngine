@@ -61,6 +61,7 @@ pub use batches::*;
 pub use lights::*;
 pub use pbr_material::{PbrMaterial, PbrMaterial3d};
 pub use transform::*;
+pub use subpass::*;
 
 use crate::{
     deferred::{

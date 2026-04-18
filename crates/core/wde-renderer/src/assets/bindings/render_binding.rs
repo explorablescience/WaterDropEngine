@@ -135,6 +135,11 @@ pub struct RenderBindingBuilder {
     dependencies: HashSet<TypeId>
 }
 impl RenderBindingBuilder {
+    /// Marks the render binding as None, which will cause the asset preparation to retry in the next update. This should be called when at least one of the buffers or textures that are added to the builder are not ready.
+    pub fn retry_next_update(&mut self) {
+        self.is_none = true;
+    }
+
     /// Adds a buffer to the render binding. The `render_data` parameter is the [`RenderData`](RenderData) that contains the buffer, and the `render_data_idx` parameter is the index of the buffer in this render data.
     pub fn add_buffer<R>(
         &mut self,
@@ -316,7 +321,8 @@ pub type BindingMut<'w, T> = ResMut<'w, RenderAssets<GpuRenderBinding<T>>>;
 pub struct GpuRenderBinding<T> {
     _phantom: PhantomData<T>,
     pub layout: BindGroupLayout,
-    pub bind_group: BindGroup
+    pub bind_group: BindGroup,
+    pub asset: T
 }
 impl<T> RenderAsset for GpuRenderBinding<T>
 where
@@ -512,7 +518,8 @@ where
         Ok(GpuRenderBinding {
             _phantom: PhantomData,
             bind_group,
-            layout
+            layout,
+            asset
         })
     }
 }

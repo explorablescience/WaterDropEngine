@@ -8,12 +8,13 @@ use crate::{
 };
 
 pub fn show_ui(
+    asset_server: Res<AssetServer>,
     mut commands: Commands,
     ctx: Res<UIContext>,
     mut ui_menu: ResMut<UIMenu>,
     mut manager: ResMut<TerrainPlacementManager>,
     config: Res<PlacementConfig>,
-    gltf_models: Res<Assets<GltfAsset>>,
+    gltf_models: Res<Assets<GltfAsset>>
 ) {
     UIWindow::new("Terrain Placement")
         .open(ui_menu.clicked_mut("Terrain/Placement"))
@@ -35,7 +36,7 @@ pub fn show_ui(
             ui.separator();
             match manager.mode {
                 TerrainPlacementMode::Place => {
-                    ui_place_entity(commands, ui, &mut manager, &config, &gltf_models);
+                    ui_place_entity(commands, ui, &mut manager, &config, &gltf_models, &asset_server);
                 }
                 TerrainPlacementMode::Remove => {} // TODO
                 TerrainPlacementMode::None => {

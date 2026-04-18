@@ -29,7 +29,7 @@ use crate::{
 use super::asset::{PrepareAssetError, RenderAsset};
 
 /// Utils component that stores a [`Mesh`] asset handle for 3D rendering.
-#[derive(Component, Reflect, Default)]
+#[derive(Component, Reflect, Default, Clone)]
 #[reflect(Component)]
 pub struct Mesh3d(pub Handle<Mesh>);
 

@@ -9,7 +9,7 @@ use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::{
-    deferred::subpass::{gbuffer_bindgroup::GBufferBindGroup, gbuffer_subpass_pbr::PushConstants},
+    deferred::subpass::{gbuffer_bindgroup::SsboTransformBinding, gbuffer_subpass_pbr::PushConstants},
     prelude::PbrMaterial
 };
 
@@ -22,7 +22,7 @@ impl RenderAsset for GBufferRenderPipeline {
         SResMut<PipelineManager>,
         SBinding<CameraBinding>,
         SBinding<SsboMeshBinding>,
-        SBinding<GBufferBindGroup>,
+        SBinding<SsboTransformBinding>,
         SBinding<PbrMaterial>
     );
 

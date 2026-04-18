@@ -1,0 +1,100 @@
+struct VertexOutput {
+    @builtin(position) clip_position: vec4<f32>,
+    @location(0) tex_coord:    vec2<f32>,
+    @location(1) normal_world: vec3<f32>,
+    @location(2) view_dir:     vec3<f32>,
+};
+
+// Push constants informations about the current mesh
+struct PushConstants {
+    first_vertex: u32,
+    first_index: u32,
+    transform_index: u32,
+}
+var<push_constant> push_constants: PushConstants;
+
+// List of vertices and indices from the ssbo
+// CPU Vertex layout: position[3], uv[2], normal[3], tangent[4]
+// Storage buffer requires vec3 aligned to 16 bytes in arrays
+// So we read as: vec4 (position + pad), vec2 (uv) + vec2 (normal.xy), vec2 (normal.z + pad) + vec2 (tangent.xy), vec2 (tangent.zw)
+// Actually, simpler: just use proper size with padding
+struct VertexData {
+    position:  vec3<f32>,    // 12 bytes
+    uv_x:      f32,          // 4 bytes (total 16)
+    uv_y:      f32,          // 4 bytes  
+    normal_x:  f32,          // 4 bytes
+    normal_y:  f32,          // 4 bytes (total 16)
+    normal_z:  f32,          // 4 bytes
+    tangent:   vec3<f32>,    // 12 bytes (total 16)
+    tangent_w: f32,          // 4 bytes (total 16)
+}
+@group(0) @binding(0) var<storage, read> in_vertices: array<VertexData>;
+@group(0) @binding(1) var<storage, read> in_indices: array<u32>;
+
+// From world space to normalized device coordinates
+struct Camera {
+    world_to_view: mat4x4<f32>,
+    view_to_ndc: mat4x4<f32>,
+    ndc_to_view: mat4x4<f32>,
+    view_to_world: mat4x4<f32>,
+    position: vec4<f32>
+}
+@group(1) @binding(0) var<uniform> in_camera: Camera;
+
+// Object to world space transformation ssbo
+struct ObjectToWorld {
+    obj_to_world:  mat4x4<f32>
+}
+@group(2) @binding(0) var<storage, read> in_raw_transform: array<ObjectToWorld>;
+
+
+// Function to compute the inverse of a 3x3 matrix
+fn inverse(m: mat3x3<f32>) -> mat3x3<f32> {
+    let a = m[0];
+    let b = m[1];
+    let c = m[2];
+
+    let r0 = cross(b, c);
+    let r1 = cross(c, a);
+    let r2 = cross(a, b);
+
+    let inv_det = 1.0 / dot(r2, c);
+
+    return mat3x3<f32>(
+        r0 * inv_det,
+        r1 * inv_det,
+        r2 * inv_det
+    );
+}
+
+@vertex
+fn main(@builtin(vertex_index) vid: u32) -> VertexOutput {
+    var out: VertexOutput;
+
+    // Fetch vertices and indices
+    let index = in_indices[vid + push_constants.first_index];
+    let vertex = in_vertices[index + push_constants.first_vertex];
+
+    // Transform position to clip space
+    let obj_to_world = in_raw_transform[push_constants.transform_index].obj_to_world;
+    let world_pos4 = obj_to_world * vec4<f32>(vertex.position, 1.0);
+    let view_pos4 = in_camera.world_to_view * world_pos4;
+    let view_pos = view_pos4.xyz / view_pos4.w;
+    out.clip_position = in_camera.view_to_ndc * vec4<f32>(view_pos, 1.0);
+
+    // Set uv
+    out.tex_coord = vec2<f32>(vertex.uv_x, vertex.uv_y);
+
+    // Transform normal to world space
+    let normal_matrix = transpose(inverse(mat3x3<f32>(
+        obj_to_world[0].xyz,
+        obj_to_world[1].xyz,
+        obj_to_world[2].xyz
+    )));
+    out.normal_world = normal_matrix * vec3<f32>(vertex.normal_x, vertex.normal_y, vertex.normal_z);
+
+    // Set view direction
+    out.view_dir = normalize(in_camera.position.xyz - world_pos4.xyz);
+
+    return out;
+}
