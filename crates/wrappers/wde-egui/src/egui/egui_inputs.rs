@@ -29,6 +29,7 @@ pub(crate) fn handle_input(
     mut keyboard_input_messages: MessageReader<KeyboardInput>,
     mut mouse_button_input_messages: MessageReader<MouseButtonInput>,
     mut mouse_motion_messages: MessageReader<MouseMotion>,
+    mut mouse_wheel_messages: MessageReader<MouseWheel>,
     keyboard_input: Res<ButtonInput<KeyCode>>
 ) {
     let mut raw_input = egui::RawInput::default();
@@ -48,6 +49,20 @@ pub(crate) fn handle_input(
     for _motion in mouse_motion_messages.read() {
         // Motion events are handled by the PointerMoved event above
         // We just need to consume the messages here
+    }
+
+    // Forward wheel scrolling to egui.
+    for event in mouse_wheel_messages.read() {
+        let unit = match event.unit {
+            bevy::input::mouse::MouseScrollUnit::Line => egui::MouseWheelUnit::Line,
+            bevy::input::mouse::MouseScrollUnit::Pixel => egui::MouseWheelUnit::Point
+        };
+
+        raw_input.events.push(egui::Event::MouseWheel {
+            unit,
+            delta: egui::Vec2::new(event.x, event.y),
+            modifiers: raw_input.modifiers
+        });
     }
 
     // Track modifiers
