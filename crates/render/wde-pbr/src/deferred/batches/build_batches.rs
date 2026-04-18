@@ -11,6 +11,12 @@ pub struct ExtractedPbrInstance {
     material_id: AssetId<PbrMaterial>
 }
 
+#[derive(Clone, Copy)]
+struct TrackedBatchEntity {
+    key: BatchKey,
+    transform_id: u32
+}
+
 #[derive(Component)]
 pub(crate) struct ExtractedPbrInstanceToRetryMarker;
 
@@ -59,7 +65,8 @@ pub(crate) struct Batch {
 pub(crate) struct BatchList {
     pub batches: HashMap<BatchKey, Batch>,
     pub sorted_batches: Vec<BatchKey>, // List of batch keys sorted first by material and then by mesh
-    pub dirty_batches: Vec<BatchKey> // List of batch keys that have been modified and need to be updated in the GPU instance to transform buffer
+    tracked_entities: HashMap<Entity, TrackedBatchEntity>,
+    pub dirty: bool // Did anything change? If true, rebuild ssbo batches
 }
 impl std::fmt::Debug for BatchList {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -82,9 +89,33 @@ impl std::fmt::Debug for BatchList {
     }
 }
 
+fn remove_tracked_entity(batches: &mut BatchList, entity: Entity) -> bool {
+    let Some(tracked) = batches.tracked_entities.remove(&entity) else {
+        return false;
+    };
+
+    let mut removed_any = false;
+    let mut remove_batch_key = false;
+    if let Some(batch) = batches.batches.get_mut(&tracked.key) {
+        let len_before = batch.transform_ssbo_ids.len();
+        batch.transform_ssbo_ids.retain(|id| *id != tracked.transform_id);
+        removed_any = batch.transform_ssbo_ids.len() != len_before;
+        remove_batch_key = batch.transform_ssbo_ids.is_empty();
+    }
+
+    if remove_batch_key {
+        batches.batches.remove(&tracked.key);
+        batches.sorted_batches.retain(|key| *key != tracked.key);
+    }
+
+    removed_any
+}
+
 pub(crate) fn build_batches(
     mut commands: Commands,
     mut batches: ResMut<BatchList>,
+    mut removed_extracted_instances: RemovedComponents<ExtractedPbrInstance>,
+    mut removed_transform_uuid: RemovedComponents<PbrSsboTransformUuid>,
     extracted_instances: Query<
         (Entity, &PbrSsboTransformUuid, &ExtractedPbrInstance),
         Changed<ExtractedPbrInstance>
@@ -95,11 +126,22 @@ pub(crate) fn build_batches(
     >,
     transform_registry: Res<PbrUuidRegistry>
 ) {
+    let mut changed = false;
+
+    for entity in removed_extracted_instances.read() {
+        changed |= remove_tracked_entity(&mut batches, entity);
+    }
+    for entity in removed_transform_uuid.read() {
+        changed |= remove_tracked_entity(&mut batches, entity);
+    }
+
     // Add new or changed instances to the batches, and remove the retry marker if it exists
     for (entity, transform_uuid, instance) in extracted_instances
         .into_iter()
         .chain(extracted_instances_to_retry)
     {
+        changed |= remove_tracked_entity(&mut batches, entity);
+
         let transform_id = if let Some(id) = transform_registry.get(&transform_uuid.0) {
             id
         } else {
@@ -124,15 +166,21 @@ pub(crate) fn build_batches(
             })
             .transform_ssbo_ids
             .push(transform_id);
-        batches.sorted_batches.push(key);
-        batches.dirty_batches.push(key);
+        batches
+            .tracked_entities
+            .insert(entity, TrackedBatchEntity { key, transform_id });
+        if !batches.sorted_batches.contains(&key) {
+            batches.sorted_batches.push(key);
+        }
         commands
             .entity(entity)
             .remove::<ExtractedPbrInstanceToRetryMarker>();
+        changed = true;
     }
+    batches.dirty |= changed;
 
     // Sort batches first by material and then by mesh
-    if extracted_instances.iter().next().is_some() {
+    if changed {
         batches.sorted_batches.sort_by(|a, b| {
             a.material
                 .cmp(&b.material)

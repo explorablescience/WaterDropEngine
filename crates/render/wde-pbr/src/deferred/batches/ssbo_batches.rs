@@ -52,8 +52,7 @@ pub(crate) fn set_instances_to_transform(
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>
 ) {
-    // Check if there are any dirty batches that need to be updated
-    if batches.dirty_batches.is_empty() {
+    if !batches.dirty {
         return;
     }
 
@@ -81,7 +80,7 @@ pub(crate) fn set_instances_to_transform(
     // Update the staging buffer with the new instance to transform mappings for each batch
     let mut staging_content = vec![0u8; staging_buffer.buffer.buffer.size() as usize];
     let mut offset = 0;
-    for batch_key in batches.dirty_batches.clone().iter() {
+    for batch_key in batches.sorted_batches.clone().iter() {
         let batch = batches.batches.get_mut(batch_key).unwrap();
         batch.instances_offset = offset;
         for transform_id in &batch.transform_ssbo_ids {
@@ -102,5 +101,5 @@ pub(crate) fn set_instances_to_transform(
         .copy_from_buffer(&render_instance, &staging_buffer.buffer);
 
     // Clear dirty batches
-    batches.dirty_batches.clear();
+    batches.dirty = false;
 }
