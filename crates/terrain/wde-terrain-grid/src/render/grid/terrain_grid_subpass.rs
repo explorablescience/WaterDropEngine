@@ -7,7 +7,7 @@ use wde_renderer::prelude::*;
 use wde_terrain::prelude::CHUNK_COUNT;
 
 use crate::{
-    editor::PlacementUI,
+    placement::TerrainPlacementManager,
     render::grid::{
         buffers::TerrainGridBufferBinding, terrain_grid_pipeline::TerrainGridRenderPipeline
     }
@@ -61,11 +61,12 @@ impl RenderSubPassTerrainGrid {
 
     pub fn extract(
         pass_main: ExtractWorld<Res<RenderSubPassTerrainGrid>>,
-        placement_ui: ExtractWorld<Res<PlacementUI>>,
+        placement_ui: ExtractWorld<Res<TerrainPlacementManager>>,
         mut pass_render: ResMut<RenderSubPassTerrainGrid>
     ) {
         pass_render.mesh = pass_main.mesh.clone();
-        pass_render.render_grid = placement_ui.enabled;
+        pass_render.render_grid =
+            placement_ui.mode == crate::placement::TerrainPlacementMode::Place;
     }
 }
 impl RenderSubPass for RenderSubPassTerrainGrid {

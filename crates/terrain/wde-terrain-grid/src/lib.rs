@@ -5,12 +5,12 @@ use bevy::prelude::*;
 
 use crate::{
     core::{CorePlugin, grid::Grid},
-    editor::EditorPlugin,
+    placement::PlacementPlugin,
     render::RenderPlugin
 };
 
 mod core;
-mod editor;
+mod placement;
 mod render;
 
 #[doc(hidden)]
@@ -22,7 +22,7 @@ pub mod prelude {
 pub struct TerrainGridPlugin;
 impl Plugin for TerrainGridPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((EditorPlugin, CorePlugin, RenderPlugin))
+        app.add_plugins((PlacementPlugin, CorePlugin, RenderPlugin))
             .init_resource::<Grid>();
     }
 }
