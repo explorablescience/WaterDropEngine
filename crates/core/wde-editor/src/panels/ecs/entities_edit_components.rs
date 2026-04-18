@@ -11,7 +11,7 @@ pub struct SelectedComponent(pub Option<bevy::ecs::component::ComponentId>);
 
 struct ComponentRow {
     id: bevy::ecs::component::ComponentId,
-    name: String,
+    name: String
 }
 
 pub fn draw_selected_entity_components_panel(world: &mut World) {
@@ -50,7 +50,7 @@ pub fn draw_selected_entity_components_panel(world: &mut World) {
             .filter_map(|component_id| {
                 components.get_name(*component_id).map(|name| ComponentRow {
                     id: *component_id,
-                    name: name.to_string(),
+                    name: name.to_string()
                 })
             })
             .collect();
@@ -99,7 +99,7 @@ pub fn draw_selected_entity_components_panel(world: &mut World) {
                                 if ui
                                     .selectable_label(
                                         selected_component == Some(component.id),
-                                        &component.name,
+                                        &component.name
                                     )
                                     .clicked()
                                 {
@@ -144,13 +144,13 @@ pub fn draw_selected_entity_components_panel(world: &mut World) {
 
 enum ComponentReflectDump {
     Dump(String),
-    Message(String),
+    Message(String)
 }
 
 fn component_reflect_dump(
     world: &World,
     entity: Entity,
-    component_id: bevy::ecs::component::ComponentId,
+    component_id: bevy::ecs::component::ComponentId
 ) -> ComponentReflectDump {
     let Some(component_info) = world.components().get_info(component_id) else {
         return ComponentReflectDump::Message("Component metadata is unavailable.".to_string());
@@ -158,28 +158,28 @@ fn component_reflect_dump(
 
     let Some(type_id) = component_info.type_id() else {
         return ComponentReflectDump::Message(
-            "Component has no Rust TypeId available for reflection.".to_string(),
+            "Component has no Rust TypeId available for reflection.".to_string()
         );
     };
 
     let type_registry = world.resource::<AppTypeRegistry>().read();
     let Some(type_registration) = type_registry.get(type_id) else {
         return ComponentReflectDump::Message(
-            "Type is not registered in AppTypeRegistry.".to_string(),
+            "Type is not registered in AppTypeRegistry.".to_string()
         );
     };
 
     let Some(reflect_component) = type_registration.data::<bevy::ecs::reflect::ReflectComponent>()
     else {
         return ComponentReflectDump::Message(
-            "Component does not provide ReflectComponent metadata.".to_string(),
+            "Component does not provide ReflectComponent metadata.".to_string()
         );
     };
 
     let entity_ref = world.entity(entity);
     let Some(reflected_component) = reflect_component.reflect(entity_ref) else {
         return ComponentReflectDump::Message(
-            "Unable to access reflected data for this entity component.".to_string(),
+            "Unable to access reflected data for this entity component.".to_string()
         );
     };
 
