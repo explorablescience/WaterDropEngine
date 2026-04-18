@@ -16,7 +16,8 @@ pub(crate) struct ExtractedPbrInstanceToRetryMarker;
 
 /// Marker component to indicate that an entity should be included in the PBR render batches.
 /// This will automatically add the [PbrSsboTransformMarker] to the entity, so that its transform will be included in the SSBO updates for rendering.
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
 #[require(PbrSsboTransformUuid)]
 pub struct PbrBatchesMarker;
 impl SyncComponent for PbrBatchesMarker {

@@ -28,7 +28,8 @@ impl Plugin for SsboTransformRegistryPlugin {
 }
 
 /// Marker component to track the UUID of an entity's transform in the SSBO registry
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Reflect)]
+#[reflect(Component)]
 pub struct PbrSsboTransformUuid(pub Uuid);
 impl Default for PbrSsboTransformUuid {
     fn default() -> Self {

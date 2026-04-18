@@ -18,13 +18,16 @@ pub struct TerrainRenderTile {
 }
 
 /// Holds the tiles used for rendering. Note that all tiles are not necessarily rendered.
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub struct TerrainRenderer {
     /// Pointer from tile position (x, z) to the corresponding tile datas
     pub pos_to_tile: HashMap<ChunkPos, usize>,
     /// A list of terrain render tiles that make up the entire terrain.
+    #[reflect(ignore)]
     pub tiles: Vec<TerrainRenderTile>,
     // List of tile maps that are dirty and need to be re-processed
+    #[reflect(ignore)]
     pub dirty: Vec<Option<TerrainDirtyTile>>
 }
 impl TerrainRenderer {

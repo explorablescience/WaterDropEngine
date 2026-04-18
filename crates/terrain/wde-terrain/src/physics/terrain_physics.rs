@@ -5,7 +5,8 @@ use wde_physics::prelude::*;
 
 use crate::manager::{CHUNK_HEIGHT, CHUNK_SIZE, ChunkPos, Terrain};
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
 pub struct TerrainPhysics {
     /// Super parent to all tile colliders, used for better organization in the scene hierarchy
     pub parent: Option<Entity>,

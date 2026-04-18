@@ -8,7 +8,8 @@ use crate::prelude::PbrBatchesMarker;
 
 /// Marker component to indicate that an entity's transform should be included in the [PbrSsboTransform] updates.
 /// This automatically adds the [PbrBatchesMarker] (and thus the [PbrSsboTransformMarker]) to the entity.
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 #[require(PbrBatchesMarker)]
 pub struct PbrMaterial3d(pub Handle<PbrMaterial>);
 

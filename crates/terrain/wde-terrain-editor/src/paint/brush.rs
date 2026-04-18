@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
 /// List of all types of brushes that can be used for terrain editing
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, Reflect)]
+#[reflect(PartialEq, Hash, Debug)]
 pub enum PaintMode {
     // Painting modes (edit splatmaps)
     #[default]
@@ -26,7 +27,8 @@ pub struct PaintCommand {
 }
 
 /// A general brush used to paint
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub struct PaintBrush {
     pub radius: f32,
     pub strength: f32,

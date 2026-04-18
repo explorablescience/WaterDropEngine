@@ -28,7 +28,8 @@ impl Plugin for CameraFeature {
 pub struct Camera;
 
 /// Marker component for the active camera. The render feature reads this each frame to know which camera to use for rendering.
-#[derive(Component, Default, Clone, Debug)]
+#[derive(Component, Default, Clone, Debug, Reflect)]
+#[reflect(Component)]
 #[require(Transform, CameraView, Camera)]
 pub struct ActiveCamera;
 

@@ -35,7 +35,8 @@ pub struct TerrainTile {
 
 /// The main terrain resource that holds all the terrain tiles.
 /// This is the source of truth for the terrain data, and is used by both the physics and rendering systems.
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub struct Terrain {
     /// Path to the terrain
     pub path: String,
@@ -44,7 +45,9 @@ pub struct Terrain {
 
     /// List of tile maps that are dirty and need to be re-processed.
     /// Each entry should be processed before the next frame, as it is cleared at the end of each frame.
+    #[reflect(ignore)]
     pub(crate) dirty_render: Vec<Option<TerrainDirtyTile>>,
+    #[reflect(ignore)]
     pub(crate) dirty_physics: Vec<Option<TerrainDirtyTile>>
 }
 impl Terrain {

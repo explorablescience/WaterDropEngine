@@ -30,6 +30,7 @@ use super::asset::{PrepareAssetError, RenderAsset};
 
 /// Utils component that stores a [`Mesh`] asset handle for 3D rendering.
 #[derive(Component, Reflect, Default)]
+#[reflect(Component)]
 pub struct Mesh3d(pub Handle<Mesh>);
 
 #[derive(Clone, Debug)]
