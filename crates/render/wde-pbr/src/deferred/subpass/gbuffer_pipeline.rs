@@ -9,7 +9,9 @@ use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::{
-    deferred::subpass::{gbuffer_bindgroup::SsboTransformBinding, gbuffer_subpass_pbr::PushConstants},
+    deferred::subpass::{
+        gbuffer_bindgroup::SsboTransformBinding, gbuffer_subpass_pbr::PushConstants
+    },
     prelude::PbrMaterial
 };
 

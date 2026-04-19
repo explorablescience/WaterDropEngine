@@ -36,7 +36,14 @@ pub fn show_ui(
             ui.separator();
             match manager.mode {
                 TerrainPlacementMode::Place => {
-                    ui_place_entity(commands, ui, &mut manager, &config, &gltf_models, &asset_server);
+                    ui_place_entity(
+                        commands,
+                        ui,
+                        &mut manager,
+                        &config,
+                        &gltf_models,
+                        &asset_server
+                    );
                 }
                 TerrainPlacementMode::Remove => {} // TODO
                 TerrainPlacementMode::None => {

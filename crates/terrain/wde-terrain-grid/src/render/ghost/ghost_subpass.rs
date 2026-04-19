@@ -2,7 +2,7 @@ use wde_logger::prelude::*;
 
 use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
-    prelude::*,
+    prelude::*
 };
 use wde_camera::prelude::*;
 use wde_pbr::prelude::*;
@@ -16,24 +16,24 @@ impl RenderSubPass for SubRenderPassGhost {
         SRes<RenderAssets<GhostRenderPipeline>>,
         SBinding<CameraBinding>,
         SBinding<SsboTransformBinding>,
-        SBinding<SsboMeshBinding>,
+        SBinding<SsboMeshBinding>
     );
 
     fn describe(
-        (render_pipeline, camera, gbuffer_bg, ssbo_mesh): &SystemParamItem<Self::Params>,
+        (render_pipeline, camera, gbuffer_bg, ssbo_mesh): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(
-                Some(render_pipeline.iter().next().map(|(_, p)| p.0)).flatten(),
+                Some(render_pipeline.iter().next().map(|(_, p)| p.0)).flatten()
             ),
             SubPassCommand::BindGroup(
                 0,
-                ssbo_mesh.iter().next().map(|(_, m)| m.bind_group.clone()),
+                ssbo_mesh.iter().next().map(|(_, m)| m.bind_group.clone())
             ),
             SubPassCommand::BindGroup(1, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
             SubPassCommand::BindGroup(
                 2,
-                gbuffer_bg.iter().next().map(|(_, t)| t.bind_group.clone()),
+                gbuffer_bg.iter().next().map(|(_, t)| t.bind_group.clone())
             ),
             SubPassCommand::Custom(draw_custom),
         ])
@@ -51,16 +51,16 @@ pub(crate) fn extract_entities(
             RenderEntity,
             &Mesh3d,
             &PbrMaterial3d<GhostMaterial>,
-            &PbrSsboTransformUuid,
-        )>,
+            &PbrSsboTransformUuid
+        )>
     >,
-    mut commands: Commands,
+    mut commands: Commands
 ) {
     for (entity, mesh, material, transform_uuid) in main_query.iter() {
         commands.get_entity(entity).unwrap().insert((
             mesh.clone(),
             material.clone(),
-            transform_uuid.clone(),
+            transform_uuid.clone()
         ));
     }
 }
@@ -70,7 +70,7 @@ pub(crate) fn extract_entities(
 pub(crate) struct PushConstants {
     first_vertex: u32,
     first_index: u32,
-    transform_index: u32,
+    transform_index: u32
 }
 
 fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
@@ -82,17 +82,17 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
     let mut query = match world.try_query::<(
         &Mesh3d,
         &PbrMaterial3d<GhostMaterial>,
-        &PbrSsboTransformUuid,
+        &PbrSsboTransformUuid
     )>() {
         Some(query) => query,
-        None => return,
+        None => return
     };
 
     for (mesh, material, transform_uuid) in query.iter(world) {
         // Set the mesh
         let mesh = match meshes.get(&mesh.0) {
             Some(mesh) => mesh,
-            None => continue,
+            None => continue
         };
 
         // Set push constants
@@ -101,14 +101,14 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
             bytemuck::bytes_of(&[PushConstants {
                 first_vertex: mesh.ssbo_first_vertex,
                 first_index: mesh.ssbo_first_index,
-                transform_index: ssbo_transform.get(&transform_uuid.0).unwrap_or(10000),
-            }]),
+                transform_index: ssbo_transform.get(&transform_uuid.0).unwrap_or(10000)
+            }])
         );
 
         // Set the material
         let material = match materials.get(&material.0) {
             Some(material) => material,
-            None => continue,
+            None => continue
         };
         render_pass.set_bind_group(3, &material.bind_group);
 

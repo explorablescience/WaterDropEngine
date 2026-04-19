@@ -3,11 +3,7 @@
 //! WIP.
 use bevy::prelude::*;
 
-use crate::{
-    core::{CorePlugin, grid::Grid},
-    placement::PlacementPlugin,
-    render::RenderPlugin
-};
+use crate::{core::CorePlugin, placement::PlacementPlugin, render::RenderPlugin};
 
 mod core;
 mod placement;
@@ -23,7 +19,6 @@ pub struct TerrainGridPlugin;
 impl Plugin for TerrainGridPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(RenderPlugin)
-            .add_plugins((PlacementPlugin, CorePlugin))
-            .init_resource::<Grid>();
+            .add_plugins((PlacementPlugin, CorePlugin));
     }
 }

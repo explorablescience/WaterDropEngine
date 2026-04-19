@@ -14,7 +14,7 @@ use wde_logger::prelude::*;
 
 use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
-    prelude::*,
+    prelude::*
 };
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
@@ -49,7 +49,7 @@ impl Plugin for GltfPlugin {
 /// Queue of glTF assets to spawn once they are loaded.
 #[derive(Resource, Default)]
 pub struct GltfSpawnQueue {
-    pending: Vec<Handle<GltfAsset>>,
+    pending: Vec<Handle<GltfAsset>>
 }
 
 /// Representation of a 3D GLTF model asset.
@@ -61,7 +61,7 @@ pub struct GltfAsset {
 
     /// The list of parsed glTF models.
     /// Each model is represented by a mesh and its associated material.
-    pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>,
+    pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>
 }
 
 #[derive(Default, TypePath)]
@@ -75,7 +75,7 @@ impl AssetLoader for GltfAssetLoader {
         &self,
         reader: &mut dyn Reader,
         _settings: &Self::Settings,
-        load_context: &mut LoadContext<'_>,
+        load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         let path = load_context.path().clone();
         debug!("Loading glTF file {}.", &path);
@@ -105,20 +105,20 @@ impl AssetLoader for GltfAssetLoader {
                 indices: indices_data.clone(),
                 bbox: MeshBbox {
                     min: bb_min,
-                    max: bb_max,
+                    max: bb_max
                 },
-                use_ssbo: true,
+                use_ssbo: true
             };
 
             models.push((
                 load_context.add_labeled_asset(label.clone(), mesh_asset),
-                materials_handles[*material_id].clone(),
+                materials_handles[*material_id].clone()
             ));
         }
 
         Ok(GltfAsset {
             path: path.to_string(),
-            models,
+            models
         })
     }
 
@@ -141,13 +141,13 @@ impl GltfLoader {
     pub fn try_spawn(
         commands: &mut Commands,
         gltf_asset: &Handle<GltfAsset>,
-        gltf_assets: &Assets<GltfAsset>,
+        gltf_assets: &Assets<GltfAsset>
     ) -> Option<Entity> {
         let gltf_asset = gltf_assets.get(gltf_asset)?;
         let parent_entity = commands
             .spawn((
                 Name::new(format!("GLTF Model {}", gltf_asset.path)),
-                Transform::default(),
+                Transform::default()
             ))
             .id();
         for (i, (mesh_handle, material_handle)) in gltf_asset.models.iter().enumerate() {
@@ -159,7 +159,7 @@ impl GltfLoader {
                 Transform::default(),
                 Mesh3d(mesh_handle.clone()),
                 PbrMaterial3d(material_handle.clone()),
-                ChildOf(parent_entity),
+                ChildOf(parent_entity)
             ));
         }
 
@@ -170,7 +170,7 @@ impl GltfLoader {
 fn process_gltf_spawn_queue(
     mut commands: Commands,
     mut queue: ResMut<GltfSpawnQueue>,
-    gltf_assets: Res<Assets<GltfAsset>>,
+    gltf_assets: Res<Assets<GltfAsset>>
 ) {
     let mut i = 0;
     while i < queue.pending.len() {

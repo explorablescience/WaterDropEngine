@@ -18,20 +18,22 @@ impl TerrainPhysics {
     pub fn extract_dirty(
         mut commands: Commands,
         mut renderer: Query<&mut TerrainPhysics>,
-        mut terrain: Query<&mut Terrain>
+        mut terrain: Query<(Entity, &mut Terrain)>
     ) {
         let mut terrain_renderer = match renderer.iter_mut().next() {
             Some(terrain) => terrain,
             None => return
         };
-        let mut terrain = match terrain.iter_mut().next() {
+        let (terrain_entity, mut terrain) = match terrain.iter_mut().next() {
             Some(terrain) => terrain,
             None => return
         };
 
         // Ensure the parent entity for the colliders exists
         if terrain_renderer.parent.is_none() {
-            let parent_entity = commands.spawn(Name::new("Terrain Colliders")).id();
+            let parent_entity = commands
+                .spawn((Name::new("Terrain Colliders"), ChildOf(terrain_entity)))
+                .id();
             terrain_renderer.parent = Some(parent_entity);
         }
 

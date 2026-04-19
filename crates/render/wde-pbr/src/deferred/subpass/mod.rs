@@ -9,8 +9,7 @@ use wde_renderer::prelude::*;
 
 use crate::{
     deferred::subpass::{
-        gbuffer_pipeline::GBufferRenderPipeline,
-        gbuffer_subpass_pbr::SubRenderPassGbufferPbr
+        gbuffer_pipeline::GBufferRenderPipeline, gbuffer_subpass_pbr::SubRenderPassGbufferPbr
     },
     prelude::RenderPassDeferredGBuffer
 };

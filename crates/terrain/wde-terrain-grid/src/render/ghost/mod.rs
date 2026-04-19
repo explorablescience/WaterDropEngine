@@ -3,10 +3,14 @@ mod ghost_pipeline;
 mod ghost_subpass;
 
 use bevy::prelude::*;
-use wde_renderer::prelude::*;
 use wde_pbr::prelude::*;
+use wde_renderer::prelude::*;
 
-use crate::render::ghost::{ghost_material::GhostMaterial, ghost_pipeline::GhostRenderPipeline, ghost_subpass::{SubRenderPassGhost, extract_entities}};
+use crate::render::ghost::{
+    ghost_material::GhostMaterial,
+    ghost_pipeline::GhostRenderPipeline,
+    ghost_subpass::{SubRenderPassGhost, extract_entities}
+};
 
 pub(crate) struct GhostPlugin;
 impl Plugin for GhostPlugin {
@@ -14,7 +18,7 @@ impl Plugin for GhostPlugin {
         // Register the material
         app.init_asset::<GhostMaterial>()
             .add_plugins(RenderBindingRegisterPlugin::<GhostMaterial>::default());
-        
+
         // Add the pbr pipeline
         app.add_plugins(RenderPipelineRegisterPlugin::<GhostRenderPipeline>::default());
     }

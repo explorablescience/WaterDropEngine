@@ -12,7 +12,7 @@ use crate::{
     core::placement_config::PlacementConfig,
     placement::{TerrainPlacementManager, TerrainPlacementMode, ui::reset_tool},
     prelude::{Grid, GridEntity, GridRotation},
-    render::ghost::ghost_material::GhostMaterial,
+    render::ghost::ghost_material::GhostMaterial
 };
 
 #[derive(Component)]
@@ -20,7 +20,7 @@ pub(crate) struct GhostMaterialStorer {
     pbr_material: Handle<PbrMaterial>,
     ok_material: Handle<GhostMaterial>,
     nok_material: Handle<GhostMaterial>,
-    current_validity: bool,
+    current_validity: bool
 }
 
 pub fn ui_place_entity(
@@ -29,7 +29,7 @@ pub fn ui_place_entity(
     manager: &mut TerrainPlacementManager,
     config: &PlacementConfig,
     gltf_models: &Assets<GltfAsset>,
-    asset_server: &AssetServer,
+    asset_server: &AssetServer
 ) {
     // Select entity to place
     ui.label("Placement Entity:");
@@ -40,7 +40,7 @@ pub fn ui_place_entity(
             ui.selectable_value(
                 &mut manager.place_selected_entry_label,
                 Some(entry.label.clone()),
-                entry.label.clone(),
+                entry.label.clone()
             );
         }
     });
@@ -61,7 +61,7 @@ pub fn ui_place_entity(
             // Get the model to place
             let model = match gltf_models.get(&entry.asset) {
                 Some(model) => model,
-                None => return, // Model not loaded yet, will try again in the next frame
+                None => return // Model not loaded yet, will try again in the next frame
             };
 
             // Add the elements as children of the placement entity
@@ -98,8 +98,8 @@ pub fn ui_place_entity(
                                 pbr_material: material.clone(),
                                 ok_material,
                                 nok_material,
-                                current_validity: true,
-                            },
+                                current_validity: true
+                            }
                         ))
                         .id()
                 })
@@ -126,7 +126,7 @@ pub fn place_update(
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut grid: ResMut<Grid>,
     children_query: Query<&Children>,
-    mut material_query: Query<(&Mesh3d, &mut GhostMaterialStorer)>,
+    mut material_query: Query<(&Mesh3d, &mut GhostMaterialStorer)>
 ) {
     if manager.mode != TerrainPlacementMode::Place || manager.place_selected_entry.is_none() {
         return;
@@ -138,14 +138,14 @@ pub fn place_update(
             GridRotation::R0 => GridRotation::R90,
             GridRotation::R90 => GridRotation::R180,
             GridRotation::R180 => GridRotation::R270,
-            GridRotation::R270 => GridRotation::R0,
+            GridRotation::R270 => GridRotation::R0
         };
     }
 
     // Create the ray from ndc position
     let cursor_ndc_position = match window.cursor_position() {
         Some(pos) => pos / window.size(),
-        None => return,
+        None => return
     };
     let (camera_transform, camera_view) = camera_query
         .single()
@@ -155,7 +155,7 @@ pub fn place_update(
         cursor_ndc_position,
         window.size().x / window.size().y,
         camera_transform,
-        camera_view,
+        camera_view
     );
 
     // Cast the ray in the physics world
@@ -166,12 +166,12 @@ pub fn place_update(
         let grid_entity = GridEntity::new(
             Vec2::new(hit_point.x, hit_point.z),
             manager.place_selected_entry.as_ref().unwrap().extent,
-            *local_rot,
+            *local_rot
         );
         commands.entity(manager.entity).insert(
             Transform::from_rotation(Quat::from_rotation_y(local_rot.rotation())).with_translation(
-                Vec3::new(grid_entity.center().x, 0.0, grid_entity.center().y),
-            ),
+                Vec3::new(grid_entity.center().x, 0.0, grid_entity.center().y)
+            )
         );
 
         // Check for placement validity and update ghost material accordingly
@@ -196,44 +196,49 @@ pub fn place_update(
             let grid_entity = GridEntity::new(
                 Vec2::new(hit_point.x, hit_point.z),
                 manager.place_selected_entry.as_ref().unwrap().extent,
-                *local_rot,
+                *local_rot
             );
 
             // Spawn parent
-            let parent = commands.spawn((
-                Name::new(format!(
-                    "Placed Entity - {}",
-                    manager.place_selected_entry_label.as_ref().unwrap()
-                )),
-                Transform::from_rotation(Quat::from_rotation_y(local_rot.rotation()))
-                    .with_translation(Vec3::new(
-                        grid_entity.center().x,
-                        0.0,
-                        grid_entity.center().y,
-                    )),
-                grid_entity.clone(),
-            )).id();
+            let parent = commands
+                .spawn((
+                    Name::new(
+                        manager
+                            .place_selected_entry_label
+                            .as_ref()
+                            .unwrap()
+                            .to_string()
+                    ),
+                    Transform::from_rotation(Quat::from_rotation_y(local_rot.rotation()))
+                        .with_translation(Vec3::new(
+                            grid_entity.center().x,
+                            0.0,
+                            grid_entity.center().y
+                        )),
+                    grid_entity.clone(),
+                    ChildOf(grid.get_parent().unwrap())
+                ))
+                .id();
 
             // Spawn children
             for child in children_query.get(manager.entity).unwrap().iter() {
-                commands
-                    .spawn((
-                        Name::new(format!(
-                            "Placed Entity Child - {}",
-                            manager.place_selected_entry_label.as_ref().unwrap()
-                        )),
-                        Transform::default(),
-                        grid_entity.clone(),
-                        Mesh3d(match material_query.get(child) {
-                            Ok((mesh, _)) => mesh.0.clone(),
-                            Err(_) => continue,
-                        }),
-                        PbrMaterial3d(match material_query.get(child) {
-                            Ok((_, material_storer)) => material_storer.pbr_material.clone(),
-                            Err(_) => continue,
-                        }),
-                        ChildOf(parent),
-                    ));
+                commands.spawn((
+                    Name::new(format!(
+                        "{} Child",
+                        manager.place_selected_entry_label.as_ref().unwrap()
+                    )),
+                    Transform::default(),
+                    grid_entity.clone(),
+                    Mesh3d(match material_query.get(child) {
+                        Ok((mesh, _)) => mesh.0.clone(),
+                        Err(_) => continue
+                    }),
+                    PbrMaterial3d(match material_query.get(child) {
+                        Ok((_, material_storer)) => material_storer.pbr_material.clone(),
+                        Err(_) => continue
+                    }),
+                    ChildOf(parent)
+                ));
             }
 
             // Mark the grid area as occupied

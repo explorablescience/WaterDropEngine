@@ -149,7 +149,8 @@ impl Chunk {
 /// The main terrain grid resource that holds all the terrain chunks and their respective tiles.
 #[derive(Resource, Default)]
 pub struct Grid {
-    chunks: HashMap<GridChunkPos, Chunk>
+    chunks: HashMap<GridChunkPos, Chunk>,
+    parent: Option<Entity>
 }
 impl Grid {
     /// Gets the entity at the specified chunk and local tile position in the grid, if it exists.
@@ -165,7 +166,10 @@ impl Grid {
     /// Adds the specified entity to the grid at the positions occupied by the entity footprint.
     pub fn set_entity(&mut self, grid_entity: &GridEntity, entity: Entity) {
         for pos in grid_entity.footprint() {
-            let chunk = self.chunks.entry(pos.0).or_insert_with(|| Chunk::new(pos.0));
+            let chunk = self
+                .chunks
+                .entry(pos.0)
+                .or_insert_with(|| Chunk::new(pos.0));
             chunk.set_entity_at(pos.1, entity);
         }
     }
@@ -246,5 +250,11 @@ impl Grid {
     }
     pub fn get_chunks_mut(&mut self) -> impl Iterator<Item = (&GridChunkPos, &mut Chunk)> {
         self.chunks.iter_mut()
+    }
+    pub fn set_parent(&mut self, parent: Entity) {
+        self.parent = Some(parent);
+    }
+    pub fn get_parent(&self) -> Option<Entity> {
+        self.parent
     }
 }

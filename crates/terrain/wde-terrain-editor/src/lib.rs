@@ -25,7 +25,7 @@ impl Plugin for TerrainEditorPlugin {
             TerrainEditorUIPlugin
         ))
         .init_resource::<SaveManager>()
-        .add_systems(Startup, init)
+        .add_systems(PreStartup, init)
         .add_systems(Update, save_extracted_tiles)
         .add_message::<ExtractedTileMessage>();
     }
@@ -33,15 +33,22 @@ impl Plugin for TerrainEditorPlugin {
 
 fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
     // Spawn a terrain
-    commands.spawn((
-        Name::new("Terrain"),
-        Terrain::load("tests/terrain"),
-        TerrainRenderer::new(&asset_server),
-        TerrainPhysics::default()
-    ));
+    let entity = commands
+        .spawn((
+            Name::new("Terrain"),
+            Transform::default(),
+            Terrain::load("tests/terrain"),
+            TerrainRenderer::new(&asset_server),
+            TerrainPhysics::default()
+        ))
+        .id();
 
     // Spawn a default brush for testing
-    commands.spawn((Name::new("Terrain Default Brush"), PaintBrush::default()));
+    commands.spawn((
+        Name::new("Terrain Default Brush"),
+        PaintBrush::default(),
+        ChildOf(entity)
+    ));
 }
 
 #[derive(Resource, Default)]

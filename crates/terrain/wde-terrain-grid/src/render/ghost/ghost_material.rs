@@ -3,7 +3,7 @@ use wde_renderer::prelude::{Color, *};
 
 use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
-    prelude::*,
+    prelude::*
 };
 
 #[repr(C)]
@@ -14,7 +14,7 @@ struct GhostMaterialUniform {
     pub albedo_texture_present: f32,
     pub desaturate_factor: f32,
     pub rim_power: f32,
-    pub rim_strength: f32,
+    pub rim_strength: f32
 }
 
 #[derive(Asset, Clone, TypePath)]
@@ -25,7 +25,7 @@ pub struct GhostMaterial {
     pub rim_strength: f32,
     pub pbr_material: Option<Handle<PbrMaterial>>,
 
-    pub buffer: Option<Handle<Buffer>>,
+    pub buffer: Option<Handle<Buffer>>
 }
 impl Default for GhostMaterial {
     fn default() -> Self {
@@ -35,7 +35,7 @@ impl Default for GhostMaterial {
             rim_power: 5.0,
             rim_strength: 0.1,
             pbr_material: None,
-            buffer: None,
+            buffer: None
         }
     }
 }
@@ -43,13 +43,13 @@ impl RenderBinding for GhostMaterial {
     type Params = (
         SRes<AssetServer>,
         SBinding<PbrMaterial>,
-        SRes<PlaceholderTexture>,
+        SRes<PlaceholderTexture>
     );
 
     fn describe(
         &mut self,
         (asset_server, render_assets, placeholder_texture): &SystemParamItem<Self::Params>,
-        builder: &mut RenderBindingBuilder,
+        builder: &mut RenderBindingBuilder
     ) {
         // Dummy material for initialization
         if self.pbr_material.is_none() {
@@ -59,8 +59,8 @@ impl RenderBinding for GhostMaterial {
                     size: std::mem::size_of::<GhostMaterialUniform>(),
                     usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
                     content: Some(
-                        bytemuck::cast_slice(&[GhostMaterialUniform::default()]).to_vec(),
-                    ),
+                        bytemuck::cast_slice(&[GhostMaterialUniform::default()]).to_vec()
+                    )
                 }));
             }
             builder.add_buffer_from_id(Some(self.buffer.as_ref().unwrap().id()));
@@ -74,7 +74,7 @@ impl RenderBinding for GhostMaterial {
             match render_assets.get(self.pbr_material.as_ref().unwrap()) {
                 Some(material) => match material.asset.albedo_t.as_ref() {
                     Some(t) => (material.asset.albedo, t.id(), true),
-                    None => (material.asset.albedo, placeholder_texture.0.id(), false),
+                    None => (material.asset.albedo, placeholder_texture.0.id(), false)
                 },
                 None => {
                     builder.retry_next_update();
@@ -89,19 +89,19 @@ impl RenderBinding for GhostMaterial {
                     self.overlay.r(),
                     self.overlay.g(),
                     self.overlay.b(),
-                    self.overlay.a(),
+                    self.overlay.a()
                 ],
                 albedo: [albedo.0, albedo.1, albedo.2, albedo.3],
                 albedo_texture_present: if is_albedo_present { 1.0 } else { 0.0 },
                 desaturate_factor: self.desaturate,
                 rim_power: self.rim_power,
-                rim_strength: self.rim_strength,
+                rim_strength: self.rim_strength
             };
             let buffer = asset_server.add(Buffer {
                 label: "ghost-material".to_string(),
                 size: std::mem::size_of::<GhostMaterialUniform>(),
                 usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                content: Some(bytemuck::cast_slice(&[uniform]).to_vec()),
+                content: Some(bytemuck::cast_slice(&[uniform]).to_vec())
             });
             self.buffer = Some(buffer);
         }

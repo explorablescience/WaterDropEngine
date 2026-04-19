@@ -98,7 +98,9 @@ fn remove_tracked_entity(batches: &mut BatchList, entity: Entity) -> bool {
     let mut remove_batch_key = false;
     if let Some(batch) = batches.batches.get_mut(&tracked.key) {
         let len_before = batch.transform_ssbo_ids.len();
-        batch.transform_ssbo_ids.retain(|id| *id != tracked.transform_id);
+        batch
+            .transform_ssbo_ids
+            .retain(|id| *id != tracked.transform_id);
         removed_any = batch.transform_ssbo_ids.len() != len_before;
         remove_batch_key = batch.transform_ssbo_ids.is_empty();
     }

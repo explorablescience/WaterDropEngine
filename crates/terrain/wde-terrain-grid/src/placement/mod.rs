@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 use crate::core::placement_config::PlacementConfigEntry;
+use wde_terrain::prelude::*;
 
 mod place;
 mod ui;
@@ -10,6 +11,7 @@ impl Plugin for PlacementPlugin {
     fn build(&self, app: &mut App) {
         let manager = TerrainPlacementManager::new(app.world_mut().commands());
         app.insert_resource(manager)
+            .add_systems(Startup, set_parent)
             .add_systems(Update, (ui::show_ui, place::place_update));
     }
 }
@@ -45,4 +47,12 @@ impl TerrainPlacementManager {
             place_selected_entry_label: None
         }
     }
+}
+
+fn set_parent(
+    mut commands: Commands,
+    manager: Res<TerrainPlacementManager>,
+    terrain: Single<Entity, With<Terrain>>
+) {
+    commands.entity(manager.entity).insert(ChildOf(*terrain));
 }

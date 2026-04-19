@@ -15,7 +15,7 @@ pub struct GltfMaterial {
     pub roughness: f32,
     pub metallic_roughness_tex_url: Option<String>,
     pub normal_tex_url: Option<String>,
-    pub occlusion_tex_url: Option<String>,
+    pub occlusion_tex_url: Option<String>
 }
 
 impl GltfMaterial {
@@ -82,24 +82,27 @@ impl GltfMaterial {
 
         // Create and add the material to the asset server
         let label = format!("gltf_material_{}", self.name);
-        load_context.add_labeled_asset(label.clone(), PbrMaterial {
-            label: label.clone(),
-            albedo: (
-                self.base_color[0],
-                self.base_color[1],
-                self.base_color[2],
-                self.base_color[3],
-            ),
-            albedo_t: aldebo_texture_handle,
+        load_context.add_labeled_asset(
+            label.clone(),
+            PbrMaterial {
+                label: label.clone(),
+                albedo: (
+                    self.base_color[0],
+                    self.base_color[1],
+                    self.base_color[2],
+                    self.base_color[3]
+                ),
+                albedo_t: aldebo_texture_handle,
 
-            metallic: self.metallic,
-            roughness: self.roughness,
-            metallic_roughness_t: metallic_roughness_texture_handle,
+                metallic: self.metallic,
+                roughness: self.roughness,
+                metallic_roughness_t: metallic_roughness_texture_handle,
 
-            normal_t: normal_texture_handle,
-            occlusion_t: occlusion_texture_handle,
-            ..Default::default()
-        })
+                normal_t: normal_texture_handle,
+                occlusion_t: occlusion_texture_handle,
+                ..Default::default()
+            }
+        )
     }
 }
 
@@ -117,7 +120,7 @@ impl Default for GltfMaterial {
             metallic_roughness_tex_url: None,
 
             normal_tex_url: None,
-            occlusion_tex_url: None,
+            occlusion_tex_url: None
         }
     }
 }
