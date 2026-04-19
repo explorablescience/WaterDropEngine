@@ -29,6 +29,7 @@ pub type BlendState = wgpu::BlendState;
 pub type BlendComponent = wgpu::BlendComponent;
 pub type BlendFactor = wgpu::BlendFactor;
 pub type BlendOperation = wgpu::BlendOperation;
+pub type ColorWrites = wgpu::ColorWrites;
 
 /// Describes an optional depth attachment for a pipeline.
 #[derive(Clone)]
@@ -73,6 +74,7 @@ struct RenderPipelineConfig {
     vertex_shader: String,
     fragment_shader: String,
     fragment_blend: Option<BlendState>,
+    color_write: ColorWrites,
     cull_mode: Option<Face>,
     sample_count: u32,
     use_vertices_buffer: bool
@@ -141,6 +143,7 @@ impl RenderPipeline {
                 vertex_shader: String::new(),
                 fragment_shader: String::new(),
                 fragment_blend: Some(wgpu::BlendState::REPLACE),
+                color_write: ColorWrites::ALL,
                 cull_mode: Some(Face::Back),
                 sample_count: 1,
                 use_vertices_buffer: true
@@ -244,6 +247,12 @@ impl RenderPipeline {
     /// * `blend` - The blend state.
     pub fn set_fragment_blend(&mut self, blend: Option<BlendState>) -> &mut Self {
         self.config.fragment_blend = blend;
+        self
+    }
+
+    /// Set the color write mask for the fragment output.
+    pub fn set_color_write_mask(&mut self, mask: ColorWrites) -> &mut Self {
+        self.config.color_write = mask;
         self
     }
 
@@ -462,7 +471,7 @@ impl RenderPipeline {
                             Some(wgpu::ColorTargetState {
                                 format: *format,
                                 blend: d.fragment_blend,
-                                write_mask: wgpu::ColorWrites::ALL
+                                write_mask: d.color_write
                             })
                         })
                         .collect::<Vec<Option<wgpu::ColorTargetState>>>()
@@ -482,6 +491,9 @@ impl RenderPipeline {
                     Some(wgpu::DepthStencilState {
                         format: match DEPTH_FORMAT {
                             TextureFormat::Depth32Float => wgpu::TextureFormat::Depth32Float,
+                            TextureFormat::Depth24PlusStencil8 => {
+                                wgpu::TextureFormat::Depth24PlusStencil8
+                            }
                             _ => {
                                 error!(
                                     "Depth format is not supported for render pipeline '{}'.",

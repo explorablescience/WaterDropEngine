@@ -22,7 +22,7 @@ pub type FilterMode = wgpu::FilterMode;
 /// The swapchain texture format.
 pub const SWAPCHAIN_FORMAT: TextureFormat = TextureFormat::Bgra8UnormSrgb;
 /// The depth texture format.
-pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth32Float;
+pub const DEPTH_FORMAT: TextureFormat = TextureFormat::Depth24PlusStencil8;
 
 /// Texture wrapper with a ready-to-use view and sampler.
 ///

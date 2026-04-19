@@ -26,6 +26,7 @@ impl RenderPass for RenderPassDeferredGBuffer {
                     .next()
                     .map(|(_, t)| t.get_texture(DepthTexture::DEPTH_IDX).unwrap().id()),
                 load: LoadOp::Clear(1.0),
+                stencil_load: LoadOp::Clear(0),
                 ..default()
             }),
             attachments_colors: Some(vec![

@@ -271,6 +271,7 @@ fn load_render_pipelines(
             pipeline.set_shader(&frag_shader.content, ShaderStages::FRAGMENT);
         }
         pipeline.set_fragment_blend(descriptor.fragment_blend);
+        pipeline.set_color_write_mask(descriptor.color_write);
         pipeline.set_topology(descriptor.topology);
         pipeline.set_cull_mode(descriptor.cull_mode);
         pipeline.set_depth(descriptor.depth.clone());

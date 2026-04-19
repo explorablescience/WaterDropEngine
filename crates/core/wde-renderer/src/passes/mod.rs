@@ -125,8 +125,9 @@ mod render_graph;
 
 // Reexport wgpu types
 pub use wde_wgpu::pipelines::{
-    BlendComponent, BlendFactor, BlendOperation, BlendState, CompareFunction, DepthDescriptor,
-    Face, RenderTopology, ShaderStages
+    BlendComponent, BlendFactor, BlendOperation, BlendState, ColorWrites, CompareFunction,
+    DepthDescriptor, Face, RenderTopology, ShaderStages, StencilFaceState, StencilOperation,
+    StencilState
 };
 pub use wde_wgpu::vertex::Vertex;
 

@@ -30,7 +30,11 @@ pub struct RenderPassDepth<'pass> {
     /// The depth operation when loading the texture. By default, load the existing texture.
     pub load: LoadOp<f32>,
     /// The depth operation when storing the texture. By default, store the texture.
-    pub store: StoreOp
+    pub store: StoreOp,
+    /// The stencil operation when loading the stencil buffer. By default, load the existing stencil content.
+    pub stencil_load: LoadOp<u32>,
+    /// The stencil operation when storing the stencil buffer. By default, store the stencil content.
+    pub stencil_store: StoreOp
 }
 impl Default for RenderPassDepth<'_> {
     fn default() -> Self {
@@ -38,7 +42,9 @@ impl Default for RenderPassDepth<'_> {
             texture: None,
             // load: wgpu::LoadOp::Clear(1.0),
             load: wgpu::LoadOp::Load,
-            store: wgpu::StoreOp::Store
+            store: wgpu::StoreOp::Store,
+            stencil_load: wgpu::LoadOp::Load,
+            stencil_store: wgpu::StoreOp::Store
         }
     }
 }
@@ -193,7 +199,10 @@ impl CommandBuffer {
                     load: builder.depth.load,
                     store: builder.depth.store
                 }),
-                stencil_ops: None
+                stencil_ops: Some(wgpu::Operations {
+                    load: builder.depth.stencil_load,
+                    store: builder.depth.stencil_store
+                })
             });
         }
 

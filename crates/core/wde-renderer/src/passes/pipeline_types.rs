@@ -1,7 +1,7 @@
 use bevy::{asset::Handle, ecs::prelude::*};
 use wde_wgpu::{
     bind_group::BindGroupLayout,
-    pipelines::BlendState,
+    pipelines::{BlendState, ColorWrites},
     render_pipeline::{DepthDescriptor, Face, RenderTopology, ShaderStages},
     texture::TextureFormat
 };
@@ -43,6 +43,8 @@ pub struct RenderPipelineDescriptor {
     pub cull_mode: Option<Face>,
     /// Blend state for the fragment shader (default: None, i.e. no blending).
     pub fragment_blend: Option<BlendState>,
+    /// Color write mask for fragment outputs (default: all channels). This enable you to disable writing to certain color channels.
+    pub color_write: ColorWrites,
     /// The sample count for multisampling (default: 1).
     pub sample_count: u32,
     /// Whether the pipeline should expect a vertex buffer. Useful for pipelines that render fullscreen quads without vertex buffers (default: true).
@@ -61,6 +63,7 @@ impl Default for RenderPipelineDescriptor {
             topology: RenderTopology::TriangleList,
             cull_mode: Some(Face::Back),
             fragment_blend: Some(BlendState::REPLACE),
+            color_write: ColorWrites::ALL,
             sample_count: 1,
             vertex_buffer: true
         }

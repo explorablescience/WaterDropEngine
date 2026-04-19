@@ -47,14 +47,20 @@ pub struct RenderPassDescDepthAttachment {
     /// How to load the texture at the start of the pass (default: Load).
     pub load: LoadOp<f32>,
     /// How to store the texture at the end of the pass (default: Store).
-    pub store: StoreOp
+    pub store: StoreOp,
+    /// How to load the stencil at the start of the pass (default: Load).
+    pub stencil_load: LoadOp<u32>,
+    /// How to store the stencil at the end of the pass (default: Store).
+    pub stencil_store: StoreOp
 }
 impl Default for RenderPassDescDepthAttachment {
     fn default() -> Self {
         Self {
             texture: None,
             load: LoadOp::Load,
-            store: StoreOp::Store
+            store: StoreOp::Store,
+            stencil_load: LoadOp::Load,
+            stencil_store: StoreOp::Store
         }
     }
 }
@@ -90,6 +96,8 @@ pub enum SubPassCommand {
     BindGroup(u32, Option<BindGroup>),
     /// Set the vertex and index buffers for subsequent draw calls.
     Mesh(Option<AssetId<Mesh>>),
+    /// Set the stencil reference value used by stencil compare and write operations.
+    StencilReference(u32),
     /// Issue draw calls with the given index and instance ranges, using the currently set pipeline and bind groups.
     DrawBatches(Vec<DrawCommandsBatch>),
     /// Execute a custom function that has access to the render world and the render pass instance. This can be used for custom rendering logic that doesn't fit into the other command types. This function should be written as `fn _name_(world: &World, render_pass: &mut RenderPassInstance) { ... }`.
@@ -403,7 +411,9 @@ fn create_render_pass<'p>(
                 builder.set_depth_texture(RenderPassDepth {
                     texture: Some(&depth_texture.texture.view),
                     load: depth_attachment.load,
-                    store: depth_attachment.store
+                    store: depth_attachment.store,
+                    stencil_load: depth_attachment.stencil_load,
+                    stencil_store: depth_attachment.stencil_store
                 });
             } else {
                 return Err("Invalid texture for depth attachment".to_string());
@@ -459,6 +469,11 @@ fn render_sub_pass<'p>(
                 } else {
                     return;
                 }
+            }
+
+            // Set stencil reference value
+            SubPassCommand::StencilReference(reference) => {
+                render_pass.set_stencil_reference(*reference);
             }
 
             // Issue draw calls

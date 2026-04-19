@@ -159,6 +159,12 @@ impl<'a> RenderPassInstance<'a> {
         self
     }
 
+    /// Set the stencil reference value used by stencil compare and write operations.
+    pub fn set_stencil_reference(&mut self, reference: u32) -> &mut Self {
+        self.render_pass.set_stencil_reference(reference);
+        self
+    }
+
     /// Draws primitives from the active vertex buffers.
     ///
     /// # Arguments
