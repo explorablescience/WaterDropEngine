@@ -10,6 +10,7 @@
 //! ```
 //! Note that the `gltf_asset` handle will be enqueued for spawning once it is loaded. The actual spawning of the model into the world will happen automatically in the background, and you can check for its presence using the asset handle.
 //! The rendering of the loaded model is then managed by the [`wde_pbr`](wde_pbr) crate, which handles the materials and shaders for the meshes.
+use serde::{Deserialize, Serialize};
 use wde_logger::prelude::*;
 
 use bevy::{
@@ -24,6 +25,7 @@ pub mod prelude {
     pub use crate::GltfAsset;
     pub use crate::GltfError;
     pub use crate::GltfLoader;
+    pub use crate::GltfLoaderSettings;
     pub use crate::GltfSpawnQueue;
 }
 
@@ -49,7 +51,7 @@ impl Plugin for GltfPlugin {
 /// Queue of glTF assets to spawn once they are loaded.
 #[derive(Resource, Default)]
 pub struct GltfSpawnQueue {
-    pending: Vec<Handle<GltfAsset>>
+    pending: Vec<(Entity, Handle<GltfAsset>)>
 }
 
 /// Representation of a 3D GLTF model asset.
@@ -64,17 +66,24 @@ pub struct GltfAsset {
     pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>
 }
 
+/// Options for loading a glTF model.
+#[derive(Serialize, Deserialize, Default)]
+pub struct GltfLoaderSettings {
+    /// The optional stencil value to set the stencil buffer to when rendering the model. By default, no stencil value is set.
+    pub stencil_value: Option<u32>
+}
+
 #[derive(Default, TypePath)]
 pub(crate) struct GltfAssetLoader;
 impl AssetLoader for GltfAssetLoader {
     type Asset = GltfAsset;
-    type Settings = ();
+    type Settings = GltfLoaderSettings;
     type Error = GltfError;
 
     async fn load(
         &self,
         reader: &mut dyn Reader,
-        _settings: &Self::Settings,
+        settings: &Self::Settings,
         load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         let path = load_context.path().clone();
@@ -91,7 +100,7 @@ impl AssetLoader for GltfAssetLoader {
         // Construct materials
         let materials_handles: Vec<Handle<PbrMaterial>> = raw_materials
             .iter()
-            .map(|material| material.to_pbr(load_context))
+            .map(|material| material.to_pbr(load_context, settings.stencil_value))
             .collect();
 
         // Add meshes to the asset server
@@ -132,8 +141,8 @@ impl AssetLoader for GltfAssetLoader {
 pub struct GltfLoader;
 impl GltfLoader {
     /// Enqueue a glTF asset handle to be spawned automatically when loaded.
-    pub fn spawn(queue: &mut GltfSpawnQueue, gltf_asset: Handle<GltfAsset>) {
-        queue.pending.push(gltf_asset);
+    pub fn spawn(queue: &mut GltfSpawnQueue, gltf_asset: Handle<GltfAsset>, parent: Entity) {
+        queue.pending.push((parent, gltf_asset));
     }
 
     /// Try to spawn the loaded glTF model into the Bevy world.
@@ -141,15 +150,10 @@ impl GltfLoader {
     pub fn try_spawn(
         commands: &mut Commands,
         gltf_asset: &Handle<GltfAsset>,
-        gltf_assets: &Assets<GltfAsset>
-    ) -> Option<Entity> {
+        gltf_assets: &Assets<GltfAsset>,
+        parent: Entity
+    ) -> Option<()> {
         let gltf_asset = gltf_assets.get(gltf_asset)?;
-        let parent_entity = commands
-            .spawn((
-                Name::new(format!("GLTF Model {}", gltf_asset.path)),
-                Transform::default()
-            ))
-            .id();
         for (i, (mesh_handle, material_handle)) in gltf_asset.models.iter().enumerate() {
             commands.spawn((
                 Name::new(format!(
@@ -159,11 +163,10 @@ impl GltfLoader {
                 Transform::default(),
                 Mesh3d(mesh_handle.clone()),
                 PbrMaterial3d(material_handle.clone()),
-                ChildOf(parent_entity)
+                ChildOf(parent)
             ));
         }
-
-        Some(parent_entity)
+        Some(())
     }
 }
 
@@ -174,7 +177,8 @@ fn process_gltf_spawn_queue(
 ) {
     let mut i = 0;
     while i < queue.pending.len() {
-        if GltfLoader::try_spawn(&mut commands, &queue.pending[i], &gltf_assets).is_some() {
+        let (parent, gltf_asset) = &queue.pending[i];
+        if GltfLoader::try_spawn(&mut commands, gltf_asset, &gltf_assets, *parent).is_some() {
             queue.pending.swap_remove(i);
         } else {
             i += 1;

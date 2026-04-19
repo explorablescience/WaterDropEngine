@@ -79,6 +79,9 @@ pub struct PbrMaterial {
     /// The occlusion value is stored in the red channel.
     pub occlusion_t: Option<Handle<Texture>>,
 
+    /// An optional stencil value to set the stencil buffer to when rendering the material.
+    pub stencil_value: Option<u32>,
+
     /// The buffer containing the material data. It is automatically created and updated if not set.
     pub uniform_buffer: Option<Handle<Buffer>>
 }
@@ -96,6 +99,8 @@ impl Default for PbrMaterial {
 
             normal_t: None,
             occlusion_t: None,
+
+            stencil_value: None,
 
             uniform_buffer: None
         }

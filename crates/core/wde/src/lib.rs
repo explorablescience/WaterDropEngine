@@ -124,7 +124,8 @@ impl Plugin for CustomWdePlugins {
             wde_physics::PhysicsPlugin,
             wde_terrain::TerrainPlugin,
             wde_terrain_grid::TerrainGridPlugin,
-            wde_terrain_editor::TerrainEditorPlugin
+            wde_terrain_editor::TerrainEditorPlugin,
+            wde_pbr_outline::PbrOutlinePlugin
         ));
 
         #[cfg(feature = "gizmos")]
@@ -159,6 +160,7 @@ pub mod prelude {
     pub use wde_camera_controller::prelude::*;
     pub use wde_gltf::prelude::*;
     pub use wde_logger::prelude::*;
+    pub use wde_pbr_outline::prelude::*;
     pub use wde_physics::prelude::*;
     pub use wde_renderer::prelude::*;
     pub use wde_scene::prelude::*;

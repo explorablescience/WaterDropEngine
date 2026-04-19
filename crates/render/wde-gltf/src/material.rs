@@ -20,14 +20,11 @@ pub struct GltfMaterial {
 
 impl GltfMaterial {
     /// Convert the GltfMaterial to a new Material3dAsset.
-    ///
-    /// # Arguments
-    ///
-    /// * `asset_server` - Reference to the Bevy asset server for loading textures.
-    ///
-    /// # Returns
-    /// * `Handle<Material3dAsset>` - Handle to the created Material3dAsset.
-    pub fn to_pbr(&self, load_context: &mut LoadContext<'_>) -> Handle<PbrMaterial> {
+    pub fn to_pbr(
+        &self,
+        load_context: &mut LoadContext<'_>,
+        stencil_value: Option<u32>
+    ) -> Handle<PbrMaterial> {
         let material_name = self.name.clone();
         let folder_path = self.folder_path.clone();
 
@@ -100,6 +97,8 @@ impl GltfMaterial {
 
                 normal_t: normal_texture_handle,
                 occlusion_t: occlusion_texture_handle,
+
+                stencil_value,
                 ..Default::default()
             }
         )

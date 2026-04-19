@@ -53,7 +53,24 @@ impl RenderAsset for GBufferRenderPipeline {
                     ],
                     depth: DepthDescriptor {
                         enabled: true,
-                        ..default()
+                        write: true,
+                        stencil: StencilState {
+                            front: StencilFaceState {
+                                compare: CompareFunction::Always,
+                                pass_op: StencilOperation::Replace,
+                                fail_op: StencilOperation::Keep,
+                                depth_fail_op: StencilOperation::Keep
+                            },
+                            back: StencilFaceState {
+                                compare: CompareFunction::Always,
+                                pass_op: StencilOperation::Replace,
+                                fail_op: StencilOperation::Keep,
+                                depth_fail_op: StencilOperation::Keep
+                            },
+                            read_mask: 0xFF,
+                            write_mask: 0xFF
+                        },
+                        ..Default::default()
                     },
                     render_targets: Some(vec![
                         // Same order as the PbrDeferredTextures

@@ -9,6 +9,7 @@ build = "build.rs"
 [dependencies]
 bevy = { workspace = true }
 bytemuck = { workspace = true }
+wde-pbr-outline = { path = "../crates/render/wde-pbr-outline" }
 
 [dependencies.wde]
 path = "../crates/core/wde"

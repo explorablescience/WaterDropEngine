@@ -1,0 +1,14 @@
+[package]
+name = "wde-pbr-outline"
+version = "0.1.0"
+edition = "2024"
+description = "Outline rendering pass for the PBR renderer, used to render selection outlines around objects."
+
+[dependencies]
+wde-logger = { path = "../../wrappers/wde-logger" }
+wde-renderer = { path = "../../core/wde-renderer" }
+wde-camera = { path = "../wde-camera" }
+wde-pbr = { path = "../wde-pbr" }
+bevy = { workspace = true }
+bytemuck = { workspace = true }
+uuid = "1.23"

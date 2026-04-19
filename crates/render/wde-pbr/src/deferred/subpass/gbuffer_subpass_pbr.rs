@@ -97,6 +97,14 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
             // Set the material bind group
             render_pass.set_bind_group(3, &material.bind_group);
             current_material_id = Some(batch_key.material);
+
+            // If the material has a stencil value, set it in the stencil buffer
+            if let Some(stencil_value) = material.asset.stencil_value {
+                render_pass.set_stencil_reference(stencil_value);
+            } else {
+                // Otherwise, set the stencil reference to 0 to avoid affecting other draw calls that use the stencil buffer
+                render_pass.set_stencil_reference(0);
+            }
         }
 
         // Draw the mesh
