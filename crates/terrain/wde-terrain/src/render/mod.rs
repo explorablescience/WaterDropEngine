@@ -25,11 +25,10 @@ impl Plugin for TerrainRenderPlugin {
         // Add the terrain renderer resource and its systems
         // Note that using Update, the dirty tiles will be extracted to the GPU renderer resource one frame after they are marked as dirty. This is to ensure that the main world is not locked for too long while the GPU renderer resource is being updated.
         app.add_systems(Update, TerrainRenderer::extract_dirty);
-        app
-            .add_plugins((
-                RenderBindingRegisterPlugin::<TerrainTileBgRender>::without_init(),
-                RenderBindingRegisterPlugin::<TerrainTileBgCompute>::without_init()
-            ));
+        app.add_plugins((
+            RenderBindingRegisterPlugin::<TerrainTileBgRender>::without_init(),
+            RenderBindingRegisterPlugin::<TerrainTileBgCompute>::without_init()
+        ));
 
         // Add the terrain renderer GPU resource and its systems
         app.get_sub_app_mut(RenderApp)

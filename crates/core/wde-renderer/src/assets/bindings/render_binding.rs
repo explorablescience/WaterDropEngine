@@ -51,12 +51,18 @@ pub struct RenderBindingRegisterPlugin<R: RenderBinding> {
 }
 impl<R: RenderBinding> Default for RenderBindingRegisterPlugin<R> {
     fn default() -> Self {
-        RenderBindingRegisterPlugin { _phantom: std::marker::PhantomData, with_init: true }
+        RenderBindingRegisterPlugin {
+            _phantom: std::marker::PhantomData,
+            with_init: true
+        }
     }
 }
 impl<R: RenderBinding> RenderBindingRegisterPlugin<R> {
     pub fn without_init() -> Self {
-        RenderBindingRegisterPlugin { _phantom: std::marker::PhantomData, with_init: false }
+        RenderBindingRegisterPlugin {
+            _phantom: std::marker::PhantomData,
+            with_init: false
+        }
     }
 }
 impl<R: RenderBinding + TypePath + Sync + Send + Clone + Asset + Default> Plugin
@@ -64,15 +70,13 @@ impl<R: RenderBinding + TypePath + Sync + Send + Clone + Asset + Default> Plugin
 {
     fn build(&self, app: &mut App) {
         let default_res = R::default();
-        app.init_asset::<R>()
-            .add_plugins((
-                RenderAssetsPlugin::<GpuRenderBinding<R>>::default(),
-                ExtractResourcePlugin::<RenderBindingHolder<R>>::default()
-            ));
+        app.init_asset::<R>().add_plugins((
+            RenderAssetsPlugin::<GpuRenderBinding<R>>::default(),
+            ExtractResourcePlugin::<RenderBindingHolder<R>>::default()
+        ));
 
         if default_res.has_dependencies() {
-            app
-                .add_systems(Update, on_dependency_recreate::<R>);
+            app.add_systems(Update, on_dependency_recreate::<R>);
         }
     }
 
