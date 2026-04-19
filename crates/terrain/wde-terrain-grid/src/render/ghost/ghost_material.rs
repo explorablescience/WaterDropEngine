@@ -112,6 +112,10 @@ impl RenderBinding for GhostMaterial {
         builder.add_texture_sampler_from_id(Some(albedo_t));
     }
 
+    fn has_dependencies(&self) -> bool {
+        true
+    }
+
     fn label(&self) -> &str {
         "ghost-material"
     }

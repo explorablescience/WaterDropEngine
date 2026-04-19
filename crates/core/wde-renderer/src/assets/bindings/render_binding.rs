@@ -45,46 +45,63 @@ impl<R: RenderBinding + TypePath + Sync + Send + Asset> ExtractResource for Rend
 ///
 /// The render binding type must implement [`RenderBinding`] and usually derive [`Asset`],
 /// [`TypePath`], [`Clone`] and [`Default`].
-pub struct RenderBindingRegisterPlugin<R: RenderBinding>(std::marker::PhantomData<R>);
+pub struct RenderBindingRegisterPlugin<R: RenderBinding> {
+    _phantom: std::marker::PhantomData<R>,
+    with_init: bool
+}
 impl<R: RenderBinding> Default for RenderBindingRegisterPlugin<R> {
     fn default() -> Self {
-        RenderBindingRegisterPlugin(std::marker::PhantomData)
+        RenderBindingRegisterPlugin { _phantom: std::marker::PhantomData, with_init: true }
+    }
+}
+impl<R: RenderBinding> RenderBindingRegisterPlugin<R> {
+    pub fn without_init() -> Self {
+        RenderBindingRegisterPlugin { _phantom: std::marker::PhantomData, with_init: false }
     }
 }
 impl<R: RenderBinding + TypePath + Sync + Send + Clone + Asset + Default> Plugin
     for RenderBindingRegisterPlugin<R>
 {
     fn build(&self, app: &mut App) {
+        let default_res = R::default();
         app.init_asset::<R>()
             .add_plugins((
                 RenderAssetsPlugin::<GpuRenderBinding<R>>::default(),
                 ExtractResourcePlugin::<RenderBindingHolder<R>>::default()
-            ))
-            .add_systems(Update, on_dependency_recreate::<R>);
+            ));
+
+        if default_res.has_dependencies() {
+            app
+                .add_systems(Update, on_dependency_recreate::<R>);
+        }
     }
 
     fn finish(&self, app: &mut App) {
         let mut default_res = R::default();
 
         // Register dependencies
-        let builder = {
-            let world = app.get_sub_app_mut(RenderApp).unwrap().world_mut();
-            let mut builder = RenderBindingBuilder::default();
-            let mut state: SystemState<R::Params> = SystemState::new(world);
-            let params = state.get_mut(world);
-            R::describe(&mut default_res, &params, &mut builder);
-            builder
-        };
-        app.world_mut()
-            .insert_resource(RenderBindingDependencies::<R> {
-                _phantom: PhantomData,
-                dependencies: builder.dependencies
-            });
+        if default_res.has_dependencies() {
+            let dependencies = {
+                let world = app.get_sub_app_mut(RenderApp).unwrap().world_mut();
+                let mut builder = RenderBindingBuilder::default();
+                let mut state: SystemState<R::Params> = SystemState::new(world);
+                let params = state.get_mut(world);
+                R::describe(&mut default_res, &params, &mut builder);
+                builder.dependencies
+            };
+            app.world_mut()
+                .insert_resource(RenderBindingDependencies::<R> {
+                    _phantom: PhantomData,
+                    dependencies
+                });
+        }
 
         // Create the asset and insert the handle in the resource
-        let binding: Handle<R> = app.world_mut().add_asset(default_res);
-        app.world_mut()
-            .insert_resource(RenderBindingHolder(binding));
+        if self.with_init {
+            let binding: Handle<R> = app.world_mut().add_asset(default_res);
+            app.world_mut()
+                .insert_resource(RenderBindingHolder(binding));
+        }
     }
 }
 
@@ -302,6 +319,10 @@ pub trait RenderBinding {
         params: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     );
+    /// Whether this render binding has any dependencies on render data. By default, false.
+    fn has_dependencies(&self) -> bool {
+        false
+    }
     /// Whether the gpu asset should be recreated. This is called every frame. The default is to never recreate (None).
     fn label(&self) -> &str;
 }
