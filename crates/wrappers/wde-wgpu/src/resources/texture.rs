@@ -220,8 +220,6 @@ impl Texture {
         texture_format: TextureFormat,
         buffer: &[u8]
     ) {
-        event!(LogLevel::TRACE, "Copying buffer to texture.");
-
         // Retrieve size corresponding to the texture format
         let format_size = match texture_format.block_dimensions() {
             (1, 1) => texture_format.block_copy_size(None).unwrap() as usize,
@@ -268,8 +266,6 @@ impl Texture {
         array_layer: u32,
         buffer: &[u8]
     ) {
-        event!(LogLevel::TRACE, "Copying texture to buffer.");
-
         // Retrieve size corresponding to the texture format
         let format_size = match texture_format.block_dimensions() {
             (1, 1) => texture_format.block_copy_size(None).unwrap() as usize,
@@ -317,8 +313,6 @@ impl Texture {
         texture: &wgpu::Texture,
         size: (u32, u32)
     ) {
-        event!(LogLevel::TRACE, "Copying texture to texture.");
-
         // Create command buffer
         let mut command = crate::command_buffer::CommandBuffer::new(instance, "Copy Texture");
 
@@ -382,8 +376,6 @@ impl Texture {
         array_layer: usize,
         size: (u32, u32)
     ) {
-        event!(LogLevel::TRACE, "Copying texture to texture.");
-
         // Create command buffer
         let mut command = crate::command_buffer::CommandBuffer::new(instance, "Copy Texture");
 
@@ -425,19 +417,16 @@ impl Texture {
     /// * `instance` - Game instance.
     pub fn generate_mipmaps(&self, instance: &RenderInstanceData<'_>) {
         if self.mip_level_count <= 1 {
-            event!(
-                LogLevel::TRACE,
-                "Texture {} has no mipmaps to generate.",
-                self.label
+            trace!(
+                "Texture {} does not have multiple mip levels ({}), skipping mipmap generation.",
+                self.label, self.mip_level_count
             );
             return;
         }
 
-        event!(
-            LogLevel::TRACE,
-            "Generating {} mip levels for texture {}.",
-            self.mip_level_count,
-            self.label
+        trace!(
+            "Generating mipmaps for texture {} with {} mip levels and {} layers.",
+            self.label, self.mip_level_count, self.layer_count
         );
 
         // Create the blit shader module

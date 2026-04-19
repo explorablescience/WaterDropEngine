@@ -158,10 +158,6 @@ pub(crate) fn handle_changes(
                 // Update the mappings
                 phworld.entity_to_collider.insert(entity, new_col_handle);
                 phworld.collider_to_entity.insert(new_col_handle, entity);
-                trace!(
-                    "Updated collider for entity {:?} with new handle {:?}",
-                    entity, new_col_handle
-                );
             }
         }
     }
@@ -191,10 +187,6 @@ pub(crate) fn handle_changes(
                             transform.translation.z
                         ],
                         true
-                    );
-                    trace!(
-                        "Updated transform for entity {:?} with rigidbody handle {:?}",
-                        entity, rb_handle
                     );
                 }
             }
@@ -241,11 +233,6 @@ pub(crate) fn handle_changes(
             .write()
             .unwrap()
             .update_incremental(colliders, &modified_colliders, &removed_colliders, true);
-        trace!(
-            "Updated query pipeline with {} modified and {} removed colliders",
-            modified_colliders.len(),
-            removed_colliders.len()
-        );
     }
 
     // Handle removed colliders

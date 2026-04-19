@@ -218,7 +218,7 @@ impl<R: RenderData + Clone + Asset> RenderAsset for GpuRenderData<R> {
         asset: Self::SourceAsset,
         asset_server: &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        debug!(
+        trace!(
             "Preparing render binding {} GPU resources.",
             std::any::type_name::<R>()
         );

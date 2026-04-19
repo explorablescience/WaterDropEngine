@@ -1,5 +1,4 @@
 //! Command encoder utilities to record render and compute work.
-use wde_logger::prelude::*;
 use wgpu::Texture;
 
 use crate::{
@@ -157,8 +156,6 @@ impl CommandBuffer {
     /// * `instance` - The render instance.
     /// * `label` - The label of the command buffer.
     pub fn new(instance: &RenderInstanceData<'_>, label: &str) -> Self {
-        event!(LogLevel::TRACE, "Creating a command buffer {}.", label);
-
         // Create command encoder
         let command_encoder =
             instance
@@ -184,8 +181,6 @@ impl CommandBuffer {
         label: &str,
         builder_func: impl FnOnce(&mut RenderPassBuilder<'pass>) -> Result<(), String>
     ) -> Result<RenderPassInstance<'pass>, String> {
-        event!(LogLevel::TRACE, "Creating a render pass {}.", label);
-
         // Run the builder function
         let mut builder = RenderPassBuilder::default();
         builder_func(&mut builder)?;
@@ -237,7 +232,6 @@ impl CommandBuffer {
     ///
     /// * `label` - The label of the compute pass.
     pub fn create_compute_pass<'pass>(&'pass mut self, label: &str) -> WComputePass<'pass> {
-        event!(LogLevel::TRACE, "Creating a compute pass {}.", label);
         let compute_pass = self
             .encoder
             .begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -254,7 +248,6 @@ impl CommandBuffer {
     ///
     /// * `instance` - The render instance.
     pub fn submit(self, instance: &RenderInstanceData) {
-        event!(LogLevel::TRACE, "Submitted command buffer {}.", self.label);
         instance
             .queue
             .submit(std::iter::once(self.encoder.finish()));
@@ -268,13 +261,6 @@ impl CommandBuffer {
     /// * `source` - The source buffer.
     /// * `destination` - The destination buffer.
     pub fn copy_buffer_to_buffer(&mut self, source: &Buffer, destination: &Buffer) {
-        event!(
-            LogLevel::TRACE,
-            "Copying buffer {} to buffer {}.",
-            source.label,
-            destination.label
-        );
-
         self.encoder.copy_buffer_to_buffer(
             &source.buffer,
             0,
@@ -302,13 +288,6 @@ impl CommandBuffer {
         destination_offset: u64,
         size: u64
     ) {
-        event!(
-            LogLevel::TRACE,
-            "Copying buffer {} to buffer {}.",
-            source.label,
-            destination.label
-        );
-
         self.encoder.copy_buffer_to_buffer(
             &source.buffer,
             source_offset,
@@ -332,12 +311,6 @@ impl CommandBuffer {
         destination: &Buffer,
         size: wgpu::Extent3d
     ) {
-        event!(
-            LogLevel::TRACE,
-            "Copying texture to buffer {}.",
-            destination.label
-        );
-
         // Create texture copy
         let texture_copy = source.as_image_copy();
 

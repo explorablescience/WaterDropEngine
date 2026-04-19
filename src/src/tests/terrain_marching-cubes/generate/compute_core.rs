@@ -121,7 +121,6 @@ impl MCComputeCorePoints {
             let desc = chunks_list.chunks.get(&chunk.index).unwrap();
 
             // Update the description buffer
-            trace!("Running the compute shader to generate the triangles for the chunk {:?}.", chunk.index);
             let desc_buff = GpuMCDescription {
                 translation: [desc.translation.x, desc.translation.y, desc.translation.z, 0.0],
                 chunk_length: [desc.length.x, desc.length.y, desc.length.z, 0.0],
@@ -161,7 +160,6 @@ impl MCComputeCorePoints {
                     let dispatch_count_x = (desc.sub_count.x as f32 / NUM_THREADS as f32).ceil() as u32;
                     let dispatch_count_y = (desc.sub_count.y as f32 / NUM_THREADS as f32).ceil() as u32;
                     let dispatch_count_z = (desc.sub_count.z as f32 / NUM_THREADS as f32).ceil() as u32;
-                    trace!("Dispatching the compute pass for generating chunk triangles {:?} with marching cubes with {} threads and {:?} dispatches.", entity, NUM_THREADS, [dispatch_count_x, dispatch_count_y, dispatch_count_z]);
                     if let Err(e) = compute_pass.dispatch(dispatch_count_x, dispatch_count_y, dispatch_count_z) {
                         error!("Failed to dispatch the compute pass for generating chunk triangles {:?} with marching cubes: {:?}", entity, e);
                         continue;
@@ -203,7 +201,6 @@ impl MCComputeCorePoints {
             });
 
             // Spawn the chunk entity
-            trace!("Spawning the chunk entity {:?} with {} triangles.", entity, triangles_counter);
             commands.entity(entity).despawn();
             commands.spawn(MCPendingChunk {
                 index: chunk.index,

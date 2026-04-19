@@ -22,7 +22,7 @@ tracy-client = { version = "0.18.3", optional = true }
 puffin = { git = "https://github.com/explorablescience/puffin.git", rev = "56ece9e", optional = true }
 
 [features]
-default = ["tracing/max_level_debug"]
+debug = ["tracing/max_level_debug"]
 tracing = ["bevy/trace", "bevy/trace_tracy", "bevy/trace_tracy_memory", "tracing-tracy", "tracy-client", "dep:tracing-error"]
 puffin = ["bevy/trace", "dep:puffin"]
 editor = []

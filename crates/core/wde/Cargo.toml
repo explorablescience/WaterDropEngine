@@ -21,6 +21,7 @@ bevy = { workspace = true }
 
 [features]
 default = ["pbr", "gizmos"]
+log-debug = ["wde-logger/debug"]
 debug = ["bevy/debug"]
 gizmos = ["wde-gizmos"]
 pbr = ["wde-pbr"]

@@ -267,10 +267,7 @@ impl RenderGraph {
 }
 
 fn render(graph: &mut RenderGraph, world: &mut World) {
-    trace!(
-        "Starting render graph execution with {} passes.",
-        graph.passes.len()
-    );
+    let _span = debug_span!("render_graph").entered();
 
     // Create command buffer
     let mut command_buffer = {
@@ -310,7 +307,6 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
         }
 
         // Create the render pass from its description
-        trace!("Rendering render pass '{}'.", pass_label);
         let _pass_span = debug_span!("render_pass", pass_id = *pass_id, pass_label).entered();
         let mut render_pass =
             match create_render_pass(world, &mut command_buffer, pass_label, &pass_desc) {
@@ -326,7 +322,6 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
 
         // Execute sub-passes in order of addition
         for (sub_pass_label, sub_pass_desc) in &sub_passes {
-            trace!("Rendering sub-pass '{}'.", sub_pass_label);
             let _sub_pass_span =
                 debug_span!("render_sub_pass", sub_pass_label = *sub_pass_label).entered();
             render_sub_pass(world, &mut render_pass, sub_pass_desc);

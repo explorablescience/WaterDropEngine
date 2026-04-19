@@ -380,7 +380,8 @@ where
                         .is_none()
                     {
                         trace!(
-                            "Texture for render binding {} is not ready, retrying...",
+                            "Texture (View, ArrayView, Sampler, or StorageTexture) {} for render binding {} is not ready, retrying...",
+                            asset_builder.textures[*idx as usize].unwrap(),
                             asset.label()
                         );
                         return Err(PrepareAssetError::RetryNextUpdate(asset));
@@ -429,7 +430,8 @@ where
                             gpu_textures.get(asset_builder.textures[*idx as usize].unwrap())
                         else {
                             trace!(
-                                "Texture for render binding {} is not ready, retrying...",
+                                "Texture (View) {} for render binding {} is not ready, retrying...",
+                                asset_builder.textures[*idx as usize].unwrap(),
                                 asset.label()
                             );
                             is_err = true;
@@ -449,7 +451,8 @@ where
                             gpu_textures.get(asset_builder.textures[*idx as usize].unwrap())
                         else {
                             trace!(
-                                "Texture for render binding {} is not ready, retrying...",
+                                "Texture (Storage) {} for render binding {} is not ready, retrying...",
+                                asset_builder.textures[*idx as usize].unwrap(),
                                 asset.label()
                             );
                             is_err = true;
@@ -514,7 +517,7 @@ where
         };
 
         // Return the gpu asset
-        debug!("Prepared render binding {} GPU resources.", asset.label());
+        trace!("Prepared render binding {} GPU resources.", asset.label());
         Ok(GpuRenderBinding {
             _phantom: PhantomData,
             bind_group,

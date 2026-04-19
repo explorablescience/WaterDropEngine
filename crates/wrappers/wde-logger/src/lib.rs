@@ -80,6 +80,9 @@ const DEFAULT_FILTER: &str = concat!(
     "naga=warn,",
     "egui_wgpu=error,",
     "winit=warn,",
+    "calloop=debug,",
+    "notify_debouncer_full=debug,",
+    "notify::inotify=debug,",
 );
 
 /// Plugin that configures logging for WaterDropEngine applications.
