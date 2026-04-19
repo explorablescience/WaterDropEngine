@@ -9,9 +9,8 @@ impl Plugin for TestPlugin {
 }
 
 fn init_scene(
-    mut commands: Commands
-    // asset_server: Res<AssetServer>,
-    // mut gltf_spawn_queue: ResMut<GltfSpawnQueue>,
+    mut commands: Commands // asset_server: Res<AssetServer>,
+                           // mut gltf_spawn_queue: ResMut<GltfSpawnQueue>,
 ) {
     // Main camera
     commands.spawn((

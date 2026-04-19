@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::Monitor};
 use wde_egui::prelude::*;
 
 use crate::{panels::ecs::entities_edit_components::SelectedEntity, ui::UIMenu};
@@ -75,12 +75,8 @@ pub fn draw_entities_panel(world: &mut World) {
 
 fn collect_entity_rows(world: &mut World) -> Vec<EntityRow> {
     // Keep this query local so World borrows stay short and obvious.
-    let mut entities_query = world.query::<(
-        Entity,
-        bevy::ecs::world::EntityRef,
-        Option<&Name>,
-        Option<&ChildOf>
-    )>();
+    let mut entities_query = world
+        .query_filtered::<(Entity, EntityRef, Option<&Name>, Option<&ChildOf>), (Without<Window>, Without<Monitor>)>();
     let components = world.components();
 
     let mut rows = entities_query
