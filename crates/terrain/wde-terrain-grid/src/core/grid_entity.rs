@@ -27,7 +27,8 @@ impl GridRotation {
 }
 
 /// Describes the area occupied by an entity on the grid.
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, Reflect)]
+#[reflect(Component)]
 pub struct GridEntity {
     center: Vec2,
     bbox: (Vec2, Vec2), // (bottom left, top_right)

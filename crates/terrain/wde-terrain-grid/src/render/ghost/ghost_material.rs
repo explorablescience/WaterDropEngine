@@ -12,12 +12,17 @@ struct GhostMaterialUniform {
     pub overlay: [f32; 4],
     pub albedo: [f32; 4],
     pub albedo_texture_present: f32,
-    pub _padding: [f32; 3],
+    pub desaturate_factor: f32,
+    pub rim_power: f32,
+    pub rim_strength: f32,
 }
 
 #[derive(Asset, Clone, TypePath)]
 pub struct GhostMaterial {
     pub overlay: Color,
+    pub desaturate: f32,
+    pub rim_power: f32,
+    pub rim_strength: f32,
     pub pbr_material: Option<Handle<PbrMaterial>>,
 
     pub buffer: Option<Handle<Buffer>>,
@@ -26,6 +31,9 @@ impl Default for GhostMaterial {
     fn default() -> Self {
         Self {
             overlay: Color::WHITE,
+            desaturate: 0.5,
+            rim_power: 5.0,
+            rim_strength: 0.1,
             pbr_material: None,
             buffer: None,
         }
@@ -85,7 +93,9 @@ impl RenderBinding for GhostMaterial {
                 ],
                 albedo: [albedo.0, albedo.1, albedo.2, albedo.3],
                 albedo_texture_present: if is_albedo_present { 1.0 } else { 0.0 },
-                _padding: [0.0, 0.0, 0.0],
+                desaturate_factor: self.desaturate,
+                rim_power: self.rim_power,
+                rim_strength: self.rim_strength,
             };
             let buffer = asset_server.add(Buffer {
                 label: "ghost-material".to_string(),

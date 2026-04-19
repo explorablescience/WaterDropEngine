@@ -2,6 +2,8 @@ use bevy::prelude::*;
 use std::collections::HashMap;
 use wde_terrain::prelude::{CHUNK_SIZE, ChunkPos};
 
+use crate::prelude::GridEntity;
+
 /// The number of subdivisions per chunk in the grid system (number of grid cells per chunk).
 pub const CHUNK_GRID_SUBDIVISIONS: u32 = CHUNK_SIZE as u32 / 2;
 
@@ -16,7 +18,8 @@ pub type GridTileLocalPos = (u32, u32);
 /// The tile position in the grid, without subtile direction.
 pub type GridTilePos = (GridChunkPos, GridTileLocalPos);
 /// The local position of a tile within a square tile.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Reflect)]
+#[reflect(Clone, Debug, PartialEq, Hash)]
 pub enum GridLocalDir {
     North,
     East,
@@ -149,20 +152,6 @@ pub struct Grid {
     chunks: HashMap<GridChunkPos, Chunk>
 }
 impl Grid {
-    // Methods to manage entities in the grid
-    /// Sets the entity at the specified chunk and local tile position in the grid.
-    pub fn set_entity_at(
-        &mut self,
-        chunk_pos: GridChunkPos,
-        local_pos: GridLocalPos,
-        entity: Entity
-    ) {
-        let chunk = self
-            .chunks
-            .entry(chunk_pos)
-            .or_insert_with(|| Chunk::new(chunk_pos));
-        chunk.set_entity_at(local_pos, entity);
-    }
     /// Gets the entity at the specified chunk and local tile position in the grid, if it exists.
     pub fn get_entity_at(
         &self,
@@ -173,15 +162,28 @@ impl Grid {
             .get(&chunk_pos)
             .and_then(|chunk| chunk.get_entity_at(local_pos))
     }
-    /// Removes the entity from all tiles it occupies in the grid.
+    /// Adds the specified entity to the grid at the positions occupied by the entity footprint.
+    pub fn set_entity(&mut self, grid_entity: &GridEntity, entity: Entity) {
+        for pos in grid_entity.footprint() {
+            let chunk = self.chunks.entry(pos.0).or_insert_with(|| Chunk::new(pos.0));
+            chunk.set_entity_at(pos.1, entity);
+        }
+    }
+    /// Removes the specified entity from the grid, freeing up the tiles it occupied.
     pub fn remove_entity(&mut self, entity: Entity) {
         for chunk in self.chunks.values_mut() {
             chunk.remove_entity(entity);
         }
     }
-    /// Clears all entities.
-    pub fn clear_all(&mut self) {
-        self.chunks.clear();
+    /// Check if the position and extent are valid for placement (no existing entities in the area).
+    pub fn is_area_free(&self, entity: &GridEntity) -> bool {
+        let footprint = entity.footprint();
+        for pos in footprint {
+            if self.get_entity_at(pos.0, pos.1).is_some() {
+                return false;
+            }
+        }
+        true
     }
 
     // Methods to convert between world positions and chunk/local positions

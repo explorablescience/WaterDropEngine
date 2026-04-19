@@ -10,8 +10,8 @@ impl Plugin for TestPlugin {
 
 fn init_scene(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut gltf_spawn_queue: ResMut<GltfSpawnQueue>,
+    // asset_server: Res<AssetServer>,
+    // mut gltf_spawn_queue: ResMut<GltfSpawnQueue>,
 ) {
     // Main camera
     commands.spawn((
@@ -55,9 +55,9 @@ fn init_scene(
         },
     ));
 
-    // Spawn a default gltf material
-    GltfLoader::spawn(
-        &mut gltf_spawn_queue,
-        asset_server.load("models/placement/house_demo1/house_demo1.gltf"),
-    );
+    // // Spawn a default gltf material
+    // GltfLoader::spawn(
+    //     &mut gltf_spawn_queue,
+    //     asset_server.load("models/placement/house_demo1/house_demo1.gltf"),
+    // );
 }
