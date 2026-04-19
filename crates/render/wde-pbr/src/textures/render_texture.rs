@@ -79,6 +79,10 @@ impl RenderBinding for RenderTextureBinding {
         builder.add_texture_sampler(tex, RenderTexture::BINDING);
     }
 
+    fn has_dependencies(&self) -> bool {
+        true
+    }
+
     fn label(&self) -> &str {
         "render_texture_binding"
     }

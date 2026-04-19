@@ -121,7 +121,7 @@ fn on_dependency_recreate<R: RenderBinding + Asset + Default>(
 
         // Check if the render binding depends on the render data that have been recreated
         if !dependencies.dependencies.contains(&type_id) {
-            return;
+            continue;
         }
 
         // Recreate asset

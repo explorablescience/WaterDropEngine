@@ -29,6 +29,10 @@ impl RenderBinding for RenderBindingResolved {
             .add_texture_sampler(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX);
     }
 
+    fn has_dependencies(&self) -> bool {
+        true
+    }
+
     fn label(&self) -> &str {
         "deferred-textures-resolved-binding"
     }
