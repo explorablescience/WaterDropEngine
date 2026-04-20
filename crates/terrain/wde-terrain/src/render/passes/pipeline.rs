@@ -41,8 +41,8 @@ impl RenderAsset for TerrainRenderPipeline {
             pipeline_manager.create_render_pipeline(
                 RenderPipelineDescriptor {
                     label: "terrain",
-                    vert: Some(assets_server.load("core/render/terrain/render_terrain_vert.wgsl")),
-                    frag: Some(assets_server.load("core/render/terrain/render_terrain_frag.wgsl")),
+                    vert: Some(assets_server.load("core/render/terrain/render_terrain.vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/terrain/render_terrain.frag.wgsl")),
                     bind_group_layouts: vec![
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
                         material_arrays.iter().next().map(|(_, m)| m.layout.clone()),

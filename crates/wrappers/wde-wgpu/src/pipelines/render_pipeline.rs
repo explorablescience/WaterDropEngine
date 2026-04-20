@@ -88,8 +88,8 @@ struct RenderPipelineConfig {
 ///
 /// let mut pipeline = RenderPipeline::new("gbuffer");
 /// pipeline
-///     .set_shader(include_str!("../../../res/pbr/gbuffer_vert.wgsl"), ShaderStages::VERTEX)
-///     .set_shader(include_str!("../../../res/pbr/gbuffer_frag.wgsl"), ShaderStages::FRAGMENT)
+///     .set_shader(include_str!("../../../res/pbr/gbuffer.vert.wgsl"), ShaderStages::VERTEX)
+///     .set_shader(include_str!("../../../res/pbr/gbuffer.frag.wgsl"), ShaderStages::FRAGMENT)
 ///     .set_topology(RenderTopology::TriangleList)
 ///     .set_depth(DepthStencilDescriptor { enabled: true, write: true, compare: wgpu::CompareFunction::Less })
 ///     .set_bind_groups(layouts)

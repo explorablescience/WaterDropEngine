@@ -111,8 +111,8 @@ impl RenderAsset for DeferredLightingPipeline {
             pipeline_manager.create_render_pipeline(
                 RenderPipelineDescriptor {
                     label: "deferred-lighting",
-                    vert: Some(assets_server.load("core/render/pbr/lighting_vert.wgsl")),
-                    frag: Some(assets_server.load("core/render/pbr/lighting_frag.wgsl")),
+                    vert: Some(assets_server.load("core/render/pbr/lighting.vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/pbr/lighting.frag.wgsl")),
                     bind_group_layouts: vec![
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
                         render_binding.iter().next().map(|(_, d)| d.layout.clone()),

@@ -100,7 +100,7 @@ impl AssetLoader for GltfAssetLoader {
         // Construct materials
         let materials_handles: Vec<Handle<PbrMaterial>> = raw_materials
             .iter()
-            .map(|material| material.to_pbr(load_context, settings.stencil_value))
+            .map(|material| material.to_pbr(load_context))
             .collect();
 
         // Add meshes to the asset server

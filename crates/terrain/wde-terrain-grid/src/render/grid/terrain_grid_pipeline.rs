@@ -31,8 +31,8 @@ impl RenderAsset for TerrainGridRenderPipeline {
             pipeline_manager.create_render_pipeline(
                 RenderPipelineDescriptor {
                     label: "terrain-grid",
-                    vert: Some(assets_server.load("core/render/terrain/render_grid_vert.wgsl")),
-                    frag: Some(assets_server.load("core/render/terrain/render_grid_frag.wgsl")),
+                    vert: Some(assets_server.load("core/render/terrain/render_grid.vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/terrain/render_grid.frag.wgsl")),
                     fragment_blend: Some(BlendState {
                         color: BlendComponent {
                             src_factor: BlendFactor::SrcAlpha,

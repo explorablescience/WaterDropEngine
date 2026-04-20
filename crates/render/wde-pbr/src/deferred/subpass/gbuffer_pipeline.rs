@@ -43,8 +43,8 @@ impl RenderAsset for GBufferRenderPipeline {
             pipeline_manager.create_render_pipeline(
                 RenderPipelineDescriptor {
                     label: "gbuffer-pbr",
-                    vert: Some(assets_server.load("core/render/pbr/gbuffer_vert.wgsl")),
-                    frag: Some(assets_server.load("core/render/pbr/gbuffer_frag.wgsl")),
+                    vert: Some(assets_server.load("core/render/pbr/gbuffer.vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/pbr/gbuffer.frag.wgsl")),
                     bind_group_layouts: vec![
                         ssbo_mesh.iter().next().map(|(_, m)| m.layout.clone()),
                         camera.iter().next().map(|(_, c)| c.layout.clone()),

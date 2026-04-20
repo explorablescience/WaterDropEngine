@@ -34,8 +34,8 @@ impl RenderAsset for GhostRenderPipeline {
             pipeline_manager.create_render_pipeline(
                 RenderPipelineDescriptor {
                     label: "ghost",
-                    vert: Some(assets_server.load("core/render/ghost/ghost_vert.wgsl")),
-                    frag: Some(assets_server.load("core/render/ghost/ghost_frag.wgsl")),
+                    vert: Some(assets_server.load("core/render/ghost/ghost.vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/ghost/ghost.frag.wgsl")),
                     bind_group_layouts: vec![
                         ssbo_mesh.iter().next().map(|(_, m)| m.layout.clone()),
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
