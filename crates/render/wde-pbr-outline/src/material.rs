@@ -23,13 +23,12 @@ impl Default for OutlineMaterial {
     fn default() -> Self {
         Self {
             label: "outline-material".to_string(),
-            color: (1.0, 0.72, 0.08, 1.0),
-            thickness: 0.03,
+            color: (1.0, 1.0, 1.0, 0.6),
+            thickness: 0.02,
             uniform_buffer: None
         }
     }
 }
-
 impl RenderBinding for OutlineMaterial {
     type Params = SRes<AssetServer>;
 

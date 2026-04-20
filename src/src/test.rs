@@ -101,12 +101,7 @@ fn set_stencil(
                 ChildOf(*child),
                 Transform::IDENTITY,
                 Mesh3d(mesh.0.clone()),
-                PbrMaterial3d(asset_server.add(OutlineMaterial {
-                    color: (0.5, 0.5, 0.2, 0.3),
-                    thickness: 0.02,
-                    ..Default::default()
-                })),
-                OutlineMarker
+                PbrMaterial3d(asset_server.add(OutlineMaterial::default()))
             ));
         }
         *is_set = true;

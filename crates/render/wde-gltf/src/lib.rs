@@ -83,7 +83,7 @@ impl AssetLoader for GltfAssetLoader {
     async fn load(
         &self,
         reader: &mut dyn Reader,
-        settings: &Self::Settings,
+        _settings: &Self::Settings,
         load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         let path = load_context.path().clone();

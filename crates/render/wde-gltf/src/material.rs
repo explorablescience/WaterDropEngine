@@ -15,7 +15,7 @@ pub struct GltfMaterial {
     pub roughness: f32,
     pub metallic_roughness_tex_url: Option<String>,
     pub normal_tex_url: Option<String>,
-    pub occlusion_tex_url: Option<String>,
+    pub occlusion_tex_url: Option<String>
 }
 
 impl GltfMaterial {
@@ -83,7 +83,7 @@ impl GltfMaterial {
                     self.base_color[0],
                     self.base_color[1],
                     self.base_color[2],
-                    self.base_color[3],
+                    self.base_color[3]
                 ),
                 albedo_t: aldebo_texture_handle,
 
@@ -94,7 +94,7 @@ impl GltfMaterial {
                 normal_t: normal_texture_handle,
                 occlusion_t: occlusion_texture_handle,
                 ..Default::default()
-            },
+            }
         )
     }
 }
@@ -113,7 +113,7 @@ impl Default for GltfMaterial {
             metallic_roughness_tex_url: None,
 
             normal_tex_url: None,
-            occlusion_tex_url: None,
+            occlusion_tex_url: None
         }
     }
 }

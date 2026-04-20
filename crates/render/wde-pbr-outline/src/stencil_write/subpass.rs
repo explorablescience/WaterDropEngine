@@ -8,14 +8,13 @@ use wde_renderer::prelude::*;
 
 use crate::{
     extract::ExtractedOutlineInstances,
-    material::OutlineMaterial,
-    pipeline::{OutlineRenderPipeline, PushConstants}
+    stencil_write::pipeline::{PushConstants, StencilWriteRenderPipeline}
 };
 
-pub(crate) struct SubRenderPassOutline;
-impl RenderSubPass for SubRenderPassOutline {
+pub(crate) struct SubRenderPassStencilWrite;
+impl RenderSubPass for SubRenderPassStencilWrite {
     type Params = (
-        SRes<RenderAssets<OutlineRenderPipeline>>,
+        SRes<RenderAssets<StencilWriteRenderPipeline>>,
         SBinding<SsboMeshBinding>,
         SBinding<CameraBinding>,
         SBinding<SsboTransformBinding>
@@ -25,6 +24,7 @@ impl RenderSubPass for SubRenderPassOutline {
         (pipeline, ssbo_mesh, camera, transforms): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
+            SubPassCommand::StencilReference(1),
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::BindGroup(
                 0,
@@ -40,37 +40,30 @@ impl RenderSubPass for SubRenderPassOutline {
     }
 
     fn label() -> &'static str {
-        "pbr-outline"
+        "stencil-write"
     }
 }
 
 fn draw_instances<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
     let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
-    let materials = world
-        .get_resource::<RenderAssets<GpuRenderBinding<OutlineMaterial>>>()
-        .unwrap();
     let extracted = world.get_resource::<ExtractedOutlineInstances>().unwrap();
     let transform_registry = world.get_resource::<PbrUuidRegistry>().unwrap();
 
     for instance in extracted.0.iter() {
-        let Some(mesh) = meshes.get(instance.mesh) else {
+        let (Some(mesh), Some(transform_id)) = (
+            meshes.get(instance.mesh),
+            transform_registry.get(&instance.transform_uuid)
+        ) else {
             continue;
         };
-        let Some(material) = materials.get(instance.material) else {
-            continue;
-        };
-        let Some(transform_id) = transform_registry.get(&instance.transform_uuid) else {
-            continue;
-        };
-
         render_pass.set_push_constants(
             ShaderStages::VERTEX,
             bytemuck::bytes_of(&PushConstants {
                 first_vertex: mesh.ssbo_first_vertex,
-                first_index: mesh.ssbo_first_index
+                first_index: mesh.ssbo_first_index,
+                transform_id
             })
         );
-        render_pass.set_bind_group(3, &material.bind_group);
         let _ = render_pass.draw(0..mesh.index_count, transform_id..(transform_id + 1));
     }
 }

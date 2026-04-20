@@ -45,16 +45,16 @@ impl RenderAsset for OutlineRenderPipeline {
                     depth: DepthDescriptor {
                         enabled: true,
                         write: false,
-                        compare: CompareFunction::LessEqual,
+                        compare: CompareFunction::NotEqual,
                         stencil: StencilState {
                             front: StencilFaceState {
-                                compare: CompareFunction::Equal,
+                                compare: CompareFunction::NotEqual,
                                 fail_op: StencilOperation::Keep,
                                 depth_fail_op: StencilOperation::Keep,
                                 pass_op: StencilOperation::Keep
                             },
                             back: StencilFaceState {
-                                compare: CompareFunction::Equal,
+                                compare: CompareFunction::NotEqual,
                                 fail_op: StencilOperation::Keep,
                                 depth_fail_op: StencilOperation::Keep,
                                 pass_op: StencilOperation::Keep
@@ -84,5 +84,6 @@ impl RenderAsset for OutlineRenderPipeline {
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct PushConstants {
     pub first_vertex: u32,
-    pub first_index: u32
+    pub first_index: u32,
+    pub transform_id: u32
 }

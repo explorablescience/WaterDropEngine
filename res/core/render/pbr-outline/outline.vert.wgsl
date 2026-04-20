@@ -1,6 +1,7 @@
 struct PushConstants {
     first_vertex: u32,
     first_index: u32,
+    transform_id: u32,
 };
 var<push_constant> push_constants: PushConstants;
 
@@ -27,7 +28,6 @@ struct ObjectToWorld {
     obj_to_world: mat4x4<f32>,
 };
 @group(2) @binding(0) var<storage, read> in_raw_transform: array<ObjectToWorld>;
-@group(2) @binding(1) var<storage, read> in_instance_to_transform: array<u32>;
 
 struct OutlineMaterial {
     color: vec4<f32>,
@@ -40,8 +40,12 @@ fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32)
     let index = in_indices[vid + push_constants.first_index];
     let vertex = in_vertices[index + push_constants.first_vertex];
 
-    let obj_to_world = in_raw_transform[in_instance_to_transform[instance]].obj_to_world;
-    let world_pos = obj_to_world * vec4<f32>(vertex.position * (1.0 + in_outline_material.thickness.x), 1.0);
+    // Build an expanded shell in object space for the outline pass.
+    let outline_scale = 1.0 + max(in_outline_material.thickness.x, 0.0);
+    let scaled_position = vertex.position * outline_scale;
+
+    let obj_to_world = in_raw_transform[push_constants.transform_id].obj_to_world;
+    let world_pos = obj_to_world * vec4<f32>(scaled_position, 1.0);
     let view_pos = in_camera.world_to_view * world_pos;
 
     return in_camera.view_to_ndc * view_pos;
