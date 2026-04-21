@@ -2,7 +2,7 @@ use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
     prelude::*
 };
-use wde_renderer::prelude::*;
+use wde_renderer::prelude::{Color, *};
 
 #[repr(C)]
 #[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -15,7 +15,7 @@ struct OutlineMaterialUniform {
 #[derive(Asset, TypePath, Clone)]
 pub struct OutlineMaterial {
     pub label: String,
-    pub color: (f32, f32, f32, f32),
+    pub color: Color,
     pub thickness: f32,
     pub uniform_buffer: Option<Handle<Buffer>>
 }
@@ -23,7 +23,7 @@ impl Default for OutlineMaterial {
     fn default() -> Self {
         Self {
             label: "outline-material".to_string(),
-            color: (1.0, 1.0, 1.0, 0.6),
+            color: Color::LinearRgba(1.0, 1.0, 1.0, 0.6),
             thickness: 0.02,
             uniform_buffer: None
         }
@@ -38,7 +38,12 @@ impl RenderBinding for OutlineMaterial {
         builder: &mut RenderBindingBuilder
     ) {
         let uniform = OutlineMaterialUniform {
-            color: [self.color.0, self.color.1, self.color.2, self.color.3],
+            color: [
+                self.color.r(),
+                self.color.g(),
+                self.color.b(),
+                self.color.a()
+            ],
             thickness: self.thickness,
             _padding: [0.0, 0.0, 0.0]
         };

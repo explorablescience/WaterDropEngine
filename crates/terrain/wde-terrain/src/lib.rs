@@ -31,14 +31,13 @@ pub(crate) mod utils;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::TERRAIN_BUILDINGS_COLLIDER_GROUP;
-    pub use crate::TERRAIN_COLLIDER_GROUP;
     pub use crate::manager::*;
     pub use crate::physics::terrain_physics::TerrainPhysics;
     pub use crate::render::extractor::*;
     pub use crate::render::renderer::TerrainRenderer;
     pub use crate::render::renderer_gpu::TerrainRendererGPU;
     pub use crate::utils::cursor_pos::TerrainCursorPos;
+    pub use crate::{TERRAIN_BUILDINGS_COLLIDER_GROUP, TERRAIN_COLLIDER_GROUP};
 }
 
 pub struct TerrainPlugin;

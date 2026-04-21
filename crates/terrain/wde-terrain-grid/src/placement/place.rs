@@ -1,7 +1,7 @@
 use wde_logger::prelude::*;
 use wde_terrain::TERRAIN_BUILDINGS_COLLIDER_GROUP;
 
-use crate::placement::TerrainCursorPos;
+use crate::{core::placement_config::PlacementConfigEntry, placement::TerrainCursorPos};
 use bevy::prelude::*;
 use wde_editor::prelude::*;
 use wde_gltf::prelude::*;
@@ -11,7 +11,7 @@ use wde_renderer::prelude::{Color, *};
 
 use crate::{
     core::placement_config::PlacementConfig,
-    placement::{TerrainPlacementManager, TerrainPlacementMode, ui::reset_tool},
+    placement::{TerrainPlacementManager, TerrainPlacementMode},
     prelude::{Grid, GridEntity, GridRotation},
     render::ghost::ghost_material::GhostMaterial
 };
@@ -46,7 +46,7 @@ pub fn ui_place_entity(
         }
     });
     if manager.place_selected_entry_label.is_none() {
-        reset_tool(&mut commands, manager);
+        reset_placement_tool(&mut commands, manager);
         return;
     }
 
@@ -57,63 +57,94 @@ pub fn ui_place_entity(
             .iter()
             .find(|e| &e.label == manager.place_selected_entry_label.as_ref().unwrap())
         {
-            manager.place_selected_entry = Some(entry.clone());
-
-            // Get the model to place
-            let model = match gltf_models.get(&entry.asset) {
-                Some(model) => model,
-                None => return // Model not loaded yet, will try again in the next frame
-            };
-
-            // Add the elements as children of the placement entity
-            let children = model
-                .models
-                .iter()
-                .map(|(mesh, material)| {
-                    // Create material
-                    let ok_material = asset_server.add(GhostMaterial {
-                        overlay: Color::LinearRgba(0.8, 0.8, 0.8, 0.1),
-                        desaturate: 0.8,
-                        rim_power: 3.0,
-                        rim_strength: 0.01,
-                        pbr_material: Some(material.clone()),
-                        ..Default::default()
-                    });
-                    let nok_material = asset_server.add(GhostMaterial {
-                        overlay: Color::LinearRgba(1.0, 0.0, 0.0, 0.16),
-                        desaturate: 0.6,
-                        rim_power: 3.0,
-                        rim_strength: 0.01,
-                        pbr_material: Some(material.clone()),
-                        ..Default::default()
-                    });
-
-                    // Spawn entity
-                    commands
-                        .spawn((
-                            Name::new(format!("Placement Entity - {}", entry.label)),
-                            Transform::default(),
-                            Mesh3d(mesh.clone()),
-                            PbrMaterial3d(ok_material.clone()),
-                            GhostMaterialStorer {
-                                pbr_material: material.clone(),
-                                ok_material,
-                                nok_material,
-                                current_validity: true
-                            }
-                        ))
-                        .id()
-                })
-                .collect::<Vec<Entity>>();
-            commands.entity(manager.entity).add_children(&children);
+            spawn_new_ghost_entity(&mut commands, entry, gltf_models, asset_server, manager);
         } else {
             error!(
                 "Selected placement entry label '{}' not found in config entries",
                 manager.place_selected_entry_label.as_ref().unwrap()
             );
-            reset_tool(&mut commands, manager);
+            reset_placement_tool(&mut commands, manager);
         }
     }
+}
+
+pub fn handle_new_entity_to_place(
+    asset_server: Res<AssetServer>,
+    mut commands: Commands,
+    mut manager: ResMut<TerrainPlacementManager>,
+    gltf_models: Res<Assets<GltfAsset>>
+) {
+    let Some(ref entry) = manager.new_entry_to_place else {
+        return;
+    };
+    let label = entry.label.clone();
+    spawn_new_ghost_entity(
+        &mut commands,
+        &entry.clone(),
+        &gltf_models,
+        &asset_server,
+        &mut manager
+    );
+    manager.place_selected_entry_label = Some(label);
+    manager.new_entry_to_place = None;
+}
+
+fn spawn_new_ghost_entity(
+    commands: &mut Commands,
+    entry: &PlacementConfigEntry,
+    gltf_models: &Assets<GltfAsset>,
+    asset_server: &AssetServer,
+    manager: &mut TerrainPlacementManager
+) {
+    manager.place_selected_entry = Some(entry.clone());
+
+    // Get the model to place
+    let model = match gltf_models.get(&entry.asset) {
+        Some(model) => model,
+        None => return // Model not loaded yet, will try again in the next frame
+    };
+
+    // Add the elements as children of the placement entity
+    let children = model
+        .models
+        .iter()
+        .map(|(mesh, material)| {
+            // Create material
+            let ok_material = asset_server.add(GhostMaterial {
+                overlay: Color::LinearRgba(0.8, 0.8, 0.8, 0.1),
+                desaturate: 0.8,
+                rim_power: 3.0,
+                rim_strength: 0.01,
+                pbr_material: Some(material.clone()),
+                ..Default::default()
+            });
+            let nok_material = asset_server.add(GhostMaterial {
+                overlay: Color::LinearRgba(1.0, 0.0, 0.0, 0.16),
+                desaturate: 0.6,
+                rim_power: 3.0,
+                rim_strength: 0.01,
+                pbr_material: Some(material.clone()),
+                ..Default::default()
+            });
+
+            // Spawn entity
+            commands
+                .spawn((
+                    Name::new(format!("Placement Entity - {}", entry.label)),
+                    Transform::default(),
+                    Mesh3d(mesh.clone()),
+                    PbrMaterial3d(ok_material.clone()),
+                    GhostMaterialStorer {
+                        pbr_material: material.clone(),
+                        ok_material,
+                        nok_material,
+                        current_validity: true
+                    }
+                ))
+                .id()
+        })
+        .collect::<Vec<Entity>>();
+    commands.entity(manager.entity).add_children(&children);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -128,7 +159,10 @@ pub fn place_update(
     mut material_query: Query<(&Mesh3d, &mut GhostMaterialStorer)>,
     gltf_models: Res<Assets<GltfAsset>>
 ) {
-    if manager.mode != TerrainPlacementMode::Place || manager.place_selected_entry.is_none() {
+    if manager.place_selected_entry.is_none()
+        || (manager.mode != TerrainPlacementMode::Place
+            && manager.mode != TerrainPlacementMode::Move)
+    {
         return;
     }
 
@@ -248,7 +282,16 @@ pub fn place_update(
             grid.set_entity(&grid_entity, parent);
 
             // Reset placement tool
-            reset_tool(&mut commands, &mut manager);
+            reset_placement_tool(&mut commands, &mut manager);
         }
     }
+}
+
+fn reset_placement_tool(commands: &mut Commands, manager: &mut TerrainPlacementManager) {
+    manager.place_selected_entry_label = None;
+    manager.place_selected_entry = None;
+    commands
+        .entity(manager.entity)
+        .insert(Transform::from_translation(Vec3::MIN));
+    commands.entity(manager.entity).despawn_children();
 }

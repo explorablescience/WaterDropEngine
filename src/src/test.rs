@@ -4,20 +4,11 @@ use wde::prelude::{Color as WdeColor, *};
 pub struct TestPlugin;
 impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, init_scene)
-            .add_systems(Update, set_stencil)
-            .init_resource::<SpawnEntity>();
+        app.add_systems(Startup, init_scene);
     }
 }
 
-#[derive(Resource, Default)]
-struct SpawnEntity(Option<Entity>);
-
-fn init_scene(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut gltf_spawn_queue: ResMut<GltfSpawnQueue>
-) {
+fn init_scene(mut commands: Commands) {
     // Main camera
     commands.spawn((
         Name::new("Main Camera"),
@@ -64,46 +55,4 @@ fn init_scene(
         },
         ChildOf(entity)
     ));
-
-    // Spawn a default gltf material
-    let parent = commands
-        .spawn((Name::new("GLTF Model Parent"), Transform::default()))
-        .id();
-    commands.insert_resource(SpawnEntity(Some(parent)));
-    GltfLoader::spawn(
-        &mut gltf_spawn_queue,
-        asset_server.load_with_settings(
-            "models/placement/house_demo1/house_demo1.gltf",
-            |settings: &mut GltfLoaderSettings| settings.stencil_value = Some(1)
-        ),
-        parent
-    );
-}
-
-fn set_stencil(
-    asset_server: Res<AssetServer>,
-    mut commands: Commands,
-    spawn_entity: Res<SpawnEntity>,
-    children: Query<&Children>,
-    query: Query<&Mesh3d>,
-    mut is_set: Local<bool>
-) {
-    if *is_set {
-        return;
-    }
-    if let Some(parent) = spawn_entity.0
-        && let Ok(children) = children.get(parent)
-    {
-        for child in children {
-            let mesh = query.get(*child).unwrap();
-            commands.spawn((
-                Name::new("Stencil Mark"),
-                ChildOf(*child),
-                Transform::IDENTITY,
-                Mesh3d(mesh.0.clone()),
-                PbrMaterial3d(asset_server.add(OutlineMaterial::default()))
-            ));
-        }
-        *is_set = true;
-    }
 }
