@@ -2,11 +2,8 @@ use std::collections::HashSet;
 
 use bevy::{
     input::{ButtonState, mouse::MouseButtonInput},
-    prelude::*,
-    window::PrimaryWindow
+    prelude::*
 };
-use wde_camera::prelude::*;
-use wde_physics::prelude::*;
 use wde_terrain::prelude::*;
 
 use crate::paint::brush::{PaintBrush, PaintCommand};
@@ -67,9 +64,7 @@ impl PaintManager {
 /// Check for mouse input and add paint commands to the list
 #[allow(clippy::too_many_arguments)]
 fn add_paint_command(
-    phworld: Res<PhysicsWorld>,
-    window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Query<(&GlobalTransform, &CameraView), With<Camera>>,
+    terrain_cursor_pos: Res<TerrainCursorPos>,
     mut mouse_input: MessageReader<MouseButtonInput>,
     mut paint_manager: ResMut<PaintManager>,
     brush_query: Query<&PaintBrush>,
@@ -111,26 +106,8 @@ fn add_paint_command(
         return;
     };
 
-    // Get cursor position in NDC
-    let Some(cursor_pos) = window.cursor_position() else {
-        return;
-    };
-    let cursor_ndc = cursor_pos / window.size();
-
-    // Get camera data
-    let Ok((camera_transform, camera_view)) = camera_query.single() else {
-        return;
-    };
-    let aspect_ratio = window.size().x / window.size().y;
-
-    // Create ray from camera
-    let ray = Ray::from_ndc(cursor_ndc, aspect_ratio, camera_transform, camera_view);
-
     // Cast the ray
-    if let Some((_, toi)) = phworld.cast_ray(&ray, &RayCastConfig::default()) {
-        // Get paint position
-        let paint_pos = ray.point_at(toi);
-
+    if let Some(paint_pos) = terrain_cursor_pos.pos() {
         // Compute new position (interpolate)
         let neighbors = [
             IVec2::new(-1, -1),

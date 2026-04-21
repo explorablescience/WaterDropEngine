@@ -114,7 +114,7 @@ pub(crate) fn update_render(
             .unwrap()
     ) {
         let grid_desc = UGridDescription {
-            fade_center: [cursor_pos.world_pos.x, cursor_pos.world_pos.z],
+            fade_center: [cursor_pos.pos_or_last().x, cursor_pos.pos_or_last().z],
             ..Default::default()
         };
         let render_instance = render_instance.0.read().unwrap();

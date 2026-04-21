@@ -15,10 +15,13 @@
 //! }
 
 use bevy::prelude::*;
+use wde_physics::prelude::*;
 
 use crate::{
     physics::TerrainPhysicsPlugin, render::TerrainRenderPlugin, utils::TerrainUtilsPlugin
 };
+
+pub const TERRAIN_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_1;
 
 pub(crate) mod manager;
 pub(crate) mod physics;
@@ -27,6 +30,7 @@ pub(crate) mod utils;
 
 #[doc(hidden)]
 pub mod prelude {
+    pub use crate::TERRAIN_COLLIDER_GROUP;
     pub use crate::manager::*;
     pub use crate::physics::terrain_physics::TerrainPhysics;
     pub use crate::render::extractor::*;

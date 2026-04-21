@@ -1,11 +1,10 @@
 use wde_logger::prelude::*;
 
-use bevy::{prelude::*, window::PrimaryWindow};
-use wde_camera::prelude::*;
+use crate::placement::TerrainCursorPos;
+use bevy::prelude::*;
 use wde_editor::prelude::*;
 use wde_gltf::prelude::*;
 use wde_pbr::prelude::*;
-use wde_physics::prelude::*;
 use wde_renderer::prelude::{Color, *};
 
 use crate::{
@@ -117,11 +116,9 @@ pub fn ui_place_entity(
 
 #[allow(clippy::too_many_arguments)]
 pub fn place_update(
+    terrain_cursor_pos: Res<TerrainCursorPos>,
     mut commands: Commands,
     mut manager: ResMut<TerrainPlacementManager>,
-    phworld: Res<PhysicsWorld>,
-    window: Single<&Window, With<PrimaryWindow>>,
-    camera_query: Query<(&GlobalTransform, &CameraView), With<Camera>>,
     mut local_rot: Local<GridRotation>,
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut grid: ResMut<Grid>,
@@ -142,29 +139,11 @@ pub fn place_update(
         };
     }
 
-    // Create the ray from ndc position
-    let cursor_ndc_position = match window.cursor_position() {
-        Some(pos) => pos / window.size(),
-        None => return
-    };
-    let (camera_transform, camera_view) = camera_query
-        .single()
-        .map_err(|_| "No camera found")
-        .unwrap();
-    let ray = Ray::from_ndc(
-        cursor_ndc_position,
-        window.size().x / window.size().y,
-        camera_transform,
-        camera_view
-    );
-
     // Cast the ray in the physics world
-    if let Some((_, toi)) = phworld.as_ref().cast_ray(&ray, &RayCastConfig::default()) {
-        let hit_point = ray.point_at(toi);
-
+    if let Some(pos) = terrain_cursor_pos.pos() {
         // Move the placement entity to the hit point with the correct rotation
         let grid_entity = GridEntity::new(
-            Vec2::new(hit_point.x, hit_point.z),
+            Vec2::new(pos.x, pos.z),
             manager.place_selected_entry.as_ref().unwrap().extent,
             *local_rot
         );
@@ -194,7 +173,7 @@ pub fn place_update(
         // Place the entity on left click if the position is valid
         if mouse_input.just_pressed(MouseButton::Left) && is_valid {
             let grid_entity = GridEntity::new(
-                Vec2::new(hit_point.x, hit_point.z),
+                Vec2::new(pos.x, pos.z),
                 manager.place_selected_entry.as_ref().unwrap().extent,
                 *local_rot
             );

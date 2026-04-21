@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
 pub use rapier3d::prelude::QueryFilter as RayQueryFilter;
+use rapier3d::prelude::{Group as ColliderGroup, InteractionGroups};
 use wde_camera::prelude::CameraView;
 
 /// Controls how rays interact with colliders during physics queries.
@@ -22,6 +23,16 @@ impl Default for RayCastConfig {
             max_toi: f32::MAX,
             solid: true,
             filter: RayQueryFilter::default()
+        }
+    }
+}
+impl RayCastConfig {
+    /// Only include colliders that are part of the specified collision group(s).
+    pub fn with_filter(filter: ColliderGroup) -> Self {
+        RayCastConfig {
+            filter: RayQueryFilter::new()
+                .groups(InteractionGroups::new(ColliderGroup::all(), filter)),
+            ..Default::default()
         }
     }
 }

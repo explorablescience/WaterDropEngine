@@ -10,9 +10,10 @@
 //! ```rust
 //! commands.spawn((
 //!     Transform::from_xyz(0.0, -1.0, 0.0),
-//!     Collider::cuboid(50.0, 0.1, 50.0),
+//!     Collider::from(CuboidCollider::new(Vec3::new(10.0, 1.0, 10.0)).with_group(ColliderGroup::GROUP_1)),
 //! ));
 //! ```
+//! This example creates a large flat collider representing the ground, assigned to `GROUP_1`. You can create various shapes (e.g., boxes, spheres, heightfields) and assign them to different groups for selective raycasting.
 //!
 //! # Raycasting
 //! Cast rays to detect physics intersections:
@@ -24,7 +25,8 @@
 //!     );
 //!
 //!     // Cast the ray and check for hits
-//!     if let Some((entity, toi)) = phworld.cast_ray(&ray, &RayCastConfig::default()) {
+//!     // Use a filter to only hit colliders in GROUP_1
+//!     if let Some((entity, toi)) = phworld.cast_ray(&ray, &RayCastConfig::with_filter(ColliderGroup::GROUP_1)) {
 //!         let hit_point = ray.point_at(toi);
 //!         println!("Hit entity {:?} at {:?}", entity, hit_point);
 //!     }
@@ -64,7 +66,7 @@ use crate::core::{PhysicsWorld, handle_changes};
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::colliders::Collider;
+    pub use crate::colliders::{Collider, ColliderGroup, CuboidCollider, HeightfieldCollider};
     pub use crate::core::PhysicsWorld;
     pub use crate::raycasting::{Ray, RayCastConfig};
 }
