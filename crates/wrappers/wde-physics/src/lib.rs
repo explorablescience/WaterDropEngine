@@ -66,7 +66,7 @@ use crate::core::{PhysicsWorld, handle_changes};
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::colliders::{Collider, ColliderGroup, CuboidCollider, HeightfieldCollider};
+    pub use crate::colliders::{Collider, ColliderGroup, BoxCollider, HeightfieldCollider};
     pub use crate::core::PhysicsWorld;
     pub use crate::raycasting::{Ray, RayCastConfig};
 }

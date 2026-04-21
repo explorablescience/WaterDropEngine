@@ -26,9 +26,9 @@ pub trait ColliderShape {
     fn build(&self) -> rapier3d::prelude::Collider;
 }
 
-/// A simple cuboid collider shape.
+/// A simple box collider shape.
 /// The collider is defined by its half extents along each axis and an optional collision group.
-pub struct CuboidCollider {
+pub struct BoxCollider {
     /// Half extents
     hx: f32,
     hy: f32,
@@ -37,11 +37,11 @@ pub struct CuboidCollider {
     /// Optional membership in a collision group. If `None`, the collider will be in the default group.
     group: Option<ColliderGroup>
 }
-impl CuboidCollider {
-    /// Create a new cuboid collider with the specified extent and collision group.
-    /// The extent is the full size of the cuboid along each axis (not half extents).
+impl BoxCollider {
+    /// Create a new box collider with the specified extent and collision group.
+    /// The extent is the full size of the box along each axis (not half extents).
     pub fn new(extent: Vec3) -> Self {
-        CuboidCollider {
+        BoxCollider {
             hx: extent.x / 2.0,
             hy: extent.y / 2.0,
             hz: extent.z / 2.0,
@@ -49,13 +49,13 @@ impl CuboidCollider {
         }
     }
 
-    /// Set the collision group for the cuboid collider.
+    /// Set the collision group for the box collider.
     pub fn with_group(mut self, group: ColliderGroup) -> Self {
         self.group = Some(group);
         self
     }
 }
-impl ColliderShape for CuboidCollider {
+impl ColliderShape for BoxCollider {
     fn build(&self) -> rapier3d::prelude::Collider {
         let mut collider = rapier3d::prelude::ColliderBuilder::cuboid(self.hx, self.hy, self.hz);
         if let Some(group) = self.group {
