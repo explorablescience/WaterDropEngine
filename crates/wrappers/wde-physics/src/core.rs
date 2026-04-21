@@ -74,10 +74,10 @@ impl PhysicsWorld {
 /// System to handle changes in colliders, including additions, removals, and updates.
 pub(crate) fn handle_changes(
     mut phworld: ResMut<PhysicsWorld>,
-    colliders: Query<(Entity, &Transform, &Collider)>,
+    colliders: Query<(Entity, &GlobalTransform, &Collider)>,
     new_collider: Query<Entity, Added<Collider>>,
     updated_collider: Query<Entity, Changed<Collider>>,
-    updated_transform: Query<Entity, (Changed<Transform>, With<Collider>)>,
+    updated_transform: Query<Entity, (Changed<GlobalTransform>, With<Collider>)>,
     mut removed_collider: RemovedComponents<Collider>
 ) {
     // Add new colliders to the physics world
@@ -101,9 +101,9 @@ pub(crate) fn handle_changes(
             // Create a rigid body for the collider and insert it into the rigid body set
             let rb = RigidBodyBuilder::fixed()
                 .translation(vector![
-                    transform.translation.x,
-                    transform.translation.y,
-                    transform.translation.z
+                    transform.translation().x,
+                    transform.translation().y,
+                    transform.translation().z
                 ])
                 .build();
             let rb_handle = phworld.rapier.rigid_body_set.write().unwrap().insert(rb);
@@ -182,9 +182,9 @@ pub(crate) fn handle_changes(
                 {
                     rigid_body.set_translation(
                         vector![
-                            transform.translation.x,
-                            transform.translation.y,
-                            transform.translation.z
+                            transform.translation().x,
+                            transform.translation().y,
+                            transform.translation().z
                         ],
                         true
                     );

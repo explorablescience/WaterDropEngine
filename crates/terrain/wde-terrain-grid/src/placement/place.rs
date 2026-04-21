@@ -1,10 +1,12 @@
 use wde_logger::prelude::*;
+use wde_terrain::TERRAIN_BUILDINGS_COLLIDER_GROUP;
 
 use crate::placement::TerrainCursorPos;
 use bevy::prelude::*;
 use wde_editor::prelude::*;
 use wde_gltf::prelude::*;
 use wde_pbr::prelude::*;
+use wde_physics::prelude::*;
 use wde_renderer::prelude::{Color, *};
 
 use crate::{
@@ -123,7 +125,8 @@ pub fn place_update(
     mouse_input: Res<ButtonInput<MouseButton>>,
     mut grid: ResMut<Grid>,
     children_query: Query<&Children>,
-    mut material_query: Query<(&Mesh3d, &mut GhostMaterialStorer)>
+    mut material_query: Query<(&Mesh3d, &mut GhostMaterialStorer)>,
+    gltf_models: Res<Assets<GltfAsset>>
 ) {
     if manager.mode != TerrainPlacementMode::Place || manager.place_selected_entry.is_none() {
         return;
@@ -199,7 +202,28 @@ pub fn place_update(
                 ))
                 .id();
 
-            // Spawn children
+            // Spawn collider child
+            let bbox = match gltf_models.get(&manager.place_selected_entry.as_ref().unwrap().asset)
+            {
+                Some(model) => &model.bbox,
+                None => return // Model not loaded yet, should not happen since we check this in the UI code, but just in case
+            };
+            let bbox_extent = bbox.max - bbox.min;
+            let bbox_offset = Vec3::new(
+                bbox.min.x + bbox_extent.x / 2.0,
+                bbox.min.y + bbox_extent.y / 2.0,
+                bbox.min.z + bbox_extent.z / 2.0
+            );
+            commands.spawn((
+                Name::new("Collider"),
+                Transform::from_translation(bbox_offset),
+                Collider::from(
+                    BoxCollider::new(bbox_extent).with_group(TERRAIN_BUILDINGS_COLLIDER_GROUP)
+                ),
+                ChildOf(parent)
+            ));
+
+            // Spawn mesh children
             for child in children_query.get(manager.entity).unwrap().iter() {
                 commands.spawn((
                     Name::new(format!(

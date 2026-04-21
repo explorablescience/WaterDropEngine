@@ -35,7 +35,11 @@ impl TerrainPhysics {
         // Ensure the parent entity for the colliders exists
         if terrain_renderer.parent.is_none() {
             let parent_entity = commands
-                .spawn((Name::new("Terrain Colliders"), ChildOf(terrain_entity)))
+                .spawn((
+                    Name::new("Terrain Colliders"),
+                    Transform::default(),
+                    ChildOf(terrain_entity)
+                ))
                 .id();
             terrain_renderer.parent = Some(parent_entity);
         }
@@ -68,12 +72,10 @@ impl TerrainPhysics {
                             0.0,
                             tile_pos.y as f32 * CHUNK_SIZE
                         ),
-                        collider
+                        collider,
+                        ChildOf(terrain_renderer.parent.unwrap())
                     ))
                     .id();
-                commands
-                    .entity(entity)
-                    .set_parent_in_place(terrain_renderer.parent.unwrap());
                 terrain_renderer.pos_to_entity.insert(*tile_pos, entity);
             }
         }

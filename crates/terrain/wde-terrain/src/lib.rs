@@ -22,6 +22,7 @@ use crate::{
 };
 
 pub const TERRAIN_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_1;
+pub const TERRAIN_BUILDINGS_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_2;
 
 pub(crate) mod manager;
 pub(crate) mod physics;
@@ -30,6 +31,7 @@ pub(crate) mod utils;
 
 #[doc(hidden)]
 pub mod prelude {
+    pub use crate::TERRAIN_BUILDINGS_COLLIDER_GROUP;
     pub use crate::TERRAIN_COLLIDER_GROUP;
     pub use crate::manager::*;
     pub use crate::physics::terrain_physics::TerrainPhysics;

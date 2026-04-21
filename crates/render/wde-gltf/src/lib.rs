@@ -63,7 +63,9 @@ pub struct GltfAsset {
 
     /// The list of parsed glTF models.
     /// Each model is represented by a mesh and its associated material.
-    pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>
+    pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>,
+    /// The englobing bounding box of the entire model, computed from the bounding boxes of all meshes.
+    pub bbox: MeshBbox
 }
 
 /// Options for loading a glTF model.
@@ -105,6 +107,8 @@ impl AssetLoader for GltfAssetLoader {
 
         // Add meshes to the asset server
         let mut models = Vec::new();
+        let mut bbox_min = Vec3::splat(f32::INFINITY);
+        let mut bbox_max = Vec3::splat(f32::NEG_INFINITY);
         for (i, (indices_data, vertices, material_id)) in raw_meshes.iter().enumerate() {
             let label = format!("gltf_mesh_{}", i);
             let (bb_min, bb_max) = bounding_boxes[i];
@@ -123,11 +127,25 @@ impl AssetLoader for GltfAssetLoader {
                 load_context.add_labeled_asset(label.clone(), mesh_asset),
                 materials_handles[*material_id].clone()
             ));
+
+            // Update the overall bounding box of the model
+            for j in 0..3 {
+                if bb_min[j] < bbox_min[j] {
+                    bbox_min[j] = bb_min[j];
+                }
+                if bb_max[j] > bbox_max[j] {
+                    bbox_max[j] = bb_max[j];
+                }
+            }
         }
 
         Ok(GltfAsset {
             path: path.to_string(),
-            models
+            models,
+            bbox: MeshBbox {
+                min: bbox_min,
+                max: bbox_max
+            }
         })
     }
 
