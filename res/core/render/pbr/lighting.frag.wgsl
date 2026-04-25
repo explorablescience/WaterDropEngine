@@ -28,6 +28,7 @@ struct Camera {
 // Light storage buffer (Light type comes from pbr_functions.wgsl)
 @group(2) @binding(0) var<storage, read> in_lights: array<Light>;
 @group(2) @binding(1) var<uniform> in_atmosphere: AtmosphereParams;
+@group(2) @binding(2) var<uniform> in_pbr_params: PbrParams;
 
 
 
@@ -60,9 +61,9 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let tmp_g_albedo_metallic  = textureSample(in_albedo_metallic_t, in_albedo_metallic_s, in.tex_coord);
     let tmp_g_normal_roughness = textureSample(in_normal_roughness_t, in_normal_roughness_s, in.tex_coord);
     let albedo    = tmp_g_albedo_metallic.rgb;
-    let metallic  = tmp_g_albedo_metallic.a;
+    let metallic  = clamp(tmp_g_albedo_metallic.a * in_pbr_params.material_params.x, 0.0, 1.0);
     let normal    = normalize(tmp_g_normal_roughness.xyz);
-    let roughness = tmp_g_normal_roughness.a;
+    let roughness = clamp(tmp_g_normal_roughness.a * in_pbr_params.material_params.y, 0.0, 1.0);
 
     // View direction from camera to fragment
     let view_dir = normalize(in_camera.position.xyz - world_position);
@@ -79,18 +80,20 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
         let n_dot_l = max(dot(normal, light_data.light_dir), 0.0);
         lo += brdf_for_light(normal, view_dir, light_data.light_dir, albedo, metallic, roughness, f0)
             * light_data.radiance
-            * n_dot_l;
+            * n_dot_l
+            * in_pbr_params.lighting_params.x;
     }
 
     // Ambient term: sample the Mars sky in the surface normal direction.
     let n_dot_v = max(dot(normal, view_dir), 0.0);
     let ks = fresnel_schlick(n_dot_v, f0);
     let kd = (1.0 - ks) * (1.0 - metallic);
-    let irradiance = mars_sky(normal, in_atmosphere) * 0.2;
+    let irradiance = mars_sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
     let ambient = kd * irradiance * albedo;
 
     // HDR tone mapping (Reinhard) and final output
     var color = lo + ambient;
-    color = color / (color + vec3<f32>(1.0));
+    color = color * in_pbr_params.lighting_params.z;
+    color = color / (color + vec3<f32>(in_pbr_params.lighting_params.w));
     return vec4<f32>(color, 1.0);
 }

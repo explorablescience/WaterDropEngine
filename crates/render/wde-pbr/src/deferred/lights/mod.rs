@@ -1,10 +1,14 @@
 use bevy::prelude::*;
 
+#[cfg(debug_assertions)]
+mod editor;
 mod lights_binding;
 mod lights_types;
+mod pbr_params;
 
 pub use lights_binding::*;
 pub use lights_types::*;
+pub use pbr_params::*;
 
 pub(crate) struct LightsPlugin;
 impl Plugin for LightsPlugin {
@@ -16,5 +20,8 @@ impl Plugin for LightsPlugin {
 
         // Add the lights feature
         app.add_plugins(LightsBindingPlugin);
+
+        #[cfg(debug_assertions)]
+        app.add_plugins(editor::PbrLightingEditorPlugin);
     }
 }

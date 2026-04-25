@@ -4,7 +4,7 @@ use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::deferred::lights::*;
-use crate::prelude::{AtmosphereParamsUniform, AtmosphereSettings};
+use crate::prelude::{AtmosphereParamsUniform, AtmosphereSettings, PbrParamsUniform, PbrSettings};
 
 /// Maximum number of lights in the scene.
 pub const MAX_LIGHTS: usize = 64;
@@ -15,6 +15,8 @@ impl Plugin for LightsBindingPlugin {
         // Add the render bindings
         app.init_resource::<AtmosphereSettings>()
             .register_type::<AtmosphereSettings>()
+            .init_resource::<PbrSettings>()
+            .register_type::<PbrSettings>()
             .add_plugins(RenderDataRegisterPlugin::<LightsData>::default());
 
         // Add the systems to extract the lights from the world, and to update the lights buffer
@@ -22,8 +24,10 @@ impl Plugin for LightsBindingPlugin {
             .unwrap()
             .init_resource::<ExtractedLights>()
             .init_resource::<AtmosphereParamsUniform>()
+            .init_resource::<PbrParamsUniform>()
             .add_systems(Extract, extract)
             .add_systems(Extract, extract_atmosphere_params)
+            .add_systems(Extract, extract_pbr_params)
             .add_systems(Render, update_lights_buffer.in_set(RenderSet::Prepare));
     }
 }
@@ -34,6 +38,7 @@ impl LightsData {
     pub const LIGHTS_BUFFER_IDX: u32 = 0;
     pub const LIGHTS_BUFFER_STAGING_IDX: u32 = 1;
     pub const ATMOSPHERE_PARAMS_BUFFER_IDX: u32 = 2;
+    pub const PBR_PARAMS_BUFFER_IDX: u32 = 3;
 }
 impl RenderData for LightsData {
     type Params = ();
@@ -65,6 +70,15 @@ impl RenderData for LightsData {
                     size: std::mem::size_of::<AtmosphereParamsUniform>(),
                     usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
                     content: Some(bytemuck::cast_slice(&[AtmosphereParamsUniform::default()]).to_vec())
+                }
+            )
+            .add_buffer(
+                Self::PBR_PARAMS_BUFFER_IDX,
+                Buffer {
+                    label: "pbr-params".to_string(),
+                    size: std::mem::size_of::<PbrParamsUniform>(),
+                    usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                    content: Some(bytemuck::cast_slice(&[PbrParamsUniform::default()]).to_vec())
                 }
             );
     }
@@ -103,12 +117,20 @@ fn extract_atmosphere_params(
     *uniform = AtmosphereParamsUniform::from_settings(&settings, time_of_day);
 }
 
+fn extract_pbr_params(
+    settings: ExtractWorld<Res<PbrSettings>>,
+    mut uniform: ResMut<PbrParamsUniform>
+) {
+    *uniform = PbrParamsUniform::from_settings(&settings);
+}
+
 fn update_lights_buffer(
     lights_buffer: ResRenderData<LightsData>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>,
     extracted_lights: Res<ExtractedLights>,
-    atmosphere_uniform: Res<AtmosphereParamsUniform>
+    atmosphere_uniform: Res<AtmosphereParamsUniform>,
+    pbr_uniform: Res<PbrParamsUniform>
 ) {
     // Get the lights buffer
     let lights_buffer_cpu = match lights_buffer.iter().next() {
@@ -194,4 +216,20 @@ fn update_lights_buffer(
         bytemuck::cast_slice(&[*atmosphere_uniform]),
         0
     );
+
+    let pbr_buffer = match buffers.get(
+        &lights_buffer
+            .iter()
+            .next()
+            .unwrap()
+            .1
+            .get_buffer(LightsData::PBR_PARAMS_BUFFER_IDX)
+            .unwrap()
+    ) {
+        Some(buffer) => buffer,
+        None => return
+    };
+    pbr_buffer
+        .buffer
+        .write(&render_instance, bytemuck::cast_slice(&[*pbr_uniform]), 0);
 }

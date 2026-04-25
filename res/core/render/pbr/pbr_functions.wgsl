@@ -143,6 +143,14 @@ struct LightData {
     radiance:  vec3<f32>
 };
 
+/// Runtime parameters controlling deferred PBR lighting.
+struct PbrParams {
+    /// x=direct_scale, y=ambient_scale, z=exposure, w=tone_map_white
+    lighting_params: vec4<f32>,
+    /// x=metallic_scale, y=roughness_scale, z=min_roughness
+    material_params: vec4<f32>
+};
+
 /// Compute light direction and radiance at a given world-space fragment position.
 fn get_light_data(light: Light, frag_world_pos: vec3<f32>) -> LightData {
     var light_dir: vec3<f32>;
