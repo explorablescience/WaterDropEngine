@@ -67,6 +67,7 @@ impl RenderAsset for StencilWriteRenderPipeline {
                         TextureFormat::R16Float,       // Depth
                         TextureFormat::Rgba8UnormSrgb, // Albedo
                         TextureFormat::Rgba16Float,    // Normal
+                        TextureFormat::R8Unorm,        // AO
                     ]),
                     cull_mode: None,
                     color_write: ColorWrites::empty(),

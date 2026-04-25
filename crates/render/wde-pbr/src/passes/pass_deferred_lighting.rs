@@ -26,7 +26,9 @@ impl RenderBinding for RenderBindingResolved {
             .add_texture_view(deferred_textures, DeferredTextures::ALBEDO_RESOLVED_IDX)
             .add_texture_sampler(deferred_textures, DeferredTextures::ALBEDO_RESOLVED_IDX)
             .add_texture_view(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX)
-            .add_texture_sampler(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX);
+            .add_texture_sampler(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX)
+            .add_texture_view(deferred_textures, DeferredTextures::AO_RESOLVED_IDX)
+            .add_texture_sampler(deferred_textures, DeferredTextures::AO_RESOLVED_IDX);
     }
 
     fn has_dependencies(&self) -> bool {

@@ -10,6 +10,21 @@ struct VertexOutput {
     @location(5) view_z: f32                  // View-space Z (linear depth)
 };
 
+const MAX_SPLAT_LAYERS: u32 = 4u;
+
+fn splat_weight(weights: vec4<f32>, layer: u32) -> f32 {
+    if layer == 0u {
+        return weights.x;
+    }
+    if layer == 1u {
+        return weights.y;
+    }
+    if layer == 2u {
+        return weights.z;
+    }
+    return weights.w;
+}
+
 // Material texture arrays (group 1)
 @group(1) @binding(0) var material_albedo: texture_2d_array<f32>;
 @group(1) @binding(1) var material_albedo_sampler: sampler;
@@ -33,35 +48,34 @@ fn main(in: VertexOutput) -> FragOutput {
     // Sample the splatmap to determine material blending weights
     let splatmap = textureSample(in_splatmap_1, in_splatmap_1_sampler, in.tex_coord);
     let weights = vec4<f32>(splatmap.r, splatmap.g, splatmap.b, splatmap.a);
+    let layer_count = min(textureNumLayers(material_albedo), MAX_SPLAT_LAYERS);
 
     // Compute material UVs (tiled based on vertex UVs)
-    let material_uv = in.tex_coord * 25.0 % 1.0;
+    // let material_uv = in.tex_coord * 25.0 % 1.0;
+    let material_uv = in.tex_coord * 2.0 % 1.0; // Allow UVs to exceed [0,1] for tiling
 
-    // Blend albedo from each material layer
+    // Blend material channels from each available layer.
     var albedo = vec3<f32>(0.0);
-    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 0).rgb * weights.r;
-    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 1).rgb * weights.g;
-    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 2).rgb * weights.b;
-    albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 3).rgb * (1.0 - weights.a);
+    var normal_sample = vec3<f32>(0.0);
+    var roughness_value = 0.0;
+    var ao_value = 0.0;
+
+    for (var layer: u32 = 0u; layer < layer_count; layer = layer + 1u) {
+        let w = splat_weight(weights, layer);
+        albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, i32(layer)).rgb * w;
+        normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, i32(layer)).rgb * w;
+        roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, i32(layer)).r * w;
+        ao_value += textureSample(material_ao, material_ao_sampler, material_uv, i32(layer)).r * w;
+    }
+
     out.albedo_metallic = vec4<f32>(albedo, 0.0); // Terrain is non-metallic
 
     // Blend normal map samples (raw [0,1] values) then decode and rotate to world space
-    var normal_sample = vec3<f32>(0.0);
-    normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, 0).rgb * weights.r;
-    normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, 1).rgb * weights.g;
-    normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, 2).rgb * weights.b;
-    normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, 3).rgb * (1.0 - weights.a);
     let normal_world = apply_normal_map(normal_sample, in.tangent_world.xyz, in.bitangent_world, normalize(in.normal_world));
 
-    // Blend roughness from each material layer
-    var roughness_value = 0.0;
-    roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, 0).r * weights.r;
-    roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, 1).r * weights.g;
-    roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, 2).r * weights.b;
-    roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, 3).r * (1.0 - weights.a);
     out.normal_roughness = vec4<f32>(normal_world, roughness_value);
 
-    // Note: AO texture is sampled but not yet applied (no occlusion term in this pass)
+    out.ao = ao_value;
 
     // Store linear view-space depth
     out.depth = in.view_z;

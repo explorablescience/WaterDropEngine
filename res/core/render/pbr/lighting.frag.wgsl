@@ -24,6 +24,8 @@ struct Camera {
 @group(1) @binding(3) var in_albedo_metallic_s:  sampler;
 @group(1) @binding(4) var in_normal_roughness_t: texture_2d<f32>;
 @group(1) @binding(5) var in_normal_roughness_s: sampler;
+@group(1) @binding(6) var in_ao_t: texture_2d<f32>;
+@group(1) @binding(7) var in_ao_s: sampler;
 
 // Light storage buffer (Light type comes from pbr_functions.wgsl)
 @group(2) @binding(0) var<storage, read> in_lights: array<Light>;
@@ -64,6 +66,7 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let metallic  = clamp(tmp_g_albedo_metallic.a * in_pbr_params.material_params.x, 0.0, 1.0);
     let normal    = normalize(tmp_g_normal_roughness.xyz);
     let roughness = clamp(tmp_g_normal_roughness.a * in_pbr_params.material_params.y, 0.0, 1.0);
+    let ao        = textureSample(in_ao_t, in_ao_s, in.tex_coord).r;
 
     // View direction from camera to fragment
     let view_dir = normalize(in_camera.position.xyz - world_position);
@@ -89,7 +92,7 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let ks = fresnel_schlick(n_dot_v, f0);
     let kd = (1.0 - ks) * (1.0 - metallic);
     let irradiance = mars_sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
-    let ambient = kd * irradiance * albedo;
+    let ambient = kd * irradiance * albedo * ao;
 
     // HDR tone mapping (Reinhard) and final output
     var color = lo + ambient;

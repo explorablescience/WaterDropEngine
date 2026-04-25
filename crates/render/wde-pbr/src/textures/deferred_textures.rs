@@ -23,6 +23,8 @@ impl DeferredTextures {
     pub const ALBEDO_RESOLVED_IDX: u32 = 3;
     pub const NORMAL_IDX: u32 = 4;
     pub const NORMAL_RESOLVED_IDX: u32 = 5;
+    pub const AO_IDX: u32 = 6;
+    pub const AO_RESOLVED_IDX: u32 = 7;
 }
 impl RenderData for DeferredTextures {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
@@ -96,6 +98,27 @@ impl RenderData for DeferredTextures {
                     label: "pbr-normal-resolved".to_string(),
                     size,
                     format: TextureFormat::Rgba16Float,
+                    usages,
+                    ..Default::default()
+                }
+            )
+            .add_texture(
+                DeferredTextures::AO_IDX,
+                Texture {
+                    label: "pbr-ao".to_string(),
+                    size,
+                    format: TextureFormat::R8Unorm,
+                    usages,
+                    sample_count: MSAA_SAMPLE_COUNT,
+                    ..Default::default()
+                }
+            )
+            .add_texture(
+                DeferredTextures::AO_RESOLVED_IDX,
+                Texture {
+                    label: "pbr-ao-resolved".to_string(),
+                    size,
+                    format: TextureFormat::R8Unorm,
                     usages,
                     ..Default::default()
                 }

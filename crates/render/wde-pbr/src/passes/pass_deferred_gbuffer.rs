@@ -69,6 +69,19 @@ impl RenderPass for RenderPassDeferredGBuffer {
                     load: LoadOp::Clear(Color::BLACK),
                     ..default()
                 },
+                RenderPassDescColorAttachment {
+                    texture: deferred_textures
+                        .get_texture(DeferredTextures::AO_IDX)
+                        .map(|t| t.id()),
+                    resolve_target: Some(
+                        deferred_textures
+                            .get_texture(DeferredTextures::AO_RESOLVED_IDX)
+                            .unwrap()
+                            .id()
+                    ),
+                    load: LoadOp::Clear(Color::WHITE),
+                    ..default()
+                },
             ])
         }
     }

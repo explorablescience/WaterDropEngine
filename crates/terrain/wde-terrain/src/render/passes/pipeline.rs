@@ -56,6 +56,7 @@ impl RenderAsset for TerrainRenderPipeline {
                         TextureFormat::R16Float,       // Depth
                         TextureFormat::Rgba8UnormSrgb, // Albedo
                         TextureFormat::Rgba16Float,    // Normal
+                        TextureFormat::R8Unorm,        // AO
                     ]),
                     depth: DepthDescriptor {
                         enabled: true,

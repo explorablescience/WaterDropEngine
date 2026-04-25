@@ -16,6 +16,21 @@ struct VertexOutput {
     @location(5) view_z: f32                  // View-space Z (linear depth)
 };
 
+const MAX_SPLAT_LAYERS: u32 = 4u;
+
+fn splat_weight(weights: vec4<f32>, layer: u32) -> f32 {
+    if layer == 0u {
+        return weights.x;
+    }
+    if layer == 1u {
+        return weights.y;
+    }
+    if layer == 2u {
+        return weights.z;
+    }
+    return weights.w;
+}
+
 // From world space to normalized device coordinates
 struct Camera {
     world_to_view: mat4x4<f32>,
@@ -23,10 +38,15 @@ struct Camera {
 }
 @group(0) @binding(0) var<uniform> in_camera: Camera;
 
+// Material texture arrays (group 1)
+@group(1) @binding(8) var material_displacement: texture_2d_array<f32>;
+@group(1) @binding(9) var material_displacement_sampler: sampler;
+
 // Description of the terrain
 struct TerrainDescription {
     tile_size: vec3<f32>,
     tile_subdivisions: f32,
+    displacement_scales: vec4<f32>,
 }
 @group(2) @binding(0) var<uniform> in_terrain_description: TerrainDescription;
 struct TerrainTile {
@@ -56,9 +76,28 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     );
     var world_pos = obj_to_world * vec4<f32>(model.position, 1.0);
 
-    // Add some noise to the height based on the xz position
+    // Base terrain height from global heightmap
     let h = in_terrain_description.tile_size.y;
     world_pos.y = textureSampleLevel(in_heightmap, in_heightmap_sampler, model.tex_coord, 0.0).r * h - 0.02;
+
+    // Add weighted per-material displacement on top of the base terrain height.
+    let splatmap = textureSampleLevel(in_splatmap_1, in_splatmap_1_sampler, model.tex_coord, 0.0);
+    let weights = vec4<f32>(splatmap.r, splatmap.g, splatmap.b, splatmap.a);
+    let material_uv = model.tex_coord * 2.0 % 1.0;
+    let layer_count = min(textureNumLayers(material_displacement), MAX_SPLAT_LAYERS);
+    var displacement = 0.0;
+    for (var layer: u32 = 0u; layer < layer_count; layer = layer + 1u) {
+        let w = splat_weight(weights, layer);
+        let d = textureSampleLevel(
+            material_displacement,
+            material_displacement_sampler,
+            material_uv,
+            i32(layer),
+            0.0
+        ).r;
+        displacement += (d * 2.0 - 1.0) * w * splat_weight(in_terrain_description.displacement_scales, layer);
+    }
+    world_pos.y += displacement;
 
     // Transform position to clip space
     let view_pos4 = in_camera.world_to_view * world_pos;

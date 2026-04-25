@@ -13,7 +13,9 @@ const MAX_TERRAIN_TILES: usize = 1000;
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TerrainDescription {
     pub tile_size: [f32; 3],
-    pub tile_subdivisions: f32
+    pub tile_subdivisions: f32,
+    /// Displacement scale (metres) applied per splat layer (indices 0–3).
+    pub displacement_scales: [f32; 4]
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -43,7 +45,8 @@ impl RenderData for TerrainBuffer {
                 content: Some(
                     bytemuck::cast_slice(&[TerrainDescription {
                         tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
-                        tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32
+                        tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
+                        displacement_scales: [0.5, 0.5, 0.5, 0.5]
                     }])
                     .into()
                 )

@@ -23,12 +23,15 @@ impl Plugin for TerrainMaterialsPlugin {
     }
 }
 
-const TEX_SIZE: (u32, u32) = (1024, 1024);
-const MATERIALS: [&str; 4] = ["grass", "dirt", "rock", "sand"];
-const TEX_TYPES: [&str; 4] = ["albedo", "normal", "roughness", "ambient_occlusion"];
-const TEX_FORMATS: [TextureFormat; 4] = [
+// const TEX_SIZE: (u32, u32) = (1024, 1024);
+const TEX_SIZE: (u32, u32) = (2048, 2048);
+// const MATERIALS: [&str; 4] = ["grass", "dirt", "rock", "sand"];
+const MATERIALS: [&str; 2] = ["ganges_river_pebbles", "ganges_river_pebbles"];
+const TEX_TYPES: [&str; 5] = ["albedo", "normal", "roughness", "ambient_occlusion", "displacement"];
+const TEX_FORMATS: [TextureFormat; 5] = [
     TextureFormat::Rgba8UnormSrgb,
     TextureFormat::Rgba8Unorm,
+    TextureFormat::R8Unorm,
     TextureFormat::R8Unorm,
     TextureFormat::R8Unorm
 ];
@@ -38,7 +41,8 @@ pub(crate) struct TerrainMaterialTextures {
     albedo_textures: Vec<Option<Handle<Texture>>>,
     normal_textures: Vec<Option<Handle<Texture>>>,
     roughness_textures: Vec<Option<Handle<Texture>>>,
-    ao_textures: Vec<Option<Handle<Texture>>>
+    ao_textures: Vec<Option<Handle<Texture>>>,
+    displacement_textures: Vec<Option<Handle<Texture>>>
 }
 
 #[derive(Asset, Clone, Debug, TypePath, Default)]
@@ -48,6 +52,7 @@ impl TerrainMaterials {
     pub const TERRAIN_NORMAL_IDX: u32 = 1;
     pub const TERRAIN_ROUGHNESS_IDX: u32 = 2;
     pub const TERRAIN_AO_IDX: u32 = 3;
+    pub const TERRAIN_DISPLACEMENT_IDX: u32 = 4;
 }
 impl RenderData for TerrainMaterials {
     type Params = (SResMut<TerrainMaterialTextures>, SRes<AssetServer>);
@@ -74,6 +79,7 @@ impl RenderData for TerrainMaterials {
                     1 => materials.normal_textures.push(Some(handle)),
                     2 => materials.roughness_textures.push(Some(handle)),
                     3 => materials.ao_textures.push(Some(handle)),
+                    4 => materials.displacement_textures.push(Some(handle)),
                     _ => unreachable!()
                 }
             }
@@ -132,6 +138,18 @@ impl RenderData for TerrainMaterials {
                     mip_level_count: 0, // Auto-calculate max mip levels
                     ..Default::default()
                 }
+            )
+            .add_texture(
+                Self::TERRAIN_DISPLACEMENT_IDX,
+                Texture {
+                    label: "terrain_material_displacement_array".to_string(),
+                    size,
+                    format: TextureFormat::R8Unorm,
+                    usages,
+                    layer_count: materials.displacement_textures.len() as u32,
+                    mip_level_count: 0, // Auto-calculate max mip levels
+                    ..Default::default()
+                }
             );
     }
 }
@@ -154,7 +172,9 @@ impl RenderBinding for TerrainMaterialsBinding {
             .add_texture_array_view(mat, TerrainMaterials::TERRAIN_ROUGHNESS_IDX)
             .add_texture_sampler(mat, TerrainMaterials::TERRAIN_ROUGHNESS_IDX)
             .add_texture_array_view(mat, TerrainMaterials::TERRAIN_AO_IDX)
-            .add_texture_sampler(mat, TerrainMaterials::TERRAIN_AO_IDX);
+            .add_texture_sampler(mat, TerrainMaterials::TERRAIN_AO_IDX)
+            .add_texture_array_view(mat, TerrainMaterials::TERRAIN_DISPLACEMENT_IDX)
+            .add_texture_sampler(mat, TerrainMaterials::TERRAIN_DISPLACEMENT_IDX);
     }
 
     fn label(&self) -> &str {
@@ -180,7 +200,7 @@ fn fill_arrays(
         Some((_, materials)) => materials,
         None => return
     };
-    let (albedo_array, normal_array, roughness_array, ao_array) = match (
+    let (albedo_array, normal_array, roughness_array, ao_array, displacement_array) = match (
         textures.get(
             &materials
                 .get_texture(TerrainMaterials::TERRAIN_ALBEDO_IDX)
@@ -200,9 +220,14 @@ fn fill_arrays(
             &materials
                 .get_texture(TerrainMaterials::TERRAIN_AO_IDX)
                 .unwrap()
+        ),
+        textures.get(
+            &materials
+                .get_texture(TerrainMaterials::TERRAIN_DISPLACEMENT_IDX)
+                .unwrap()
         )
     ) {
-        (Some(albedo), Some(normal), Some(roughness), Some(ao)) => (albedo, normal, roughness, ao),
+        (Some(albedo), Some(normal), Some(roughness), Some(ao), Some(displacement)) => (albedo, normal, roughness, ao, displacement),
         _ => return
     };
 
@@ -256,6 +281,17 @@ fn fill_arrays(
             i,
             size
         );
+
+        let displacement_tex = match textures.get(material_textures.displacement_textures[i].as_ref().unwrap()) {
+            Some(tex) => tex,
+            None => return
+        };
+        displacement_array.texture.copy_from_texture_layered(
+            &render_instance,
+            &displacement_tex.texture.texture,
+            i,
+            size
+        );
     }
 
     // Generate mipmaps for all texture arrays
@@ -264,6 +300,7 @@ fn fill_arrays(
     normal_array.texture.generate_mipmaps(&render_instance);
     roughness_array.texture.generate_mipmaps(&render_instance);
     ao_array.texture.generate_mipmaps(&render_instance);
+    displacement_array.texture.generate_mipmaps(&render_instance);
 
     *is_done = true;
 }

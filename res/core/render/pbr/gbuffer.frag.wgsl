@@ -58,7 +58,12 @@ fn main(in: VertexOutput) -> FragOutput {
     }
     out.normal_roughness = vec4<f32>(normal_world, roughness_value);
 
-    // Note: For now, occlusion texture is not processed in this shader (w flag)
+    // Ambient occlusion
+    var ao: f32 = 1.0;
+    if (in_pbr_material.flags.w == 1.0) { // Occlusion texture present
+        ao = textureSample(in_occlusion_texture, in_occlusion_sampler, in.tex_coord).r;
+    }
+    out.ao = ao;
 
     return out;
 }

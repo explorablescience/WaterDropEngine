@@ -77,6 +77,7 @@ impl RenderAsset for GBufferRenderPipeline {
                         TextureFormat::R16Float,       // Depth
                         TextureFormat::Rgba8UnormSrgb, // Albedo
                         TextureFormat::Rgba16Float,    // Normal
+                        TextureFormat::R8Unorm,        // AO
                     ]),
                     push_constants: vec![PushConstantDescriptor {
                         stages: ShaderStages::VERTEX,
