@@ -46,13 +46,13 @@ fn init_scene(mut commands: Commands) {
         },
         ChildOf(entity)
     ));
-    commands.spawn((
-        Name::new("Directional Light"),
-        DirectionalLight {
-            direction: Vec3::new(-1.0, -2.0, -1.0).normalize(),
-            intensity: 0.1,
-            ..Default::default()
-        },
-        ChildOf(entity)
-    ));
+    // commands.spawn((
+    //     Name::new("Directional Light"),
+    //     DirectionalLight {
+    //         direction: Vec3::new(-1.0, -2.0, -1.0).normalize(),
+    //         intensity: 0.1,
+    //         ..Default::default()
+    //     },
+    //     ChildOf(entity)
+    // ));
 }

@@ -100,13 +100,9 @@ async fn resolve_includes(
                                 include_path, e
                             ))
                         })?;
-                    let include_source =
-                        String::from_utf8(bytes).map_err(|_| {
-                            ShaderLoaderError::Include(format!(
-                                "'{}' is not valid UTF-8",
-                                include_path
-                            ))
-                        })?;
+                    let include_source = String::from_utf8(bytes).map_err(|_| {
+                        ShaderLoaderError::Include(format!("'{}' is not valid UTF-8", include_path))
+                    })?;
                     let new_lines: Vec<String> =
                         include_source.lines().map(str::to_owned).collect();
                     // Replace the #include line with the file contents.
