@@ -26,7 +26,7 @@ impl Plugin for TerrainMaterialsPlugin {
 // const TEX_SIZE: (u32, u32) = (1024, 1024);
 const TEX_SIZE: (u32, u32) = (2048, 2048);
 // const MATERIALS: [&str; 4] = ["grass", "dirt", "rock", "sand"];
-const MATERIALS: [&str; 2] = ["ganges_river_pebbles", "ganges_river_pebbles"];
+const MATERIALS: [&str; 4] = ["ganges_river_pebbles", "ganges_river_pebbles", "ganges_river_pebbles", "ganges_river_pebbles"];
 const TEX_TYPES: [&str; 5] = ["albedo", "normal", "roughness", "ambient_occlusion", "displacement"];
 const TEX_FORMATS: [TextureFormat; 5] = [
     TextureFormat::Rgba8UnormSrgb,

@@ -34,6 +34,7 @@ pub mod prelude {
     pub use crate::manager::*;
     pub use crate::physics::terrain_physics::TerrainPhysics;
     pub use crate::render::extractor::*;
+    pub use crate::render::dependencies::terrain_buffer::TerrainRenderSettings;
     pub use crate::render::renderer::TerrainRenderer;
     pub use crate::render::renderer_gpu::TerrainRendererGPU;
     pub use crate::utils::cursor_pos::TerrainCursorPos;

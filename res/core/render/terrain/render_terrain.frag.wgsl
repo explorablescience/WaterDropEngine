@@ -22,7 +22,67 @@ fn splat_weight(weights: vec4<f32>, layer: u32) -> f32 {
     if layer == 2u {
         return weights.z;
     }
-    return weights.w;
+    return 1.0 - weights.w;
+}
+
+struct TerrainDescription {
+    tile_size: vec3<f32>,
+    tile_subdivisions: f32,
+    displacement_scales: vec4<f32>,
+    tiling_scales: vec4<f32>,
+}
+@group(2) @binding(0) var<uniform> in_terrain_description: TerrainDescription;
+
+// Stochastic tiling
+// Eliminates visible repetition by applying a per-cell random UV
+// offset and blending smoothly across the four neighbouring cells.
+
+fn hash2(p: vec2<f32>) -> vec2<f32> {
+    let q = vec2<f32>(
+        dot(p, vec2<f32>(127.1, 311.7)),
+        dot(p, vec2<f32>(269.5, 183.3))
+    );
+    return fract(sin(q) * 43758.5453123);
+}
+
+struct NoTileParams {
+    uv00: vec2<f32>,
+    uv10: vec2<f32>,
+    uv01: vec2<f32>,
+    uv11: vec2<f32>,
+    w00:  f32,
+    w10:  f32,
+    w01:  f32,
+    w11:  f32,
+}
+
+fn no_tile_params(uv: vec2<f32>) -> NoTileParams {
+    let i = floor(uv);
+    let f = fract(uv);
+    // Quintic smooth blend so first derivative is continuous at cell edges.
+    let u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+    return NoTileParams(
+        fract(uv + hash2(i                      )),
+        fract(uv + hash2(i + vec2<f32>(1.0, 0.0))),
+        fract(uv + hash2(i + vec2<f32>(0.0, 1.0))),
+        fract(uv + hash2(i + vec2<f32>(1.0, 1.0))),
+        (1.0 - u.x) * (1.0 - u.y),
+        u.x         * (1.0 - u.y),
+        (1.0 - u.x) * u.y,
+        u.x         * u.y
+    );
+}
+
+fn no_tile_sample(
+    tex:   texture_2d_array<f32>,
+    samp:  sampler,
+    p:     NoTileParams,
+    layer: i32
+) -> vec4<f32> {
+    return textureSample(tex, samp, p.uv00, layer) * p.w00
+         + textureSample(tex, samp, p.uv10, layer) * p.w10
+         + textureSample(tex, samp, p.uv01, layer) * p.w01
+         + textureSample(tex, samp, p.uv11, layer) * p.w11;
 }
 
 // Material texture arrays (group 1)
@@ -50,10 +110,6 @@ fn main(in: VertexOutput) -> FragOutput {
     let weights = vec4<f32>(splatmap.r, splatmap.g, splatmap.b, splatmap.a);
     let layer_count = min(textureNumLayers(material_albedo), MAX_SPLAT_LAYERS);
 
-    // Compute material UVs (tiled based on vertex UVs)
-    // let material_uv = in.tex_coord * 25.0 % 1.0;
-    let material_uv = in.tex_coord * 2.0 % 1.0; // Allow UVs to exceed [0,1] for tiling
-
     // Blend material channels from each available layer.
     var albedo = vec3<f32>(0.0);
     var normal_sample = vec3<f32>(0.0);
@@ -62,10 +118,13 @@ fn main(in: VertexOutput) -> FragOutput {
 
     for (var layer: u32 = 0u; layer < layer_count; layer = layer + 1u) {
         let w = splat_weight(weights, layer);
-        albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, i32(layer)).rgb * w;
-        normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, i32(layer)).rgb * w;
-        roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, i32(layer)).r * w;
-        ao_value += textureSample(material_ao, material_ao_sampler, material_uv, i32(layer)).r * w;
+        let material_uv = in.tex_coord * splat_weight(in_terrain_description.tiling_scales, layer);
+        let p = no_tile_params(material_uv);
+        let l = i32(layer);
+        albedo          += no_tile_sample(material_albedo,    material_albedo_sampler,    p, l).rgb * w;
+        normal_sample   += no_tile_sample(material_normal,    material_normal_sampler,    p, l).rgb * w;
+        roughness_value += no_tile_sample(material_roughness, material_roughness_sampler, p, l).r   * w;
+        ao_value        += no_tile_sample(material_ao,        material_ao_sampler,        p, l).r   * w;
     }
 
     out.albedo_metallic = vec4<f32>(albedo, 0.0); // Terrain is non-metallic

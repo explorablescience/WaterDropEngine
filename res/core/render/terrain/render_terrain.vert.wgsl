@@ -28,7 +28,7 @@ fn splat_weight(weights: vec4<f32>, layer: u32) -> f32 {
     if layer == 2u {
         return weights.z;
     }
-    return weights.w;
+    return 1.0 - weights.w;
 }
 
 // From world space to normalized device coordinates
@@ -47,6 +47,7 @@ struct TerrainDescription {
     tile_size: vec3<f32>,
     tile_subdivisions: f32,
     displacement_scales: vec4<f32>,
+    tiling_scales: vec4<f32>,
 }
 @group(2) @binding(0) var<uniform> in_terrain_description: TerrainDescription;
 struct TerrainTile {
@@ -83,11 +84,11 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     // Add weighted per-material displacement on top of the base terrain height.
     let splatmap = textureSampleLevel(in_splatmap_1, in_splatmap_1_sampler, model.tex_coord, 0.0);
     let weights = vec4<f32>(splatmap.r, splatmap.g, splatmap.b, splatmap.a);
-    let material_uv = model.tex_coord * 2.0 % 1.0;
     let layer_count = min(textureNumLayers(material_displacement), MAX_SPLAT_LAYERS);
     var displacement = 0.0;
     for (var layer: u32 = 0u; layer < layer_count; layer = layer + 1u) {
         let w = splat_weight(weights, layer);
+        let material_uv = model.tex_coord * splat_weight(in_terrain_description.tiling_scales, layer) % 1.0;
         let d = textureSampleLevel(
             material_displacement,
             material_displacement_sampler,

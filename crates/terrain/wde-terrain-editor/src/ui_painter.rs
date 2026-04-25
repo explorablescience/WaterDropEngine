@@ -16,7 +16,8 @@ pub struct TerrainEditorUIPlugin;
 impl Plugin for TerrainEditorUIPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, ui_paint_terrain)
-            .add_systems(Update, ui_save_terrain);
+            .add_systems(Update, ui_save_terrain)
+            .add_systems(Update, ui_terrain_settings);
     }
 }
 
@@ -68,6 +69,27 @@ fn ui_paint_terrain(
                 "Commands: {}",
                 paint_manager.commands.as_ref().map_or(0, |c| c.len())
             ));
+        });
+}
+
+fn ui_terrain_settings(
+    ctx: Res<UIContext>,
+    mut settings: ResMut<TerrainRenderSettings>,
+    mut ui_menu: ResMut<UIMenu>
+) {
+    UIWindow::new("Terrain Settings")
+        .default_pos([40.0, 400.0])
+        .open(ui_menu.clicked_mut("Terrain/Settings"))
+        .show(&ctx.0, |ui| {
+            ui.heading("Tiling (UV repetitions per tile)");
+            for i in 0..4 {
+                ui.add(Slider::new(&mut settings.tiling_scales[i], 1.0..=100.0).text(format!("Layer {i}")));
+            }
+            ui.separator();
+            ui.heading("Displacement (metres)");
+            for i in 0..4 {
+                ui.add(Slider::new(&mut settings.displacement_scales[i], 0.0..=2.0).text(format!("Layer {i}")));
+            }
         });
 }
 

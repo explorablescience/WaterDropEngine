@@ -9,13 +9,30 @@ use crate::{
 // The maximum number of terrain tiles that can be rendered
 const MAX_TERRAIN_TILES: usize = 1000;
 
+/// Runtime-editable terrain rendering parameters, synced to the render world each frame.
+#[derive(Resource, ExtractResource, Clone, Debug)]
+pub struct TerrainRenderSettings {
+    pub displacement_scales: [f32; 4],
+    pub tiling_scales: [f32; 4]
+}
+impl Default for TerrainRenderSettings {
+    fn default() -> Self {
+        Self {
+            displacement_scales: [0.5, 0.5, 0.5, 0.5],
+            tiling_scales: [25.0, 25.0, 25.0, 25.0]
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TerrainDescription {
     pub tile_size: [f32; 3],
     pub tile_subdivisions: f32,
     /// Displacement scale (metres) applied per splat layer (indices 0–3).
-    pub displacement_scales: [f32; 4]
+    pub displacement_scales: [f32; 4],
+    /// UV tiling repetitions across one tile per splat layer (indices 0–3).
+    pub tiling_scales: [f32; 4]
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -46,7 +63,8 @@ impl RenderData for TerrainBuffer {
                     bytemuck::cast_slice(&[TerrainDescription {
                         tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
                         tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
-                        displacement_scales: [0.5, 0.5, 0.5, 0.5]
+                        displacement_scales: [0.5, 0.5, 0.5, 0.5],
+                        tiling_scales: [25.0, 25.0, 25.0, 25.0]
                     }])
                     .into()
                 )
@@ -81,6 +99,39 @@ impl RenderBinding for TerrainBufferBinding {
     fn label(&self) -> &str {
         "terrain_buffer_binding"
     }
+}
+
+// System to write the current TerrainRenderSettings into the description uniform buffer
+pub(crate) fn update_terrain_description_buffer(
+    render_instance: Res<RenderInstance>,
+    terrain_buffer: ResRenderData<TerrainBuffer>,
+    buffers: Res<RenderAssets<GpuBuffer>>,
+    settings: Res<TerrainRenderSettings>
+) {
+    if !settings.is_changed() {
+        return;
+    }
+    let terrain_buffer = match terrain_buffer.iter().next() {
+        Some((_, buf)) => buf,
+        None => return
+    };
+    let desc_buffer = match buffers.get(
+        &terrain_buffer.get_buffer(TerrainBuffer::DESC_BIND).unwrap()
+    ) {
+        Some(buf) => buf,
+        None => return
+    };
+    let render_instance = render_instance.0.read().unwrap();
+    desc_buffer.buffer.write(
+        &render_instance,
+        bytemuck::cast_slice(&[TerrainDescription {
+            tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
+            tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
+            displacement_scales: settings.displacement_scales,
+            tiling_scales: settings.tiling_scales
+        }]),
+        0
+    );
 }
 
 // System to update the terrain tiles buffer with the current visible tiles
