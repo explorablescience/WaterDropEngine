@@ -50,7 +50,7 @@ fn world_from_screen_coord_depth(uv: vec2<f32>, view_z: f32) -> vec3<f32> {
     let view_pos4 = in_camera.ndc_to_view * ndc_pos;
     let view_pos = view_pos4.xyz / view_pos4.w;
     let view_dir = normalize(view_pos);
-    let view_position = view_dir * view_z;
+    let view_position = view_dir * (view_z / -view_dir.z); // scale so view_position.z == -view_z
     
     // Transform to world space
     let world_pos4 = in_camera.view_to_world * vec4<f32>(view_position, 1.0);
@@ -107,8 +107,7 @@ fn get_light_data(light: Light, frag_world_position: vec3<f32>) -> LightData {
         let theta = dot(light_dir, normalize(-light.direction_range.xyz));
         let inner_cos = light.spot_cone.x; // cos of inner angle
         let outer_cos = light.spot_cone.y; // cos of outer angle
-        let epsilon = inner_cos - outer_cos;
-        let cone_intensity = smoothstep(outer_cos - epsilon * 0.1, inner_cos, theta); // Smooth cone falloff
+        let cone_intensity = smoothstep(outer_cos, inner_cos, theta); // Smooth cone falloff
         
         radiance = light_color * light_intensity * attenuation * range_falloff * cone_intensity;
     }

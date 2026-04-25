@@ -56,12 +56,13 @@ fn inverse(m: mat3x3<f32>) -> mat3x3<f32> {
     let r1 = cross(c, a);
     let r2 = cross(a, b);
 
-    let inv_det = 1.0 / dot(r2, c);
+    let inv_det = 1.0 / dot(r0, a);
 
+    // r0, r1, r2 are the rows of the inverse; construct column-major matrix by transposing
     return mat3x3<f32>(
-        r0 * inv_det,
-        r1 * inv_det,
-        r2 * inv_det
+        vec3<f32>(r0.x, r1.x, r2.x) * inv_det,
+        vec3<f32>(r0.y, r1.y, r2.y) * inv_det,
+        vec3<f32>(r0.z, r1.z, r2.z) * inv_det
     );
 }
 
