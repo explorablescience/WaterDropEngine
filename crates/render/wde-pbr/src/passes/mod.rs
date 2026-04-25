@@ -47,8 +47,10 @@ impl Plugin for PassesPlugin {
             RenderPipelineRegisterPlugin::<DeferredLightingPipeline>::default(),
             #[cfg(feature = "atmosphere")]
             RenderPipelineRegisterPlugin::<AtmospherePipeline>::default(),
-            #[cfg(debug_assertions)]
+            #[cfg(all(feature = "atmosphere", debug_assertions))]
             atmosphere::editor::AtmosphereEditorPlugin,
+            #[cfg(feature = "atmosphere")]
+            AtmosphereSunLightPlugin,
         ));
     }
 }
