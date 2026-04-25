@@ -1,3 +1,5 @@
+#include "core/render/pbr/pbr_functions.wgsl"
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,  // Clip space position (after projection)
     @location(0) tex_coord:    vec2<f32>,     // Texture coordinates (UV)
@@ -22,7 +24,7 @@ var<push_constant> push_constants: PushConstants;
 struct VertexData {
     position:  vec3<f32>,    // 12 bytes
     uv_x:      f32,          // 4 bytes (total 16)
-    uv_y:      f32,          // 4 bytes  
+    uv_y:      f32,          // 4 bytes
     normal_x:  f32,          // 4 bytes
     normal_y:  f32,          // 4 bytes (total 16)
     normal_z:  f32,          // 4 bytes
@@ -46,26 +48,6 @@ struct ObjectToWorld {
 @group(2) @binding(0) var<storage, read> in_raw_transform: array<ObjectToWorld>;
 @group(2) @binding(1) var<storage, read> in_instance_to_transform: array<u32>;
 
-// Function to compute the inverse of a 3x3 matrix
-fn inverse(m: mat3x3<f32>) -> mat3x3<f32> {
-    let a = m[0];
-    let b = m[1];
-    let c = m[2];
-
-    let r0 = cross(b, c);
-    let r1 = cross(c, a);
-    let r2 = cross(a, b);
-
-    let inv_det = 1.0 / dot(r0, a);
-
-    // r0, r1, r2 are the rows of the inverse; construct column-major matrix by transposing
-    return mat3x3<f32>(
-        vec3<f32>(r0.x, r1.x, r2.x) * inv_det,
-        vec3<f32>(r0.y, r1.y, r2.y) * inv_det,
-        vec3<f32>(r0.z, r1.z, r2.z) * inv_det
-    );
-}
-
 @vertex
 fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32) -> VertexOutput {
     var out: VertexOutput;
@@ -86,28 +68,17 @@ fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32)
         * vec4<f32>(vertex.position, 1.0);
     let view_pos = view_pos4.xyz / view_pos4.w;
     out.clip_position = in_camera.view_to_ndc * vec4<f32>(view_pos, 1.0);
-    
+
     // Store linear view-space depth (negative Z in view space)
     out.view_z = -view_pos.z;
 
     // Pass through texture coordinates
     out.tex_coord = tex_coord;
 
-    // Transform normal to world space
-    let normal_matrix = transpose(inverse(mat3x3<f32>(
-        obj_to_world[0].xyz,
-        obj_to_world[1].xyz,
-        obj_to_world[2].xyz
-    )));
-    out.normal_world = normal_matrix * normal;
-
-    // Transform tangent to world space
-    out.tangent_world = vec4<f32>(
-        normal_matrix * tangent.xyz,
-        tangent.w
-    );
-
-    // Transform bitangent to world space
+    // Transform normal and tangent to world space
+    let nm = normal_matrix(obj_to_world);
+    out.normal_world = nm * normal;
+    out.tangent_world = vec4<f32>(nm * tangent.xyz, tangent.w);
     out.bitangent_world = cross(out.normal_world, out.tangent_world.xyz) * out.tangent_world.w;
 
     return out;

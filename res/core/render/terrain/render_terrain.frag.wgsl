@@ -1,3 +1,5 @@
+#include "core/render/pbr/pbr_functions.wgsl"
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,  // Clip space position (after projection)
     @location(0) tex_coord:       vec2<f32>,  // Texture coordinates (UV)
@@ -8,13 +10,7 @@ struct VertexOutput {
     @location(5) view_z: f32                  // View-space Z (linear depth)
 };
 
-struct FragOutput {
-    @location(0) depth: f32,                  // Linear view-space depth
-    @location(1) albedo_metallic:  vec4<f32>, // (r, g, b) = albedo color - a = metallic
-    @location(2) normal_roughness: vec4<f32>, // (r, g, b) = normal - a = roughness
-};
-
-// Material texture arrays (group 2)
+// Material texture arrays (group 1)
 @group(1) @binding(0) var material_albedo: texture_2d_array<f32>;
 @group(1) @binding(1) var material_albedo_sampler: sampler;
 @group(1) @binding(2) var material_normal: texture_2d_array<f32>;
@@ -34,57 +30,41 @@ struct FragOutput {
 fn main(in: VertexOutput) -> FragOutput {
     var out: FragOutput;
 
-    // Sample the splatmap to determine material blending
+    // Sample the splatmap to determine material blending weights
     let splatmap = textureSample(in_splatmap_1, in_splatmap_1_sampler, in.tex_coord);
     let weights = vec4<f32>(splatmap.r, splatmap.g, splatmap.b, splatmap.a);
 
-    // Compute material UVs (could be world position based for better tiling)
-    let material_uv = in.tex_coord * 25.0 % 1.0; // Simple tiling based on vertex UVs
+    // Compute material UVs (tiled based on vertex UVs)
+    let material_uv = in.tex_coord * 25.0 % 1.0;
 
-    // Sample albedo from each material layer and blend
+    // Blend albedo from each material layer
     var albedo = vec3<f32>(0.0);
     albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 0).rgb * weights.r;
     albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 1).rgb * weights.g;
     albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 2).rgb * weights.b;
     albedo += textureSample(material_albedo, material_albedo_sampler, material_uv, 3).rgb * (1.0 - weights.a);
-    
-    // Set Albedo and Metallic
-    let metallic_value = 0.0; // Terrain is non-metallic
-    out.albedo_metallic = vec4<f32>(albedo, metallic_value);
+    out.albedo_metallic = vec4<f32>(albedo, 0.0); // Terrain is non-metallic
 
-    // Normal mapping
-    var normal_world = normalize(in.normal_world);
+    // Blend normal map samples (raw [0,1] values) then decode and rotate to world space
     var normal_sample = vec3<f32>(0.0);
     normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, 0).rgb * weights.r;
     normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, 1).rgb * weights.g;
     normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, 2).rgb * weights.b;
     normal_sample += textureSample(material_normal, material_normal_sampler, material_uv, 3).rgb * (1.0 - weights.a);
-    normal_sample = normal_sample * 2.0 - vec3<f32>(1.0, 1.0, 1.0);
-    let normal_tangent = normalize(normal_sample * 2.0 - vec3<f32>(1.0, 1.0, 1.0));
-    let tangent_world = normalize(in.tangent_world.xyz);
-    let bitangent_world = normalize(in.bitangent_world);
-    let tbn_matrix: mat3x3<f32> = mat3x3<f32>(
-        tangent_world,
-        bitangent_world,
-        normal_world
-    );
-    normal_world = normalize(tbn_matrix * normal_tangent);
+    let normal_world = apply_normal_map(normal_sample, in.tangent_world.xyz, in.bitangent_world, normalize(in.normal_world));
 
-    // Roughness map
+    // Blend roughness from each material layer
     var roughness_value = 0.0;
     roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, 0).r * weights.r;
     roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, 1).r * weights.g;
     roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, 2).r * weights.b;
     roughness_value += textureSample(material_roughness, material_roughness_sampler, material_uv, 3).r * (1.0 - weights.a);
-
-    // Set Roughness, and Normal
     out.normal_roughness = vec4<f32>(normal_world, roughness_value);
 
-    // Note: For now, occlusion texture is not processed in this shader (w flag)
+    // Note: AO texture is sampled but not yet applied (no occlusion term in this pass)
 
-    // Store linear view-space depth for better precision
+    // Store linear view-space depth
     out.depth = in.view_z;
 
-    // Return G-buffer output
     return out;
 }
