@@ -1,4 +1,5 @@
 #include "core/render/pbr/pbr_functions.wgsl"
+#include "core/render/atmosphere/mars_sky.wgsl"
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -26,6 +27,7 @@ struct Camera {
 
 // Light storage buffer (Light type comes from pbr_functions.wgsl)
 @group(2) @binding(0) var<storage, read> in_lights: array<Light>;
+@group(2) @binding(1) var<uniform> in_atmosphere: AtmosphereParams;
 
 
 
@@ -44,6 +46,7 @@ fn world_from_screen_coord_depth(uv: vec2<f32>, view_z: f32) -> vec3<f32> {
 
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
+
     // Reconstruct world position from linear view-space depth
     let view_z = textureSample(in_depth_texture, in_depth_sampler, in.tex_coord).r;
     let world_position = world_from_screen_coord_depth(in.tex_coord, view_z);
@@ -79,11 +82,11 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
             * n_dot_l;
     }
 
-    // Ambient term (placeholder; replace with IBL cubemap for full PBR)
+    // Ambient term: sample the Mars sky in the surface normal direction.
     let n_dot_v = max(dot(normal, view_dir), 0.0);
     let ks = fresnel_schlick(n_dot_v, f0);
     let kd = (1.0 - ks) * (1.0 - metallic);
-    let irradiance = vec3<f32>(1.0) * 0.001;
+    let irradiance = mars_sky(normal, in_atmosphere) * 0.2;
     let ambient = kd * irradiance * albedo;
 
     // HDR tone mapping (Reinhard) and final output

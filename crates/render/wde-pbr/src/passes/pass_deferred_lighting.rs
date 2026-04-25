@@ -39,7 +39,7 @@ impl RenderBinding for RenderBindingResolved {
 }
 
 #[derive(TypePath, Default, Clone, Asset)]
-pub(crate) struct LightsDataBinding;
+pub struct LightsDataBinding;
 impl RenderBinding for LightsDataBinding {
     type Params = SRenderData<LightsData>;
 
@@ -48,7 +48,9 @@ impl RenderBinding for LightsDataBinding {
         lights_data: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
-        builder.add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX);
+        builder
+            .add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX)
+            .add_buffer(lights_data, LightsData::ATMOSPHERE_PARAMS_BUFFER_IDX);
     }
 
     fn label(&self) -> &str {

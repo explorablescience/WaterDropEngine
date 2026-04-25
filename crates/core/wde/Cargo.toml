@@ -16,16 +16,17 @@ wde-terrain-editor = { path = "../../terrain/wde-terrain-editor" }
 wde-scene = { path = "../wde-scene" }
 wde-pbr-outline = { path = "../../render/wde-pbr-outline" }
 wde-gizmos = { path = "../../render/wde-gizmos", optional = true }
-wde-pbr = { path = "../../render/wde-pbr", optional = true }
+wde-pbr = { path = "../../render/wde-pbr", optional = true, default-features = false }
 wde-editor = { path = "../wde-editor", optional = true }
 bevy = { workspace = true }
 
 [features]
-default = ["pbr", "gizmos"]
+default = ["pbr", "gizmos", "atmosphere"]
 log-debug = ["wde-logger/debug"]
 debug = ["bevy/debug"]
 gizmos = ["wde-gizmos"]
 pbr = ["wde-pbr"]
+atmosphere = ["wde-pbr/atmosphere", "pbr"]
 watch = ["bevy/file_watcher"]
 tracing = ["wde-logger/tracing", "bevy/trace_tracy_memory", "wde-logger/puffin"]
 editor = ["wde-editor", "wde-renderer/editor", "wde-logger/editor"]

@@ -8,6 +8,11 @@ description = "Physically based rendering for WaterDropEngine."
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-renderer = { path = "../../core/wde-renderer" }
 wde-camera = { path = "../wde-camera" }
+wde-editor = { path = "../../core/wde-editor" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 uuid = "1.23"
+
+[features]
+default = ["atmosphere"]
+atmosphere = []

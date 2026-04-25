@@ -15,6 +15,7 @@ fn init_scene(mut commands: Commands) {
         Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y),
         ActiveCamera,
         ThirdPersonController::default()
+        // FreeCameraController::default()
     ));
 
     // Spawn the lights
