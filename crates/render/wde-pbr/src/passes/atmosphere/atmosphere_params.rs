@@ -65,10 +65,10 @@ impl Default for AtmosphereSettings {
             sun_disk_max: 0.99992,
             sun_corona_exp: 22.0,
             sun_corona_intensity: 0.7,
-            star_density_threshold: 0.9992,
-            star_core_scale: 1250.0,
-            star_min_altitude: 0.08,
-            star_max_altitude: 0.30,
+            star_density_threshold: 0.9840,
+            star_core_scale: 1300.0,
+            star_min_altitude: -0.1,
+            star_max_altitude: 0.45,
             ground_falloff: 3.5,
             day_zenith_color: [0.25, 0.10, 0.05],
             day_horizon_color: [0.95, 0.48, 0.20],
@@ -77,7 +77,7 @@ impl Default for AtmosphereSettings {
             twilight_tint_color: [1.15, 0.36, 0.10],
             sun_day_color: [1.35, 0.70, 0.28],
             sun_night_color: [1.06, 0.95, 0.86],
-            star_color: [0.67, 0.73, 0.92],
+            star_color: [0.149, 0.143, 0.369],
             ground_night_color: [0.015, 0.010, 0.012],
             ground_day_color: [0.085, 0.036, 0.016]
         }
