@@ -69,7 +69,9 @@ impl RenderData for LightsData {
                     label: "atmosphere-params".to_string(),
                     size: std::mem::size_of::<AtmosphereParamsUniform>(),
                     usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                    content: Some(bytemuck::cast_slice(&[AtmosphereParamsUniform::default()]).to_vec())
+                    content: Some(
+                        bytemuck::cast_slice(&[AtmosphereParamsUniform::default()]).to_vec()
+                    )
                 }
             )
             .add_buffer(

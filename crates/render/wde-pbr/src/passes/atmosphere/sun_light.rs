@@ -17,15 +17,9 @@ impl Plugin for AtmosphereSunLightPlugin {
     }
 }
 
-fn ensure_sun_light(
-    mut commands: Commands,
-    sun_query: Query<Entity, With<AtmosphereSunLight>>
-) {
+fn ensure_sun_light(mut commands: Commands, sun_query: Query<Entity, With<AtmosphereSunLight>>) {
     if sun_query.is_empty() {
-        commands.spawn((
-            DirectionalLight::default(),
-            AtmosphereSunLight
-        ));
+        commands.spawn((DirectionalLight::default(), AtmosphereSunLight));
     }
 }
 

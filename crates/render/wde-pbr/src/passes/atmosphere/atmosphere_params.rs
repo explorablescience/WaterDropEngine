@@ -185,7 +185,12 @@ impl AtmosphereParamsUniform {
                 settings.sun_night_color[2],
                 1.0
             ],
-            star_color: [settings.star_color[0], settings.star_color[1], settings.star_color[2], 1.0],
+            star_color: [
+                settings.star_color[0],
+                settings.star_color[1],
+                settings.star_color[2],
+                1.0
+            ],
             ground_night_color: [
                 settings.ground_night_color[0],
                 settings.ground_night_color[1],

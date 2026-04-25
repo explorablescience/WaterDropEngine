@@ -22,7 +22,8 @@ fn edit_atmosphere_settings(
         .show(&ctx.0, |ui| {
             ui.add(Checkbox::new(&mut atmosphere.animate_time, "Animate Time"));
             ui.columns(2, |cols| {
-                cols[0].add(Slider::new(&mut atmosphere.time_of_day, 0.0..=1.0).text("Time Of Day"));
+                cols[0]
+                    .add(Slider::new(&mut atmosphere.time_of_day, 0.0..=1.0).text("Time Of Day"));
                 cols[1].add(
                     Slider::new(&mut atmosphere.day_length_seconds, 10.0..=1200.0)
                         .text("Day Length")
@@ -30,22 +31,25 @@ fn edit_atmosphere_settings(
                 );
             });
             ui.columns(2, |cols| {
-                cols[0].add(Slider::new(&mut atmosphere.sun_intensity, 0.0..=3.0).text("Sun Intensity"));
+                cols[0].add(
+                    Slider::new(&mut atmosphere.sun_intensity, 0.0..=3.0).text("Sun Intensity")
+                );
                 cols[1].add(
                     Slider::new(&mut atmosphere.twilight_softness, 0.0..=1.0)
                         .text("Twilight Softness")
                 );
             });
             ui.columns(2, |cols| {
-                cols[0].add(Slider::new(&mut atmosphere.star_intensity, 0.0..=2.0).text("Star Intensity"));
+                cols[0].add(
+                    Slider::new(&mut atmosphere.star_intensity, 0.0..=2.0).text("Star Intensity")
+                );
             });
 
             ui.add(Separator::default());
             ui.label("Gradient");
             ui.columns(2, |cols| {
                 cols[0].add(
-                    Slider::new(&mut atmosphere.day_horizon_exp, 0.1..=3.0)
-                        .text("Day Horizon Pow")
+                    Slider::new(&mut atmosphere.day_horizon_exp, 0.1..=3.0).text("Day Horizon Pow")
                 );
                 cols[1].add(
                     Slider::new(&mut atmosphere.night_horizon_exp, 0.1..=3.0)
@@ -98,39 +102,54 @@ fn edit_atmosphere_settings(
                         .text("Density Threshold")
                 );
                 cols[1].add(
-                    Slider::new(&mut atmosphere.star_core_scale, 50.0..=5000.0)
-                        .text("Core Scale")
+                    Slider::new(&mut atmosphere.star_core_scale, 50.0..=5000.0).text("Core Scale")
                 );
             });
             ui.columns(2, |cols| {
                 cols[0].add(
-                    Slider::new(&mut atmosphere.star_min_altitude, -1.0..=1.0)
-                        .text("Min Altitude")
+                    Slider::new(&mut atmosphere.star_min_altitude, -1.0..=1.0).text("Min Altitude")
                 );
                 cols[1].add(
-                    Slider::new(&mut atmosphere.star_max_altitude, -1.0..=1.0)
-                        .text("Max Altitude")
+                    Slider::new(&mut atmosphere.star_max_altitude, -1.0..=1.0).text("Max Altitude")
                 );
             });
 
             ui.add(Separator::default());
             ui.label("Ground");
             ui.columns(2, |cols| {
-                cols[0].add(Slider::new(&mut atmosphere.ground_falloff, 0.1..=10.0).text("Ground Falloff"));
+                cols[0].add(
+                    Slider::new(&mut atmosphere.ground_falloff, 0.1..=10.0).text("Ground Falloff")
+                );
             });
 
             ui.add(Separator::default());
             ui.label("Colors (RGB)");
             ui.columns(2, |cols| {
                 color_rgb(&mut cols[0], "Day Zenith", &mut atmosphere.day_zenith_color);
-                color_rgb(&mut cols[1], "Day Horizon", &mut atmosphere.day_horizon_color);
+                color_rgb(
+                    &mut cols[1],
+                    "Day Horizon",
+                    &mut atmosphere.day_horizon_color
+                );
             });
             ui.columns(2, |cols| {
-                color_rgb(&mut cols[0], "Night Zenith", &mut atmosphere.night_zenith_color);
-                color_rgb(&mut cols[1], "Night Horizon", &mut atmosphere.night_horizon_color);
+                color_rgb(
+                    &mut cols[0],
+                    "Night Zenith",
+                    &mut atmosphere.night_zenith_color
+                );
+                color_rgb(
+                    &mut cols[1],
+                    "Night Horizon",
+                    &mut atmosphere.night_horizon_color
+                );
             });
             ui.columns(2, |cols| {
-                color_rgb(&mut cols[0], "Twilight Tint", &mut atmosphere.twilight_tint_color);
+                color_rgb(
+                    &mut cols[0],
+                    "Twilight Tint",
+                    &mut atmosphere.twilight_tint_color
+                );
                 color_rgb(&mut cols[1], "Sun Day", &mut atmosphere.sun_day_color);
             });
             ui.columns(2, |cols| {
@@ -138,7 +157,11 @@ fn edit_atmosphere_settings(
                 color_rgb(&mut cols[1], "Star", &mut atmosphere.star_color);
             });
             ui.columns(2, |cols| {
-                color_rgb(&mut cols[0], "Ground Night", &mut atmosphere.ground_night_color);
+                color_rgb(
+                    &mut cols[0],
+                    "Ground Night",
+                    &mut atmosphere.ground_night_color
+                );
                 color_rgb(&mut cols[1], "Ground Day", &mut atmosphere.ground_day_color);
             });
         });

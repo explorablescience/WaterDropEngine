@@ -131,10 +131,7 @@ impl RenderSubPass for SubRenderPassAtmosphere {
                     .next()
                     .map(|(_, d)| d.bind_group.clone())
             ),
-            SubPassCommand::BindGroup(
-                2,
-                lights.iter().next().map(|(_, l)| l.bind_group.clone())
-            ),
+            SubPassCommand::BindGroup(2, lights.iter().next().map(|(_, l)| l.bind_group.clone())),
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
                 index_range: 0..6,
                 ..Default::default()

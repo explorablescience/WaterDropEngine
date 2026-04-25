@@ -1,9 +1,9 @@
-mod pass_atmosphere;
+mod atmosphere_params;
 #[cfg(debug_assertions)]
 pub(crate) mod editor;
-mod atmosphere_params;
+mod pass_atmosphere;
 mod sun_light;
 
-pub use pass_atmosphere::*;
 pub use atmosphere_params::*;
+pub use pass_atmosphere::*;
 pub use sun_light::*;

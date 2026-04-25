@@ -50,7 +50,7 @@ impl Plugin for PassesPlugin {
             #[cfg(all(feature = "atmosphere", debug_assertions))]
             atmosphere::editor::AtmosphereEditorPlugin,
             #[cfg(feature = "atmosphere")]
-            AtmosphereSunLightPlugin,
+            AtmosphereSunLightPlugin
         ));
     }
 }
