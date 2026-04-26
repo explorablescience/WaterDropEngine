@@ -1,4 +1,5 @@
 #include "core/render/pbr/pbr_functions.wgsl"
+#include "core/render/terrain/terrain_common.wgsl"
 
 struct ModelInput {
     @location(0) position:  vec3<f32>,
@@ -13,23 +14,9 @@ struct VertexOutput {
     @location(2) normal_world:    vec3<f32>,  // Normal in world space
     @location(3) tangent_world:   vec4<f32>,  // Tangent in world space
     @location(4) bitangent_world: vec3<f32>,  // Bitangent in world space
-    @location(5) view_z: f32                  // View-space Z (linear depth)
+    @location(5) view_z: f32,                 // View-space Z (linear depth)
+    @location(6) tile_pos: vec2<f32>          // Terrain tile index in grid space
 };
-
-const MAX_SPLAT_LAYERS: u32 = 4u;
-
-fn splat_weight(weights: vec4<f32>, layer: u32) -> f32 {
-    if layer == 0u {
-        return weights.x;
-    }
-    if layer == 1u {
-        return weights.y;
-    }
-    if layer == 2u {
-        return weights.z;
-    }
-    return 1.0 - weights.w;
-}
 
 // From world space to normalized device coordinates
 struct Camera {
@@ -42,13 +29,6 @@ struct Camera {
 @group(1) @binding(8) var material_displacement: texture_2d_array<f32>;
 @group(1) @binding(9) var material_displacement_sampler: sampler;
 
-// Description of the terrain
-struct TerrainDescription {
-    tile_size: vec3<f32>,
-    tile_subdivisions: f32,
-    displacement_scales: vec4<f32>,
-    tiling_scales: vec4<f32>,
-}
 @group(2) @binding(0) var<uniform> in_terrain_description: TerrainDescription;
 struct TerrainTile {
     pos: vec2<f32>,
@@ -84,19 +64,12 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     // Add weighted per-material displacement on top of the base terrain height.
     let splatmap = textureSampleLevel(in_splatmap_1, in_splatmap_1_sampler, model.tex_coord, 0.0);
     let weights = vec4<f32>(splatmap.r, splatmap.g, splatmap.b, splatmap.a);
-    let layer_count = min(textureNumLayers(material_displacement), MAX_SPLAT_LAYERS);
+    let layer_count = terrain_layer_count(textureNumLayers(material_displacement));
     var displacement = 0.0;
     for (var layer: u32 = 0u; layer < layer_count; layer = layer + 1u) {
+        let uv = terrain_layer_uv_no_repeat(model.tex_coord, in_terrain_description, tile.pos, layer);
         let w = splat_weight(weights, layer);
-        let material_uv = model.tex_coord * splat_weight(in_terrain_description.tiling_scales, layer) % 1.0;
-        let d = textureSampleLevel(
-            material_displacement,
-            material_displacement_sampler,
-            material_uv,
-            i32(layer),
-            0.0
-        ).r;
-        displacement += (d * 2.0 - 1.0) * w * splat_weight(in_terrain_description.displacement_scales, layer);
+        displacement += w * textureSampleLevel(material_displacement, material_displacement_sampler, uv, layer, 0.0).r * in_terrain_description.displacement_scales[layer];
     }
     world_pos.y += displacement;
 
@@ -110,6 +83,7 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
 
     // Pass through texture coordinates
     out.tex_coord = model.tex_coord;
+    out.tile_pos = tile.pos;
 
     // Compute normal with finite differences from the heightmap
     let epsilon = 0.001;
