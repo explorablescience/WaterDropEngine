@@ -67,11 +67,12 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     let layer_count = terrain_layer_count(textureNumLayers(material_displacement));
     var displacement = 0.0;
     for (var layer: u32 = 0u; layer < layer_count; layer = layer + 1u) {
-        let uv = terrain_layer_uv_no_repeat(model.tex_coord, in_terrain_description, tile.pos, layer);
+        let uv = get_terrain_uv(model.tex_coord, tile.pos, in_terrain_description, layer);
         let w = splat_weight(weights, layer);
-        displacement += w * textureSampleLevel(material_displacement, material_displacement_sampler, uv, layer, 0.0).r * in_terrain_description.displacement_scales[layer];
+        let d = textureSampleLevel(material_displacement, material_displacement_sampler, uv, layer, 0.0).r;
+        displacement += w * (d - 0.5) * 2.0 * in_terrain_description.displacement_scales[layer];
     }
-    world_pos.y += displacement;
+    world_pos.y += displacement; // Small offset to prevent z-fighting with base heightmap
 
     // Transform position to clip space
     let view_pos4 = in_camera.world_to_view * world_pos;

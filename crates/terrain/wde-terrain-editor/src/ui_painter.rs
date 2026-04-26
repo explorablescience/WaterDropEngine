@@ -83,12 +83,12 @@ fn ui_terrain_settings(
         .show(&ctx.0, |ui| {
             ui.heading("Tiling (UV repetitions per tile)");
             for i in 0..4 {
-                ui.add(Slider::new(&mut settings.tiling_scales[i], 1.0..=100.0).text(format!("Layer {i}")));
+                ui.add(Slider::new(&mut settings.tiling_scales[i], 1.0..=20.0).text(format!("Layer {i}")));
             }
             ui.separator();
             ui.heading("Displacement (metres)");
             for i in 0..4 {
-                ui.add(Slider::new(&mut settings.displacement_scales[i], 0.0..=2.0).text(format!("Layer {i}")));
+                ui.add(Slider::new(&mut settings.displacement_scales[i], 0.0..=0.5).text(format!("Layer {i}")));
             }
         });
 }

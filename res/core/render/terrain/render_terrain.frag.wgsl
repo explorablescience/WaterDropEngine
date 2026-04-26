@@ -44,15 +44,14 @@ fn main(in: VertexOutput) -> FragOutput {
     var normal_sample = vec3<f32>(0.0);
     var roughness_value = 0.0;
     var ao_value = 0.0;
-    let no_tile_variation = 0.5;
 
     for (var layer: u32 = 0u; layer < layer_count; layer = layer + 1u) {
-        let uv = terrain_layer_uv_no_repeat(in.tex_coord, in_terrain_description, in.tile_pos, layer);
+        let uv = get_terrain_uv(in.tex_coord, in.tile_pos, in_terrain_description, layer);
         let w = splat_weight(weights, layer);
-        albedo          += w * terrain_texture_no_tile_rgb(material_albedo, material_albedo_sampler, uv, layer, no_tile_variation);
-        normal_sample   += w * terrain_texture_no_tile_rgb(material_normal, material_normal_sampler, uv, layer, no_tile_variation);
-        roughness_value += w * terrain_texture_no_tile_r(material_roughness, material_roughness_sampler, uv, layer, no_tile_variation);
-        ao_value        += w * terrain_texture_no_tile_r(material_ao, material_ao_sampler, uv, layer, no_tile_variation);
+        albedo          += w * textureSample(material_albedo, material_albedo_sampler, uv, layer).rgb;
+        normal_sample   += w * textureSample(material_normal, material_normal_sampler, uv, layer).rgb;
+        roughness_value += w * textureSample(material_roughness, material_roughness_sampler, uv, layer).r;
+        ao_value        += w * textureSample(material_ao, material_ao_sampler, uv, layer).r;
     }
 
     out.albedo_metallic = vec4<f32>(albedo, 0.0); // Terrain is non-metallic

@@ -18,8 +18,8 @@ pub struct TerrainRenderSettings {
 impl Default for TerrainRenderSettings {
     fn default() -> Self {
         Self {
-            displacement_scales: [0.5, 0.5, 0.5, 0.5],
-            tiling_scales: [25.0, 25.0, 25.0, 25.0]
+            displacement_scales: [0.0, 0.16, 0.07, 0.0],
+            tiling_scales: [1.0, 9.5, 8.5, 1.0]
         }
     }
 }
@@ -34,6 +34,17 @@ pub struct TerrainDescription {
     /// UV tiling repetitions across one tile per splat layer (indices 0–3).
     pub tiling_scales: [f32; 4]
 }
+impl Default for TerrainDescription {
+    fn default() -> Self {
+        Self {
+            tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
+            tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
+            displacement_scales: TerrainRenderSettings::default().displacement_scales,
+            tiling_scales: TerrainRenderSettings::default().tiling_scales
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TerrainTileDescription {
@@ -60,12 +71,7 @@ impl RenderData for TerrainBuffer {
                 size: std::mem::size_of::<TerrainDescription>(),
                 usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
                 content: Some(
-                    bytemuck::cast_slice(&[TerrainDescription {
-                        tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
-                        tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
-                        displacement_scales: [0.5, 0.5, 0.5, 0.5],
-                        tiling_scales: [25.0, 25.0, 25.0, 25.0]
-                    }])
+                    bytemuck::cast_slice(&[TerrainDescription::default()])
                     .into()
                 )
             }
