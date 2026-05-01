@@ -11,55 +11,48 @@ use crate::{
 #[derive(Component, Default, Reflect)]
 #[reflect(Component)]
 pub struct TerrainPhysics {
-    /// Super parent to all tile colliders, used for better organization in the scene hierarchy
     pub parent: Option<Entity>,
-    /// Pointer from tile position (x, z) to the corresponding tile entity
     pub pos_to_entity: HashMap<ChunkPos, Entity>
 }
+
 impl TerrainPhysics {
-    /// Extracts the dirty tiles from the main terrain
     pub fn extract_dirty(
         mut commands: Commands,
-        mut renderer: Query<&mut TerrainPhysics>,
+        mut physics: Query<&mut TerrainPhysics>,
         mut terrain: Query<(Entity, &mut Terrain)>
     ) {
-        let mut terrain_renderer = match renderer.iter_mut().next() {
-            Some(terrain) => terrain,
-            None => return
-        };
-        let (terrain_entity, mut terrain) = match terrain.iter_mut().next() {
-            Some(terrain) => terrain,
-            None => return
+        let (Ok(mut physics), Ok((terrain_entity, mut terrain))) =
+            (physics.single_mut(), terrain.single_mut())
+        else {
+            return;
         };
 
-        // Ensure the parent entity for the colliders exists
-        if terrain_renderer.parent.is_none() {
-            let parent_entity = commands
-                .spawn((
-                    Name::new("Terrain Colliders"),
-                    Transform::default(),
-                    ChildOf(terrain_entity)
-                ))
-                .id();
-            terrain_renderer.parent = Some(parent_entity);
+        // Lazily create the parent collider container.
+        if physics.parent.is_none() {
+            physics.parent = Some(
+                commands
+                    .spawn((
+                        Name::new("Terrain Colliders"),
+                        Transform::default(),
+                        ChildOf(terrain_entity)
+                    ))
+                    .id()
+            );
         }
+        let parent = physics.parent.unwrap();
 
-        // Extract the dirty tiles from the main terrain and create the according colliders
-        for (tile_pos, tile_type, _, data) in terrain.dirty_physics.iter().flatten() {
-            // Check if the tile is a heightmap
-            if *tile_type != 0 {
-                continue;
+        for (tile_pos, tile_type, _, data) in terrain.dirty_physics.drain(..) {
+            if tile_type != 0 {
+                continue; // Only heightmaps drive colliders.
             }
 
-            // Create the heightfield collider for the tile
             let collider = Collider::from(
-                HeightfieldCollider::from_heightmap(data, [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE])
+                HeightfieldCollider::from_heightmap(&data, [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE])
                     .with_group(TERRAIN_COLLIDER_GROUP)
             );
 
-            // Spawn or update the collider entity for the tile
-            if let Some(entity) = terrain_renderer.pos_to_entity.get(tile_pos) {
-                commands.entity(*entity).insert(collider);
+            if let Some(&entity) = physics.pos_to_entity.get(&tile_pos) {
+                commands.entity(entity).insert(collider);
             } else {
                 let entity = commands
                     .spawn((
@@ -73,14 +66,11 @@ impl TerrainPhysics {
                             tile_pos.y as f32 * CHUNK_SIZE
                         ),
                         collider,
-                        ChildOf(terrain_renderer.parent.unwrap())
+                        ChildOf(parent)
                     ))
                     .id();
-                terrain_renderer.pos_to_entity.insert(*tile_pos, entity);
+                physics.pos_to_entity.insert(tile_pos, entity);
             }
         }
-
-        // Clear the dirty tiles list after processing
-        terrain.dirty_physics.clear();
     }
 }

@@ -24,8 +24,19 @@ impl Plugin for TerrainMaterialsPlugin {
 }
 
 const TEX_SIZE: (u32, u32) = (2048, 2048);
-const MATERIALS: [&str; 4] = ["coral_gravel", "gravelly_sand", "rocky_trail", "sandy_gravel"];
-const TEX_TYPES: [&str; 5] = ["albedo", "normal", "roughness", "ambient_occlusion", "displacement"];
+const MATERIALS: [&str; 4] = [
+    "coral_gravel",
+    "gravelly_sand",
+    "rocky_trail",
+    "sandy_gravel"
+];
+const TEX_TYPES: [&str; 5] = [
+    "albedo",
+    "normal",
+    "roughness",
+    "ambient_occlusion",
+    "displacement"
+];
 const TEX_FORMATS: [TextureFormat; 5] = [
     TextureFormat::Rgba8UnormSrgb,
     TextureFormat::Rgba8Unorm,
@@ -225,7 +236,9 @@ fn fill_arrays(
                 .unwrap()
         )
     ) {
-        (Some(albedo), Some(normal), Some(roughness), Some(ao), Some(displacement)) => (albedo, normal, roughness, ao, displacement),
+        (Some(albedo), Some(normal), Some(roughness), Some(ao), Some(displacement)) => {
+            (albedo, normal, roughness, ao, displacement)
+        }
         _ => return
     };
 
@@ -280,10 +293,11 @@ fn fill_arrays(
             size
         );
 
-        let displacement_tex = match textures.get(material_textures.displacement_textures[i].as_ref().unwrap()) {
-            Some(tex) => tex,
-            None => return
-        };
+        let displacement_tex =
+            match textures.get(material_textures.displacement_textures[i].as_ref().unwrap()) {
+                Some(tex) => tex,
+                None => return
+            };
         displacement_array.texture.copy_from_texture_layered(
             &render_instance,
             &displacement_tex.texture.texture,
@@ -298,7 +312,9 @@ fn fill_arrays(
     normal_array.texture.generate_mipmaps(&render_instance);
     roughness_array.texture.generate_mipmaps(&render_instance);
     ao_array.texture.generate_mipmaps(&render_instance);
-    displacement_array.texture.generate_mipmaps(&render_instance);
+    displacement_array
+        .texture
+        .generate_mipmaps(&render_instance);
 
     *is_done = true;
 }

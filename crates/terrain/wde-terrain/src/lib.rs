@@ -1,18 +1,18 @@
-//! This crate provides a terrain system for the game.
-//! The terrain is divided into tiles, each of which has its own heightmap and splat maps for texture blending. The terrain system is designed to be efficient and flexible, allowing for dynamic updates to the terrain data and seamless integration with the rendering and physics systems.
+//! Terrain system for WaterDropEngine.
 //!
-//! This module is still WIP.
+//! Divide the world into a grid of chunks, each with its own heightmap and splat-map stored
+//! as a layer inside shared GPU texture arrays.
 //!
 //! # Example
 //! ```
 //! fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
-//!     // Load the terrain from the specified path
 //!     commands.spawn((
 //!         Terrain::load("tests/terrain"),
 //!         TerrainRenderer::new(&asset_server),
 //!         TerrainPhysics::default()
 //!     ));
 //! }
+//! ```
 
 use bevy::prelude::*;
 use wde_physics::prelude::*;
@@ -33,10 +33,12 @@ pub(crate) mod utils;
 pub mod prelude {
     pub use crate::manager::*;
     pub use crate::physics::terrain_physics::TerrainPhysics;
-    pub use crate::render::extractor::*;
     pub use crate::render::dependencies::terrain_buffer::TerrainRenderSettings;
+    pub use crate::render::extractor::*;
     pub use crate::render::renderer::TerrainRenderer;
-    pub use crate::render::renderer_gpu::TerrainRendererGPU;
+    pub use crate::render::renderer_gpu::{
+        TerrainChunkArrayBg, TerrainComputeArrayBg, TerrainRendererGPU
+    };
     pub use crate::utils::cursor_pos::TerrainCursorPos;
     pub use crate::{TERRAIN_BUILDINGS_COLLIDER_GROUP, TERRAIN_COLLIDER_GROUP};
 }

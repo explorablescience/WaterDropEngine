@@ -15,7 +15,7 @@ use crate::{
 mod compute;
 mod resources;
 
-/// Stores the extracted paint commands and the dirty chunks that need to be updated
+/// Extracted paint commands forwarded to the render world each frame.
 #[derive(Resource, Default)]
 pub struct ExtractedPaintCommands {
     pub commands: Vec<PaintCommand>,
@@ -30,32 +30,40 @@ impl Plugin for PaintProcessorPlugin {
             .init_resource::<ExtractedPaintCommands>()
             .add_systems(Extract, extract_paint_commands);
 
-        // Add the resources plugins
-        app.add_plugins(ComputeCommandsBufferPlugin);
+        app.add_plugins(ComputeCommandsBufferPlugin)
+            .add_plugins(RenderPipelineRegisterPlugin::<PaintComputePipeline>::default())
+            // Queue heightmap readbacks for physics whenever a paint flush happens.
+            .add_systems(Update, queue_physics_extraction);
 
-        // Add the pipelines
-        app.add_plugins(RenderPipelineRegisterPlugin::<PaintComputePipeline>::default());
-
-        // Add the render pass
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .add_systems(Render, apply_paint_compute.in_set(RenderSet::Render));
     }
 }
 
-// Extracts paint commands from the PaintManager
 fn extract_paint_commands(
     paint_manager: ExtractWorld<Res<PaintManager>>,
-    mut extracted_commands: ResMut<ExtractedPaintCommands>
+    mut extracted: ResMut<ExtractedPaintCommands>
 ) {
-    // Check if there are commands to extract
-    if paint_manager.to_extract.is_none() {
+    let Some((commands, chunks)) = paint_manager.to_extract.clone() else {
         return;
-    }
-    let (commands, chunks) = paint_manager.to_extract.clone().unwrap();
-    extracted_commands.commands.extend(commands);
-    extracted_commands
+    };
+    extracted.commands.extend(commands);
+    extracted
         .dirty_chunks
         .get_or_insert_with(HashSet::new)
         .extend(chunks);
+}
+
+/// After each paint flush, queue heightmap GPU readbacks for the affected chunks so the
+/// physics colliders can be rebuilt with the new heights.
+fn queue_physics_extraction(
+    paint_manager: Res<PaintManager>,
+    mut extractor: ResMut<TerrainExtractor>
+) {
+    if let Some((_, dirty_chunks)) = &paint_manager.to_extract {
+        for &chunk_pos in dirty_chunks {
+            extractor.queue_tile_extraction(chunk_pos, 0, 0);
+        }
+    }
 }

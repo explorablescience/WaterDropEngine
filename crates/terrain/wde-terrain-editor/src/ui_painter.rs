@@ -83,12 +83,18 @@ fn ui_terrain_settings(
         .show(&ctx.0, |ui| {
             ui.heading("Tiling (UV repetitions per tile)");
             for i in 0..4 {
-                ui.add(Slider::new(&mut settings.tiling_scales[i], 1.0..=20.0).text(format!("Layer {i}")));
+                ui.add(
+                    Slider::new(&mut settings.tiling_scales[i], 1.0..=20.0)
+                        .text(format!("Layer {i}"))
+                );
             }
             ui.separator();
             ui.heading("Displacement (metres)");
             for i in 0..4 {
-                ui.add(Slider::new(&mut settings.displacement_scales[i], 0.0..=0.5).text(format!("Layer {i}")));
+                ui.add(
+                    Slider::new(&mut settings.displacement_scales[i], 0.0..=0.5)
+                        .text(format!("Layer {i}"))
+                );
             }
         });
 }
@@ -100,10 +106,6 @@ fn ui_save_terrain(
     mut save_manager: ResMut<SaveManager>,
     mut ui_menu: ResMut<UIMenu>
 ) {
-    // Clear the previous list of tiles to extract
-    extractor.clear_tiles_to_extract();
-
-    // Draw UI
     UIWindow::new("Save Terrain")
         .default_pos([40.0, 200.0])
         .open(ui_menu.clicked_mut("Terrain/Save"))
@@ -116,14 +118,15 @@ fn ui_save_terrain(
                     return;
                 }
                 let terrain = match terrain.single() {
-                    Ok(terrain) => terrain,
+                    Ok(t) => t,
                     Err(_) => return
                 };
                 for pos in terrain.pos_to_tile.keys() {
-                    for t in 0..2 {
-                        extractor.queue_tile_extraction(*pos, t, 0);
-                        save_manager.tiles_to_save.push((*pos, t, 0));
-                    }
+                    // Queue heightmap + splatmap for readback.
+                    extractor.queue_tile_extraction(*pos, 0, 0);
+                    extractor.queue_tile_extraction(*pos, 1, 0);
+                    save_manager.tiles_to_save.push((*pos, 0, 0));
+                    save_manager.tiles_to_save.push((*pos, 1, 0));
                 }
                 save_manager.saving = true;
             }

@@ -346,6 +346,47 @@ impl CommandBuffer {
             .copy_texture_to_buffer(texture_copy, buffer_copy, size);
     }
 
+    /// Copy a single layer from a texture array to a buffer.
+    pub fn copy_texture_layer_to_buffer(
+        &mut self,
+        source: &wgpu::Texture,
+        destination: &Buffer,
+        layer: u32
+    ) {
+        let size = source.size();
+        let bytes_per_pixel = match source.format() {
+            wgpu::TextureFormat::R8Unorm => 1,
+            wgpu::TextureFormat::Rgba8Unorm => 4,
+            _ => panic!("Unsupported texture format for layered copy")
+        };
+        let bytes_per_row = (size.width * bytes_per_pixel).div_ceil(256) * 256;
+        self.encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: source,
+                mip_level: 0,
+                origin: wgpu::Origin3d {
+                    x: 0,
+                    y: 0,
+                    z: layer
+                },
+                aspect: wgpu::TextureAspect::All
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &destination.buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(bytes_per_row),
+                    rows_per_image: None
+                }
+            },
+            wgpu::Extent3d {
+                width: size.width,
+                height: size.height,
+                depth_or_array_layers: 1
+            }
+        );
+    }
+
     /// Get the encoder of the command buffer.
     ///
     /// # Returns

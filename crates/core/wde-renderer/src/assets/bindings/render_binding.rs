@@ -143,7 +143,8 @@ enum RenderBindingType {
     TextureView,
     TextureArrayView,
     TextureSampler,
-    StorageTexture
+    StorageTexture,
+    StorageTextureArray
 }
 
 /// A builder for the render binding. This is used in the description of the render binding to specify the buffers and textures that should be created on the gpu, and to build the bind group layout and bind group entries.
@@ -268,6 +269,13 @@ impl RenderBindingBuilder {
     /// Adds a storage texture view directly from an asset id.
     pub fn add_storage_texture_from_id(&mut self, texture: Option<AssetId<Texture>>) -> &mut Self {
         self.add_texture_from_id(texture, RenderBindingType::StorageTexture)
+    }
+    /// Adds a storage texture array view directly from an asset id (for `texture_storage_2d_array`).
+    pub fn add_storage_texture_array_from_id(
+        &mut self,
+        texture: Option<AssetId<Texture>>
+    ) -> &mut Self {
+        self.add_texture_from_id(texture, RenderBindingType::StorageTextureArray)
     }
 
     fn add_texture<R>(
@@ -399,7 +407,8 @@ where
                 RenderBindingType::TextureView
                 | RenderBindingType::TextureArrayView
                 | RenderBindingType::TextureSampler
-                | RenderBindingType::StorageTexture => {
+                | RenderBindingType::StorageTexture
+                | RenderBindingType::StorageTextureArray => {
                     if gpu_textures
                         .get(asset_builder.textures[*idx as usize].unwrap())
                         .is_none()
@@ -485,6 +494,21 @@ where
                         };
                         builder.add_storage_texture_view(binding as u32, texture.texture.format)
                     }
+                    RenderBindingType::StorageTextureArray => {
+                        let Some(texture) =
+                            gpu_textures.get(asset_builder.textures[*idx as usize].unwrap())
+                        else {
+                            trace!(
+                                "Texture (StorageArray) {} for render binding {} is not ready, retrying...",
+                                asset_builder.textures[*idx as usize].unwrap(),
+                                asset.label()
+                            );
+                            is_err = true;
+                            return;
+                        };
+                        builder
+                            .add_storage_texture_array_view(binding as u32, texture.texture.format)
+                    }
                 };
             }
         });
@@ -511,7 +535,8 @@ where
                 }
                 RenderBindingType::TextureView
                 | RenderBindingType::TextureArrayView
-                | RenderBindingType::StorageTexture => {
+                | RenderBindingType::StorageTexture
+                | RenderBindingType::StorageTextureArray => {
                     let texture = gpu_textures
                         .get(asset_builder.textures[*idx as usize].unwrap())
                         .unwrap();

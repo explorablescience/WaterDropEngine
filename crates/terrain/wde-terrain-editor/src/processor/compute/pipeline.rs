@@ -6,7 +6,7 @@ use bevy::{
     prelude::*
 };
 use wde_renderer::prelude::*;
-use wde_terrain::render::renderer_gpu::TerrainTileBgCompute;
+use wde_terrain::prelude::TerrainComputeArrayBg;
 
 use crate::processor::{
     compute::computepass::TileInfo, resources::commands_buffer::CommandsBufferBinding
@@ -20,12 +20,14 @@ impl RenderAsset for PaintComputePipeline {
         SRes<AssetServer>,
         SResMut<PipelineManager>,
         SBinding<CommandsBufferBinding>,
-        SBinding<TerrainTileBgCompute>
+        SBinding<TerrainComputeArrayBg>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, commands_buffer, terrain_tile_bg_compute): &mut SystemParamItem<Self::Params>
+        (assets_server, pipeline_manager, commands_buffer, compute_array): &mut SystemParamItem<
+            Self::Params
+        >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(PaintComputePipeline(
             pipeline_manager.create_compute_pipeline(
@@ -36,10 +38,7 @@ impl RenderAsset for PaintComputePipeline {
                     ),
                     bind_group_layouts: vec![
                         commands_buffer.iter().next().map(|(_, b)| b.layout.clone()),
-                        terrain_tile_bg_compute
-                            .iter()
-                            .next()
-                            .map(|(_, b)| b.layout.clone()), // Take first one, they all have the same layout
+                        compute_array.iter().next().map(|(_, b)| b.layout.clone()),
                     ],
                     push_constants: vec![PushConstantDescriptor {
                         stages: ShaderStages::COMPUTE,

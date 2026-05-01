@@ -6,10 +6,9 @@ use crate::{
     render::renderer_gpu::TerrainRendererGPU
 };
 
-// The maximum number of terrain tiles that can be rendered
 const MAX_TERRAIN_TILES: usize = 1000;
 
-/// Runtime-editable terrain rendering parameters, synced to the render world each frame.
+/// Runtime-editable terrain rendering parameters synced to the render world each frame.
 #[derive(Resource, ExtractResource, Clone, Debug)]
 pub struct TerrainRenderSettings {
     pub displacement_scales: [f32; 4],
@@ -29,9 +28,7 @@ impl Default for TerrainRenderSettings {
 pub struct TerrainDescription {
     pub tile_size: [f32; 3],
     pub tile_subdivisions: f32,
-    /// Displacement scale (metres) applied per splat layer (indices 0–3).
     pub displacement_scales: [f32; 4],
-    /// UV tiling repetitions across one tile per splat layer (indices 0–3).
     pub tiling_scales: [f32; 4]
 }
 impl Default for TerrainDescription {
@@ -45,15 +42,16 @@ impl Default for TerrainDescription {
     }
 }
 
+/// Per-tile GPU descriptor.
+/// `tile_layer` maps this draw-call instance to its layer in the texture arrays.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TerrainTileDescription {
     pub pos: [f32; 2],
     pub lod: f32,
-    pub _padding: f32
+    pub tile_layer: u32
 }
 
-/// Struct to hold the terrain uniform layout description.
 #[derive(Asset, Clone, Debug, Default, TypePath)]
 pub struct TerrainBuffer;
 impl TerrainBuffer {
@@ -64,27 +62,25 @@ impl RenderData for TerrainBuffer {
     type Params = ();
 
     fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
-        builder.add_buffer(
-            Self::DESC_BIND,
-            Buffer {
-                label: "ssbo-terrain-description-buffer".to_string(),
-                size: std::mem::size_of::<TerrainDescription>(),
-                usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                content: Some(
-                    bytemuck::cast_slice(&[TerrainDescription::default()])
-                    .into()
-                )
-            }
-        );
-        builder.add_buffer(
-            Self::TILES_BIND,
-            Buffer {
-                label: "ssbo-terrain-tiles-buffer".to_string(),
-                size: std::mem::size_of::<TerrainTileDescription>() * MAX_TERRAIN_TILES,
-                usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
-                content: None
-            }
-        );
+        builder
+            .add_buffer(
+                Self::DESC_BIND,
+                Buffer {
+                    label: "terrain-description-buffer".to_string(),
+                    size: std::mem::size_of::<TerrainDescription>(),
+                    usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                    content: Some(bytemuck::cast_slice(&[TerrainDescription::default()]).into())
+                }
+            )
+            .add_buffer(
+                Self::TILES_BIND,
+                Buffer {
+                    label: "terrain-tiles-buffer".to_string(),
+                    size: std::mem::size_of::<TerrainTileDescription>() * MAX_TERRAIN_TILES,
+                    usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
+                    content: None
+                }
+            );
     }
 }
 
@@ -98,8 +94,9 @@ impl RenderBinding for TerrainBufferBinding {
         buffer: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
-        builder.add_buffer(buffer, TerrainBuffer::DESC_BIND);
-        builder.add_buffer(buffer, TerrainBuffer::TILES_BIND);
+        builder
+            .add_buffer(buffer, TerrainBuffer::DESC_BIND)
+            .add_buffer(buffer, TerrainBuffer::TILES_BIND);
     }
 
     fn label(&self) -> &str {
@@ -107,7 +104,6 @@ impl RenderBinding for TerrainBufferBinding {
     }
 }
 
-// System to write the current TerrainRenderSettings into the description uniform buffer
 pub(crate) fn update_terrain_description_buffer(
     render_instance: Res<RenderInstance>,
     terrain_buffer: ResRenderData<TerrainBuffer>,
@@ -118,17 +114,15 @@ pub(crate) fn update_terrain_description_buffer(
         return;
     }
     let terrain_buffer = match terrain_buffer.iter().next() {
-        Some((_, buf)) => buf,
+        Some((_, b)) => b,
         None => return
     };
-    let desc_buffer = match buffers.get(
-        &terrain_buffer.get_buffer(TerrainBuffer::DESC_BIND).unwrap()
-    ) {
-        Some(buf) => buf,
+    let buf = match buffers.get(&terrain_buffer.get_buffer(TerrainBuffer::DESC_BIND).unwrap()) {
+        Some(b) => b,
         None => return
     };
     let render_instance = render_instance.0.read().unwrap();
-    desc_buffer.buffer.write(
+    buf.buffer.write(
         &render_instance,
         bytemuck::cast_slice(&[TerrainDescription {
             tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
@@ -140,22 +134,19 @@ pub(crate) fn update_terrain_description_buffer(
     );
 }
 
-// System to update the terrain tiles buffer with the current visible tiles
 pub(crate) fn update_terrain_tiles_buffer(
     render_instance: Res<RenderInstance>,
     terrain_buffer: ResRenderData<TerrainBuffer>,
     buffers: Res<RenderAssets<GpuBuffer>>,
-    terrain_tiles: Res<TerrainRendererGPU>,
+    terrain: Res<TerrainRendererGPU>,
     mut is_set: Local<bool>
 ) {
-    // Check if is ready
-    if *is_set || !terrain_tiles.ready {
+    if *is_set || !terrain.ready {
         return;
     }
 
-    // Get the buffer
     let terrain_buffer = match terrain_buffer.iter().next() {
-        Some((_, buffer)) => buffer,
+        Some((_, b)) => b,
         None => return
     };
     let tile_buffer = match buffers.get(
@@ -163,22 +154,23 @@ pub(crate) fn update_terrain_tiles_buffer(
             .get_buffer(TerrainBuffer::TILES_BIND)
             .unwrap()
     ) {
-        Some(buffer) => buffer,
+        Some(b) => b,
         None => return
     };
 
-    // Prepare the data
-    let data: Vec<TerrainTileDescription> = terrain_tiles
-        .tiles
+    // Build sorted slice: layer index is the draw instance index.
+    let mut tiles: Vec<(&crate::manager::ChunkPos, &u32)> = terrain.pos_to_layer.iter().collect();
+    tiles.sort_by_key(|&(_, layer)| *layer);
+
+    let data: Vec<TerrainTileDescription> = tiles
         .iter()
-        .map(|tile| TerrainTileDescription {
-            pos: [tile.position.x as f32, tile.position.y as f32],
+        .map(|&(pos, layer)| TerrainTileDescription {
+            pos: [pos.x as f32, pos.y as f32],
             lod: 1.0,
-            _padding: 0.0
+            tile_layer: *layer
         })
         .collect();
 
-    // Update the buffer
     let render_instance = render_instance.0.read().unwrap();
     tile_buffer
         .buffer

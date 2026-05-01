@@ -5,75 +5,61 @@ use std::collections::HashMap;
 
 use crate::utils::image_decoder::decode_png_as_channels;
 
-/// The size of the terrain in terms of number of chunks (e.g., 4 means the terrain is made up of a 4x4 grid of chunks)
-/// Here, a "chunk" refers to a section of the terrain that has its own heightmap and splat maps, and is rendered as a single unit.
-/// It is not necessarily the same as the grid cells using in the terrain.
+/// Number of chunks along each axis (terrain is CHUNK_COUNT×CHUNK_COUNT).
 pub const CHUNK_COUNT: u32 = 8;
-/// The number of splat maps per chunk (must be a multiple of 4, as each splat map can store 4 channels for texture blending)
+/// Number of splat-map channels packed into one RGBA texture (always 4).
 pub const SPLAT_MAP_COUNT: u32 = 4;
 
-/// The size of each terrain chunk in world units.
+/// World-space size of one chunk.
 pub const CHUNK_SIZE: f32 = 32.0;
+/// Maximum height range in world units.
 pub const CHUNK_HEIGHT: f32 = 100.0;
-/// The number of subdivisions per chunk in the rendering system (heightmap and splatmap resolution).
-/// This should match the width and height of the texture maps.
+/// Heightmap/splatmap resolution (pixels per side).
 pub const CHUNK_RENDER_SUBDIVISIONS: u32 = 256;
 
-/// The structure describing the 2d position of a given terrain tile.
-/// This is not to be confused with the grid cells used for the terrain.
+/// 2-D integer grid position of a terrain chunk.
 pub type ChunkPos = IVec2;
-/// The raw data of a terrain tile, containing the heightmap and splat maps as byte arrays. This is the format used for storing as a texture.
+/// Raw pixel bytes for one map layer.
 pub(crate) type TerrainTileData = Vec<u8>;
-/// A dirty tile that needs to be re-processed, containing its position, the type of map that is dirty (0 for heightmap, 1 for splatmap), the index of the splat map if the map type is splatmap, and the new tile data.
+/// (pos, map_type [0=height|1=splat], splat_index, data)
 pub(crate) type TerrainDirtyTile = (ChunkPos, u32, u32, TerrainTileData);
 
-pub struct TerrainTile {
-    pub pos: ChunkPos,
-    pub heightmap: TerrainTileData,
-    pub splatmaps: Vec<TerrainTileData>
-}
-
-/// The main terrain resource that holds all the terrain tiles.
-/// This is the source of truth for the terrain data, and is used by both the physics and rendering systems.
+/// Source-of-truth terrain component.
+/// Owns the dirty queues consumed by the render and physics sub-systems.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Terrain {
-    /// Path to the terrain
     pub path: String,
-    /// Pointer from tile position (x, z) to the corresponding tile datas
+    /// Maps chunk grid position → sequential index (used by UI for iteration).
     pub pos_to_tile: HashMap<ChunkPos, usize>,
 
-    /// List of tile maps that are dirty and need to be re-processed.
-    /// Each entry should be processed before the next frame, as it is cleared at the end of each frame.
+    /// Tiles that need re-uploading to the GPU this frame.
     #[reflect(ignore)]
-    pub(crate) dirty_render: Vec<Option<TerrainDirtyTile>>,
+    pub(crate) dirty_render: Vec<TerrainDirtyTile>,
+    /// Heightmap tiles that need their physics collider rebuilt.
     #[reflect(ignore)]
-    pub(crate) dirty_physics: Vec<Option<TerrainDirtyTile>>
+    pub dirty_physics: Vec<TerrainDirtyTile>
 }
+
 impl Terrain {
-    /// Initializes the terrain by loading the heightmaps and splat maps for each tile from the specified folder.
-    ///
-    /// # Arguments
-    /// * `path` - The path where the terrain assets are located (e.g., "assets/terrain")
-    ///
-    /// # Returns
-    /// A `Terrain` resource containing the initialized terrain tiles with their respective heightmap and splat map data.
+    /// Load terrain data from `res/<path>/`.
     pub fn load(path: &str) -> Self {
+        let cur_dir = std::env::current_dir().unwrap();
+        let full_path = format!("{}/res/{}", cur_dir.display(), path);
+
         let mut pos_to_tile = HashMap::new();
-        let mut tiles = Vec::new();
         let mut dirty_render = Vec::new();
         let mut dirty_physics = Vec::new();
+        let mut index = 0usize;
+
         for i in 0..CHUNK_COUNT {
             for j in 0..CHUNK_COUNT {
-                // Calculate the world position of the tile (centered around the origin)
                 let px = i as i32 - (CHUNK_COUNT as i32) / 2;
                 let pz = j as i32 - (CHUNK_COUNT as i32) / 2;
                 let pos = IVec2::new(px, pz);
 
-                // Compute files_names
-                let cur_dir = std::env::current_dir().unwrap();
-                let full_path = format!("{}/res/{}", cur_dir.display(), path);
-                let heightmap_path =
+                // --- heightmap ---
+                let hm_path =
                     if std::fs::metadata(format!("{}/heightmap_{}_{}.png", full_path, px, pz))
                         .is_ok()
                     {
@@ -81,75 +67,50 @@ impl Terrain {
                     } else {
                         format!("{}/heightmap_default.png", full_path)
                     };
-                let mut splatmap_paths = Vec::new();
-                for i in 0..SPLAT_MAP_COUNT / 4 {
-                    let splatmap_path = if std::fs::metadata(format!(
-                        "{}/splatmap_{}_{}-{}.png",
-                        full_path, px, pz, i
-                    ))
-                    .is_ok()
-                    {
-                        format!("{}/splatmap_{}_{}-{}.png", full_path, px, pz, i)
-                    } else {
-                        format!("{}/splatmap_default.png", full_path)
-                    };
-                    splatmap_paths.push(splatmap_path);
-                }
 
-                // Load the tile data from the files and create the tile
-                let mut tile = TerrainTile {
-                    pos,
-                    heightmap: Vec::new(),
-                    splatmaps: Vec::new()
-                };
-
-                // Load heightmap as R8 (1 channel)
-                tile.heightmap = match decode_png_as_channels(
-                    &heightmap_path,
+                let heightmap = match decode_png_as_channels(
+                    &hm_path,
                     1,
                     (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)
                 ) {
-                    Ok(data) => data,
+                    Ok(d) => d,
                     Err(e) => {
-                        error!(
-                            "Failed to decode heightmap for tile ({}, {}): {}",
-                            pos.x, pos.y, e
-                        );
+                        error!("Failed to load heightmap ({}, {}): {}", px, pz, e);
                         continue;
                     }
                 };
 
-                // Load splat maps
-                for splatmap_path in splatmap_paths {
-                    tile.splatmaps.push(
-                        match decode_png_as_channels(
-                            &splatmap_path,
-                            4,
-                            (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)
-                        ) {
-                            Ok(data) => data,
-                            Err(e) => {
-                                error!(
-                                    "Failed to decode splatmap for tile ({}, {}): {}",
-                                    pos.x, pos.y, e
-                                );
-                                continue;
-                            }
-                        }
-                    );
-                }
+                dirty_render.push((pos, 0, 0, heightmap.clone()));
+                dirty_physics.push((pos, 0, 0, heightmap));
 
-                // Add the tile to the list and mark it as dirty
-                dirty_render.push(Some((pos, 0, 0, tile.heightmap.clone()))); // Mark heightmap as dirty
-                dirty_physics.push(Some((pos, 0, 0, tile.heightmap.clone())));
-                for i in 0..SPLAT_MAP_COUNT / 4 {
-                    dirty_render.push(Some((pos, 1, i, tile.splatmaps[i as usize].clone()))); // Mark splat map as dirty
-                    dirty_physics.push(Some((pos, 1, i, tile.splatmaps[i as usize].clone())));
-                }
-                tiles.push(tile);
-                pos_to_tile.insert(pos, tiles.len() - 1);
+                // --- splatmap (one RGBA texture = 4 layers) ---
+                let sm_path =
+                    if std::fs::metadata(format!("{}/splatmap_{}_{}-0.png", full_path, px, pz))
+                        .is_ok()
+                    {
+                        format!("{}/splatmap_{}_{}-0.png", full_path, px, pz)
+                    } else {
+                        format!("{}/splatmap_default.png", full_path)
+                    };
+
+                let splatmap = match decode_png_as_channels(
+                    &sm_path,
+                    4,
+                    (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)
+                ) {
+                    Ok(d) => d,
+                    Err(e) => {
+                        error!("Failed to load splatmap ({}, {}): {}", px, pz, e);
+                        continue;
+                    }
+                };
+
+                dirty_render.push((pos, 1, 0, splatmap));
+                pos_to_tile.insert(pos, index);
+                index += 1;
             }
         }
+
         Self {
             path: path.to_string(),
             pos_to_tile,
@@ -158,22 +119,12 @@ impl Terrain {
         }
     }
 
-    /// Gets the tile indices for a given world position.
-    ///
-    /// # Arguments
-    /// * `world_pos` - The world position for which to get the tile indices
-    ///
-    /// # Returns
-    /// An option containing the tile indices (x, z) if the position is within the terrain bounds
-    /// or None if the position is out of bounds.
+    /// Returns the chunk grid position for a world position, or `None` if out of bounds.
     pub fn get_tile_idx_for_world_pos(&self, world_pos: Vec3) -> Option<IVec2> {
-        let tile_x = (world_pos.x / CHUNK_SIZE).round() as i32;
-        let tile_z = (world_pos.z / CHUNK_SIZE).round() as i32;
-        let tile_pos = IVec2::new(tile_x, tile_z);
-        if self.pos_to_tile.contains_key(&tile_pos) {
-            Some(tile_pos)
-        } else {
-            None
-        }
+        let tile_pos = IVec2::new(
+            (world_pos.x / CHUNK_SIZE).round() as i32,
+            (world_pos.z / CHUNK_SIZE).round() as i32
+        );
+        self.pos_to_tile.contains_key(&tile_pos).then_some(tile_pos)
     }
 }

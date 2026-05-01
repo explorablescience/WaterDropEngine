@@ -196,13 +196,20 @@ impl Buffer {
         instance: &RenderInstanceData<'_>,
         texture: &wgpu::Texture
     ) {
-        // Create command encoder
         let mut command_buffer = CommandBuffer::new(instance, &format!("copy-to-{}", self.label));
-
-        // Copy texture
         command_buffer.copy_texture_to_buffer(texture, self, texture.size());
+        command_buffer.submit(instance);
+    }
 
-        // Submit commands
+    /// Copy a single layer from a texture array into this buffer.
+    pub fn copy_from_texture_layered(
+        &mut self,
+        instance: &RenderInstanceData<'_>,
+        texture: &wgpu::Texture,
+        layer: u32
+    ) {
+        let mut command_buffer = CommandBuffer::new(instance, &format!("copy-to-{}", self.label));
+        command_buffer.copy_texture_layer_to_buffer(texture, self, layer);
         command_buffer.submit(instance);
     }
 

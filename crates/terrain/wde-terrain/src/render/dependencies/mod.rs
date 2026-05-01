@@ -23,13 +23,12 @@ impl Plugin for BuffersPlugin {
             .add_systems(Extract, TerrainRenderPassMesh::extract_terrain_mesh);
 
         // Init the terrain material arrays
-        app.init_resource::<TerrainRenderSettings>()
-            .add_plugins((
-                TerrainMaterialsPlugin,
-                ExtractResourcePlugin::<TerrainRenderSettings>::default(),
-                RenderDataRegisterPlugin::<TerrainBuffer>::default(),
-                RenderBindingRegisterPlugin::<TerrainBufferBinding>::default()
-            ));
+        app.init_resource::<TerrainRenderSettings>().add_plugins((
+            TerrainMaterialsPlugin,
+            ExtractResourcePlugin::<TerrainRenderSettings>::default(),
+            RenderDataRegisterPlugin::<TerrainBuffer>::default(),
+            RenderBindingRegisterPlugin::<TerrainBufferBinding>::default()
+        ));
         app.get_sub_app_mut(RenderApp).unwrap().add_systems(
             Render,
             (

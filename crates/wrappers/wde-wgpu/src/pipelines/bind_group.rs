@@ -175,6 +175,25 @@ impl BindGroupLayoutBuilder {
         self
     }
 
+    /// Add a storage texture array view to the bind group (for compute read/write of array layers).
+    pub fn add_storage_texture_array_view(
+        &mut self,
+        binding: u32,
+        format: TextureFormat
+    ) -> &mut Self {
+        self.layout_entries.push(wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::StorageTexture {
+                access: wgpu::StorageTextureAccess::ReadWrite,
+                view_dimension: wgpu::TextureViewDimension::D2Array,
+                format
+            },
+            count: None
+        });
+        self
+    }
+
     /// Add a texture array to the bind group.
     ///
     /// # Arguments

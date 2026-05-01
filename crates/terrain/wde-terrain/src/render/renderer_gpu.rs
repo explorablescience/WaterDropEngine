@@ -4,18 +4,19 @@ use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::{
-    manager::{ChunkPos, SPLAT_MAP_COUNT, TerrainDirtyTile},
+    manager::{ChunkPos, TerrainDirtyTile},
     prelude::TerrainExtractor,
-    render::{extractor, renderer::TerrainRenderer}
+    render::extractor
 };
 
+// ─── Render bind group (texture_2d_array sampling) ──────────────────────────
+
 #[derive(Asset, Clone, TypePath, Default)]
-pub struct TerrainTileBgRender {
-    tile_position: ChunkPos,
-    heightmap: Handle<Texture>,
-    splatmaps: Vec<Handle<Texture>>
+pub struct TerrainChunkArrayBg {
+    pub heightmap_array: Option<Handle<Texture>>,
+    pub splatmap_array: Option<Handle<Texture>>
 }
-impl RenderBinding for TerrainTileBgRender {
+impl RenderBinding for TerrainChunkArrayBg {
     type Params = ();
 
     fn describe(
@@ -23,35 +24,26 @@ impl RenderBinding for TerrainTileBgRender {
         _params: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
-        builder.add_texture_view_from_id(Some(self.heightmap.id()));
-        builder.add_texture_sampler_from_id(Some(self.heightmap.id()));
-        for i in 0..SPLAT_MAP_COUNT / 4 {
-            if i as usize >= self.splatmaps.len() {
-                continue;
-            }
-            builder.add_texture_view_from_id(Some(self.splatmaps[i as usize].id()));
-            builder.add_texture_sampler_from_id(Some(self.splatmaps[i as usize].id()));
-        }
+        builder
+            .add_texture_array_view_from_id(self.heightmap_array.as_ref().map(|h| h.id()))
+            .add_texture_sampler_from_id(self.heightmap_array.as_ref().map(|h| h.id()))
+            .add_texture_array_view_from_id(self.splatmap_array.as_ref().map(|h| h.id()))
+            .add_texture_sampler_from_id(self.splatmap_array.as_ref().map(|h| h.id()));
     }
 
     fn label(&self) -> &str {
-        Box::leak(
-            format!(
-                "terrain-tile-{}-{}-render",
-                self.tile_position.x, self.tile_position.y
-            )
-            .into_boxed_str()
-        )
+        "terrain-chunk-array-render"
     }
 }
 
+// ─── Compute bind group (texture_storage_2d_array read/write) ────────────────
+
 #[derive(Asset, Clone, TypePath, Default)]
-pub struct TerrainTileBgCompute {
-    tile_position: ChunkPos,
-    heightmap: Handle<Texture>,
-    splatmaps: Vec<Handle<Texture>>
+pub struct TerrainComputeArrayBg {
+    pub heightmap_array: Option<Handle<Texture>>,
+    pub splatmap_array: Option<Handle<Texture>>
 }
-impl RenderBinding for TerrainTileBgCompute {
+impl RenderBinding for TerrainComputeArrayBg {
     type Params = ();
 
     fn describe(
@@ -59,179 +51,133 @@ impl RenderBinding for TerrainTileBgCompute {
         _params: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
-        builder.add_storage_texture_from_id(Some(self.heightmap.id()));
-        for i in 0..SPLAT_MAP_COUNT / 4 {
-            if i as usize >= self.splatmaps.len() {
-                continue;
-            }
-            builder.add_storage_texture_from_id(Some(self.splatmaps[i as usize].id()));
-        }
+        builder
+            .add_storage_texture_array_from_id(self.heightmap_array.as_ref().map(|h| h.id()))
+            .add_storage_texture_array_from_id(self.splatmap_array.as_ref().map(|h| h.id()));
     }
 
     fn label(&self) -> &str {
-        Box::leak(
-            format!(
-                "terrain-tile-{}-{}-compute",
-                self.tile_position.x, self.tile_position.y
-            )
-            .into_boxed_str()
-        )
+        "terrain-chunk-array-compute"
     }
 }
 
-/// Same as `TerrainRenderTile`, but with the texture handles replaced by their corresponding asset IDs. Only present on the GPU side.
-#[derive(Default, Clone)]
-pub struct TerrainRenderTileGPU {
-    /// The position of the tile in world space (x, z)
-    pub position: ChunkPos,
+// ─── GPU-side renderer resource ──────────────────────────────────────────────
 
-    /// The heightmap and splat maps for this tile
-    pub heightmap: Handle<Texture>,
-    pub splatmaps: Vec<Handle<Texture>>,
-
-    // The associated render and compute bind groups
-    pub render_bind_group: Option<Handle<TerrainTileBgRender>>,
-    pub compute_bind_group: Option<Handle<TerrainTileBgCompute>>
-}
-
-/// Holds the tiles used for rendering. Note that all tiles are not necessarily rendered.
 #[derive(Resource, Default)]
 pub struct TerrainRendererGPU {
-    /// True if the renderer has been initialized (i.e., the bind group of each tiles have been created and is ready for rendering)
+    /// True once bind groups are created and the renderer is ready.
     pub ready: bool,
-    /// Mapping of the tile position (x, z) to its tile index in the tiles vector
-    pub pos_to_tile: HashMap<ChunkPos, usize>,
-    /// A list of terrain render tiles that make up the entire terrain.
-    pub tiles: Vec<TerrainRenderTileGPU>,
-    // List of tile maps that are dirty and need to be re-processed
-    pub dirty: Vec<Option<TerrainDirtyTile>>
+    /// Maps chunk position → array layer index.
+    pub pos_to_layer: HashMap<ChunkPos, u32>,
+    /// Total number of chunks to draw.
+    pub chunk_count: u32,
+
+    pub heightmap_array: Option<Handle<Texture>>,
+    pub splatmap_array: Option<Handle<Texture>>,
+
+    pub render_bind_group: Option<Handle<TerrainChunkArrayBg>>,
+    pub compute_bind_group: Option<Handle<TerrainComputeArrayBg>>,
+
+    pub dirty: Vec<TerrainDirtyTile>
 }
+
 impl TerrainRendererGPU {
-    // Extract the dirty tiles from the main world and move them to the GPU renderer resource.
+    /// Extract dirty tiles and, on first call, copy texture handles from `TerrainRenderer`.
+    #[allow(clippy::too_many_arguments)]
     pub fn extract_dirty(
-        main_terrain_extractor: &TerrainExtractor,
+        main_terrain_extractor: &mut TerrainExtractor,
         render_terrain_extractor: &mut TerrainExtractor,
-        terrain_renderer_query: Query<&TerrainRenderer>,
+        heightmap_array: Option<Handle<Texture>>,
+        splatmap_array: Option<Handle<Texture>>,
+        pos_to_layer: HashMap<ChunkPos, u32>,
+        dirty: Vec<TerrainDirtyTile>,
+        terrain_renderer_chunk_count: u32,
         gpu_terrain_renderer: &mut TerrainRendererGPU
     ) {
-        // Run extractor if needed
         extractor::extract_dirty(main_terrain_extractor, render_terrain_extractor);
 
-        // Get the terrain renderer resource and the GPU terrain tiles resource
-        let terrain_renderer = match terrain_renderer_query.iter().next() {
-            Some(terrain) => terrain,
-            None => return
-        };
-
-        // If it is the first time the terrain is ready, extract the tiles data from the main world and move them to the GPU renderer resource
-        if gpu_terrain_renderer.tiles.is_empty() {
-            gpu_terrain_renderer.tiles = terrain_renderer
-                .tiles
-                .iter()
-                .map(|tile| TerrainRenderTileGPU {
-                    position: tile.position,
-                    heightmap: tile.heightmap.clone(),
-                    splatmaps: tile.splatmaps.to_vec(),
-                    render_bind_group: None,
-                    compute_bind_group: None
-                })
-                .collect();
-            gpu_terrain_renderer.pos_to_tile = terrain_renderer.pos_to_tile.clone();
+        // One-time initialisation of GPU handles.
+        if gpu_terrain_renderer.heightmap_array.is_none() {
+            gpu_terrain_renderer.heightmap_array = heightmap_array;
+            gpu_terrain_renderer.splatmap_array = splatmap_array;
+            gpu_terrain_renderer.pos_to_layer = pos_to_layer;
+            gpu_terrain_renderer.chunk_count = terrain_renderer_chunk_count;
         }
 
-        // Extract the dirty tiles
-        for i in 0..terrain_renderer.dirty.len() {
-            if let Some(dirty_tile) = &terrain_renderer.dirty[i] {
-                gpu_terrain_renderer.dirty.push(Some(dirty_tile.clone()));
-            }
-        }
+        gpu_terrain_renderer.dirty.extend(dirty);
     }
 
-    // Upload the dirty tiles to the GPU by updating the corresponding textures with the new data, and clear the dirty list.
+    /// Upload dirty tile data to the appropriate array layer on the GPU.
     pub fn upload_dirty(
-        mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>,
+        mut gpu: ResMut<TerrainRendererGPU>,
         textures: Res<RenderAssets<GpuTexture>>,
         render_instance: Res<RenderInstance>
     ) {
+        if gpu.dirty.is_empty() {
+            return;
+        }
         let render_instance = render_instance.0.read().unwrap();
-
-        // Process the dirty tiles by updating the corresponding textures with the new data
-        for i in 0..gpu_terrain_renderer.dirty.len() {
-            if let Some(dirty_tile) = gpu_terrain_renderer.dirty[i].take() {
-                let (pos, map_type, splat_map_index, tile_data) = dirty_tile;
-                let tile_index = match gpu_terrain_renderer.pos_to_tile.get(&pos) {
-                    Some(index) => *index,
-                    None => continue
-                };
-                let tile = &mut gpu_terrain_renderer.tiles[tile_index];
-                match map_type {
-                    0 => {
-                        // Heightmap
-                        let heightmap = match textures.get(&tile.heightmap) {
-                            Some(texture) => texture,
-                            None => continue
-                        };
-                        heightmap.texture.copy_from_buffer(
+        let dirty = std::mem::take(&mut gpu.dirty);
+        for (pos, map_type, _, tile_data) in dirty {
+            let layer = match gpu.pos_to_layer.get(&pos) {
+                Some(&l) => l,
+                None => continue
+            };
+            match map_type {
+                0 => {
+                    if let Some(handle) = &gpu.heightmap_array
+                        && let Some(tex) = textures.get(handle)
+                    {
+                        tex.texture.copy_from_buffer_layered(
                             &render_instance,
-                            heightmap.texture.format,
+                            tex.texture.format,
+                            layer,
                             bytemuck::cast_slice(&tile_data)
                         );
                     }
-                    1 => {
-                        // Splatmap
-                        let splatmap = match textures.get(&tile.splatmaps[splat_map_index as usize])
-                        {
-                            Some(texture) => texture,
-                            None => continue
-                        };
-                        splatmap.texture.copy_from_buffer(
+                }
+                1 => {
+                    if let Some(handle) = &gpu.splatmap_array
+                        && let Some(tex) = textures.get(handle)
+                    {
+                        tex.texture.copy_from_buffer_layered(
                             &render_instance,
-                            splatmap.texture.format,
+                            tex.texture.format,
+                            layer,
                             bytemuck::cast_slice(&tile_data)
                         );
                     }
-                    _ => unreachable!()
-                };
+                }
+                _ => unreachable!()
             }
         }
     }
 
-    // Create the bind groups and layouts for tiles that are not ready
+    /// Create the single render and compute bind groups once textures are ready.
     pub fn prepare_bind_groups(
         asset_server: Res<AssetServer>,
-        mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>
+        mut gpu: ResMut<TerrainRendererGPU>
     ) {
-        // Check if all tiles gpu data is read
-        if gpu_terrain_renderer.ready {
+        if gpu.ready {
+            return;
+        }
+        if gpu.heightmap_array.is_none() || gpu.splatmap_array.is_none() {
             return;
         }
 
-        // Create the bind groups for the dirty tiles
-        for tile in &mut gpu_terrain_renderer.tiles {
-            // Check if already processed
-            if tile.render_bind_group.is_some() {
-                continue;
-            }
-
-            // Create the bind group layout for the render tile
-            tile.render_bind_group = Some(asset_server.add(TerrainTileBgRender {
-                tile_position: tile.position,
-                heightmap: tile.heightmap.clone(),
-                splatmaps: tile.splatmaps.to_vec()
+        if gpu.render_bind_group.is_none() {
+            gpu.render_bind_group = Some(asset_server.add(TerrainChunkArrayBg {
+                heightmap_array: gpu.heightmap_array.clone(),
+                splatmap_array: gpu.splatmap_array.clone()
             }));
-
-            // Create the bind group layout for the compute tile
-            tile.compute_bind_group = Some(asset_server.add(TerrainTileBgCompute {
-                tile_position: tile.position,
-                heightmap: tile.heightmap.clone(),
-                splatmaps: tile.splatmaps.to_vec()
+        }
+        if gpu.compute_bind_group.is_none() {
+            gpu.compute_bind_group = Some(asset_server.add(TerrainComputeArrayBg {
+                heightmap_array: gpu.heightmap_array.clone(),
+                splatmap_array: gpu.splatmap_array.clone()
             }));
         }
 
-        // Check if all tiles are ready
-        gpu_terrain_renderer.ready = gpu_terrain_renderer
-            .tiles
-            .iter()
-            .all(|tile| tile.render_bind_group.is_some());
+        gpu.ready = gpu.render_bind_group.is_some() && gpu.compute_bind_group.is_some();
     }
 }

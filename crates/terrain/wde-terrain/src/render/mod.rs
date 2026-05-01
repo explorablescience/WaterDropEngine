@@ -6,7 +6,7 @@ use crate::render::{
     extractor::TerrainExtractorPlugin,
     passes::TerrainPassesPlugin,
     renderer::TerrainRenderer,
-    renderer_gpu::{TerrainRendererGPU, TerrainTileBgCompute, TerrainTileBgRender}
+    renderer_gpu::{TerrainChunkArrayBg, TerrainComputeArrayBg, TerrainRendererGPU}
 };
 
 pub mod dependencies;
@@ -18,19 +18,18 @@ pub mod renderer_gpu;
 pub struct TerrainRenderPlugin;
 impl Plugin for TerrainRenderPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(BuffersPlugin)
-            .add_plugins(TerrainPassesPlugin)
-            .add_plugins(TerrainExtractorPlugin);
+        app.add_plugins((BuffersPlugin, TerrainPassesPlugin, TerrainExtractorPlugin));
 
-        // Add the terrain renderer resource and its systems
-        // Note that using Update, the dirty tiles will be extracted to the GPU renderer resource one frame after they are marked as dirty. This is to ensure that the main world is not locked for too long while the GPU renderer resource is being updated.
+        // Extract dirty tiles from Terrain → TerrainRenderer each frame.
         app.add_systems(Update, TerrainRenderer::extract_dirty);
+
+        // Register the single-instance bind group types (created on demand).
         app.add_plugins((
-            RenderBindingRegisterPlugin::<TerrainTileBgRender>::without_init(),
-            RenderBindingRegisterPlugin::<TerrainTileBgCompute>::without_init()
+            RenderBindingRegisterPlugin::<TerrainChunkArrayBg>::without_init(),
+            RenderBindingRegisterPlugin::<TerrainComputeArrayBg>::without_init()
         ));
 
-        // Add the terrain renderer GPU resource and its systems
+        // GPU-side systems: upload dirty tiles, then create bind groups if needed.
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<TerrainRendererGPU>()

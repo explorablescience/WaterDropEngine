@@ -10,7 +10,7 @@ use wde_renderer::prelude::*;
 
 use crate::render::{
     dependencies::{materials::TerrainMaterialsBinding, terrain_buffer::TerrainBufferBinding},
-    renderer_gpu::TerrainTileBgRender
+    renderer_gpu::TerrainChunkArrayBg
 };
 
 #[derive(Default, Asset, Clone, TypePath, Debug)]
@@ -23,19 +23,12 @@ impl RenderAsset for TerrainRenderPipeline {
         SBinding<CameraBinding>,
         SBinding<TerrainMaterialsBinding>,
         SBinding<TerrainBufferBinding>,
-        SBinding<TerrainTileBgRender>
+        SBinding<TerrainChunkArrayBg>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (
-            assets_server,
-            pipeline_manager,
-            camera,
-            material_arrays,
-            terrain_buffer,
-            terrain_tile_bg_render
-        ): &mut SystemParamItem<Self::Params>
+        (assets_server, pipeline_manager, camera, material_arrays, terrain_buffer, chunk_array): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
         Ok(TerrainRenderPipeline(
             pipeline_manager.create_render_pipeline(
@@ -47,16 +40,13 @@ impl RenderAsset for TerrainRenderPipeline {
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
                         material_arrays.iter().next().map(|(_, m)| m.layout.clone()),
                         terrain_buffer.iter().next().map(|(_, b)| b.layout.clone()),
-                        terrain_tile_bg_render
-                            .iter()
-                            .next()
-                            .map(|(_, b)| b.layout.clone()), // Take first one, they all have the same layout
+                        chunk_array.iter().next().map(|(_, b)| b.layout.clone()),
                     ],
                     render_targets: Some(vec![
-                        TextureFormat::R16Float,       // Depth
-                        TextureFormat::Rgba8UnormSrgb, // Albedo
-                        TextureFormat::Rgba16Float,    // Normal
-                        TextureFormat::R8Unorm,        // AO
+                        TextureFormat::R16Float,
+                        TextureFormat::Rgba8UnormSrgb,
+                        TextureFormat::Rgba16Float,
+                        TextureFormat::R8Unorm,
                     ]),
                     depth: DepthDescriptor {
                         enabled: true,
