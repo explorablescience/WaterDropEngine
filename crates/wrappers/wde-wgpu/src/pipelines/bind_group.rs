@@ -151,6 +151,36 @@ impl BindGroupLayoutBuilder {
         self
     }
 
+    /// Add a texture to the bind group.
+    ///
+    /// # Arguments
+    ///
+    /// * `binding` - The binding index of the texture.
+    /// * `visibility` - The shader stages that can access the texture.
+    /// * `multisampled` - Whether the texture is multisampled.
+    /// * `filterable` - Whether the texture is filterable (only relevant if not multisampled).
+    pub fn add_texture_view_filterable(
+        &mut self,
+        binding: u32,
+        visibility: ShaderStages,
+        multisampled: bool,
+        filterable: bool
+    ) -> &mut Self {
+        // Create bind group layout
+        self.layout_entries.push(wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility,
+            ty: wgpu::BindingType::Texture {
+                multisampled,
+                view_dimension: wgpu::TextureViewDimension::D2,
+                sample_type: wgpu::TextureSampleType::Float { filterable }
+            },
+            count: None
+        });
+
+        self
+    }
+
     /// Add a storage texture view to the bind group.
     /// This is used for textures that will be read and written to in a compute shader.
     ///

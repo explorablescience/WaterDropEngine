@@ -39,6 +39,8 @@ pub struct Texture {
     pub layer_count: u32,
     /// Number of mip levels (1 = no mipmaps, 0 = auto-calculate max levels). Defaults to 1.
     pub mip_level_count: u32,
+    /// Whether the texture should be filterable when sampled. Defaults to true.
+    pub filterable: bool,
 
     /// Raw pixel data for the texture, in the format specified by `format`. Defaults to empty.
     pub data: Vec<u8>
@@ -53,6 +55,7 @@ impl Default for Texture {
             sample_count: 1,
             layer_count: 1,
             mip_level_count: 1,
+            filterable: true,
             data: Vec::new()
         }
     }
@@ -86,7 +89,8 @@ impl RenderAsset for GpuTexture {
             asset.usages,
             asset.sample_count,
             asset.layer_count,
-            asset.mip_level_count
+            asset.mip_level_count,
+            asset.filterable
         );
 
         // Copy the texture data
@@ -180,6 +184,7 @@ impl AssetLoader for TextureLoader {
             sample_count: 1,
             layer_count: 1,
             mip_level_count: 1,
+            filterable: true,
             data
         })
     }

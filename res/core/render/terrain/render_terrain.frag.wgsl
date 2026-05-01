@@ -8,7 +8,7 @@ struct VertexOutput {
     @location(2) normal_world:    vec3<f32>,
     @location(3) tangent_world:   vec4<f32>,
     @location(4) bitangent_world: vec3<f32>,
-    @location(5) view_z:          f32,
+    @location(5) ndc_z:           f32,
     @location(6) tile_pos:        vec2<f32>,
     @location(7) tile_layer:      u32
 };
@@ -57,8 +57,8 @@ fn main(in: VertexOutput) -> FragOutput {
         normal_sample, in.tangent_world.xyz, in.bitangent_world, normalize(in.normal_world)
     );
     out.normal_roughness = vec4<f32>(normal_world, roughness_value);
-    out.ao   = ao_value;
-    out.depth = in.view_z;
+    out.ao    = ao_value;
+    out.depth = write_depth(in.ndc_z);
 
     return out;
 }

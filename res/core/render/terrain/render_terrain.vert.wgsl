@@ -14,15 +14,11 @@ struct VertexOutput {
     @location(2) normal_world:    vec3<f32>,
     @location(3) tangent_world:   vec4<f32>,
     @location(4) bitangent_world: vec3<f32>,
-    @location(5) view_z:          f32,
+    @location(5) ndc_z:           f32,
     @location(6) tile_pos:        vec2<f32>,
     @location(7) tile_layer:      u32
 };
 
-struct Camera {
-    world_to_view: mat4x4<f32>,
-    view_to_ndc:   mat4x4<f32>
-}
 @group(0) @binding(0) var<uniform> in_camera: Camera;
 
 @group(1) @binding(8) var material_displacement:         texture_2d_array<f32>;
@@ -84,8 +80,9 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     // Clip space.
     let view_pos4 = in_camera.world_to_view * world_pos;
     let view_pos  = view_pos4.xyz / view_pos4.w;
-    out.clip_position = in_camera.view_to_ndc * vec4<f32>(view_pos, 1.0);
-    out.view_z = -view_pos.z;
+    let clip_pos = in_camera.view_to_ndc * view_pos4;
+    out.clip_position = clip_pos;
+    out.ndc_z = -view_pos4.z;
 
     out.tex_coord   = model.tex_coord;
     out.tile_pos    = tile.pos;

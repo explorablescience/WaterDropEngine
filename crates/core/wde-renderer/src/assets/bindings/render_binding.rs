@@ -472,7 +472,12 @@ where
                             return;
                         };
                         let multisampled = texture.texture.sample_count > 1;
-                        builder.add_texture_view(binding as u32, vis, multisampled)
+                        builder.add_texture_view_filterable(
+                            binding as u32,
+                            vis,
+                            multisampled,
+                            texture.texture.filterable
+                        )
                     }
                     RenderBindingType::TextureArrayView => {
                         builder.add_texture_array_view(binding as u32, vis)

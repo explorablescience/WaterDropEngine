@@ -6,8 +6,9 @@ struct VertexOutput {
     @location(1) normal_world: vec3<f32>,     // Normal in world space
     @location(2) tangent_world: vec4<f32>,    // Tangent in world space
     @location(3) bitangent_world: vec3<f32>,  // Bitangent in world space
-    @location(4) view_z: f32,                 // View-space Z (linear depth)
+    @location(4) ndc_z: f32,                  // View-space Z (linear depth)
 };
+@group(1) @binding(0) var<uniform> in_camera: Camera;
 
 struct Material3dUniform {
     flags: vec4<f32>,    // Flags indicating material textures (1.0 = present, 0.0 = absent) - albedo, metallic-roughness, normal, occlusion
@@ -31,7 +32,7 @@ fn main(in: VertexOutput) -> FragOutput {
     var out: FragOutput;
 
     // Store linear view-space depth for better precision
-    out.depth = in.view_z;
+    out.depth = write_depth(in.ndc_z);
 
     // Albedo and Metallic
     var albedo_color: vec3<f32> = in_pbr_material.albedo.rgb;

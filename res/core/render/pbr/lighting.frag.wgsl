@@ -7,17 +7,10 @@ struct VertexOutput {
 };
 
 // Camera uniform buffer
-struct Camera {
-    world_to_view: mat4x4<f32>,
-    view_to_ndc: mat4x4<f32>,
-    ndc_to_view: mat4x4<f32>,
-    view_to_world: mat4x4<f32>,
-    position: vec4<f32>
-}
 @group(0) @binding(0) var<uniform> in_camera: Camera;
 
 // G-Buffer textures
-// Depth texture: Linear view-space depth, stored in R32Float
+// Depth texture: Linear view-space depth (-view_z), stored in R16Float
 @group(1) @binding(0) var in_depth_texture: texture_2d<f32>;
 @group(1) @binding(1) var in_depth_sampler: sampler;
 @group(1) @binding(2) var in_albedo_metallic_t:  texture_2d<f32>;
@@ -33,29 +26,18 @@ struct Camera {
 @group(2) @binding(2) var<uniform> in_pbr_params: PbrParams;
 
 
-
-/// Reconstruct world position from screen UV and linear view-space depth.
-fn world_from_screen_coord_depth(uv: vec2<f32>, view_z: f32) -> vec3<f32> {
-    let ndc_x = uv.x * 2.0 - 1.0;
-    let ndc_y = (1.0 - uv.y) * 2.0 - 1.0; // Flip Y for NDC
-    let view_pos4 = in_camera.ndc_to_view * vec4<f32>(ndc_x, ndc_y, 0.0, 1.0);
-    let view_dir = normalize(view_pos4.xyz / view_pos4.w);
-    let view_position = view_dir * (view_z / -view_dir.z); // scale so .z == -view_z
-    let world_pos4 = in_camera.view_to_world * vec4<f32>(view_position, 1.0);
-    return world_pos4.xyz / world_pos4.w;
+fn map(value: f32, in_min: f32, in_max: f32, out_min: f32, out_max: f32) -> f32 {
+    return (value - in_min) / (in_max - in_min) * (out_max - out_min) + out_min;
 }
-
-
 
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
-
     // Reconstruct world position from linear view-space depth
-    let view_z = textureSample(in_depth_texture, in_depth_sampler, in.tex_coord).r;
-    let world_position = world_from_screen_coord_depth(in.tex_coord, view_z);
+    let depth_z = textureSample(in_depth_texture, in_depth_sampler, in.tex_coord).r;
+    let world_position = get_depth_world_position(in.tex_coord, depth_z, in_camera);
 
     // Discard background pixels (no geometry written to G-buffer)
-    if view_z <= 0.0 {
+    if depth_z <= 0.0 {
         discard;
     }
 
@@ -87,10 +69,8 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
             * in_pbr_params.lighting_params.x;
     }
 
-    // Ambient term: sample the Mars sky in the surface normal direction.
-    let n_dot_v = max(dot(normal, view_dir), 0.0);
-    let ks = fresnel_schlick(n_dot_v, f0);
-    let kd = (1.0 - ks) * (1.0 - metallic);
+    // Ambient term: sample the Mars sky
+    let kd = 0.2;
     let irradiance = mars_sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
     let ambient = kd * irradiance * albedo * ao;
 

@@ -6,6 +6,7 @@ use bevy::{
     prelude::*
 };
 use wde_camera::prelude::*;
+use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::render::{
@@ -43,10 +44,11 @@ impl RenderAsset for TerrainRenderPipeline {
                         chunk_array.iter().next().map(|(_, b)| b.layout.clone()),
                     ],
                     render_targets: Some(vec![
-                        TextureFormat::R16Float,
-                        TextureFormat::Rgba8UnormSrgb,
-                        TextureFormat::Rgba16Float,
-                        TextureFormat::R8Unorm,
+                        // Same order as the PbrDeferredTextures
+                        PbrTextureFormat::DEPTH,  // Depth
+                        PbrTextureFormat::ALBEDO, // Albedo
+                        PbrTextureFormat::NORMAL, // Normal
+                        PbrTextureFormat::AO,     // AO
                     ]),
                     depth: DepthDescriptor {
                         enabled: true,

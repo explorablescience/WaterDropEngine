@@ -3,6 +3,16 @@
 // Include with:  #include "core/render/pbr/pbr_functions.wgsl"
 // ================================================================
 
+// ── SHARED TYPES & STRUCTURES ───────────────────────────────────
+
+struct Camera {
+    world_to_view: mat4x4<f32>,
+    view_to_ndc: mat4x4<f32>,
+    ndc_to_view: mat4x4<f32>,
+    view_to_world: mat4x4<f32>,
+    position: vec4<f32>
+}
+
 
 // ── G-BUFFER OUTPUT ─────────────────────────────────────────────
 
@@ -181,4 +191,34 @@ fn get_light_data(light: Light, frag_world_pos: vec3<f32>) -> LightData {
         radiance    = color * intensity * atten * falloff * cone;
     }
     return LightData(light_dir, radiance);
+}
+
+
+// ── DEPTH FUNCTIONS ────────────────────────────────────
+/// Write linear depth
+fn write_depth(z_value: f32) -> f32 {
+    return z_value;
+}
+
+/// Reconstruct view-space position from linear depth and screen UV coordinates.
+/// linear_depth is -view_z (positive distance from camera along the view axis).
+fn get_depth_view_position(uv: vec2<f32>, linear_depth: f32, camera: Camera) -> vec3<f32> {
+    // Unproject screen UV at ndc_z=0 to get a view-space ray through this pixel.
+    let ndc_xy = vec4<f32>(uv.x * 2.0 - 1.0, (1.0 - uv.y) * 2.0 - 1.0, 0.0, 1.0);
+    let view_ray = camera.ndc_to_view * ndc_xy;
+    let ray = view_ray.xyz / view_ray.w;
+    // Scale the ray so its Z component equals -linear_depth.
+    return ray * (-linear_depth / ray.z);
+}
+
+/// Reconstruct linear view-space depth (positive camera distance) from depth and screen UV.
+fn get_depth_camera_distance(uv: vec2<f32>, linear_depth: f32, camera: Camera) -> f32 {
+    return linear_depth;
+}
+
+/// Reconstruct world-space position from linear depth and screen UV coordinates.
+fn get_depth_world_position(uv: vec2<f32>, linear_depth: f32, camera: Camera) -> vec3<f32> {
+    let view_pos = get_depth_view_position(uv, linear_depth, camera);
+    let world = camera.view_to_world * vec4<f32>(view_pos, 1.0);
+    return world.xyz;
 }

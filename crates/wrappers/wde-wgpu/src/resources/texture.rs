@@ -78,7 +78,8 @@ pub struct Texture {
     pub size: (u32, u32),
     pub sample_count: u32,
     pub layer_count: u32,
-    pub mip_level_count: u32
+    pub mip_level_count: u32,
+    pub filterable: bool
 }
 
 impl std::fmt::Debug for Texture {
@@ -90,6 +91,7 @@ impl std::fmt::Debug for Texture {
             .field("sample_count", &self.sample_count)
             .field("layer_count", &self.layer_count)
             .field("mip_level_count", &self.mip_level_count)
+            .field("filterable", &self.filterable)
             .finish()
     }
 }
@@ -116,7 +118,8 @@ impl Texture {
         usage: TextureUsages,
         sample_count: u32,
         layer_count: u32,
-        mip_level_count: u32
+        mip_level_count: u32,
+        filterable: bool
     ) -> Self {
         event!(LogLevel::TRACE, "Creating wgpu texture {}.", label);
 
@@ -200,7 +203,8 @@ impl Texture {
             size,
             sample_count,
             layer_count,
-            mip_level_count
+            mip_level_count,
+            filterable
         }
     }
 

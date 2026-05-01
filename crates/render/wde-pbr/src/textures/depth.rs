@@ -36,6 +36,7 @@ impl RenderData for DepthTexture {
                 format: DEPTH_FORMAT,
                 usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 sample_count: MSAA_SAMPLE_COUNT,
+                filterable: false,
                 ..Default::default()
             }
         );

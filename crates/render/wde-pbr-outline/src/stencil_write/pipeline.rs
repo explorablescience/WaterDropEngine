@@ -64,10 +64,11 @@ impl RenderAsset for StencilWriteRenderPipeline {
                         }
                     },
                     render_targets: Some(vec![
-                        TextureFormat::R16Float,       // Depth
-                        TextureFormat::Rgba8UnormSrgb, // Albedo
-                        TextureFormat::Rgba16Float,    // Normal
-                        TextureFormat::R8Unorm,        // AO
+                        // Same order as the PbrDeferredTextures
+                        PbrTextureFormat::DEPTH,  // Depth
+                        PbrTextureFormat::ALBEDO, // Albedo
+                        PbrTextureFormat::NORMAL, // Normal
+                        PbrTextureFormat::AO,     // AO
                     ]),
                     cull_mode: None,
                     color_write: ColorWrites::empty(),

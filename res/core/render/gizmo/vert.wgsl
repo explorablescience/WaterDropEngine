@@ -9,10 +9,6 @@ struct VertexOutput {
 };
 
 // From world space to normalized device coordinates
-struct Camera {
-    world_to_view: mat4x4<f32>,
-    view_to_ndc: mat4x4<f32>
-}
 @group(0) @binding(0) var<uniform> in_camera: Camera;
 
 // Object to world space transformation ssbo

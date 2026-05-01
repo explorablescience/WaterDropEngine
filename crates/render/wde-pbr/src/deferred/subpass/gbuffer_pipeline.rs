@@ -12,7 +12,7 @@ use crate::{
     deferred::subpass::{
         gbuffer_bindgroup::SsboTransformBinding, gbuffer_subpass_pbr::PushConstants
     },
-    prelude::PbrMaterial
+    prelude::{PbrMaterial, PbrTextureFormat}
 };
 
 #[derive(TypePath, Asset, Default, Clone)]
@@ -74,10 +74,10 @@ impl RenderAsset for GBufferRenderPipeline {
                     },
                     render_targets: Some(vec![
                         // Same order as the PbrDeferredTextures
-                        TextureFormat::R16Float,       // Depth
-                        TextureFormat::Rgba8UnormSrgb, // Albedo
-                        TextureFormat::Rgba16Float,    // Normal
-                        TextureFormat::R8Unorm,        // AO
+                        PbrTextureFormat::DEPTH,  // Depth
+                        PbrTextureFormat::ALBEDO, // Albedo
+                        PbrTextureFormat::NORMAL, // Normal
+                        PbrTextureFormat::AO,     // AO
                     ]),
                     push_constants: vec![PushConstantDescriptor {
                         stages: ShaderStages::VERTEX,

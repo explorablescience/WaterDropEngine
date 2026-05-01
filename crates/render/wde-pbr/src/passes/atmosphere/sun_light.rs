@@ -36,10 +36,11 @@ fn update_sun_light(
     };
 
     let sun_elevation = (time_of_day - 0.25) * TAU;
+    // Direction toward the sun — matches the atmosphere shader exactly.
     let sun_dir = Vec3::new(
-        -sun_elevation.cos() * SUN_AZIMUTH.cos(),
+        sun_elevation.cos() * SUN_AZIMUTH.cos(),
         sun_elevation.sin(),
-        -sun_elevation.cos() * SUN_AZIMUTH.sin()
+        sun_elevation.cos() * SUN_AZIMUTH.sin()
     )
     .normalize();
 
@@ -59,7 +60,9 @@ fn update_sun_light(
     );
 
     for mut light in &mut lights {
-        light.direction = sun_dir;
+        // DirectionalLight.direction is the ray travel direction (sun → scene),
+        // which is the opposite of the toward-sun vector.
+        light.direction = -sun_dir;
         light.color = Color::from_srgba(sun_color.x, sun_color.y, sun_color.z, 1.0);
         light.intensity = (atmosphere.sun_intensity * sun_visible).max(0.0);
     }

@@ -14,6 +14,14 @@ impl Plugin for DeferredTexturesPlugin {
     }
 }
 
+pub struct PbrTextureFormat;
+impl PbrTextureFormat {
+    pub const DEPTH: TextureFormat = TextureFormat::R16Float;
+    pub const ALBEDO: TextureFormat = TextureFormat::Rgba8UnormSrgb;
+    pub const NORMAL: TextureFormat = TextureFormat::Rgba16Float;
+    pub const AO: TextureFormat = TextureFormat::R8Unorm;
+}
+
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct DeferredTextures;
 impl DeferredTextures {
@@ -44,9 +52,10 @@ impl RenderData for DeferredTextures {
                 Texture {
                     label: "pbr-depth".to_string(),
                     size,
-                    format: TextureFormat::R16Float,
+                    format: PbrTextureFormat::DEPTH,
                     usages,
                     sample_count: MSAA_SAMPLE_COUNT,
+                    filterable: false,
                     ..Default::default()
                 }
             )
@@ -55,7 +64,7 @@ impl RenderData for DeferredTextures {
                 Texture {
                     label: "pbr-depth-resolved".to_string(),
                     size,
-                    format: TextureFormat::R16Float,
+                    format: PbrTextureFormat::DEPTH,
                     usages,
                     ..Default::default()
                 }
@@ -65,9 +74,10 @@ impl RenderData for DeferredTextures {
                 Texture {
                     label: "pbr-albedo".to_string(),
                     size,
-                    format: TextureFormat::Rgba8UnormSrgb,
+                    format: PbrTextureFormat::ALBEDO,
                     usages,
                     sample_count: MSAA_SAMPLE_COUNT,
+                    filterable: false,
                     ..Default::default()
                 }
             )
@@ -76,7 +86,7 @@ impl RenderData for DeferredTextures {
                 Texture {
                     label: "pbr-albedo-resolved".to_string(),
                     size,
-                    format: TextureFormat::Rgba8UnormSrgb,
+                    format: PbrTextureFormat::ALBEDO,
                     usages,
                     ..Default::default()
                 }
@@ -86,9 +96,10 @@ impl RenderData for DeferredTextures {
                 Texture {
                     label: "pbr-normal".to_string(),
                     size,
-                    format: TextureFormat::Rgba16Float,
+                    format: PbrTextureFormat::NORMAL,
                     usages,
                     sample_count: MSAA_SAMPLE_COUNT,
+                    filterable: false,
                     ..Default::default()
                 }
             )
@@ -97,7 +108,7 @@ impl RenderData for DeferredTextures {
                 Texture {
                     label: "pbr-normal-resolved".to_string(),
                     size,
-                    format: TextureFormat::Rgba16Float,
+                    format: PbrTextureFormat::NORMAL,
                     usages,
                     ..Default::default()
                 }
@@ -107,9 +118,10 @@ impl RenderData for DeferredTextures {
                 Texture {
                     label: "pbr-ao".to_string(),
                     size,
-                    format: TextureFormat::R8Unorm,
+                    format: PbrTextureFormat::AO,
                     usages,
                     sample_count: MSAA_SAMPLE_COUNT,
+                    filterable: false,
                     ..Default::default()
                 }
             )
@@ -118,7 +130,7 @@ impl RenderData for DeferredTextures {
                 Texture {
                     label: "pbr-ao-resolved".to_string(),
                     size,
-                    format: TextureFormat::R8Unorm,
+                    format: PbrTextureFormat::AO,
                     usages,
                     ..Default::default()
                 }

@@ -6,7 +6,7 @@ struct VertexOutput {
     @location(1) normal_world: vec3<f32>,     // Normal in world space
     @location(2) tangent_world: vec4<f32>,    // Tangent in world space
     @location(3) bitangent_world: vec3<f32>,  // Bitangent in world space
-    @location(4) view_z: f32,                 // View-space Z (linear depth)
+    @location(4) ndc_z: f32,                  // Linear view-space depth (-view_z, always positive)
 };
 
 // Push constants informations about the current mesh
@@ -34,11 +34,6 @@ struct VertexData {
 @group(0) @binding(0) var<storage, read> in_vertices: array<VertexData>;
 @group(0) @binding(1) var<storage, read> in_indices: array<u32>;
 
-// From world space to normalized device coordinates
-struct Camera {
-    world_to_view: mat4x4<f32>,
-    view_to_ndc: mat4x4<f32>
-}
 @group(1) @binding(0) var<uniform> in_camera: Camera;
 
 // Object to world space transformation ssbo
@@ -66,11 +61,9 @@ fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32)
     let view_pos4 = in_camera.world_to_view
         * obj_to_world
         * vec4<f32>(vertex.position, 1.0);
-    let view_pos = view_pos4.xyz / view_pos4.w;
-    out.clip_position = in_camera.view_to_ndc * vec4<f32>(view_pos, 1.0);
-
-    // Store linear view-space depth (negative Z in view space)
-    out.view_z = -view_pos.z;
+    let clip_pos = in_camera.view_to_ndc * view_pos4;
+    out.clip_position = clip_pos;
+    out.ndc_z = -view_pos4.z;
 
     // Pass through texture coordinates
     out.tex_coord = tex_coord;
