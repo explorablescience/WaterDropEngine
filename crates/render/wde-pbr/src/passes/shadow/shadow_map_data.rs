@@ -40,9 +40,9 @@ pub struct ShadowSettings {
 impl Default for ShadowSettings {
     fn default() -> Self {
         Self {
-            ortho_size: 250.0,
-            ortho_depth: 600.0,
-            depth_bias: 0.005
+            ortho_size: 100.0,
+            ortho_depth: 200.0,
+            depth_bias: 0.0001
         }
     }
 }
@@ -99,16 +99,18 @@ fn ortho_rh_wgpu(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f
 pub(crate) fn extract_shadow_params(
     lights: ExtractWorld<Query<&DirectionalLight>>,
     settings: ExtractWorld<Res<ShadowSettings>>,
-    camera: ExtractWorld<Query<&GlobalTransform, With<Camera>>>,
+    camera: ExtractWorld<Single<&GlobalTransform, With<ActiveCamera>>>,
     mut params: ResMut<ExtractedShadowParams>
 ) {
     let uniform = if let Some(light) = lights.iter().next() {
         let dir = light.direction.normalize();
-        let center = if let Some(cam_transform) = camera.iter().next() {
-            cam_transform.translation()
-        } else {
-            Vec3::ZERO
-        };
+
+        let mut center = camera.translation();
+        // Fine grid quantization (each shadow texel = ~0.24 world units)
+        // Reduces shimmer while maintaining near-continuous coverage
+        let texel_world_size = settings.ortho_size / 2048.0;
+        center = (center / texel_world_size).round() * texel_world_size;
+
         let eye = center - dir * (settings.ortho_depth * 0.5);
         let up = if dir.y.abs() < 0.99 { Vec3::Y } else { Vec3::X };
         let view = Mat4::look_at_rh(eye, center, up);
@@ -155,14 +157,8 @@ impl ShadowMapData {
 impl RenderData for ShadowMapData {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
 
-    fn describe((window, _): &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
-        let size = {
-            let window = window.single().unwrap();
-            (
-                window.resolution.physical_width(),
-                window.resolution.physical_height()
-            )
-        };
+    fn describe((_window, _): &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
+        let size = (2048, 2048);
         builder
             .add_texture(
                 Self::SHADOW_MAP_IDX,

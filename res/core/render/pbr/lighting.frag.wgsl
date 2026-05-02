@@ -39,7 +39,7 @@ fn map(value: f32, in_min: f32, in_max: f32, out_min: f32, out_max: f32) -> f32 
     return (value - in_min) / (in_max - in_min) * (out_max - out_min) + out_min;
 }
 
-// Returns 1.0 when the fragment is lit, 0.0 when in shadow.
+// Returns 1.0 when the fragment is lit, 0.0 when in shadow. Uses 3x3 PCF for smooth shadows.
 fn sample_shadow(world_pos: vec3<f32>) -> f32 {
     let light_clip = in_shadow_params.view_proj * vec4<f32>(world_pos, 1.0);
     let ndc = light_clip.xyz / light_clip.w;
@@ -49,9 +49,19 @@ fn sample_shadow(world_pos: vec3<f32>) -> f32 {
     }
     // NDC Y=1 is top; UV Y=0 is top — flip Y
     let shadow_uv = vec2<f32>(ndc.x * 0.5 + 0.5, -ndc.y * 0.5 + 0.5);
-    let shadow_depth = textureSample(in_shadow_map, in_shadow_sampler, shadow_uv);
     let bias = in_shadow_params.light_dir.w;
-    return select(0.0, 1.0, ndc.z <= shadow_depth + bias);
+
+    // 3x3 PCF sampling for smooth shadow edges
+    let texel_size = 1.0 / 2048.0;
+    var shadow_sum = 0.0;
+    for (var x = -1; x <= 1; x = x + 1) {
+        for (var y = -1; y <= 1; y = y + 1) {
+            let offset_uv = shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_size;
+            let shadow_depth = textureSample(in_shadow_map, in_shadow_sampler, offset_uv);
+            shadow_sum += select(0.0, 1.0, ndc.z <= shadow_depth + bias);
+        }
+    }
+    return shadow_sum / 9.0;
 }
 
 @fragment

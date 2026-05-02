@@ -405,7 +405,10 @@ fn create_render_pass<'p>(
         if let Some(depth_attachment) = pass_desc.attachments_depth.as_ref() {
             if let Some(depth_texture) = depth_attachment.texture
                && let Some(depth_texture) = textures.get(depth_texture) {
-                if !(surface_width == depth_texture.texture.size.0 && surface_height == depth_texture.texture.size.1) {
+                // Depth-only passes (empty color list) use off-screen textures at arbitrary resolutions;
+                // skip the surface-size check for them.
+                let depth_only = pass_desc.attachments_colors.as_ref().is_some_and(|c| c.is_empty());
+                if !(depth_only || surface_width == depth_texture.texture.size.0 && surface_height == depth_texture.texture.size.1) {
                     return Err(format!("Depth attachment texture has invalid size: expected ({}, {}), got ({}, {}).", surface_width, surface_height, depth_texture.texture.size.0, depth_texture.texture.size.1));
                 }
                 builder.set_depth_texture(RenderPassDepth {
