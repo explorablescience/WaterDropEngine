@@ -144,7 +144,8 @@ enum RenderBindingType {
     TextureArrayView,
     TextureSampler,
     StorageTexture,
-    StorageTextureArray
+    StorageTextureArray,
+    DepthTextureView
 }
 
 /// A builder for the render binding. This is used in the description of the render binding to specify the buffers and textures that should be created on the gpu, and to build the bind group layout and bind group entries.
@@ -277,6 +278,21 @@ impl RenderBindingBuilder {
     ) -> &mut Self {
         self.add_texture_from_id(texture, RenderBindingType::StorageTextureArray)
     }
+    /// Adds a depth texture view to the render binding (for `texture_depth_2d` in WGSL).
+    pub fn add_depth_texture_view<R>(
+        &mut self,
+        render_data: &RenderAssets<GpuRenderData<R>>,
+        render_data_idx: u32
+    ) -> &mut Self
+    where
+        R: RenderData + Clone + Asset + 'static
+    {
+        self.add_texture(
+            render_data,
+            render_data_idx,
+            RenderBindingType::DepthTextureView
+        )
+    }
 
     fn add_texture<R>(
         &mut self,
@@ -408,13 +424,14 @@ where
                 | RenderBindingType::TextureArrayView
                 | RenderBindingType::TextureSampler
                 | RenderBindingType::StorageTexture
-                | RenderBindingType::StorageTextureArray => {
+                | RenderBindingType::StorageTextureArray
+                | RenderBindingType::DepthTextureView => {
                     if gpu_textures
                         .get(asset_builder.textures[*idx as usize].unwrap())
                         .is_none()
                     {
                         trace!(
-                            "Texture (View, ArrayView, Sampler, or StorageTexture) {} for render binding {} is not ready, retrying...",
+                            "Texture (View, ArrayView, Sampler, StorageTexture, or DepthView) {} for render binding {} is not ready, retrying...",
                             asset_builder.textures[*idx as usize].unwrap(),
                             asset.label()
                         );
@@ -514,6 +531,9 @@ where
                         builder
                             .add_storage_texture_array_view(binding as u32, texture.texture.format)
                     }
+                    RenderBindingType::DepthTextureView => {
+                        builder.add_depth_texture_view(binding as u32, vis, false)
+                    }
                 };
             }
         });
@@ -541,7 +561,8 @@ where
                 RenderBindingType::TextureView
                 | RenderBindingType::TextureArrayView
                 | RenderBindingType::StorageTexture
-                | RenderBindingType::StorageTextureArray => {
+                | RenderBindingType::StorageTextureArray
+                | RenderBindingType::DepthTextureView => {
                     let texture = gpu_textures
                         .get(asset_builder.textures[*idx as usize].unwrap())
                         .unwrap();

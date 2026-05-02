@@ -52,12 +52,14 @@ use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
 mod batches;
+mod cast_shadow;
 mod lights;
 mod pbr_material;
 mod subpass;
 mod transform;
 
 pub use batches::*;
+pub use cast_shadow::*;
 pub use lights::*;
 pub use pbr_material::{PbrMaterial, PbrMaterial3d};
 pub use subpass::*;
@@ -80,6 +82,7 @@ impl Plugin for DeferredPlugin {
             DeferredDependenciesPlugin,
             PbrRenderPlugin,
             PbrTransformPlugin,
+            CastShadowPlugin,
             RenderBindingRegisterPlugin::<PbrMaterial>::default()
         ));
 

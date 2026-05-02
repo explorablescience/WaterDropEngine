@@ -17,7 +17,11 @@ impl Plugin for DeferredDependenciesPlugin {
         app.get_sub_app_mut(RenderApp).unwrap().add_systems(
             Render,
             (
-                build_batches::build_batches,
+                (
+                    build_batches::build_batches,
+                    build_batches::update_shadow_casting_batches
+                )
+                    .chain(),
                 ssbo_batches::set_instances_to_transform
             )
                 .chain()

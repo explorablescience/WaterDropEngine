@@ -25,9 +25,33 @@ struct VertexOutput {
 @group(2) @binding(1) var<uniform> in_atmosphere: AtmosphereParams;
 @group(2) @binding(2) var<uniform> in_pbr_params: PbrParams;
 
+// Shadow map: depth texture from the directional sun light, sampler, and light matrix
+struct ShadowParams {
+    view_proj: mat4x4<f32>,
+    light_dir: vec4<f32> // xyz = direction toward sun, w = depth bias
+}
+@group(3) @binding(0) var in_shadow_map:     texture_depth_2d;
+@group(3) @binding(1) var in_shadow_sampler: sampler;
+@group(3) @binding(2) var<uniform> in_shadow_params: ShadowParams;
+
 
 fn map(value: f32, in_min: f32, in_max: f32, out_min: f32, out_max: f32) -> f32 {
     return (value - in_min) / (in_max - in_min) * (out_max - out_min) + out_min;
+}
+
+// Returns 1.0 when the fragment is lit, 0.0 when in shadow.
+fn sample_shadow(world_pos: vec3<f32>) -> f32 {
+    let light_clip = in_shadow_params.view_proj * vec4<f32>(world_pos, 1.0);
+    let ndc = light_clip.xyz / light_clip.w;
+    // Discard fragments outside the light frustum (treat as fully lit)
+    if ndc.x < -1.0 || ndc.x > 1.0 || ndc.y < -1.0 || ndc.y > 1.0 || ndc.z < 0.0 || ndc.z > 1.0 {
+        return 1.0;
+    }
+    // NDC Y=1 is top; UV Y=0 is top — flip Y
+    let shadow_uv = vec2<f32>(ndc.x * 0.5 + 0.5, -ndc.y * 0.5 + 0.5);
+    let shadow_depth = textureSample(in_shadow_map, in_shadow_sampler, shadow_uv);
+    let bias = in_shadow_params.light_dir.w;
+    return select(0.0, 1.0, ndc.z <= shadow_depth + bias);
 }
 
 @fragment
@@ -57,16 +81,23 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     var f0 = vec3<f32>(0.04);
     f0 = mix(f0, albedo, metallic);
 
+    // Shadow factor from the directional sun light
+    let shadow = sample_shadow(world_position);
+
     // Accumulate lighting from each light source
     var lo = vec3<f32>(0.0);
     let lights_count = i32(arrayLength(&in_lights));
     for (var i = 0; i < lights_count; i = i + 1) {
         let light_data = get_light_data(in_lights[i], world_position);
         let n_dot_l = max(dot(normal, light_data.light_dir), 0.0);
-        lo += brdf_for_light(normal, view_dir, light_data.light_dir, albedo, metallic, roughness, f0)
+        let light_contribution = brdf_for_light(normal, view_dir, light_data.light_dir, albedo, metallic, roughness, f0)
             * light_data.radiance
             * n_dot_l
             * in_pbr_params.lighting_params.x;
+        // Only the directional light (type 0) is attenuated by the shadow map
+        let light_type = i32(in_lights[i].color_type.w);
+        let attenuation = select(1.0, shadow, light_type == 0);
+        lo += light_contribution * attenuation;
     }
 
     // Ambient term: sample the Mars sky

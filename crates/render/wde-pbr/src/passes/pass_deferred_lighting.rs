@@ -8,7 +8,7 @@ use bevy::{
 use wde_camera::prelude::*;
 use wde_renderer::prelude::{Color, *};
 
-use crate::prelude::*;
+use crate::{passes::shadow::ShadowSamplingBinding, prelude::*};
 
 #[derive(TypePath, Default, Clone, Asset)]
 pub(crate) struct RenderBindingResolved;
@@ -103,12 +103,13 @@ impl RenderAsset for DeferredLightingPipeline {
         SResMut<PipelineManager>,
         SBinding<CameraBinding>,
         SBinding<RenderBindingResolved>,
-        SBinding<LightsDataBinding>
+        SBinding<LightsDataBinding>,
+        SBinding<ShadowSamplingBinding>
     );
 
     fn prepare(
         asset: Self::SourceAsset,
-        (assets_server, pipeline_manager, camera, render_binding, lights_buffer): &mut SystemParamItem<
+        (assets_server, pipeline_manager, camera, render_binding, lights_buffer, shadow_binding): &mut SystemParamItem<
             Self::Params,
         >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
@@ -122,6 +123,7 @@ impl RenderAsset for DeferredLightingPipeline {
                         camera.iter().next().map(|(_, c)| c.layout.clone()),
                         render_binding.iter().next().map(|(_, d)| d.layout.clone()),
                         lights_buffer.iter().next().map(|(_, b)| b.layout.clone()),
+                        shadow_binding.iter().next().map(|(_, s)| s.layout.clone()),
                     ],
                     depth: DepthDescriptor {
                         enabled: false,
@@ -143,11 +145,12 @@ impl RenderSubPass for SubRenderPassLightingPbr {
         SRes<PostProcessingMesh>,
         SBinding<CameraBinding>,
         SBinding<RenderBindingResolved>,
-        SBinding<LightsDataBinding>
+        SBinding<LightsDataBinding>,
+        SBinding<ShadowSamplingBinding>
     );
 
     fn describe(
-        (pipeline, mesh, camera, rbinding, lights): &SystemParamItem<Self::Params>
+        (pipeline, mesh, camera, rbinding, lights, shadow): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
@@ -155,6 +158,7 @@ impl RenderSubPass for SubRenderPassLightingPbr {
             SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
             SubPassCommand::BindGroup(1, rbinding.iter().next().map(|(_, d)| d.bind_group.clone())),
             SubPassCommand::BindGroup(2, lights.iter().next().map(|(_, b)| b.bind_group.clone())),
+            SubPassCommand::BindGroup(3, shadow.iter().next().map(|(_, s)| s.bind_group.clone())),
             SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
                 index_range: 0..6,
                 ..Default::default()

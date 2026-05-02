@@ -274,6 +274,7 @@ pub fn place_update(
                         Ok((_, material_storer)) => material_storer.pbr_material.clone(),
                         Err(_) => continue
                     }),
+                    CastShadow,
                     ChildOf(parent)
                 ));
             }

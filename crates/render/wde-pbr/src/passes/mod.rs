@@ -8,24 +8,39 @@ mod pass_deferred_gbuffer;
 mod pass_deferred_lighting;
 mod pass_resolve;
 mod pass_transparent;
+pub mod shadow;
 
 #[cfg(feature = "atmosphere")]
 pub use atmosphere::*;
 pub use pass_deferred_gbuffer::*;
 pub use pass_deferred_lighting::*;
 pub use pass_transparent::*;
+pub use shadow::*;
 
 pub(crate) struct PassesPlugin;
 impl Plugin for PassesPlugin {
     fn build(&self, app: &mut App) {
+        // Register shadow settings in the main world
+        app.init_resource::<ShadowSettings>()
+            .register_type::<ShadowSettings>();
+
         // Add the render graph nodes
-        let mut render_graph = app
-            .get_sub_app_mut(RenderApp)
-            .unwrap()
+        let render_world = app.get_sub_app_mut(RenderApp).unwrap();
+        render_world
+            .init_resource::<ExtractedShadowParams>()
+            .add_systems(Extract, shadow::extract_shadow_params)
+            .add_systems(
+                Render,
+                shadow::update_shadow_params_buffer.in_set(RenderSet::Prepare)
+            );
+
+        let mut render_graph = render_world
             .world_mut()
             .get_resource_mut::<RenderGraph>()
             .unwrap();
         render_graph
+            .add_pass::<RenderPassShadow>()
+            .add_sub_pass::<SubRenderPassShadow, RenderPassShadow>()
             .add_pass::<RenderPassDeferredGBuffer>()
             .add_pass::<RenderPassDeferredLighting>();
         #[cfg(feature = "atmosphere")]
@@ -37,8 +52,16 @@ impl Plugin for PassesPlugin {
         #[cfg(feature = "atmosphere")]
         render_graph.add_sub_pass::<SubRenderPassAtmosphere, RenderPassAtmosphere>();
 
+        // Add the ui
+        #[cfg(debug_assertions)]
+        app.add_systems(Update, shadow::params_data_ui);
+
         // Add the pipelines and bindings
         app.add_plugins((
+            RenderDataRegisterPlugin::<ShadowMapData>::default(),
+            RenderBindingRegisterPlugin::<ShadowParamsBinding>::default(),
+            RenderBindingRegisterPlugin::<ShadowSamplingBinding>::default(),
+            RenderPipelineRegisterPlugin::<ShadowMapPipeline>::default(),
             RenderBindingRegisterPlugin::<RenderBindingResolved>::default(),
             RenderBindingRegisterPlugin::<LightsDataBinding>::default(),
             #[cfg(feature = "atmosphere")]

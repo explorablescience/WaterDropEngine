@@ -61,7 +61,8 @@ impl RenderAsset for OutlineRenderPipeline {
                             },
                             read_mask: 0xff,
                             write_mask: 0x00
-                        }
+                        },
+                        format: None
                     },
                     fragment_blend: Some(BlendState::ALPHA_BLENDING),
                     cull_mode: None,

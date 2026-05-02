@@ -1,9 +1,11 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::prelude::{PbrMaterial, PbrMaterial3d, PbrSsboTransformUuid, PbrUuidRegistry};
+use crate::prelude::{
+    CastShadow, PbrMaterial, PbrMaterial3d, PbrSsboTransformUuid, PbrUuidRegistry
+};
 
 #[derive(Component)]
 pub struct ExtractedPbrInstance {
@@ -12,9 +14,10 @@ pub struct ExtractedPbrInstance {
 }
 
 #[derive(Clone, Copy)]
-struct TrackedBatchEntity {
-    key: BatchKey,
-    transform_id: u32
+pub(crate) struct TrackedBatchEntity {
+    pub(crate) key: BatchKey,
+    transform_id: u32,
+    pub(crate) main_entity: Entity
 }
 
 #[derive(Component)]
@@ -65,7 +68,8 @@ pub(crate) struct Batch {
 pub(crate) struct BatchList {
     pub batches: HashMap<BatchKey, Batch>,
     pub sorted_batches: Vec<BatchKey>, // List of batch keys sorted first by material and then by mesh
-    tracked_entities: HashMap<Entity, TrackedBatchEntity>,
+    pub(crate) tracked_entities: HashMap<Entity, TrackedBatchEntity>,
+    pub shadow_casting_batches: HashSet<BatchKey>, // Subset of sorted_batches whose entities have CastShadow
     pub dirty: bool // Did anything change? If true, rebuild ssbo batches
 }
 impl std::fmt::Debug for BatchList {
@@ -119,11 +123,21 @@ pub(crate) fn build_batches(
     mut removed_extracted_instances: RemovedComponents<ExtractedPbrInstance>,
     mut removed_transform_uuid: RemovedComponents<PbrSsboTransformUuid>,
     extracted_instances: Query<
-        (Entity, &PbrSsboTransformUuid, &ExtractedPbrInstance),
+        (
+            Entity,
+            MainEntity,
+            &PbrSsboTransformUuid,
+            &ExtractedPbrInstance
+        ),
         Changed<ExtractedPbrInstance>
     >,
     extracted_instances_to_retry: Query<
-        (Entity, &PbrSsboTransformUuid, &ExtractedPbrInstance),
+        (
+            Entity,
+            MainEntity,
+            &PbrSsboTransformUuid,
+            &ExtractedPbrInstance
+        ),
         With<ExtractedPbrInstanceToRetryMarker>
     >,
     transform_registry: Res<PbrUuidRegistry>
@@ -138,7 +152,7 @@ pub(crate) fn build_batches(
     }
 
     // Add new or changed instances to the batches, and remove the retry marker if it exists
-    for (entity, transform_uuid, instance) in extracted_instances
+    for (entity, main_entity, transform_uuid, instance) in extracted_instances
         .into_iter()
         .chain(extracted_instances_to_retry)
     {
@@ -168,9 +182,14 @@ pub(crate) fn build_batches(
             })
             .transform_ssbo_ids
             .push(transform_id);
-        batches
-            .tracked_entities
-            .insert(entity, TrackedBatchEntity { key, transform_id });
+        batches.tracked_entities.insert(
+            entity,
+            TrackedBatchEntity {
+                key,
+                transform_id,
+                main_entity
+            }
+        );
         if !batches.sorted_batches.contains(&key) {
             batches.sorted_batches.push(key);
         }
@@ -189,6 +208,26 @@ pub(crate) fn build_batches(
                 .then_with(|| a.mesh.cmp(&b.mesh))
         });
     }
+}
+
+/// Rebuilds `BatchList::shadow_casting_batches` every frame from render-world entities.
+pub(crate) fn update_shadow_casting_batches(
+    mut batches: ResMut<BatchList>,
+    cast_shadow_query: Query<MainEntity, With<CastShadow>>
+) {
+    let shadow_main_entities: HashSet<Entity> = cast_shadow_query.iter().collect();
+    let new_shadow_batches: HashSet<BatchKey> = batches
+        .tracked_entities
+        .iter()
+        .filter_map(|(_, tracked)| {
+            if shadow_main_entities.contains(&tracked.main_entity) {
+                Some(tracked.key)
+            } else {
+                None
+            }
+        })
+        .collect();
+    batches.shadow_casting_batches = new_shadow_batches;
 }
 
 pub(crate) struct BatchesPlugin;

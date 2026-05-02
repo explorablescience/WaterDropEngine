@@ -61,7 +61,8 @@ impl RenderAsset for StencilWriteRenderPipeline {
                             },
                             read_mask: 0x00,
                             write_mask: 0xff
-                        }
+                        },
+                        format: None
                     },
                     render_targets: Some(vec![
                         // Same order as the PbrDeferredTextures

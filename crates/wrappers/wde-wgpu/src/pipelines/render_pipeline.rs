@@ -41,7 +41,9 @@ pub struct DepthDescriptor {
     /// The comparison function that the depth attachment will use.
     pub compare: CompareFunction,
     /// The stencil state for the depth attachment. If `None`, stencil testing is disabled.
-    pub stencil: StencilState
+    pub stencil: StencilState,
+    /// Override the depth texture format. Defaults to `DEPTH_FORMAT` when `None`.
+    pub format: Option<TextureFormat>
 }
 impl Default for DepthDescriptor {
     fn default() -> Self {
@@ -49,7 +51,8 @@ impl Default for DepthDescriptor {
             enabled: false,
             write: true,
             compare: CompareFunction::Less,
-            stencil: StencilState::default()
+            stencil: StencilState::default(),
+            format: None
         }
     }
 }
@@ -489,20 +492,7 @@ impl RenderPipeline {
                 },
                 depth_stencil: if d.depth.enabled {
                     Some(wgpu::DepthStencilState {
-                        format: match DEPTH_FORMAT {
-                            TextureFormat::Depth32Float => wgpu::TextureFormat::Depth32Float,
-                            TextureFormat::Depth24PlusStencil8 => {
-                                wgpu::TextureFormat::Depth24PlusStencil8
-                            }
-                            _ => {
-                                error!(
-                                    "Depth format is not supported for render pipeline '{}'.",
-                                    self.label
-                                );
-                                res = Err(RenderError::UnsupportedDepthFormat);
-                                wgpu::TextureFormat::Depth32Float
-                            }
-                        },
+                        format: d.depth.format.unwrap_or(DEPTH_FORMAT),
                         depth_write_enabled: d.depth.write,
                         depth_compare: d.depth.compare,
                         stencil: d.depth.stencil.clone(),
