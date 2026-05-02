@@ -26,13 +26,9 @@ struct VertexOutput {
 @group(2) @binding(2) var<uniform> in_pbr_params: PbrParams;
 
 // Shadow map: depth textures from the directional sun light (3 cascades), sampler, and light matrices
-struct ShadowParams {
-    view_proj: mat4x4<f32>,
-    light_dir: vec4<f32> // xyz = direction toward sun, w = depth bias
-}
-@group(3) @binding(0) var in_shadow_map_0:     texture_depth_2d;
-@group(3) @binding(1) var in_shadow_map_1:     texture_depth_2d;
-@group(3) @binding(2) var in_shadow_map_2:     texture_depth_2d;
+@group(3) @binding(0) var in_shadow_map_0: texture_depth_2d;
+@group(3) @binding(1) var in_shadow_map_1: texture_depth_2d;
+@group(3) @binding(2) var in_shadow_map_2: texture_depth_2d;
 @group(3) @binding(3) var in_shadow_sampler: sampler;
 @group(3) @binding(4) var<uniform> in_shadow_params: array<ShadowParams, 3>;
 @group(3) @binding(5) var<uniform> in_cascade_splits: vec4<f32>; // xyz = split distances, w = unused
@@ -40,6 +36,28 @@ struct ShadowParams {
 
 fn map(value: f32, in_min: f32, in_max: f32, out_min: f32, out_max: f32) -> f32 {
     return (value - in_min) / (in_max - in_min) * (out_max - out_min) + out_min;
+}
+
+fn depth_pcf_sample(idx: u32, uv: vec2<f32>, depth: f32, shadow_map: texture_depth_2d) -> f32 {
+    // Get PCF kernel parameters
+    let shadow_params = in_shadow_params[idx];
+    let half_kernel = i32(shadow_params.kernel_half_size);
+    let kernel_scale = shadow_params.kernel_scale;
+    let shadow_intensity = shadow_params.shadow_intensity;
+
+    // PCF sampling
+    var shadow = 0.0;
+    let texel_size = 1.0 / vec2<f32>(textureDimensions(shadow_map, 0));
+    for (var x = -half_kernel; x < half_kernel; x = x + 1) {
+        for (var y = -half_kernel; y < half_kernel; y = y + 1) {
+            let offset = vec2<f32>(f32(x), f32(y)) * texel_size * kernel_scale;
+            let sample_depth = textureSample(shadow_map, in_shadow_sampler, uv + offset);
+            if (depth > sample_depth) {
+                shadow += 1.0;
+            }
+        }
+    }
+    return shadow / f32(4 * half_kernel * half_kernel) * shadow_intensity;
 }
 
 // Returns 1.0 when the fragment is lit, 0.0 when in shadow. Uses 3x3 PCF for smooth shadows.
@@ -71,40 +89,18 @@ fn sample_cascaded_shadow(world_pos: vec3<f32>) -> f32 {
 
     // NDC Y=1 is top; UV Y=0 is top — flip Y
     let shadow_uv = vec2<f32>(ndc.x * 0.5 + 0.5, -ndc.y * 0.5 + 0.5);
-    let bias = shadow_params.light_dir.w;
+    let bias = shadow_params.light_dir.w * 0.3;
 
-    // 3x3 PCF sampling for smooth shadow edges
-    let texel_size = 1.0 / 2048.0;
-    var shadow_sum = 0.0;
-
-    // Sample appropriate cascade map (WGSL doesn't support dynamic texture indexing, so use branches)
-    if cascade_idx == 0u {
-        for (var x = -1; x <= 1; x = x + 1) {
-            for (var y = -1; y <= 1; y = y + 1) {
-                let offset_uv = shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_size;
-                let shadow_depth = textureSample(in_shadow_map_0, in_shadow_sampler, offset_uv);
-                shadow_sum += select(0.0, 1.0, ndc.z <= shadow_depth + bias);
-            }
-        }
+    // PCF sampling for smooth shadow edges
+    var shadow = 0.0;
+    if cascade_idx == 0u { // Wgsl doesn't allow dynamic indexing of arrays of textures, so we need to branch here
+        shadow = depth_pcf_sample(cascade_idx, shadow_uv, ndc.z - bias, in_shadow_map_0);
     } else if cascade_idx == 1u {
-        for (var x = -1; x <= 1; x = x + 1) {
-            for (var y = -1; y <= 1; y = y + 1) {
-                let offset_uv = shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_size;
-                let shadow_depth = textureSample(in_shadow_map_1, in_shadow_sampler, offset_uv);
-                shadow_sum += select(0.0, 1.0, ndc.z <= shadow_depth + bias);
-            }
-        }
+        shadow = depth_pcf_sample(cascade_idx, shadow_uv, ndc.z - bias, in_shadow_map_1);
     } else {
-        for (var x = -1; x <= 1; x = x + 1) {
-            for (var y = -1; y <= 1; y = y + 1) {
-                let offset_uv = shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_size;
-                let shadow_depth = textureSample(in_shadow_map_2, in_shadow_sampler, offset_uv);
-                shadow_sum += select(0.0, 1.0, ndc.z <= shadow_depth + bias);
-            }
-        }
+        shadow = depth_pcf_sample(cascade_idx, shadow_uv, ndc.z - bias, in_shadow_map_2);
     }
-
-    return shadow_sum / 9.0;
+    return 1.0 - shadow; // Invert: 1.0 = fully lit, 0.0 = fully shadowed
 }
 
 @fragment

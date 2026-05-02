@@ -1,3 +1,5 @@
+#include "core/render/pbr/pbr_functions.wgsl"
+
 // Shadow map vertex shader.
 // Transforms each vertex to the light's clip space for depth-only rendering.
 
@@ -17,10 +19,6 @@ struct VertexData {
 @group(0) @binding(1) var<storage, read> in_indices:  array<u32>;
 
 // Group 1: shadow params (light view-projection matrices for 3 cascades)
-struct ShadowParams {
-    view_proj: mat4x4<f32>,
-    light_dir: vec4<f32>
-}
 @group(1) @binding(0) var<uniform> in_shadow_params: array<ShadowParams, 3>;
 
 // Group 2: per-instance transforms (reuses SsboTransformBinding layout)

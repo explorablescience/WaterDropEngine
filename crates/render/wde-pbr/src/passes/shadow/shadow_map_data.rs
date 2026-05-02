@@ -15,13 +15,21 @@ use crate::prelude::DirectionalLight;
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct ShadowParamsUniform {
     pub view_proj: [[f32; 4]; 4],
-    pub light_dir: [f32; 4] // xyz = direction toward sun, w = depth bias
+    pub light_dir: [f32; 4],   // xyz = direction toward sun, w = depth bias
+    pub kernel_half_size: f32, // kernel half size for PCF sampling
+    pub kernel_scale: f32,     // kernel scale for PCF sampling
+    pub shadow_intensity: f32,
+    pub _padding: f32
 }
 impl Default for ShadowParamsUniform {
     fn default() -> Self {
         Self {
             view_proj: Mat4::IDENTITY.to_cols_array_2d(),
-            light_dir: [0.0, 1.0, 0.0, 0.005]
+            light_dir: [0.0, 1.0, 0.0, 0.005],
+            kernel_half_size: 1.0,
+            kernel_scale: 1.0,
+            shadow_intensity: 1.0,
+            _padding: 0.0
         }
     }
 }
@@ -30,12 +38,22 @@ impl Default for ShadowParamsUniform {
 #[derive(Resource, Reflect, Clone, ExtractResource)]
 #[reflect(Resource)]
 pub struct CascadedShadowSettings {
+    // Depth texture size configs
     /// Linear depth split distances: [cascade0_end, cascade1_end, cascade2_end]
     pub split_distances: [f32; 3],
     /// Orthographic box half-width per cascade
     pub ortho_sizes: [f32; 3],
     /// Frustum depth per cascade
     pub ortho_depths: [f32; 3],
+
+    // Shadow appearance configs
+    /// PCF kernel half size in texels (e.g. 1.0 for 3x3 kernel)
+    pub kernel_half_size: [u32; 3],
+    /// PCF kernel scale (e.g. 1.0 for normal sampling, >1.0 for softer shadows)
+    pub kernel_scale: [f32; 3],
+    /// Individual cascade shadow intensity multiplier
+    pub shadow_intensity: [f32; 3],
+
     /// Enable individual cascades for debugging
     pub cascade_enabled: [bool; 3]
 }
@@ -45,6 +63,9 @@ impl Default for CascadedShadowSettings {
             split_distances: [50.0, 150.0, 400.0],
             ortho_sizes: [60.0, 200.0, 400.0],
             ortho_depths: [100.0, 300.0, 800.0],
+            kernel_half_size: [5, 3, 1],
+            kernel_scale: [0.9, 0.7, 1.0],
+            shadow_intensity: [0.8, 0.8, 0.8],
             cascade_enabled: [true, true, true]
         }
     }
@@ -58,75 +79,50 @@ pub(crate) fn params_data_ui(
     UIWindow::new("Shadow Settings")
         .open(ui_menu.clicked_mut("PBR/Shadows"))
         .show(&ctx.0, |ui| {
-            ui.label("Cascaded Shadow Maps:");
-            ui.label("Cascade 0 (Near):");
-            ui.add(
-                DragValue::new(&mut cascaded_settings.split_distances[0])
-                    .prefix("Split distance: ")
-                    .speed(1.0)
-                    .range(1.0..=500.0)
-            );
-            ui.add(
-                DragValue::new(&mut cascaded_settings.ortho_sizes[0])
-                    .prefix("Ortho size: ")
-                    .speed(1.0)
-            );
-            ui.add(
-                DragValue::new(&mut cascaded_settings.ortho_depths[0])
-                    .prefix("Ortho depth: ")
-                    .speed(1.0)
-            );
+            for i in 0..3 {
+                ui.label(format!("Cascade {}", i));
+                ui.add(Checkbox::new(
+                    &mut cascaded_settings.cascade_enabled[i],
+                    "Enabled"
+                ));
 
-            ui.label("Cascade 1 (Mid):");
-            ui.add(
-                DragValue::new(&mut cascaded_settings.split_distances[1])
-                    .prefix("Split distance: ")
-                    .speed(1.0)
-                    .range(1.0..=500.0)
-            );
-            ui.add(
-                DragValue::new(&mut cascaded_settings.ortho_sizes[1])
-                    .prefix("Ortho size: ")
-                    .speed(1.0)
-            );
-            ui.add(
-                DragValue::new(&mut cascaded_settings.ortho_depths[1])
-                    .prefix("Ortho depth: ")
-                    .speed(1.0)
-            );
-
-            ui.label("Cascade 2 (Far):");
-            ui.add(
-                DragValue::new(&mut cascaded_settings.split_distances[2])
-                    .prefix("Split distance: ")
-                    .speed(1.0)
-                    .range(1.0..=500.0)
-            );
-            ui.add(
-                DragValue::new(&mut cascaded_settings.ortho_sizes[2])
-                    .prefix("Ortho size: ")
-                    .speed(1.0)
-            );
-            ui.add(
-                DragValue::new(&mut cascaded_settings.ortho_depths[2])
-                    .prefix("Ortho depth: ")
-                    .speed(1.0)
-            );
-
-            ui.separator();
-            ui.label("Debug - Cascade Visibility:");
-            ui.checkbox(
-                &mut cascaded_settings.cascade_enabled[0],
-                "Cascade 0 (Near)"
-            );
-            ui.checkbox(&mut cascaded_settings.cascade_enabled[1], "Cascade 1 (Mid)");
-            ui.checkbox(&mut cascaded_settings.cascade_enabled[2], "Cascade 2 (Far)");
+                ui.columns(2, |cols| {
+                    cols[0].add(
+                        Slider::new(&mut cascaded_settings.split_distances[i], 1.0..=500.0)
+                            .text("Split Distance")
+                            .suffix(" m")
+                    );
+                    cols[1].add(
+                        Slider::new(&mut cascaded_settings.ortho_sizes[i], 1.0..=500.0)
+                            .text("Ortho Size")
+                            .suffix(" m")
+                    );
+                });
+                ui.columns(2, |cols| {
+                    cols[0].add(
+                        Slider::new(&mut cascaded_settings.ortho_depths[i], 1.0..=1000.0)
+                            .text("Ortho Depth")
+                            .suffix(" m")
+                    );
+                    cols[1].add(
+                        Slider::new(&mut cascaded_settings.kernel_half_size[i], 1..=10)
+                            .text("PCF Kernel Half Size")
+                            .suffix(" px")
+                    );
+                });
+                ui.columns(2, |cols| {
+                    cols[0].add(
+                        Slider::new(&mut cascaded_settings.kernel_scale[i], 0.001..=5.0)
+                            .text("PCF Kernel Scale")
+                    );
+                    cols[1].add(
+                        Slider::new(&mut cascaded_settings.shadow_intensity[i], 0.001..=2.0)
+                            .text("Shadow Intensity")
+                    );
+                });
+            }
         });
 }
-
-/// Extracted shadow params for the render world.
-#[derive(Resource, Default, Clone, Copy)]
-pub struct ExtractedShadowParams(pub ShadowParamsUniform);
 
 /// Extracted cascaded shadow params for the render world (3 cascades).
 #[derive(Resource, Default, Clone, Copy)]
@@ -195,7 +191,11 @@ pub(crate) fn extract_cascaded_shadow_params(
 
         params.0[cascade_idx] = ShadowParamsUniform {
             view_proj: (proj * view).to_cols_array_2d(),
-            light_dir: [dir.x, dir.y, dir.z, 0.0005]
+            light_dir: [dir.x, dir.y, dir.z, 0.0005],
+            kernel_half_size: settings.kernel_half_size[cascade_idx] as f32,
+            kernel_scale: settings.kernel_scale[cascade_idx],
+            shadow_intensity: settings.shadow_intensity[cascade_idx],
+            _padding: 0.0
         };
     }
 }
@@ -262,7 +262,7 @@ impl RenderData for ShadowMapData {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
 
     fn describe((_window, _): &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
-        let size = (2048, 2048);
+        let size = (4096, 4096);
         builder
             .add_texture(
                 Self::SHADOW_MAP_CASCADE_0,

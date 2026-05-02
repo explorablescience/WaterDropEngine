@@ -26,7 +26,6 @@ impl Plugin for PassesPlugin {
         // Add the render graph nodes
         let render_world = app.get_sub_app_mut(RenderApp).unwrap();
         render_world
-            .init_resource::<ExtractedShadowParams>()
             .init_resource::<ExtractedCascadedShadowParams>()
             .init_resource::<CascadeEnabledFlags>()
             .add_systems(Extract, shadow::extract_cascaded_shadow_params)
