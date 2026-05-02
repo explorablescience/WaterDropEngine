@@ -16,12 +16,12 @@ struct VertexData {
 @group(0) @binding(0) var<storage, read> in_vertices: array<VertexData>;
 @group(0) @binding(1) var<storage, read> in_indices:  array<u32>;
 
-// Group 1: shadow params (light view-projection matrix)
+// Group 1: shadow params (light view-projection matrices for 3 cascades)
 struct ShadowParams {
     view_proj: mat4x4<f32>,
     light_dir: vec4<f32>
 }
-@group(1) @binding(0) var<uniform> in_shadow_params: ShadowParams;
+@group(1) @binding(0) var<uniform> in_shadow_params: array<ShadowParams, 3>;
 
 // Group 2: per-instance transforms (reuses SsboTransformBinding layout)
 struct ObjectToWorld {
@@ -31,8 +31,9 @@ struct ObjectToWorld {
 @group(2) @binding(1) var<storage, read> in_instance_to_transform: array<u32>;
 
 struct PushConstants {
-    first_vertex: u32,
-    first_index:  u32
+    first_vertex:  u32,
+    first_index:   u32,
+    cascade_index: u32
 }
 var<push_constant> push_constants: PushConstants;
 
@@ -45,5 +46,5 @@ fn main(
     let vertex = in_vertices[index + push_constants.first_vertex];
     let obj_to_world = in_raw_transform[in_instance_to_transform[instance]].obj_to_world;
     let world_pos = obj_to_world * vec4<f32>(vertex.position, 1.0);
-    return in_shadow_params.view_proj * world_pos;
+    return in_shadow_params[push_constants.cascade_index].view_proj * world_pos;
 }

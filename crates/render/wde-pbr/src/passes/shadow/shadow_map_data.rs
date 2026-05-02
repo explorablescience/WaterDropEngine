@@ -26,23 +26,26 @@ impl Default for ShadowParamsUniform {
     }
 }
 
-/// Settings for shadow rendering, defined in the main world.
-#[derive(Resource, Reflect, Clone)]
+/// Cascaded shadow mapping settings with per-cascade configuration.
+#[derive(Resource, Reflect, Clone, ExtractResource)]
 #[reflect(Resource)]
-pub struct ShadowSettings {
-    /// Half-width of the orthographic shadow box (covers scene_center ± ortho_size/2).
-    pub ortho_size: f32,
-    /// Total depth of the shadow frustum (near=0, far=ortho_depth).
-    pub ortho_depth: f32,
-    /// Depth bias added when comparing shadow depth to avoid self-shadowing.
-    pub depth_bias: f32
+pub struct CascadedShadowSettings {
+    /// Linear depth split distances: [cascade0_end, cascade1_end, cascade2_end]
+    pub split_distances: [f32; 3],
+    /// Orthographic box half-width per cascade
+    pub ortho_sizes: [f32; 3],
+    /// Frustum depth per cascade
+    pub ortho_depths: [f32; 3],
+    /// Enable individual cascades for debugging
+    pub cascade_enabled: [bool; 3]
 }
-impl Default for ShadowSettings {
+impl Default for CascadedShadowSettings {
     fn default() -> Self {
         Self {
-            ortho_size: 100.0,
-            ortho_depth: 200.0,
-            depth_bias: 0.0001
+            split_distances: [50.0, 150.0, 400.0],
+            ortho_sizes: [60.0, 200.0, 400.0],
+            ortho_depths: [100.0, 300.0, 800.0],
+            cascade_enabled: [true, true, true]
         }
     }
 }
@@ -50,33 +53,88 @@ impl Default for ShadowSettings {
 pub(crate) fn params_data_ui(
     mut ui_menu: ResMut<UIMenu>,
     ctx: Res<UIContext>,
-    mut settings: ResMut<ShadowSettings>
+    mut cascaded_settings: ResMut<CascadedShadowSettings>
 ) {
     UIWindow::new("Shadow Settings")
         .open(ui_menu.clicked_mut("PBR/Shadows"))
         .show(&ctx.0, |ui| {
-            ui.label("Scene center:");
+            ui.label("Cascaded Shadow Maps:");
+            ui.label("Cascade 0 (Near):");
             ui.add(
-                DragValue::new(&mut settings.ortho_size)
+                DragValue::new(&mut cascaded_settings.split_distances[0])
+                    .prefix("Split distance: ")
+                    .speed(1.0)
+                    .range(1.0..=500.0)
+            );
+            ui.add(
+                DragValue::new(&mut cascaded_settings.ortho_sizes[0])
                     .prefix("Ortho size: ")
-                    .speed(0.1)
+                    .speed(1.0)
             );
             ui.add(
-                DragValue::new(&mut settings.ortho_depth)
+                DragValue::new(&mut cascaded_settings.ortho_depths[0])
                     .prefix("Ortho depth: ")
-                    .speed(0.1)
+                    .speed(1.0)
+            );
+
+            ui.label("Cascade 1 (Mid):");
+            ui.add(
+                DragValue::new(&mut cascaded_settings.split_distances[1])
+                    .prefix("Split distance: ")
+                    .speed(1.0)
+                    .range(1.0..=500.0)
             );
             ui.add(
-                DragValue::new(&mut settings.depth_bias)
-                    .prefix("Depth bias: ")
-                    .speed(0.0001)
+                DragValue::new(&mut cascaded_settings.ortho_sizes[1])
+                    .prefix("Ortho size: ")
+                    .speed(1.0)
             );
+            ui.add(
+                DragValue::new(&mut cascaded_settings.ortho_depths[1])
+                    .prefix("Ortho depth: ")
+                    .speed(1.0)
+            );
+
+            ui.label("Cascade 2 (Far):");
+            ui.add(
+                DragValue::new(&mut cascaded_settings.split_distances[2])
+                    .prefix("Split distance: ")
+                    .speed(1.0)
+                    .range(1.0..=500.0)
+            );
+            ui.add(
+                DragValue::new(&mut cascaded_settings.ortho_sizes[2])
+                    .prefix("Ortho size: ")
+                    .speed(1.0)
+            );
+            ui.add(
+                DragValue::new(&mut cascaded_settings.ortho_depths[2])
+                    .prefix("Ortho depth: ")
+                    .speed(1.0)
+            );
+
+            ui.separator();
+            ui.label("Debug - Cascade Visibility:");
+            ui.checkbox(
+                &mut cascaded_settings.cascade_enabled[0],
+                "Cascade 0 (Near)"
+            );
+            ui.checkbox(&mut cascaded_settings.cascade_enabled[1], "Cascade 1 (Mid)");
+            ui.checkbox(&mut cascaded_settings.cascade_enabled[2], "Cascade 2 (Far)");
         });
 }
 
 /// Extracted shadow params for the render world.
 #[derive(Resource, Default, Clone, Copy)]
 pub struct ExtractedShadowParams(pub ShadowParamsUniform);
+
+/// Extracted cascaded shadow params for the render world (3 cascades).
+#[derive(Resource, Default, Clone, Copy)]
+pub struct ExtractedCascadedShadowParams(pub [ShadowParamsUniform; 3]);
+
+/// Tracks which cascades are enabled for rendering.
+#[derive(Resource, Default, Clone, Copy)]
+pub struct CascadeEnabledFlags(pub [bool; 3]);
 
 /// Right-handed orthographic projection mapping Z to [0, 1] (wgpu/Vulkan NDC convention).
 fn ortho_rh_wgpu(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f32) -> Mat4 {
@@ -96,41 +154,65 @@ fn ortho_rh_wgpu(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f
     )
 }
 
-pub(crate) fn extract_shadow_params(
+pub(crate) fn extract_cascaded_shadow_params(
     lights: ExtractWorld<Query<&DirectionalLight>>,
-    settings: ExtractWorld<Res<ShadowSettings>>,
+    settings: ExtractWorld<Res<CascadedShadowSettings>>,
     camera: ExtractWorld<Single<&GlobalTransform, With<ActiveCamera>>>,
-    mut params: ResMut<ExtractedShadowParams>
+    mut params: ResMut<ExtractedCascadedShadowParams>
 ) {
-    let uniform = if let Some(light) = lights.iter().next() {
-        let dir = light.direction.normalize();
+    let Some(light) = lights.iter().next() else {
+        return;
+    };
 
-        let mut center = camera.translation();
-        // Fine grid quantization (each shadow texel = ~0.24 world units)
-        // Reduces shimmer while maintaining near-continuous coverage
-        let texel_world_size = settings.ortho_size / 2048.0;
+    let dir = light.direction.normalize();
+    let camera_pos = camera.translation();
+    let camera_forward = camera.forward();
+
+    for cascade_idx in 0..3 {
+        let ortho_size = settings.ortho_sizes[cascade_idx];
+        let ortho_depth = settings.ortho_depths[cascade_idx];
+
+        // Position frustum at midpoint of this cascade's depth range
+        let prev_split = if cascade_idx == 0 {
+            0.0
+        } else {
+            settings.split_distances[cascade_idx - 1]
+        };
+        let curr_split = settings.split_distances[cascade_idx];
+        let center_distance = (prev_split + curr_split) / 2.0;
+        let mut center = camera_pos + camera_forward * center_distance;
+
+        // Fine grid quantization per cascade
+        let texel_world_size = ortho_size / 2048.0;
         center = (center / texel_world_size).round() * texel_world_size;
 
-        let eye = center - dir * (settings.ortho_depth * 0.5);
+        // Position eye along light direction
+        let eye = center - dir * (ortho_depth * 0.5);
         let up = if dir.y.abs() < 0.99 { Vec3::Y } else { Vec3::X };
         let view = Mat4::look_at_rh(eye, center, up);
-        let half = settings.ortho_size * 0.5;
-        let proj = ortho_rh_wgpu(-half, half, -half, half, 0.0, settings.ortho_depth);
-        ShadowParamsUniform {
+        let half = ortho_size * 0.5;
+        let proj = ortho_rh_wgpu(-half, half, -half, half, 0.0, ortho_depth);
+
+        params.0[cascade_idx] = ShadowParamsUniform {
             view_proj: (proj * view).to_cols_array_2d(),
-            light_dir: [dir.x, dir.y, dir.z, settings.depth_bias]
-        }
-    } else {
-        ShadowParamsUniform::default()
-    };
-    params.0 = uniform;
+            light_dir: [dir.x, dir.y, dir.z, 0.0005]
+        };
+    }
 }
 
-pub(crate) fn update_shadow_params_buffer(
+pub(crate) fn extract_cascade_enabled_flags(
+    settings: ExtractWorld<Res<CascadedShadowSettings>>,
+    mut flags: ResMut<CascadeEnabledFlags>
+) {
+    flags.0 = settings.cascade_enabled;
+}
+
+pub(crate) fn update_cascaded_shadow_params_buffer(
     shadow_data: ResRenderData<ShadowMapData>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>,
-    extracted: Res<ExtractedShadowParams>
+    extracted: Res<ExtractedCascadedShadowParams>,
+    settings: Res<CascadedShadowSettings>
 ) {
     let Some((_, data)) = shadow_data.iter().next() else {
         return;
@@ -141,18 +223,40 @@ pub(crate) fn update_shadow_params_buffer(
     let Some(buffer) = buffers.get(&buffer_handle) else {
         return;
     };
+    // Write all 3 cascades to the params buffer
     buffer.buffer.write(
         &render_instance.0.read().unwrap(),
-        bytemuck::bytes_of(&extracted.0),
+        bytemuck::cast_slice(&extracted.0),
         0
     );
+
+    // Update cascade splits buffer
+    if let Some(splits_buffer_handle) = data.get_buffer(ShadowMapData::CASCADE_SPLITS_BUFFER_IDX)
+        && let Some(splits_buffer) = buffers.get(&splits_buffer_handle)
+    {
+        let splits_data = [
+            settings.split_distances[0],
+            settings.split_distances[1],
+            settings.split_distances[2],
+            0.0_f32
+        ];
+        splits_buffer.buffer.write(
+            &render_instance.0.read().unwrap(),
+            bytemuck::cast_slice(&[splits_data]),
+            0
+        );
+    }
 }
 
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct ShadowMapData;
 impl ShadowMapData {
     pub const SHADOW_MAP_IDX: u32 = 0;
-    pub const PARAMS_BUFFER_IDX: u32 = 1;
+    pub const SHADOW_MAP_CASCADE_0: u32 = 0;
+    pub const SHADOW_MAP_CASCADE_1: u32 = 1;
+    pub const SHADOW_MAP_CASCADE_2: u32 = 2;
+    pub const PARAMS_BUFFER_IDX: u32 = 3;
+    pub const CASCADE_SPLITS_BUFFER_IDX: u32 = 4;
 }
 impl RenderData for ShadowMapData {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
@@ -161,9 +265,31 @@ impl RenderData for ShadowMapData {
         let size = (2048, 2048);
         builder
             .add_texture(
-                Self::SHADOW_MAP_IDX,
+                Self::SHADOW_MAP_CASCADE_0,
                 Texture {
-                    label: "shadow-map".to_string(),
+                    label: "shadow-map-cascade-0".to_string(),
+                    size,
+                    format: TextureFormat::Depth32Float,
+                    usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+                    filterable: true,
+                    ..Default::default()
+                }
+            )
+            .add_texture(
+                Self::SHADOW_MAP_CASCADE_1,
+                Texture {
+                    label: "shadow-map-cascade-1".to_string(),
+                    size,
+                    format: TextureFormat::Depth32Float,
+                    usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
+                    filterable: true,
+                    ..Default::default()
+                }
+            )
+            .add_texture(
+                Self::SHADOW_MAP_CASCADE_2,
+                Texture {
+                    label: "shadow-map-cascade-2".to_string(),
                     size,
                     format: TextureFormat::Depth32Float,
                     usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
@@ -175,9 +301,20 @@ impl RenderData for ShadowMapData {
                 Self::PARAMS_BUFFER_IDX,
                 Buffer {
                     label: "shadow-params".to_string(),
-                    size: std::mem::size_of::<ShadowParamsUniform>(),
+                    size: std::mem::size_of::<ShadowParamsUniform>() * 3,
                     usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                    content: Some(bytemuck::cast_slice(&[ShadowParamsUniform::default()]).to_vec())
+                    content: Some(
+                        bytemuck::cast_slice(&[ShadowParamsUniform::default(); 3]).to_vec()
+                    )
+                }
+            )
+            .add_buffer(
+                Self::CASCADE_SPLITS_BUFFER_IDX,
+                Buffer {
+                    label: "cascade-splits".to_string(),
+                    size: std::mem::size_of::<[f32; 4]>(),
+                    usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                    content: Some(bytemuck::cast_slice(&[[50.0_f32, 150.0, 400.0, 0.0]]).to_vec())
                 }
             );
     }

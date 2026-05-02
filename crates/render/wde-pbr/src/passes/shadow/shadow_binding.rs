@@ -27,7 +27,7 @@ impl RenderBinding for ShadowParamsBinding {
     }
 }
 
-/// Bind group for the deferred lighting shader (group 3): shadow map texture + sampler + params.
+/// Bind group for the deferred lighting shader (group 3): shadow map textures + sampler + params.
 #[derive(Default, Clone, TypePath, Asset)]
 pub struct ShadowSamplingBinding;
 impl RenderBinding for ShadowSamplingBinding {
@@ -39,9 +39,12 @@ impl RenderBinding for ShadowSamplingBinding {
         builder: &mut RenderBindingBuilder
     ) {
         builder
-            .add_depth_texture_view(shadow_data, ShadowMapData::SHADOW_MAP_IDX)
-            .add_texture_sampler(shadow_data, ShadowMapData::SHADOW_MAP_IDX)
-            .add_buffer(shadow_data, ShadowMapData::PARAMS_BUFFER_IDX);
+            .add_depth_texture_view(shadow_data, ShadowMapData::SHADOW_MAP_CASCADE_0)
+            .add_depth_texture_view(shadow_data, ShadowMapData::SHADOW_MAP_CASCADE_1)
+            .add_depth_texture_view(shadow_data, ShadowMapData::SHADOW_MAP_CASCADE_2)
+            .add_texture_sampler(shadow_data, ShadowMapData::SHADOW_MAP_CASCADE_0)
+            .add_buffer(shadow_data, ShadowMapData::PARAMS_BUFFER_IDX)
+            .add_buffer(shadow_data, ShadowMapData::CASCADE_SPLITS_BUFFER_IDX);
     }
 
     fn has_dependencies(&self) -> bool {

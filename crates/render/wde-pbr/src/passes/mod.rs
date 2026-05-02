@@ -21,17 +21,19 @@ pub(crate) struct PassesPlugin;
 impl Plugin for PassesPlugin {
     fn build(&self, app: &mut App) {
         // Register shadow settings in the main world
-        app.init_resource::<ShadowSettings>()
-            .register_type::<ShadowSettings>();
+        app.init_resource::<CascadedShadowSettings>();
 
         // Add the render graph nodes
         let render_world = app.get_sub_app_mut(RenderApp).unwrap();
         render_world
             .init_resource::<ExtractedShadowParams>()
-            .add_systems(Extract, shadow::extract_shadow_params)
+            .init_resource::<ExtractedCascadedShadowParams>()
+            .init_resource::<CascadeEnabledFlags>()
+            .add_systems(Extract, shadow::extract_cascaded_shadow_params)
+            .add_systems(Extract, shadow::extract_cascade_enabled_flags)
             .add_systems(
                 Render,
-                shadow::update_shadow_params_buffer.in_set(RenderSet::Prepare)
+                shadow::update_cascaded_shadow_params_buffer.in_set(RenderSet::Prepare)
             );
 
         let mut render_graph = render_world
@@ -41,6 +43,10 @@ impl Plugin for PassesPlugin {
         render_graph
             .add_pass::<RenderPassShadow>()
             .add_sub_pass::<SubRenderPassShadow, RenderPassShadow>()
+            .add_pass::<RenderPassShadow1>()
+            .add_sub_pass::<SubRenderPassShadow1, RenderPassShadow1>()
+            .add_pass::<RenderPassShadow2>()
+            .add_sub_pass::<SubRenderPassShadow2, RenderPassShadow2>()
             .add_pass::<RenderPassDeferredGBuffer>()
             .add_pass::<RenderPassDeferredLighting>();
         #[cfg(feature = "atmosphere")]
@@ -62,6 +68,8 @@ impl Plugin for PassesPlugin {
             RenderBindingRegisterPlugin::<ShadowParamsBinding>::default(),
             RenderBindingRegisterPlugin::<ShadowSamplingBinding>::default(),
             RenderPipelineRegisterPlugin::<ShadowMapPipeline>::default(),
+            RenderPipelineRegisterPlugin::<ShadowMapPipeline1>::default(),
+            RenderPipelineRegisterPlugin::<ShadowMapPipeline2>::default(),
             RenderBindingRegisterPlugin::<RenderBindingResolved>::default(),
             RenderBindingRegisterPlugin::<LightsDataBinding>::default(),
             #[cfg(feature = "atmosphere")]
@@ -73,7 +81,8 @@ impl Plugin for PassesPlugin {
             #[cfg(all(feature = "atmosphere", debug_assertions))]
             atmosphere::editor::AtmosphereEditorPlugin,
             #[cfg(feature = "atmosphere")]
-            AtmosphereSunLightPlugin
+            AtmosphereSunLightPlugin,
+            ExtractResourcePlugin::<CascadedShadowSettings>::default()
         ));
     }
 }

@@ -25,14 +25,17 @@ struct VertexOutput {
 @group(2) @binding(1) var<uniform> in_atmosphere: AtmosphereParams;
 @group(2) @binding(2) var<uniform> in_pbr_params: PbrParams;
 
-// Shadow map: depth texture from the directional sun light, sampler, and light matrix
+// Shadow map: depth textures from the directional sun light (3 cascades), sampler, and light matrices
 struct ShadowParams {
     view_proj: mat4x4<f32>,
     light_dir: vec4<f32> // xyz = direction toward sun, w = depth bias
 }
-@group(3) @binding(0) var in_shadow_map:     texture_depth_2d;
-@group(3) @binding(1) var in_shadow_sampler: sampler;
-@group(3) @binding(2) var<uniform> in_shadow_params: ShadowParams;
+@group(3) @binding(0) var in_shadow_map_0:     texture_depth_2d;
+@group(3) @binding(1) var in_shadow_map_1:     texture_depth_2d;
+@group(3) @binding(2) var in_shadow_map_2:     texture_depth_2d;
+@group(3) @binding(3) var in_shadow_sampler: sampler;
+@group(3) @binding(4) var<uniform> in_shadow_params: array<ShadowParams, 3>;
+@group(3) @binding(5) var<uniform> in_cascade_splits: vec4<f32>; // xyz = split distances, w = unused
 
 
 fn map(value: f32, in_min: f32, in_max: f32, out_min: f32, out_max: f32) -> f32 {
@@ -40,27 +43,67 @@ fn map(value: f32, in_min: f32, in_max: f32, out_min: f32, out_max: f32) -> f32 
 }
 
 // Returns 1.0 when the fragment is lit, 0.0 when in shadow. Uses 3x3 PCF for smooth shadows.
-fn sample_shadow(world_pos: vec3<f32>) -> f32 {
-    let light_clip = in_shadow_params.view_proj * vec4<f32>(world_pos, 1.0);
+// Selects appropriate cascade based on linear depth from camera.
+fn sample_cascaded_shadow(world_pos: vec3<f32>) -> f32 {
+    // Compute linear depth from camera
+    let linear_depth = distance(in_camera.position.xyz, world_pos);
+
+    // Select cascade based on split distances
+    var cascade_idx = 0u;
+    if linear_depth < in_cascade_splits.x {
+        cascade_idx = 0u;
+    } else if linear_depth < in_cascade_splits.y {
+        cascade_idx = 1u;
+    } else {
+        cascade_idx = 2u;
+    }
+
+    let shadow_params = in_shadow_params[cascade_idx];
+
+    // Project into light space
+    let light_clip = shadow_params.view_proj * vec4<f32>(world_pos, 1.0);
     let ndc = light_clip.xyz / light_clip.w;
+
     // Discard fragments outside the light frustum (treat as fully lit)
     if ndc.x < -1.0 || ndc.x > 1.0 || ndc.y < -1.0 || ndc.y > 1.0 || ndc.z < 0.0 || ndc.z > 1.0 {
         return 1.0;
     }
+
     // NDC Y=1 is top; UV Y=0 is top — flip Y
     let shadow_uv = vec2<f32>(ndc.x * 0.5 + 0.5, -ndc.y * 0.5 + 0.5);
-    let bias = in_shadow_params.light_dir.w;
+    let bias = shadow_params.light_dir.w;
 
     // 3x3 PCF sampling for smooth shadow edges
     let texel_size = 1.0 / 2048.0;
     var shadow_sum = 0.0;
-    for (var x = -1; x <= 1; x = x + 1) {
-        for (var y = -1; y <= 1; y = y + 1) {
-            let offset_uv = shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_size;
-            let shadow_depth = textureSample(in_shadow_map, in_shadow_sampler, offset_uv);
-            shadow_sum += select(0.0, 1.0, ndc.z <= shadow_depth + bias);
+
+    // Sample appropriate cascade map (WGSL doesn't support dynamic texture indexing, so use branches)
+    if cascade_idx == 0u {
+        for (var x = -1; x <= 1; x = x + 1) {
+            for (var y = -1; y <= 1; y = y + 1) {
+                let offset_uv = shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_size;
+                let shadow_depth = textureSample(in_shadow_map_0, in_shadow_sampler, offset_uv);
+                shadow_sum += select(0.0, 1.0, ndc.z <= shadow_depth + bias);
+            }
+        }
+    } else if cascade_idx == 1u {
+        for (var x = -1; x <= 1; x = x + 1) {
+            for (var y = -1; y <= 1; y = y + 1) {
+                let offset_uv = shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_size;
+                let shadow_depth = textureSample(in_shadow_map_1, in_shadow_sampler, offset_uv);
+                shadow_sum += select(0.0, 1.0, ndc.z <= shadow_depth + bias);
+            }
+        }
+    } else {
+        for (var x = -1; x <= 1; x = x + 1) {
+            for (var y = -1; y <= 1; y = y + 1) {
+                let offset_uv = shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_size;
+                let shadow_depth = textureSample(in_shadow_map_2, in_shadow_sampler, offset_uv);
+                shadow_sum += select(0.0, 1.0, ndc.z <= shadow_depth + bias);
+            }
         }
     }
+
     return shadow_sum / 9.0;
 }
 
@@ -92,7 +135,7 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     f0 = mix(f0, albedo, metallic);
 
     // Shadow factor from the directional sun light
-    let shadow = sample_shadow(world_position);
+    let shadow = sample_cascaded_shadow(world_position);
 
     // Accumulate lighting from each light source
     var lo = vec3<f32>(0.0);
