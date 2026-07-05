@@ -8,13 +8,17 @@ impl Plugin for TestPlugin {
     }
 }
 
-fn init_scene(mut commands: Commands) {
+fn init_scene(
+    mut commands: Commands,
+    mut gltf_spawn_queue: ResMut<GltfSpawnQueue>,
+    asset_server: Res<AssetServer>,
+) {
     // Main camera
     commands.spawn((
         Name::new("Main Camera"),
         Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y),
         ActiveCamera,
-        ThirdPersonController::default() // FreeCameraController::default()
+        ThirdPersonController::default(), // FreeCameraController::default()
     ));
 
     // Spawn the lights
@@ -26,7 +30,7 @@ fn init_scene(mut commands: Commands) {
             color: WdeColor::from_srgba(0.8, 0.2, 0.2, 1.0),
             ..Default::default()
         },
-        ChildOf(entity)
+        ChildOf(entity),
     ));
     commands.spawn((
         Name::new("Green Light"),
@@ -35,7 +39,7 @@ fn init_scene(mut commands: Commands) {
             color: WdeColor::from_srgba(0.2, 0.8, 0.2, 1.0),
             ..Default::default()
         },
-        ChildOf(entity)
+        ChildOf(entity),
     ));
     commands.spawn((
         Name::new("Blue Light"),
@@ -44,7 +48,7 @@ fn init_scene(mut commands: Commands) {
             color: WdeColor::from_srgba(0.2, 0.2, 0.8, 1.0),
             ..Default::default()
         },
-        ChildOf(entity)
+        ChildOf(entity),
     ));
     // commands.spawn((
     //     Name::new("Directional Light"),
@@ -55,4 +59,10 @@ fn init_scene(mut commands: Commands) {
     //     },
     //     ChildOf(entity)
     // ));
+
+    let entity_parent = commands
+        .spawn((Name::new("Human"), Transform::default()))
+        .id();
+    let gltf_asset = asset_server.load("models/entities/human/human.gltf");
+    GltfLoader::spawn(&mut gltf_spawn_queue, gltf_asset, entity_parent);
 }
