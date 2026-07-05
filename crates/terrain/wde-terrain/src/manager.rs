@@ -13,7 +13,7 @@ pub const SPLAT_MAP_COUNT: u32 = 4;
 /// World-space size of one chunk.
 pub const CHUNK_SIZE: f32 = 32.0;
 /// Maximum height range in world units.
-pub const CHUNK_HEIGHT: f32 = 100.0;
+pub const CHUNK_HEIGHT: f32 = 10.0;
 /// Heightmap/splatmap resolution (pixels per side).
 pub const CHUNK_RENDER_SUBDIVISIONS: u32 = 256;
 

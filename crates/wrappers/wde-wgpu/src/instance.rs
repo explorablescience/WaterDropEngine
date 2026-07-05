@@ -421,3 +421,11 @@ pub fn present(surface_texture: SurfaceTexture) -> Result<(), RenderError> {
 pub fn resize(device: &Device, surface: &Surface, surface_config: &SurfaceConfiguration) {
     surface.configure(device, surface_config);
 }
+
+impl RenderInstanceData<'_> {
+    /// Non-blocking device poll: asks the driver to fire any pending GPU callbacks
+    /// (e.g. `map_async` completions) without waiting for outstanding GPU work.
+    pub fn poll_non_blocking(&self) {
+        self.device.poll(wgpu::PollType::Poll).ok();
+    }
+}

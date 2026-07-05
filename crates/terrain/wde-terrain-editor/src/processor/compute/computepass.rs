@@ -12,14 +12,21 @@ use crate::processor::{
 };
 
 /// Push constants sent to the compute shader for each tile dispatch.
+/// Size must match the WGSL struct (alignment rounds up to 32 bytes).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TileInfo {
     pub tile_idx: [f32; 2],
     pub tile_size: [f32; 2],
     pub tile_subdivisions: f32,
-    pub tile_layer: u32
+    pub tile_layer: u32,
+    pub commands_count: u32,
+    pub _pad: u32
 }
+
+/// One workgroup handles 64 pixels; the shader loops over all commands per pixel.
+/// This is constant regardless of how many commands are queued.
+const WORKGROUPS_PER_TILE: u32 = CHUNK_RENDER_SUBDIVISIONS * CHUNK_RENDER_SUBDIVISIONS / 64;
 
 pub fn apply_paint_compute(
     render_instance: Res<RenderInstance>,
@@ -51,56 +58,37 @@ pub fn apply_paint_compute(
             if compute_pass.set_pipeline(pipeline).is_ok() {
                 compute_pass.set_bind_group(0, &cmds_bg.bind_group);
 
-                // Set the single array bind group once for all tile dispatches.
-                if let Some((_, array_bg)) = compute_array_bg.iter().next() {
-                    compute_pass.set_bind_group(1, &array_bg.bind_group);
-                } else {
+                let Some((_, array_bg)) = compute_array_bg.iter().next() else {
                     return;
-                }
+                };
+                compute_pass.set_bind_group(1, &array_bg.bind_group);
 
-                const MAX_PER_DISPATCH: u32 = 65535;
-                let count_raw = commands_buffer_desc.commands_count as u32
-                    * CHUNK_RENDER_SUBDIVISIONS
-                    * CHUNK_RENDER_SUBDIVISIONS
-                    / 64;
-                let iterations = ops::ceil(count_raw as f32 / MAX_PER_DISPATCH as f32) as u32;
-                let last_count = count_raw % MAX_PER_DISPATCH;
+                let commands_count = commands_buffer_desc.commands_count as u32;
 
-                for i in 0..iterations {
-                    let count = if i == iterations - 1 {
-                        last_count
-                    } else {
-                        MAX_PER_DISPATCH
+                for tile_pos in &commands_buffer_desc.dirty_chunks {
+                    let Some((&layer, tile)) = terrain_tiles
+                        .pos_to_layer
+                        .get_key_value(tile_pos)
+                        .map(|(p, l)| (l, p))
+                    else {
+                        continue;
                     };
 
-                    for tile_pos in &commands_buffer_desc.dirty_chunks {
-                        let layer = match terrain_tiles.pos_to_layer.get(tile_pos) {
-                            Some(&l) => l,
-                            None => continue
-                        };
-                        let tile = match terrain_tiles
-                            .pos_to_layer
-                            .get_key_value(tile_pos)
-                            .map(|(p, _)| p)
-                        {
-                            Some(p) => p,
-                            None => continue
-                        };
+                    let push = TileInfo {
+                        tile_idx: [tile.x as f32, tile.y as f32],
+                        tile_size: [CHUNK_SIZE, CHUNK_SIZE],
+                        tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
+                        tile_layer: layer,
+                        commands_count,
+                        _pad: 0
+                    };
+                    compute_pass.set_push_constants(bytemuck::cast_slice(&[push]));
 
-                        let push = TileInfo {
-                            tile_idx: [tile.x as f32, tile.y as f32],
-                            tile_size: [CHUNK_SIZE, CHUNK_SIZE],
-                            tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
-                            tile_layer: layer
-                        };
-                        compute_pass.set_push_constants(bytemuck::cast_slice(&[push]));
-
-                        if let Err(e) = compute_pass.dispatch(count, 1, 1) {
-                            error!(
-                                "Failed to dispatch paint compute for tile {:?}: {:?}",
-                                tile_pos, e
-                            );
-                        }
+                    if let Err(e) = compute_pass.dispatch(WORKGROUPS_PER_TILE, 1, 1) {
+                        error!(
+                            "Failed to dispatch paint compute for tile {:?}: {:?}",
+                            tile_pos, e
+                        );
                     }
                 }
             } else {

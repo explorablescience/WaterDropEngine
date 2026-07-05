@@ -1,6 +1,6 @@
 //! GPU buffer helper utilities built on top of `wgpu::Buffer`.
 
-use std::fmt::Formatter;
+use std::{fmt::Formatter, sync::mpsc};
 use wde_logger::prelude::*;
 use wgpu::{BufferView, util::DeviceExt};
 
@@ -298,5 +298,99 @@ impl Buffer {
 
         // Unmap buffer
         self.buffer.unmap();
+    }
+}
+
+/// A pending GPU→CPU readback. Created by [`AsyncReadback::from_texture_layer`].
+/// Call [`AsyncReadback::try_collect`] each frame (after a non-blocking device poll)
+/// until it returns `Ok(data)`.
+pub struct AsyncReadback {
+    buffer: wgpu::Buffer,
+    receiver: mpsc::Receiver<Result<(), wgpu::BufferAsyncError>>
+}
+
+// wgpu::Buffer is Send+Sync so AsyncReadback can cross thread boundaries.
+unsafe impl Send for AsyncReadback {}
+unsafe impl Sync for AsyncReadback {}
+
+impl AsyncReadback {
+    /// Copy one layer of a texture array into a fresh staging buffer and start an
+    /// async mapping. The GPU copy and the mapping are both non-blocking — the caller
+    /// must poll the device (e.g. `PollType::Poll`) and call `try_collect` in a later frame.
+    pub fn from_texture_layer(
+        instance: &RenderInstanceData,
+        texture: &wgpu::Texture,
+        layer: u32
+    ) -> Self {
+        let size = texture.size();
+        let bytes_per_pixel: u32 = match texture.format() {
+            wgpu::TextureFormat::R8Unorm => 1,
+            wgpu::TextureFormat::Rgba8Unorm => 4,
+            fmt => panic!("Unsupported format for async readback: {:?}", fmt)
+        };
+        // wgpu requires bytes_per_row to be a multiple of 256.
+        let bytes_per_row = (size.width * bytes_per_pixel).div_ceil(256) * 256;
+        let buffer_size = (bytes_per_row * size.height) as u64;
+
+        let staging = instance.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("async-readback-staging"),
+            size: buffer_size,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false
+        });
+
+        let mut encoder = instance
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("async-readback-copy")
+            });
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d { x: 0, y: 0, z: layer },
+                aspect: wgpu::TextureAspect::All
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &staging,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(bytes_per_row),
+                    rows_per_image: None
+                }
+            },
+            wgpu::Extent3d {
+                width: size.width,
+                height: size.height,
+                depth_or_array_layers: 1
+            }
+        );
+        instance.queue.submit(std::iter::once(encoder.finish()));
+
+        let (sender, receiver) = mpsc::channel();
+        staging
+            .slice(..)
+            .map_async(wgpu::MapMode::Read, move |r| { let _ = sender.send(r); });
+
+        AsyncReadback { buffer: staging, receiver }
+    }
+
+    /// Try to collect the result. Returns `Ok(data)` when the GPU has finished, or
+    /// `Err(self)` when the mapping is still in progress (call again next frame).
+    /// Call `instance.device.poll(PollType::Poll)` before this to process GPU callbacks.
+    pub fn try_collect(self) -> Result<Vec<u8>, Self> {
+        match self.receiver.try_recv() {
+            Ok(Ok(())) => {
+                let data = self.buffer.slice(..).get_mapped_range().to_vec();
+                self.buffer.unmap();
+                Ok(data)
+            }
+            Ok(Err(e)) => {
+                error!("Async readback mapping error: {:?}", e);
+                Ok(Vec::new())
+            }
+            Err(mpsc::TryRecvError::Empty) => Err(self),
+            Err(mpsc::TryRecvError::Disconnected) => Ok(Vec::new())
+        }
     }
 }

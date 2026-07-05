@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::*;
+use wde_terrain::render::extractor::TerrainRenderSets;
 
 use crate::{
     paint::{brush::PaintCommand, paint_manager::PaintManager},
@@ -35,9 +36,17 @@ impl Plugin for PaintProcessorPlugin {
             // Queue heightmap readbacks for physics whenever a paint flush happens.
             .add_systems(Update, queue_physics_extraction);
 
+        // Place apply_paint_compute in the TextureWrite set so that initiate_tile_readbacks
+        // (which is in TerrainExtractorPlugin, ordered after TextureWrite) always runs
+        // after the paint compute has submitted its GPU work.
         app.get_sub_app_mut(RenderApp)
             .unwrap()
-            .add_systems(Render, apply_paint_compute.in_set(RenderSet::Render));
+            .add_systems(
+                Render,
+                apply_paint_compute
+                    .in_set(RenderSet::Render)
+                    .in_set(TerrainRenderSets::TextureWrite)
+            );
     }
 }
 

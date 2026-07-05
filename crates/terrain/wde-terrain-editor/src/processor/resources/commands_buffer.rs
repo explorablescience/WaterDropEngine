@@ -5,6 +5,8 @@ use std::collections::HashSet;
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::ChunkPos;
 
+use wde_terrain::prelude::CHUNK_HEIGHT;
+
 use crate::{paint::brush::PaintMode, processor::ExtractedPaintCommands};
 
 // The maximum number of commands that can be stored by render frame.
@@ -24,15 +26,18 @@ impl Plugin for ComputeCommandsBufferPlugin {
     }
 }
 
+/// GPU-side paint command. Layout must match the WGSL `Command` struct in paint_compute.wgsl.
+/// Total size: 48 bytes (struct align 16, no trailing padding needed).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct CommandDescription {
-    pub world_position: [f32; 2],
+    pub world_position: [f32; 2], // x, z in world space
     pub radius: f32,
     pub strength: f32,
     pub color: [f32; 4],
     pub brush_type: f32,
-    pub _padding: [f32; 3]
+    pub target_height: f32, // normalized [0,1] height for Flatten mode
+    pub _padding: [f32; 2]
 }
 
 #[derive(Resource, Default)]
@@ -121,13 +126,13 @@ fn update_commands_buffer(
             brush_type: match command.paint_mode {
                 PaintMode::Paint => 0.0,
                 PaintMode::Erase => 1.0,
-
                 PaintMode::Raise => 2.0,
                 PaintMode::Lower => 3.0,
                 PaintMode::Smooth => 4.0,
                 PaintMode::Flatten => 5.0
             },
-            _padding: [0.0; 3]
+            target_height: command.world_position.y / CHUNK_HEIGHT,
+            _padding: [0.0; 2]
         })
         .collect();
 

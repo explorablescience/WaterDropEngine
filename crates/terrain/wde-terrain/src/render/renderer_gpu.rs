@@ -82,7 +82,8 @@ pub struct TerrainRendererGPU {
 }
 
 impl TerrainRendererGPU {
-    /// Extract dirty tiles and, on first call, copy texture handles from `TerrainRenderer`.
+    /// Transfer the physics extraction queue and dirty tile uploads from the main world.
+    /// Also does the one-time GPU handle initialisation on the first call.
     #[allow(clippy::too_many_arguments)]
     pub fn extract_dirty(
         main_terrain_extractor: &mut TerrainExtractor,
@@ -94,6 +95,7 @@ impl TerrainRendererGPU {
         terrain_renderer_chunk_count: u32,
         gpu_terrain_renderer: &mut TerrainRendererGPU
     ) {
+        // Move the tile-extraction queue from main world → render world.
         extractor::extract_dirty(main_terrain_extractor, render_terrain_extractor);
 
         // One-time initialisation of GPU handles.

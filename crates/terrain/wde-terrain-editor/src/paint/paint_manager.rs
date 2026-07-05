@@ -11,9 +11,9 @@ use crate::paint::brush::{PaintBrush, PaintCommand};
 // Number of commands after which we automatically flush
 const FLUSH_ON_N_COMMANDS: usize = 50;
 // Maximum time (in seconds) before we automatically flush commands
-const MAX_T_BEFORE_FLUSH: f32 = 0.05;
+const MAX_T_BEFORE_FLUSH: f32 = 0.2;
 // Minimum time (in seconds) between two commands to avoid adding too many commands per second
-const MIN_DT_BETWEEN_COMMANDS: f32 = 0.01;
+const MIN_DT_BETWEEN_COMMANDS: f32 = 0.05;
 
 pub struct PaintManagerPlugin;
 impl Plugin for PaintManagerPlugin {
