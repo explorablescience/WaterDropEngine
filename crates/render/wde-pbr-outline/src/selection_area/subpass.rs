@@ -1,16 +1,15 @@
 use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
-    prelude::*,
+    prelude::*
 };
 use wde_camera::prelude::*;
-use wde_logger::prelude::*;
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::selection_area::{
     extract::ExtractedSelectionAreaInstances,
     material::SelectionAreaMaterial,
-    pipeline::{PushConstants, SelectionAreaRenderPipeline},
+    pipeline::{PushConstants, SelectionAreaRenderPipeline}
 };
 
 pub(crate) struct SubRenderPassSelectionArea;
@@ -19,22 +18,22 @@ impl RenderSubPass for SubRenderPassSelectionArea {
         SRes<RenderAssets<SelectionAreaRenderPipeline>>,
         SBinding<SsboMeshBinding>,
         SBinding<CameraBinding>,
-        SBinding<SsboTransformBinding>,
+        SBinding<SsboTransformBinding>
     );
 
     fn describe(
-        (pipeline, ssbo_mesh, camera, transforms): &SystemParamItem<Self::Params>,
+        (pipeline, ssbo_mesh, camera, transforms): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
         RenderSubPassDesc(vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
             SubPassCommand::BindGroup(
                 0,
-                ssbo_mesh.iter().next().map(|(_, m)| m.bind_group.clone()),
+                ssbo_mesh.iter().next().map(|(_, m)| m.bind_group.clone())
             ),
             SubPassCommand::BindGroup(1, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
             SubPassCommand::BindGroup(
                 2,
-                transforms.iter().next().map(|(_, t)| t.bind_group.clone()),
+                transforms.iter().next().map(|(_, t)| t.bind_group.clone())
             ),
             SubPassCommand::Custom(draw_instances),
         ])
@@ -68,8 +67,8 @@ fn draw_instances<'pass>(world: &'pass World, render_pass: &mut RenderPassInstan
             bytemuck::bytes_of(&PushConstants {
                 first_vertex: mesh.ssbo_first_vertex,
                 first_index: mesh.ssbo_first_index,
-                transform_id,
-            }),
+                transform_id
+            })
         );
         render_pass.set_bind_group(3, &material.bind_group);
         let _ = render_pass.draw(0..mesh.index_count, transform_id..(transform_id + 1));

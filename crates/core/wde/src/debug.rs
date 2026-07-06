@@ -32,7 +32,10 @@ fn edit_physics_debug_settings(
         .default_pos([100.0, 260.0])
         .open(ui_menu.clicked_mut("Engine/Physics"))
         .show(&ctx.0, |ui| {
-            ui.add(Checkbox::new(&mut settings.show_colliders, "Show Colliders"));
+            ui.add(Checkbox::new(
+                &mut settings.show_colliders,
+                "Show Colliders"
+            ));
         });
 }
 

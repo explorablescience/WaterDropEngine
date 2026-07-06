@@ -31,7 +31,7 @@ pub mod prelude {
 #[derive(Resource, Default)]
 pub struct Gizmos {
     lines: Vec<(Vec3, Vec3, Color)>,
-    quads: Vec<([Vec3; 4], Color)>,
+    quads: Vec<([Vec3; 4], Color)>
 }
 impl Gizmos {
     pub fn line(&mut self, start: Vec3, end: Vec3, color: Color) {
@@ -54,13 +54,22 @@ impl Gizmos {
             Vec3::new(-half_size.x, -half_size.y, half_size.z),
             Vec3::new(half_size.x, -half_size.y, half_size.z),
             Vec3::new(half_size.x, half_size.y, half_size.z),
-            Vec3::new(-half_size.x, half_size.y, half_size.z),
+            Vec3::new(-half_size.x, half_size.y, half_size.z)
         ];
 
         let edges = [
-            (0, 1), (1, 2), (2, 3), (3, 0), // back face
-            (4, 5), (5, 6), (6, 7), (7, 4), // front face
-            (0, 4), (1, 5), (2, 6), (3, 7), // sides
+            (0, 1),
+            (1, 2),
+            (2, 3),
+            (3, 0), // back face
+            (4, 5),
+            (5, 6),
+            (6, 7),
+            (7, 4), // front face
+            (0, 4),
+            (1, 5),
+            (2, 6),
+            (3, 7) // sides
         ];
 
         for &(start_idx, end_idx) in &edges {

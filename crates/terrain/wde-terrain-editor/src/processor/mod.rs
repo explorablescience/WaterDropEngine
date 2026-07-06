@@ -39,14 +39,12 @@ impl Plugin for PaintProcessorPlugin {
         // Place apply_paint_compute in the TextureWrite set so that initiate_tile_readbacks
         // (which is in TerrainExtractorPlugin, ordered after TextureWrite) always runs
         // after the paint compute has submitted its GPU work.
-        app.get_sub_app_mut(RenderApp)
-            .unwrap()
-            .add_systems(
-                Render,
-                apply_paint_compute
-                    .in_set(RenderSet::Render)
-                    .in_set(TerrainRenderSets::TextureWrite)
-            );
+        app.get_sub_app_mut(RenderApp).unwrap().add_systems(
+            Render,
+            apply_paint_compute
+                .in_set(RenderSet::Render)
+                .in_set(TerrainRenderSets::TextureWrite)
+        );
     }
 }
 

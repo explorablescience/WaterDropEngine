@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use wde_renderer::{prelude::*, wgpu_utils::AsyncReadback};
 
-use crate::{
-    manager::ChunkPos,
-    prelude::TerrainRendererGPU
-};
+use crate::{manager::ChunkPos, prelude::TerrainRendererGPU};
 
 /// Message sent from the render world to the main world when a tile is read back from GPU.
 #[derive(Message)]
@@ -43,10 +40,7 @@ impl Plugin for TerrainExtractorPlugin {
             // Poll pending readbacks and forward completions to the main world.
             .add_systems(Extract, flush_completed_readbacks)
             // Kick off GPU copies for the tiles queued this frame.
-            .add_systems(
-                Render,
-                initiate_tile_readbacks.in_set(RenderSet::Render)
-            );
+            .add_systems(Render, initiate_tile_readbacks.in_set(RenderSet::Render));
     }
 }
 
@@ -110,8 +104,12 @@ pub fn initiate_tile_readbacks(
             1 => gpu.splatmap_array.as_ref(),
             _ => continue
         };
-        let Some(tex_h) = texture_handle else { continue };
-        let Some(tex) = textures.get(tex_h) else { continue };
+        let Some(tex_h) = texture_handle else {
+            continue;
+        };
+        let Some(tex) = textures.get(tex_h) else {
+            continue;
+        };
 
         pending.pending.push(PendingReadback {
             pos,
@@ -137,7 +135,13 @@ fn flush_completed_readbacks(
     render_instance.0.read().unwrap().poll_non_blocking();
 
     let drained = std::mem::take(&mut pending.pending);
-    for PendingReadback { pos, map_type, splat_index, readback } in drained {
+    for PendingReadback {
+        pos,
+        map_type,
+        splat_index,
+        readback
+    } in drained
+    {
         match readback.try_collect() {
             Ok(data) if !data.is_empty() => {
                 main_world.write_message(ExtractedTileMessage {
@@ -150,7 +154,12 @@ fn flush_completed_readbacks(
             Ok(_) => {} // empty data means a mapping error was already logged
             Err(readback) => {
                 // Mapping not done yet — return to queue for next frame.
-                pending.pending.push(PendingReadback { pos, map_type, splat_index, readback });
+                pending.pending.push(PendingReadback {
+                    pos,
+                    map_type,
+                    splat_index,
+                    readback
+                });
             }
         }
     }

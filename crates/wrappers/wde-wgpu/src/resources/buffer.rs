@@ -348,7 +348,11 @@ impl AsyncReadback {
             wgpu::TexelCopyTextureInfo {
                 texture,
                 mip_level: 0,
-                origin: wgpu::Origin3d { x: 0, y: 0, z: layer },
+                origin: wgpu::Origin3d {
+                    x: 0,
+                    y: 0,
+                    z: layer
+                },
                 aspect: wgpu::TextureAspect::All
             },
             wgpu::TexelCopyBufferInfo {
@@ -368,11 +372,14 @@ impl AsyncReadback {
         instance.queue.submit(std::iter::once(encoder.finish()));
 
         let (sender, receiver) = mpsc::channel();
-        staging
-            .slice(..)
-            .map_async(wgpu::MapMode::Read, move |r| { let _ = sender.send(r); });
+        staging.slice(..).map_async(wgpu::MapMode::Read, move |r| {
+            let _ = sender.send(r);
+        });
 
-        AsyncReadback { buffer: staging, receiver }
+        AsyncReadback {
+            buffer: staging,
+            receiver
+        }
     }
 
     /// Try to collect the result. Returns `Ok(data)` when the GPU has finished, or

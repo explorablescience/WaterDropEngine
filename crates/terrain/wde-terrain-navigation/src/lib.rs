@@ -16,12 +16,10 @@ impl Plugin for TerrainNavigationPlugin {
     }
 }
 
-
-
 #[derive(Resource, Default)]
 pub struct TerrainNavigator {
     new_entities: Vec<(Entity, Vec3)>,
-    removed_entities: Vec<Entity>,
+    removed_entities: Vec<Entity>
 }
 impl TerrainNavigator {
     pub fn add(&mut self, entity: Entity, position: Vec3) {
@@ -36,10 +34,7 @@ impl TerrainNavigator {
 #[derive(Component)]
 pub(crate) struct TargetLocation(Vec3);
 
-fn handle_changes(
-    mut commands: Commands,
-    mut navigator: ResMut<TerrainNavigator>,
-) {
+fn handle_changes(mut commands: Commands, mut navigator: ResMut<TerrainNavigator>) {
     for (entity, position) in navigator.new_entities.drain(..) {
         commands.entity(entity).insert(TargetLocation(position));
     }
@@ -48,4 +43,3 @@ fn handle_changes(
         commands.entity(entity).remove::<TargetLocation>();
     }
 }
-

@@ -19,7 +19,8 @@ fn move_entities_towards_target(
         let speed = 2.0; // units per second
         let delta_move = direction * speed * time.delta_secs();
         transform.translation += delta_move;
-        transform.rotation = Quat::from_rotation_arc(Vec3::Z, direction) * Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2);
+        transform.rotation = Quat::from_rotation_arc(Vec3::Z, direction)
+            * Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2);
 
         // Check if the entity has reached the target location
         if transform.translation.distance(target_location.0) < 0.1 {

@@ -1,4 +1,7 @@
-use bevy::{ecs::system::{SystemParamItem, lifetimeless::SRes}, prelude::*};
+use bevy::{
+    ecs::system::{SystemParamItem, lifetimeless::SRes},
+    prelude::*
+};
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
