@@ -19,11 +19,22 @@ impl Collider {
             data: Arc::new(RwLock::new(Box::new(shape)))
         }
     }
+
+    /// Half-extents of the shape if this is a box/cuboid collider (e.g. [`BoxCollider`]), or
+    /// `None` for other shapes (e.g. [`HeightfieldCollider`]).
+    pub fn box_half_extents(&self) -> Option<Vec3> {
+        self.data.read().unwrap().box_half_extents()
+    }
 }
 
 /// Trait for collider shapes.
 pub trait ColliderShape {
     fn build(&self) -> rapier3d::prelude::Collider;
+
+    /// Half-extents of the shape if it is a box/cuboid, `None` otherwise. Defaults to `None`.
+    fn box_half_extents(&self) -> Option<Vec3> {
+        None
+    }
 }
 
 /// A simple box collider shape.
@@ -63,6 +74,10 @@ impl ColliderShape for BoxCollider {
                 collider.collision_groups(InteractionGroups::new(group, ColliderGroup::all()));
         }
         collider.build()
+    }
+
+    fn box_half_extents(&self) -> Option<Vec3> {
+        Some(Vec3::new(self.hx, self.hy, self.hz))
     }
 }
 

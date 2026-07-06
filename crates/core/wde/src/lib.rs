@@ -58,6 +58,9 @@ use bevy::{
     time::TimePlugin
 };
 
+#[cfg(all(feature = "gizmos", feature = "editor"))]
+mod debug;
+
 /// Custom Bevy plugins for WaterDropEngine default plugins.
 #[derive(Default)]
 struct CustomBevyPlugins;
@@ -136,6 +139,8 @@ impl Plugin for CustomWdePlugins {
         app.add_plugins(wde_pbr::PbrPlugin);
         #[cfg(feature = "editor")]
         app.add_plugins(wde_editor::EditorPlugin);
+        #[cfg(all(feature = "gizmos", feature = "editor"))]
+        app.add_plugins(debug::PhysicsDebugPlugin);
 
         // Always add the scene plugin last
         app.add_plugins(wde_scene::ScenePlugin);
@@ -177,4 +182,6 @@ pub mod prelude {
     pub use wde_editor::prelude::*;
     #[cfg(feature = "pbr")]
     pub use wde_pbr::prelude::*;
+    #[cfg(all(feature = "gizmos", feature = "editor"))]
+    pub use crate::debug::PhysicsDebugSettings;
 }
