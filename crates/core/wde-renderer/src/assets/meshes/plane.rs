@@ -10,15 +10,15 @@ impl PlaneMesh {
     /// # Arguments
     ///
     /// * `label` - The label for this mesh asset.
-    /// * `size` - The size in the u and v direction.
     ///   The plane will be centered at the origin.
     /// * `subdivisions` - Number of subdivisions per axis (minimum 1).
     /// * `normal` - The normal direction of the plane.
+    /// * `use_ssbo` - Whether to use SSBO for vertex data.
     ///
     /// # Returns
     ///
     /// The plane mesh.
-    pub fn from(label: &str, subdivisions: u32, normal: Vec3) -> Mesh {
+    pub fn from(label: &str, subdivisions: u32, normal: Vec3, use_ssbo: bool) -> Mesh {
         let subdivisions = subdivisions.max(1);
         let half_size = [0.5, 0.5];
 
@@ -91,7 +91,7 @@ impl PlaneMesh {
             vertices,
             indices,
             bbox: bounding_box,
-            use_ssbo: false
+            use_ssbo
         }
     }
 }

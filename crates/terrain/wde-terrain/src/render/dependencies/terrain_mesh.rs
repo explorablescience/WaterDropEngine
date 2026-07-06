@@ -10,7 +10,7 @@ pub struct TerrainRenderPassMesh {
 impl TerrainRenderPassMesh {
     // Creates the rendering mesh.
     pub fn init(assets_server: Res<AssetServer>, mut render_pass: ResMut<TerrainRenderPassMesh>) {
-        let mut mesh = PlaneMesh::from("terrain_tile", CHUNK_RENDER_SUBDIVISIONS, Vec3::Y);
+        let mut mesh = PlaneMesh::from("terrain_tile", CHUNK_RENDER_SUBDIVISIONS, Vec3::Y, false);
 
         // Scale the plane to cover the entire terrain tile size
         for vertex in &mut mesh.vertices {

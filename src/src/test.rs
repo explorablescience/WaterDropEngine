@@ -40,7 +40,7 @@ struct SelectionAreaAssets {
 struct SelectionAreaQuadMarker;
 
 /// Vertical offset applied to the selection-area decal above the terrain hit point, to avoid z-fighting.
-const SELECTION_AREA_Y_OFFSET: f32 = 0.05;
+const SELECTION_AREA_Y_OFFSET: f32 = 0.01;
 
 fn init_scene(
     mut commands: Commands,
@@ -103,10 +103,10 @@ fn init_scene(
     )));
 
     commands.insert_resource(SelectionAreaAssets {
-        mesh: asset_server.add(PlaneMesh::from("selection-area-quad", 1, Vec3::Y)),
+        mesh: asset_server.add(PlaneMesh::from("selection-area-quad", 1, Vec3::Y, true)),
         material: asset_server.add(SelectionAreaMaterial {
             label: "selection-area".to_string(),
-            color: WdeColor::from_srgba(1.0, 0.85, 0.0, 0.25),
+            color: WdeColor::from_srgba(0.8, 0.8, 0.4, 0.2),
             ..Default::default()
         })
     });
@@ -172,10 +172,11 @@ fn select_entity(
     outline_material: Res<SelectionOutlineMaterial>,
     selection_area_assets: Res<SelectionAreaAssets>,
     selected_entities: Query<Entity, With<EntitySelectedMarker>>,
-    entities_query: Query<(Entity, &Transform), With<EntityMarker>>,
+    entities_query: Query<(Entity, &Transform), (With<EntityMarker>, Without<SelectionAreaQuadMarker>)>,
     children_query: Query<&Children>,
     mesh_query: Query<(), With<Mesh3d>>,
-    mut quad_transform_query: Query<&mut Transform, With<SelectionAreaQuadMarker>>
+    mut quad_transform_query: Query<&mut Transform, With<SelectionAreaQuadMarker>>,
+    asset_server: Res<AssetServer>
 ) {
     if mouse_input.just_pressed(MouseButton::Left) {
         let start_pos = cursor_pos.pos_or_last();
@@ -190,7 +191,7 @@ fn select_entity(
                 PbrMaterial3d(selection_area_assets.material.clone()),
                 Transform::from_translation(
                     start_pos + Vec3::new(0.0, SELECTION_AREA_Y_OFFSET, 0.0)
-                ),
+                ).with_scale(Vec3::new(0.0, 1.0, 0.0)),
                 PbrSsboTransformUuid::default()
             ))
             .id();
@@ -200,8 +201,6 @@ fn select_entity(
             let end_pos = cursor_pos.pos_or_last();
             let min = start_pos.min(end_pos);
             let max = start_pos.max(end_pos);
-            // Ground-plane (x, z) coordinates are used here, not (x, y): this is a Y-up engine,
-            // so `y` is terrain height, not depth.
             let selection_rect = Rect::new(min.x, min.z, max.x, max.z);
 
             // Deselect all previously selected entities and remove their contour outline
@@ -243,7 +242,7 @@ fn select_entity(
             let max = start_pos.max(end_pos);
             let center = (min + max) * 0.5;
 
-            transform.translation = center + Vec3::new(0.0, SELECTION_AREA_Y_OFFSET, 0.0);
+            transform.translation = Vec3::new(center.x, SELECTION_AREA_Y_OFFSET, center.z);
             transform.scale = Vec3::new(
                 (max.x - min.x).max(f32::EPSILON),
                 1.0,
@@ -265,11 +264,6 @@ fn set_entity_outline(
     let Ok(children) = children_query.get(entity) else {
         return;
     };
-    println!(
-        "Setting outline for entity {:?} with {} children",
-        entity,
-        children.len()
-    );
 
     for &child in children {
         if !mesh_query.contains(child) {

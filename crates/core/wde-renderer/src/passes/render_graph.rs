@@ -466,9 +466,10 @@ fn render_sub_pass<'p>(
             SubPassCommand::Mesh(mesh) => {
                 if let Some(mesh) = mesh
                     && let Some(mesh) = meshes.get(*mesh)
+                    && let (Some(vertex_buffer), Some(index_buffer)) = (mesh.vertex_buffer.as_ref(), mesh.index_buffer.as_ref())
                 {
-                    render_pass.set_vertex_buffer(0, mesh.vertex_buffer.as_ref().unwrap());
-                    render_pass.set_index_buffer(mesh.index_buffer.as_ref().unwrap());
+                    render_pass.set_vertex_buffer(0, vertex_buffer);
+                    render_pass.set_index_buffer(index_buffer);
                 } else {
                     return;
                 }
