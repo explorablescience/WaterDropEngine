@@ -25,6 +25,13 @@ impl Collider {
     pub fn box_half_extents(&self) -> Option<Vec3> {
         self.data.read().unwrap().box_half_extents()
     }
+
+    /// Local-space wireframe line segments approximating the shape's surface, for debug
+    /// visualization, if this is a heightfield collider (e.g. [`HeightfieldCollider`]), or
+    /// `None` for other shapes (e.g. [`BoxCollider`]).
+    pub fn heightfield_wireframe(&self) -> Option<Vec<(Vec3, Vec3)>> {
+        self.data.read().unwrap().heightfield_wireframe()
+    }
 }
 
 /// Trait for collider shapes.
@@ -33,6 +40,12 @@ pub trait ColliderShape {
 
     /// Half-extents of the shape if it is a box/cuboid, `None` otherwise. Defaults to `None`.
     fn box_half_extents(&self) -> Option<Vec3> {
+        None
+    }
+
+    /// Local-space wireframe line segments approximating the shape's surface, for debug
+    /// visualization, if it is a heightfield, `None` otherwise. Defaults to `None`.
+    fn heightfield_wireframe(&self) -> Option<Vec<(Vec3, Vec3)>> {
         None
     }
 }
@@ -128,6 +141,12 @@ impl HeightfieldCollider {
         self
     }
 }
+
+/// Number of sampled rows/columns used to draw a heightfield's debug wireframe, regardless of
+/// the resolution of the underlying height grid. Keeps the gizmo line count bounded even for
+/// large heightmaps (e.g. terrain tiles), at the cost of some visual precision.
+const HEIGHTFIELD_WIREFRAME_SAMPLES: usize = 17;
+
 impl ColliderShape for HeightfieldCollider {
     fn build(&self) -> rapier3d::prelude::Collider {
         // Convert the vector of heights to a rapier3d::nalgebra::Matrix
@@ -146,5 +165,47 @@ impl ColliderShape for HeightfieldCollider {
                 heightfield.collision_groups(InteractionGroups::new(group, ColliderGroup::all()));
         }
         heightfield.build()
+    }
+
+    fn heightfield_wireframe(&self) -> Option<Vec<(Vec3, Vec3)>> {
+        let nrows = (self.heights.len() as f32).sqrt() as usize;
+        if nrows < 2 {
+            return None;
+        }
+
+        // Downsample to a fixed grid resolution, picking evenly spaced rows/columns from the
+        // source heights, so the line count stays bounded regardless of the heightmap's size.
+        let samples = nrows.min(HEIGHTFIELD_WIREFRAME_SAMPLES);
+        let sample_index = |i: usize| {
+            if samples == 1 {
+                0
+            } else {
+                i * (nrows - 1) / (samples - 1)
+            }
+        };
+        let point = |row: usize, col: usize| -> Vec3 {
+            let height = self.heights[row * nrows + col];
+            Vec3::new(
+                (col as f32 / (nrows - 1) as f32 - 0.5) * self.scale[0],
+                height * self.scale[1],
+                (row as f32 / (nrows - 1) as f32 - 0.5) * self.scale[2]
+            )
+        };
+
+        let mut lines = Vec::new();
+        for si in 0..samples {
+            let row = sample_index(si);
+            for sj in 0..samples {
+                let col = sample_index(sj);
+                let p = point(row, col);
+                if sj + 1 < samples {
+                    lines.push((p, point(row, sample_index(sj + 1))));
+                }
+                if si + 1 < samples {
+                    lines.push((p, point(sample_index(si + 1), col)));
+                }
+            }
+        }
+        Some(lines)
     }
 }

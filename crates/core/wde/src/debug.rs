@@ -10,7 +10,8 @@ use wde_renderer::prelude::Color;
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
 pub struct PhysicsDebugSettings {
-    pub show_colliders: bool
+    pub show_colliders: bool,
+    pub show_heightfields: bool
 }
 
 pub(crate) struct PhysicsDebugPlugin;
@@ -36,10 +37,14 @@ fn edit_physics_debug_settings(
                 &mut settings.show_colliders,
                 "Show Colliders"
             ));
+            ui.add(Checkbox::new(
+                &mut settings.show_heightfields,
+                "Show Heightfields"
+            ));
         });
 }
 
-/// Draws every box collider as a gizmo cube, positioned like the physics engine sees it: at the
+/// Draws every collider as a gizmo wireframe, positioned like the physics engine sees it: at the
 /// entity's world translation only, ignoring rotation and scale (colliders are always
 /// axis-aligned, see [`wde_physics`] `handle_changes`).
 fn draw_collider_gizmos(
@@ -47,17 +52,25 @@ fn draw_collider_gizmos(
     colliders: Query<(&GlobalTransform, &Collider)>,
     mut gizmos: ResMut<Gizmos>
 ) {
-    if !settings.show_colliders {
+    if !settings.show_colliders && !settings.show_heightfields {
         return;
     }
 
     for (transform, collider) in &colliders {
-        let Some(half_extents) = collider.box_half_extents() else {
-            continue;
-        };
+        let origin = transform.translation();
 
-        let cube_transform =
-            Transform::from_translation(transform.translation()).with_scale(half_extents * 2.0);
-        gizmos.cube(cube_transform, Color::from_srgba(0.0, 1.0, 0.0, 1.0));
+        if settings.show_colliders && let Some(half_extents) = collider.box_half_extents() {
+            let cube_transform = Transform::from_translation(origin).with_scale(half_extents * 2.0);
+            gizmos.cube(cube_transform, Color::from_srgba(0.0, 1.0, 0.0, 1.0));
+        }
+        if settings.show_heightfields && let Some(lines) = collider.heightfield_wireframe() {
+            for (start, end) in lines {
+                gizmos.line(
+                    origin + start,
+                    origin + end,
+                    Color::from_srgba(0.2, 0.6, 1.0, 1.0)
+                );
+            }
+        }
     }
 }
