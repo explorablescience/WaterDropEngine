@@ -1,90 +1,96 @@
 //! WaterDropEngine's `wde-gizmos` crate renders lightweight debug gizmos (lines/boxes) on top of the main scene.
 //!
-//! WIP.
-
-// //! WaterDropEngine's `wde-gizmos` crate renders lightweight debug gizmos (lines/boxes) on top of
-// //! the main scene. It adds a dedicated render pass, a simple line-list pipeline, and a minimal
-// //! material model for per-gizmo color.
-// //!
-// //! # Architecture
-// //! - **Assets**: [`CubeGizmoMesh`](crate::assets::cube_gizmo::CubeGizmoMesh) builds a line-list cube mesh;
-// //!   [`assets::gizmo_material::GizmoMaterialAsset`](crate::assets::gizmo_material::GizmoMaterialAsset) defines a single-color gizmo material with
-// //!   a tiny uniform buffer.
-// //! - **SSBO**: `passes::gizmo_ssbo::GizmoSsbo` allocates CPU/GPU buffers for per-instance
-// //!   `TransformUniform` data and exposes a storage bind group (set 1).
-// //! - **Pipeline**: `passes::gizmo_pipeline::GizmoRenderPipelineAsset` compiles the WGSL gizmo
-// //!   shaders (`gizmo/vert.wgsl`, `gizmo/frag.wgsl`), wiring camera (set 0), transforms (set 1),
-// //!   and material (set 2) layouts into a cached render pipeline.
-// //! - **Render pass**: `passes::gizmo_renderpass::GizmoRenderPass` batches gizmos by
-// //!   (mesh, material), uploads transforms, and draws after the main scene (pass index 1000).
-// //! - **Plugin wiring**: [`GizmosPlugin`](crate::GizmosPlugin) registers materials, SSBO, pipeline assets, and the
-// //!   render pass so gizmos always render last.
-// //!
-// //! # Quickstart (draw a debug box)
-// //! ```rust,no_run
-// //! use bevy::prelude::*;
-// //! use wde_renderer::prelude::*;
-// //! use wde_camera::prelude::*;
-// //! use wde_gizmos::prelude::*;
-// //!
-// //! fn main() {
-// //!     App::new()
-// //!         .add_plugins(DefaultPlugins)
-// //!         .add_plugins(RenderPlugin)
-// //!         .add_plugins(CameraPlugin)
-// //!         .add_plugins(GizmosPlugin)
-// //!         .add_systems(Startup, spawn_gizmo)
-// //!         .run();
-// //! }
-// //!
-// //! fn spawn_gizmo(mut commands: Commands, assets: Res<AssetServer>) {
-// //!     // Create material and mesh
-// //!     let mat: Handle<GizmoMaterialAsset> = assets.add(GizmoMaterialAsset {
-// //!         color: [1.0, 0.2, 0.2, 1.0],
-// //!         ..Default::default()
-// //!     });
-// //!     let mesh = assets.add(CubeGizmoMesh::from("gizmo-cube", Vec3::splat(1.0)));
-// //!
-// //!     commands.spawn((
-// //!         Mesh(mesh),
-// //!         GizmoMaterial(mat),
-// //!         Transform::from_xyz(0.0, 1.0, 0.0),
-// //!     ));
-// //! }
-// //! ```
-// //!
-// //! # Core usage patterns
-// //! - Reuse `CubeGizmoMesh` for AABBs; author custom line meshes by supplying `MeshAsset` with
-// //!   `RenderTopology::LineList` indices.
-// //! - Materials are per-entity; a single color uniform feeds all instances in the batch.
-// //! - Gizmos rely on the camera bind group from `wde-camera`; keep an active camera present.
-// //! - SSBO capacity defaults to 100k instances; adjust in code if you stream more gizmos.
-// //!
-// //! # Modules
-// //! - [`assets`]: gizmo mesh helper, color-only material asset + uniform packing.
-// //! - [`passes`]: SSBO creation, pipeline compilation, batching, and render pass submission.
-// //!
-// //! # Examples and further reading
-// //! - To visualize bounds, spawn multiple meshes sharing the same `GizmoMaterialAsset` so they
-// //!   batch together.
-// //! - Extend the WGSL in `res/gizmo` to add per-vertex coloring while keeping the same bind
-// //!   group layout.
+//! Lines are recorded on the [`Gizmos`] resource from any main-world system (e.g. `ResMut<Gizmos>`).
+//! Every frame, the recorded lines are extracted, uploaded to the GPU and drawn in a single
+//! line-list draw call in the [`RenderPassTransparent`](wde_pbr::prelude::RenderPassTransparent)
+//! pass, then the [`Gizmos`] resource is cleared so it can be recorded again for the next frame.
 use bevy::prelude::*;
+use wde_pbr::prelude::*;
+use wde_renderer::prelude::{Color, *};
+
+use crate::{
+    data::{GizmoLineData, GizmoLinesBinding},
+    extract::{ExtractedGizmoLines, GizmoDrawCount, extract_gizmo_lines, update_gizmo_buffer},
+    pipeline::GizmoRenderPipeline,
+    subpass::SubRenderPassGizmos
+};
+
+mod data;
+mod extract;
+mod pipeline;
+mod subpass;
 
 #[doc(hidden)]
 pub mod prelude {
-    // pub use crate::GizmosPlugin;
-    // pub use crate::assets::{cube_gizmo::CubeGizmoMesh, gizmo_material::{GizmoMaterial, GizmoMaterialAsset}};
+    pub use crate::Gizmos;
 }
 
-// pub mod assets;
-// pub mod passes;
+#[derive(Resource, Default)]
+pub struct Gizmos {
+    lines: Vec<(Vec3, Vec3, Color)>,
+}
+impl Gizmos {
+    pub fn line(&mut self, start: Vec3, end: Vec3, color: Color) {
+        self.lines.push((start, end, color));
+    }
+
+    pub fn cube(&mut self, transform: Transform, color: Color) {
+        let half_size = Vec3::splat(0.5);
+        let vertices = [
+            Vec3::new(-half_size.x, -half_size.y, -half_size.z),
+            Vec3::new(half_size.x, -half_size.y, -half_size.z),
+            Vec3::new(half_size.x, half_size.y, -half_size.z),
+            Vec3::new(-half_size.x, half_size.y, -half_size.z),
+            Vec3::new(-half_size.x, -half_size.y, half_size.z),
+            Vec3::new(half_size.x, -half_size.y, half_size.z),
+            Vec3::new(half_size.x, half_size.y, half_size.z),
+            Vec3::new(-half_size.x, half_size.y, half_size.z),
+        ];
+
+        let edges = [
+            (0, 1), (1, 2), (2, 3), (3, 0), // back face
+            (4, 5), (5, 6), (6, 7), (7, 4), // front face
+            (0, 4), (1, 5), (2, 6), (3, 7), // sides
+        ];
+
+        for &(start_idx, end_idx) in &edges {
+            let start = transform.transform_point(vertices[start_idx]);
+            let end = transform.transform_point(vertices[end_idx]);
+            self.line(start, end, color);
+        }
+    }
+
+    /// Takes the recorded lines, leaving this resource empty for the next frame.
+    fn take(&mut self) -> Vec<(Vec3, Vec3, Color)> {
+        std::mem::take(&mut self.lines)
+    }
+}
 
 pub struct GizmosPlugin;
 impl Plugin for GizmosPlugin {
-    fn build(&self, _app: &mut App) {
-        // app
-        //     .add_plugins(GizmoMaterialPlugin)
-        //     .add_plugins(GizmoFeaturesPlugin);
+    fn build(&self, app: &mut App) {
+        app.init_resource::<Gizmos>();
+
+        app.add_plugins((
+            RenderDataRegisterPlugin::<GizmoLineData>::default(),
+            RenderBindingRegisterPlugin::<GizmoLinesBinding>::default(),
+            RenderPipelineRegisterPlugin::<GizmoRenderPipeline>::default()
+        ));
+
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .init_resource::<ExtractedGizmoLines>()
+            .init_resource::<GizmoDrawCount>()
+            .add_systems(Extract, extract_gizmo_lines)
+            .add_systems(Render, update_gizmo_buffer.in_set(RenderSet::Prepare));
+    }
+
+    fn finish(&self, app: &mut App) {
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .world_mut()
+            .get_resource_mut::<RenderGraph>()
+            .unwrap()
+            .add_sub_pass::<SubRenderPassGizmos, RenderPassTransparent>();
     }
 }

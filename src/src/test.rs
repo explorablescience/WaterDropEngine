@@ -6,7 +6,12 @@ impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, init_scene).add_systems(
             Update,
-            (add_human_collider, select_entity, set_entities_target),
+            (
+                add_human_collider,
+                select_entity,
+                set_entities_target,
+                draw_gizmo_smoke_test,
+            ),
         );
     }
 }
@@ -294,4 +299,11 @@ fn set_entities_target(
         let target_location = cursor_pos.pos_or_last();
         navigator.add(entity, target_location);
     }
+}
+
+// TEMP: smoke test for wde-gizmos rendering, to be removed.
+fn draw_gizmo_smoke_test(mut gizmos: ResMut<Gizmos>) {
+    gizmos.cube(Transform::from_xyz(0.0, 1.5, 0.0).with_scale(Vec3::splat(2.0)), WdeColor::from_srgba(1.0, 0.0, 0.0, 1.0));
+    gizmos.line(Vec3::new(-5.0, 0.1, 0.0), Vec3::new(5.0, 0.1, 0.0), WdeColor::from_srgba(0.0, 1.0, 0.0, 1.0));
+    gizmos.line(Vec3::new(0.0, 0.1, -5.0), Vec3::new(0.0, 0.1, 5.0), WdeColor::from_srgba(0.0, 0.5, 1.0, 1.0));
 }

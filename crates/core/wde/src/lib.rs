@@ -171,6 +171,8 @@ pub mod prelude {
     pub use wde_terrain_navigation::prelude::*;
 
     // Optional feature modules
+    #[cfg(feature = "gizmos")]
+    pub use wde_gizmos::prelude::*;
     #[cfg(feature = "editor")]
     pub use wde_editor::prelude::*;
     #[cfg(feature = "pbr")]
