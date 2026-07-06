@@ -7,6 +7,7 @@
 //!    - [`wde_terrain`](wde_terrain): A plugin for generating and rendering procedural terrain.
 //!    - [`wde_terrain_editor`](wde_terrain_editor): A plugin for editing terrain in-game.
 //!    - [`wde_terrain_grid`](wde_terrain_grid): A plugin for managing terrain grids and LOD.
+//!    - [`wde_terrain_navigation`](wde_terrain_navigation): A plugin for pathfinding and navigation on terrain.
 //! - Render:
 //!    - [`wde_pbr`](wde_pbr): A plugin for physically based rendering (PBR) materials and lighting.
 //!    - [`wde_camera`](wde_camera): A plugin for managing cameras and viewports.
@@ -125,6 +126,7 @@ impl Plugin for CustomWdePlugins {
             wde_terrain::TerrainPlugin,
             wde_terrain_grid::TerrainGridPlugin,
             wde_terrain_editor::TerrainEditorPlugin,
+            wde_terrain_navigation::TerrainNavigationPlugin,
             wde_pbr_outline::PbrOutlinePlugin
         ));
 
@@ -166,6 +168,7 @@ pub mod prelude {
     pub use wde_scene::prelude::*;
     pub use wde_terrain::prelude::*;
     pub use wde_terrain_grid::prelude::*;
+    pub use wde_terrain_navigation::prelude::*;
 
     // Optional feature modules
     #[cfg(feature = "editor")]

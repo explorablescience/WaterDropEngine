@@ -6,12 +6,7 @@ impl Plugin for TestPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, init_scene).add_systems(
             Update,
-            (
-                add_human_collider,
-                select_entity,
-                set_entities_target,
-                move_entities_towards_target
-            )
+            (add_human_collider, select_entity, set_entities_target),
         );
     }
 }
@@ -32,7 +27,7 @@ struct SelectionOutlineMaterial(Handle<OutlineMaterial>);
 #[derive(Resource)]
 struct SelectionAreaAssets {
     mesh: Handle<Mesh>,
-    material: Handle<SelectionAreaMaterial>
+    material: Handle<SelectionAreaMaterial>,
 }
 
 /// Marker component for the drag-selection ground decal entity.
@@ -45,14 +40,14 @@ const SELECTION_AREA_Y_OFFSET: f32 = 0.01;
 fn init_scene(
     mut commands: Commands,
     mut gltf_spawn_queue: ResMut<GltfSpawnQueue>,
-    asset_server: Res<AssetServer>
+    asset_server: Res<AssetServer>,
 ) {
     // Main camera
     commands.spawn((
         Name::new("Main Camera"),
         Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y),
         ActiveCamera,
-        ThirdPersonController::default() // FreeCameraController::default()
+        ThirdPersonController::default(), // FreeCameraController::default()
     ));
 
     // Spawn the lights
@@ -64,7 +59,7 @@ fn init_scene(
             color: WdeColor::from_srgba(0.8, 0.2, 0.2, 1.0),
             ..Default::default()
         },
-        ChildOf(entity)
+        ChildOf(entity),
     ));
     commands.spawn((
         Name::new("Green Light"),
@@ -73,7 +68,7 @@ fn init_scene(
             color: WdeColor::from_srgba(0.2, 0.8, 0.2, 1.0),
             ..Default::default()
         },
-        ChildOf(entity)
+        ChildOf(entity),
     ));
     commands.spawn((
         Name::new("Blue Light"),
@@ -82,7 +77,7 @@ fn init_scene(
             color: WdeColor::from_srgba(0.2, 0.2, 0.8, 1.0),
             ..Default::default()
         },
-        ChildOf(entity)
+        ChildOf(entity),
     ));
     // commands.spawn((
     //     Name::new("Directional Light"),
@@ -99,7 +94,7 @@ fn init_scene(
             label: "selection-outline".to_string(),
             color: WdeColor::from_srgba(1.0, 0.85, 0.0, 1.0),
             ..Default::default()
-        }
+        },
     )));
 
     commands.insert_resource(SelectionAreaAssets {
@@ -108,7 +103,7 @@ fn init_scene(
             label: "selection-area".to_string(),
             color: WdeColor::from_srgba(0.8, 0.8, 0.4, 0.2),
             ..Default::default()
-        })
+        }),
     });
 
     let global_parent = commands
@@ -122,11 +117,11 @@ fn init_scene(
                 Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(
                     i as f32 * 1.0,
                     0.0,
-                    0.0
+                    0.0,
                 )),
                 PendingHumanCollider(gltf_asset.clone()),
                 EntityMarker,
-                ChildOf(global_parent)
+                ChildOf(global_parent),
             ))
             .id();
         GltfLoader::spawn(&mut gltf_spawn_queue, gltf_asset.clone(), parent);
@@ -138,7 +133,7 @@ fn init_scene(
 fn add_human_collider(
     mut commands: Commands,
     gltf_assets: Res<Assets<GltfAsset>>,
-    query: Query<(Entity, &PendingHumanCollider)>
+    query: Query<(Entity, &PendingHumanCollider)>,
 ) {
     for (entity, pending) in &query {
         let Some(gltf_asset) = gltf_assets.get(&pending.0) else {
@@ -154,7 +149,7 @@ fn add_human_collider(
             Name::new("Human Collider"),
             Transform::from_translation(bbox_offset),
             Collider::from(BoxCollider::new(bbox_extent)),
-            ChildOf(entity)
+            ChildOf(entity),
         ));
     }
 }
@@ -172,11 +167,13 @@ fn select_entity(
     outline_material: Res<SelectionOutlineMaterial>,
     selection_area_assets: Res<SelectionAreaAssets>,
     selected_entities: Query<Entity, With<EntitySelectedMarker>>,
-    entities_query: Query<(Entity, &Transform), (With<EntityMarker>, Without<SelectionAreaQuadMarker>)>,
+    entities_query: Query<
+        (Entity, &Transform),
+        (With<EntityMarker>, Without<SelectionAreaQuadMarker>),
+    >,
     children_query: Query<&Children>,
     mesh_query: Query<(), With<Mesh3d>>,
     mut quad_transform_query: Query<&mut Transform, With<SelectionAreaQuadMarker>>,
-    asset_server: Res<AssetServer>
 ) {
     if mouse_input.just_pressed(MouseButton::Left) {
         let start_pos = cursor_pos.pos_or_last();
@@ -190,9 +187,10 @@ fn select_entity(
                 Mesh3d(selection_area_assets.mesh.clone()),
                 PbrMaterial3d(selection_area_assets.material.clone()),
                 Transform::from_translation(
-                    start_pos + Vec3::new(0.0, SELECTION_AREA_Y_OFFSET, 0.0)
-                ).with_scale(Vec3::new(0.0, 1.0, 0.0)),
-                PbrSsboTransformUuid::default()
+                    start_pos + Vec3::new(0.0, SELECTION_AREA_Y_OFFSET, 0.0),
+                )
+                .with_scale(Vec3::new(0.0, 1.0, 0.0)),
+                PbrSsboTransformUuid::default(),
             ))
             .id();
         *selection_area_quad = Some(entity);
@@ -205,9 +203,7 @@ fn select_entity(
 
             // Deselect all previously selected entities and remove their contour outline
             for entity in &selected_entities {
-                commands
-                    .entity(entity)
-                    .remove::<(EntitySelectedMarker, TargetLocation)>();
+                commands.entity(entity).remove::<EntitySelectedMarker>();
                 set_entity_outline(&mut commands, &children_query, &mesh_query, entity, None);
             }
 
@@ -221,7 +217,7 @@ fn select_entity(
                         &children_query,
                         &mesh_query,
                         entity,
-                        Some(&outline_material.0)
+                        Some(&outline_material.0),
                     );
                 }
             }
@@ -246,7 +242,7 @@ fn select_entity(
             transform.scale = Vec3::new(
                 (max.x - min.x).max(f32::EPSILON),
                 1.0,
-                (max.z - min.z).max(f32::EPSILON)
+                (max.z - min.z).max(f32::EPSILON),
             );
         }
     }
@@ -259,7 +255,7 @@ fn set_entity_outline(
     children_query: &Query<&Children>,
     mesh_query: &Query<(), With<Mesh3d>>,
     entity: Entity,
-    outline_material: Option<&Handle<OutlineMaterial>>
+    outline_material: Option<&Handle<OutlineMaterial>>,
 ) {
     let Ok(children) = children_query.get(entity) else {
         return;
@@ -285,43 +281,17 @@ fn set_entity_outline(
     }
 }
 
-#[derive(Component)]
-struct TargetLocation(Vec3);
-
 fn set_entities_target(
-    mut commands: Commands,
     selected_entities: Query<Entity, With<EntitySelectedMarker>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
-    cursor_pos: Res<TerrainCursorPos>
+    cursor_pos: Res<TerrainCursorPos>,
+    mut navigator: ResMut<TerrainNavigator>,
 ) {
-    if selected_entities.is_empty() {
-        return;
-    }
-    if !mouse_input.just_pressed(MouseButton::Right) {
+    if selected_entities.is_empty() || !mouse_input.just_pressed(MouseButton::Right) {
         return;
     }
     for entity in &selected_entities {
         let target_location = cursor_pos.pos_or_last();
-        commands
-            .entity(entity)
-            .insert(TargetLocation(target_location));
-    }
-}
-
-fn move_entities_towards_target(
-    mut commands: Commands,
-    mut query: Query<(Entity, &mut Transform, &TargetLocation), With<EntitySelectedMarker>>,
-    time: Res<Time>
-) {
-    for (entity, mut transform, target_location) in &mut query {
-        let direction = (target_location.0 - transform.translation).normalize_or_zero();
-        let speed = 2.0; // units per second
-        let delta_move = direction * speed * time.delta_secs();
-        transform.translation += delta_move;
-
-        // Check if the entity has reached the target location
-        if transform.translation.distance(target_location.0) < 0.1 {
-            commands.entity(entity).remove::<TargetLocation>();
-        }
+        navigator.add(entity, target_location);
     }
 }

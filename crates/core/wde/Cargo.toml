@@ -13,6 +13,7 @@ wde-physics = { path = "../../wrappers/wde-physics" }
 wde-terrain = { path = "../../terrain/wde-terrain" }
 wde-terrain-grid = { path = "../../terrain/wde-terrain-grid" }
 wde-terrain-editor = { path = "../../terrain/wde-terrain-editor" }
+wde-terrain-navigation = { path = "../../terrain/wde-terrain-navigation" }
 wde-scene = { path = "../wde-scene" }
 wde-pbr-outline = { path = "../../render/wde-pbr-outline" }
 wde-gizmos = { path = "../../render/wde-gizmos", optional = true }

@@ -1,0 +1,8 @@
+[package]
+name = "wde-terrain-navigation"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+wde-logger = { path = "../../wrappers/wde-logger" }
+bevy = { workspace = true }
