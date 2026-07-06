@@ -306,4 +306,13 @@ fn draw_gizmo_smoke_test(mut gizmos: ResMut<Gizmos>) {
     gizmos.cube(Transform::from_xyz(0.0, 1.5, 0.0).with_scale(Vec3::splat(2.0)), WdeColor::from_srgba(1.0, 0.0, 0.0, 1.0));
     gizmos.line(Vec3::new(-5.0, 0.1, 0.0), Vec3::new(5.0, 0.1, 0.0), WdeColor::from_srgba(0.0, 1.0, 0.0, 1.0));
     gizmos.line(Vec3::new(0.0, 0.1, -5.0), Vec3::new(0.0, 0.1, 5.0), WdeColor::from_srgba(0.0, 0.5, 1.0, 1.0));
+    gizmos.quad(
+        [
+            Vec3::new(-2.0, 0.05, -2.0),
+            Vec3::new(2.0, 0.05, -2.0),
+            Vec3::new(2.0, 0.05, 2.0),
+            Vec3::new(-2.0, 0.05, 2.0),
+        ],
+        WdeColor::from_srgba(1.0, 1.0, 0.0, 0.35),
+    );
 }
