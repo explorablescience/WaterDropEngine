@@ -59,11 +59,15 @@ fn draw_collider_gizmos(
     for (transform, collider) in &colliders {
         let origin = transform.translation();
 
-        if settings.show_colliders && let Some(half_extents) = collider.box_half_extents() {
+        if settings.show_colliders
+            && let Some(half_extents) = collider.box_half_extents()
+        {
             let cube_transform = Transform::from_translation(origin).with_scale(half_extents * 2.0);
             gizmos.cube(cube_transform, Color::from_srgba(0.0, 1.0, 0.0, 1.0));
         }
-        if settings.show_heightfields && let Some(lines) = collider.heightfield_wireframe() {
+        if settings.show_heightfields
+            && let Some(lines) = collider.heightfield_wireframe()
+        {
             for (start, end) in lines {
                 gizmos.line(
                     origin + start,

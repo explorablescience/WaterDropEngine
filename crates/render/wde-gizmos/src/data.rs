@@ -4,7 +4,7 @@ use wde_renderer::prelude::*;
 
 /// Maximum number of lines that can be recorded in a single frame. Lines recorded past this
 /// limit are dropped (with a warning) rather than growing the GPU buffer.
-pub const MAX_GIZMO_LINES: usize = 32_768*2;
+pub const MAX_GIZMO_LINES: usize = 32_768 * 2;
 
 /// A single gizmo line vertex: world-space position and linear RGBA color.
 #[repr(C)]

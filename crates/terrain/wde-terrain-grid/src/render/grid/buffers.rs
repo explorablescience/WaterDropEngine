@@ -63,7 +63,7 @@ impl RenderData for TerrainGridBuffer {
         let mut chunks_pos = Vec::with_capacity((CHUNK_COUNT * CHUNK_COUNT) as usize);
         for y in -(CHUNK_COUNT as i32) / 2..CHUNK_COUNT as i32 / 2 {
             for x in -(CHUNK_COUNT as i32) / 2..CHUNK_COUNT as i32 / 2 {
-                let pos = Grid::chunk_pos_to_world(GridChunkPos { x, y });
+                let pos = Grid::get_chunk_world_pos(GridChunkPos { x, y });
                 chunks_pos.push(UGridChunkPos { xz: [pos.x, pos.y] });
             }
         }
