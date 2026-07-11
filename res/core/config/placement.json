@@ -14,6 +14,14 @@
                     "x": 2,
                     "y": 2
                 }
+            },
+            {
+                "label": "Dome",
+                "model": "models/placement/dome/dome.gltf",
+                "extent": {
+                    "x": 3,
+                    "y": 3
+                }
             }
         ]
     }
