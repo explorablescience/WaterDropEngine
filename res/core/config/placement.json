@@ -8,12 +8,36 @@
         "version": 1,
         "entities" : [
             {
-                "label": "House",
-                "model": "models/placement/house_demo1/house_demo1.gltf"
+                "label": "Dome Small",
+                "model": "models/placement/dome/dome_3x3.gltf"
             },
             {
-                "label": "Dome",
-                "model": "models/placement/dome/dome.gltf"
+                "label": "Dome Large",
+                "model": "models/placement/dome/dome_5x5.gltf"
+            },
+            {
+                "label": "Tunnel Straight",
+                "model": "models/placement/tunnel/tunnel_2.gltf"
+            },
+            {
+                "label": "Tunnel Intersection",
+                "model": "models/placement/tunnel/tunnel_4.gltf"
+            },
+            {
+                "label": "Airlock",
+                "model": "models/placement/airlock/airlock.gltf"
+            },
+            {
+                "label": "Path Straight",
+                "model": "models/placement/path/path_2.gltf"
+            },
+            {
+                "label": "Path Intersection",
+                "model": "models/placement/path/path_4.gltf"
+            },
+            {
+                "label": "Storage",
+                "model": "models/placement/storage/storage_3x3.gltf"
             }
         ]
     }
