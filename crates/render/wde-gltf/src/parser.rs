@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use bevy::math::Vec3;
 use wde_logger::prelude::*;
 
 use crate::error::GltfError;
@@ -9,6 +10,10 @@ use crate::model::{
 };
 use base64::{Engine, engine::general_purpose};
 use serde_json::Value;
+
+/// Prefix marking a glTF mesh as a named property (e.g. a spawn point) rather than a
+/// renderable mesh. Its position and scale are recorded but it is otherwise skipped.
+const PROPERTY_MESH_PREFIX: &str = "%P%";
 
 /// Parse a glTF 2.0 JSON file from `res/` and build an in-memory `GltfModel`.
 pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
@@ -122,6 +127,7 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
 
     // Handle each nodes
     let mut mesh_primitives: Vec<MeshPrimitive> = Vec::new();
+    let mut properties: HashMap<String, (Vec3, Vec3)> = HashMap::new();
     let mut material_datas: Vec<GltfMaterial> = Vec::new();
     let mut material_map: HashMap<i64, usize> = HashMap::new();
     for node in nodes_list {
@@ -136,15 +142,67 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
             .as_i64()
             .ok_or(GltfError::MissingField("node.mesh".to_string()))?;
         let mesh = &json["meshes"][mesh_index as usize];
+        // Prefer the node's (object's) name over the mesh data-block's name: the `%P%`
+        // prefix is set by renaming the object in Blender, which does not rename the
+        // underlying mesh data if it is not unique to that node.
+        let name = node
+            .get("name")
+            .and_then(|v| v.as_str())
+            .or_else(|| mesh.get("name").and_then(|v| v.as_str()))
+            .unwrap_or("unnamed_mesh");
+
+        // Extract node transform
+        let translation = node
+            .get("translation")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                [
+                    arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                    arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                    arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32
+                ]
+            })
+            .unwrap_or([0.0, 0.0, 0.0]);
+
+        let rotation = node
+            .get("rotation")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                [
+                    arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                    arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                    arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+                    arr.get(3).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32
+                ]
+            })
+            .unwrap_or([0.0, 0.0, 0.0, 1.0]);
+
+        let scale = node
+            .get("scale")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                [
+                    arr.first().and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                    arr.get(1).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
+                    arr.get(2).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32
+                ]
+            })
+            .unwrap_or([1.0, 1.0, 1.0]);
+
+        // Meshes prefixed with "%P%" are not real renderable meshes: they mark a named
+        // property (e.g. a spawn point) and only their position/scale are kept.
+        if let Some(property_name) = name.strip_prefix(PROPERTY_MESH_PREFIX) {
+            properties.insert(
+                property_name.to_string(),
+                (Vec3::from(translation), Vec3::from(scale))
+            );
+            continue;
+        }
 
         // Process primitives in the mesh (each primitive contains a description of how to draw a part of the mesh)
         let primitives = mesh["primitives"]
             .as_array()
             .ok_or(GltfError::MissingField("mesh.primitives".to_string()))?;
-        let name = mesh
-            .get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("unnamed_mesh");
         for (i, primitive) in primitives.iter().enumerate() {
             // Process optional indexed vertices
             let vertex_indexed_accessor_id = primitive
@@ -276,44 +334,6 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
                 }
             }
 
-            // Extract node transform
-            let translation = node
-                .get("translation")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    [
-                        arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                        arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32
-                    ]
-                })
-                .unwrap_or([0.0, 0.0, 0.0]);
-
-            let rotation = node
-                .get("rotation")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    [
-                        arr.first().and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                        arr.get(1).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-                        arr.get(3).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32
-                    ]
-                })
-                .unwrap_or([0.0, 0.0, 0.0, 1.0]);
-
-            let scale = node
-                .get("scale")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    [
-                        arr.first().and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
-                        arr.get(1).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32,
-                        arr.get(2).and_then(|v| v.as_f64()).unwrap_or(1.0) as f32
-                    ]
-                })
-                .unwrap_or([1.0, 1.0, 1.0]);
-
             // Build MeshPrimitive
             let mesh_primitive = MeshPrimitive {
                 name: format!("{}_primitive_{}", name, i),
@@ -349,7 +369,8 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
         meshes: vec![GltfMesh {
             primitives: mesh_primitives
         }],
-        materials: material_datas
+        materials: material_datas,
+        properties
     })
 }
 

@@ -10,6 +10,8 @@
 //! ```
 //! Note that the `gltf_asset` handle will be enqueued for spawning once it is loaded. The actual spawning of the model into the world will happen automatically in the background, and you can check for its presence using the asset handle.
 //! The rendering of the loaded model is then managed by the [`wde_pbr`](wde_pbr) crate, which handles the materials and shaders for the meshes.
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use wde_logger::prelude::*;
 
@@ -65,7 +67,10 @@ pub struct GltfAsset {
     /// Each model is represented by a mesh and its associated material.
     pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>,
     /// The englobing bounding box of the entire model, computed from the bounding boxes of all meshes.
-    pub bbox: MeshBbox
+    pub bbox: MeshBbox,
+    /// Named properties (e.g. spawn points) extracted from meshes whose name starts with `%P%`.
+    /// These meshes are not added to [`Self::models`]; only their name, position and scale are kept here.
+    pub properties: HashMap<String, (Vec3, Vec3)>
 }
 
 /// Options for loading a glTF model.
@@ -145,7 +150,8 @@ impl AssetLoader for GltfAssetLoader {
             bbox: MeshBbox {
                 min: bbox_min,
                 max: bbox_max
-            }
+            },
+            properties: model.properties
         })
     }
 

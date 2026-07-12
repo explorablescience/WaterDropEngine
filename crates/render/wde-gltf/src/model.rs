@@ -1,6 +1,8 @@
 //! Core glTF model structures used by the loader and parser.
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 
 use crate::material::GltfMaterial;
@@ -12,7 +14,10 @@ pub struct GltfModel {
     pub filename: String,
     pub buffers: Vec<GltfBuffer>,
     pub meshes: Vec<GltfMesh>,
-    pub materials: Vec<GltfMaterial>
+    pub materials: Vec<GltfMaterial>,
+    /// Named properties (e.g. spawn points) extracted from meshes prefixed with `%P%`,
+    /// mapping the property name to its `(position, scale)`.
+    pub properties: HashMap<String, (Vec3, Vec3)>
 }
 
 /// Representation of a glTF buffer with its raw data and bufferView slices.
