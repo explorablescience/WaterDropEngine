@@ -8,12 +8,13 @@ const PLACEMENT_CONFIG_VERSION: u32 = 1;
 const PLACEMENT_CONFIG_PATH: &str = "core/config/placement.json";
 
 /// Entry for a single entity in the placement configuration.
-#[derive(Clone)]
+#[derive(Clone, Debug, Reflect)]
 pub struct PlacementConfigEntry {
     pub label: String,
     pub asset: Handle<GltfAsset>,
     pub extent: UVec2,
-    pub anchors: Vec<Vec2>
+    pub anchors_in: Vec<Vec2>,
+    pub anchors_out: Vec<Vec2>,
 }
 
 /// Configuration for the placement of entities in the terrain grid.
@@ -104,17 +105,21 @@ fn process_pending_entries(
                     UVec2::new(1, 1)
                 }
             };
-            let mut anchors = Vec::new();
+            let mut anchors_in = Vec::new();
+            let mut anchors_out = Vec::new();
             for (anchor_name, (pos, _scale)) in properties.iter() {
-                if anchor_name.starts_with("Anchor") {
-                    anchors.push(Vec2::new(pos.x, pos.z));
+                if anchor_name.starts_with("AnchorIn") {
+                    anchors_in.push(Vec2::new(pos.x, pos.z));
+                } else if anchor_name.starts_with("AnchorOut") {
+                    anchors_out.push(Vec2::new(pos.x, pos.z));
                 }
             }
             processed_entries.push(PlacementConfigEntry {
                 label: label.clone(),
                 asset: asset_handle.clone(),
                 extent,
-                anchors,
+                anchors_in,
+                anchors_out,
             });
             processed_labels.push(label);
         } else {

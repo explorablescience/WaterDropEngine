@@ -3,7 +3,7 @@ use wde_editor::prelude::*;
 use wde_gltf::prelude::*;
 
 use crate::{
-    core::placement_config::PlacementConfig,
+    core::entries::PlacementConfig,
     placement::{
         TerrainPlacementManager, TerrainPlacementMode, move_and_delete::MoveAndDeleteManager,
         place::ui_place_entity
@@ -51,8 +51,8 @@ pub fn show_ui(
                         &asset_server
                     );
                 }
-                TerrainPlacementMode::Move => {}   // TODO
-                TerrainPlacementMode::Remove => {} // TODO
+                TerrainPlacementMode::Move => {}
+                TerrainPlacementMode::Remove => {}
                 TerrainPlacementMode::None => {
                     reset_tool(&mut commands, &mut manager, &mut move_and_delete_manager);
                 }

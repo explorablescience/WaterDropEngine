@@ -9,9 +9,7 @@ use wde_renderer::prelude::Color;
 use wde_terrain::prelude::*;
 
 use crate::{
-    core::placement_config::PlacementConfig,
-    placement::{TerrainPlacementManager, TerrainPlacementMode},
-    prelude::Grid
+    core::{entries::PlacementConfig, grid::GridEntityEvent}, placement::{TerrainPlacementManager, TerrainPlacementMode}
 };
 
 #[derive(Component)]
@@ -160,8 +158,8 @@ pub fn handle_move_and_delete_update(
     buildings_hover_query: Query<&MaterialStorer>,
     children_query: Query<&Children>,
     entity_label_query: Query<&Name>,
-    mut grid: ResMut<Grid>,
-    config: Res<PlacementConfig>
+    config: Res<PlacementConfig>,
+    mut grid_entity_events: MessageWriter<GridEntityEvent>
 ) {
     if move_delete_manager.current_hovered_entity.is_none()
         || (manager.mode != TerrainPlacementMode::Move
@@ -199,7 +197,9 @@ pub fn handle_move_and_delete_update(
         commands.entity(hovered_entity).despawn();
 
         // Notify the grid
-        grid.remove_entity(hovered_entity);
+        grid_entity_events.write(GridEntityEvent::Removed {
+            entity: hovered_entity
+        });
     }
 }
 

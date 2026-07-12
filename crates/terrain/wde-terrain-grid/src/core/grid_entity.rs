@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    core::grid::{GridTilePos, TILE_SIZE},
-    prelude::Grid
+    core::{entries::PlacementConfigEntry, grid::{GridTilePos, TILE_SIZE}}, prelude::Grid
 };
 
 /// Local rotation of an entity on the grid around its center, in 90 degree increments.
@@ -26,25 +25,32 @@ impl GridRotation {
     }
 }
 
-/// Describes the area occupied by an entity on the grid.
+/// Describes an entity that has been placed on the grid.
 #[derive(Component, Clone, Debug, Reflect)]
 #[reflect(Component)]
 pub struct GridEntity {
+    entry: PlacementConfigEntry,
     center: Vec2,
     bbox: (Vec2, Vec2), // (bottom left, top_right)
     footprint: Vec<GridTilePos>
 }
 impl GridEntity {
-    pub fn new(center: Vec2, extent: UVec2, rotation: GridRotation) -> Self {
-        let (center, bbox, footprint) = compute_footprint(center, extent, rotation);
+    /// Creates a new GridEntity with the given center position, rotation, and placement configuration entry.
+    /// 
+    /// # Arguments
+    /// * `center` - The center position of the entity in world coordinates. Note that this is not necessarily the center of the footprint, but the position used to place the entity on the grid. It will be adjusted to the nearest grid tile.
+    /// * `rotation` - The rotation of the entity on the grid, in 90 degree increments. This will affect the footprint of the entity.
+    /// * `entry` - The placement configuration entry that describes the entity, including its extent and anchors.
+    pub fn new(center: Vec2, rotation: GridRotation, entry: PlacementConfigEntry) -> Self {
+        let (center, bbox, footprint) = compute_footprint(center, entry.extent, rotation);
         GridEntity {
+            entry,
             center,
             bbox,
             footprint
         }
     }
-    /// Gets the center tile position of this entity.
-    /// Note that this is not necessarily the center of the footprint, but the position used to place the entity on the grid.
+    /// Get the center position of this entity in world coordinates.
     pub fn center(&self) -> Vec2 {
         self.center
     }
@@ -58,7 +64,6 @@ impl GridEntity {
     }
 }
 
-// For non-rotated entities, the footprint is a simple rectangle around the center
 fn compute_footprint(
     center: Vec2,
     extent: UVec2,

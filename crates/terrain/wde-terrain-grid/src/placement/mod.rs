@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    core::placement_config::PlacementConfigEntry, placement::move_and_delete::MoveAndDeleteManager
+    core::entries::PlacementConfigEntry, placement::move_and_delete::MoveAndDeleteManager
 };
 use wde_terrain::prelude::*;
 
