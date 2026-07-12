@@ -9,19 +9,11 @@
         "entities" : [
             {
                 "label": "House",
-                "model": "models/placement/house_demo1/house_demo1.gltf",
-                "extent": {
-                    "x": 2,
-                    "y": 2
-                }
+                "model": "models/placement/house_demo1/house_demo1.gltf"
             },
             {
                 "label": "Dome",
-                "model": "models/placement/dome/dome.gltf",
-                "extent": {
-                    "x": 3,
-                    "y": 3
-                }
+                "model": "models/placement/dome/dome.gltf"
             }
         ]
     }
