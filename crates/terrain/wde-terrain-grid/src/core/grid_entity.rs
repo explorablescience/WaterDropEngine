@@ -5,7 +5,7 @@ use crate::{
 };
 
 /// Local rotation of an entity on the grid around its center, in 90 degree increments.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Reflect)]
 pub enum GridRotation {
     #[default]
     R0,
@@ -31,6 +31,7 @@ impl GridRotation {
 pub struct GridEntity {
     entry: PlacementConfigEntry,
     center: Vec2,
+    rotation: GridRotation,
     bbox: (Vec2, Vec2), // (bottom left, top_right)
     footprint: Vec<GridTilePos>
 }
@@ -46,6 +47,7 @@ impl GridEntity {
         GridEntity {
             entry,
             center,
+            rotation,
             bbox,
             footprint
         }
@@ -54,6 +56,10 @@ impl GridEntity {
     pub fn center(&self) -> Vec2 {
         self.center
     }
+    /// Get the rotation of this entity on the grid.
+    pub fn rotation(&self) -> GridRotation {
+        self.rotation
+    }
     /// Gets the bounding box of this entity in world coordinates (bottom left, top right).
     pub fn bbox(&self) -> (Vec2, Vec2) {
         self.bbox
@@ -61,6 +67,10 @@ impl GridEntity {
     /// Gets the list of grid tiles that are occupied by this entity footprint.
     pub fn footprint(&self) -> &Vec<GridTilePos> {
         &self.footprint
+    }
+    /// Gets a reference to the placement configuration entry that describes this entity.
+    pub fn entry(&self) -> &PlacementConfigEntry {
+        &self.entry
     }
 }
 

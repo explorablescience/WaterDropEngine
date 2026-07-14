@@ -235,7 +235,7 @@ fn prepare_assets<A: RenderAsset>(
             Some(asset) => asset.label(),
             None => "(asset not loaded)"
         };
-        debug!(
+        trace!(
             "Removing asset {} of type {}.",
             label,
             std::any::type_name::<A::SourceAsset>()

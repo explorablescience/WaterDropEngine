@@ -38,6 +38,10 @@
             {
                 "label": "Storage",
                 "model": "models/placement/storage/storage_3x3.gltf"
+            },
+            {
+                "label": "Control Room",
+                "model": "models/placement/control_room/control_room.gltf"
             }
         ]
     }

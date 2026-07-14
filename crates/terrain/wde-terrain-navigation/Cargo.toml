@@ -5,4 +5,7 @@ edition = "2024"
 
 [dependencies]
 wde-logger = { path = "../../wrappers/wde-logger" }
+wde-terrain-grid = { path = "../wde-terrain-grid" }
+wde-renderer = { path = "../../core/wde-renderer" }
+wde-gizmos = { path = "../../render/wde-gizmos" }
 bevy = { workspace = true }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 mod navigation;
-mod navmap;
+mod navgrid;
 
 pub mod prelude {
     pub use super::TerrainNavigator;
@@ -10,7 +10,7 @@ pub mod prelude {
 pub struct TerrainNavigationPlugin;
 impl Plugin for TerrainNavigationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(navigation::NavigationPlugin)
+        app.add_plugins((navigation::NavigationPlugin, navgrid::NavMapPlugin))
             .init_resource::<TerrainNavigator>()
             .add_systems(Update, handle_changes);
     }
