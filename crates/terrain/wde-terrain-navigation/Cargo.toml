@@ -8,4 +8,5 @@ wde-logger = { path = "../../wrappers/wde-logger" }
 wde-terrain-grid = { path = "../wde-terrain-grid" }
 wde-renderer = { path = "../../core/wde-renderer" }
 wde-gizmos = { path = "../../render/wde-gizmos" }
+wde-editor = { path = "../../core/wde-editor" }
 bevy = { workspace = true }

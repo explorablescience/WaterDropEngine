@@ -31,7 +31,7 @@ fn edit_physics_debug_settings(
     UIWindow::new("Physics")
         .resizable(false)
         .default_pos([100.0, 260.0])
-        .open(ui_menu.clicked_mut("Engine/Physics"))
+        .open(ui_menu.clicked_mut("Debug/Physics"))
         .show(&ctx.0, |ui| {
             ui.add(Checkbox::new(
                 &mut settings.show_colliders,

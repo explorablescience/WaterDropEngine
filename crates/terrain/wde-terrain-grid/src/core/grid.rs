@@ -13,7 +13,7 @@ pub const TILE_SIZE: f32 = CHUNK_SIZE / CHUNK_GRID_SUBDIVISIONS as f32;
 /// The position of a chunk in the grid, represented as (x, z) coordinates.
 pub type GridChunkPos = IVec2;
 /// The local position of a tile within a chunk, represented as (x, z) coordinates.
-type GridLocalPos = (u32, u32);
+pub type GridLocalPos = (u32, u32);
 /// The full position in the grid
 pub type GridTilePos = (GridChunkPos, GridLocalPos);
 
@@ -26,7 +26,7 @@ pub enum GridEntityEvent {
 }
 
 /// A terrain chunk that contains a list of terrain tiles.
-struct Chunk {
+pub struct Chunk {
     /// List of terrain tiles that belong to this chunk.
     tiles: Vec<Option<Entity>>,
     /// Pointers from the entities to their position in the grid.
@@ -92,7 +92,7 @@ impl Chunk {
             - CHUNK_SIZE / 2.0
     }
     /// Converts a local tile position to an index in the tiles vector.
-    fn local_pos_to_index(local_pos: GridLocalPos) -> usize {
+    pub fn local_pos_to_index(local_pos: GridLocalPos) -> usize {
         let (local_x, local_y) = local_pos;
         (local_y * CHUNK_GRID_SUBDIVISIONS + local_x) as usize * 4
     }

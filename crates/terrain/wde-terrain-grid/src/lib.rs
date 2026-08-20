@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use crate::{core::CorePlugin, placement::PlacementPlugin, render::RenderPlugin};
 
-mod core;
+pub mod core;
 mod placement;
 mod render;
 
