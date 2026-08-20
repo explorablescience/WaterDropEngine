@@ -14,7 +14,7 @@ pub struct PlacementConfigEntry {
     pub asset: Handle<GltfAsset>,
     pub extent: UVec2,
     pub anchors_in: Vec<Vec2>,
-    pub anchors_out: Vec<Vec2>,
+    pub anchors_out: Vec<Vec2>
 }
 
 /// Configuration for the placement of entities in the terrain grid.
@@ -22,7 +22,7 @@ pub struct PlacementConfigEntry {
 pub struct PlacementConfig {
     pending_entries: Vec<(String, Handle<GltfAsset>)>,
     pub labels: Vec<String>,
-    pub entries: Vec<PlacementConfigEntry>,
+    pub entries: Vec<PlacementConfigEntry>
 }
 
 pub struct PlacementPlugin;
@@ -36,7 +36,7 @@ impl Plugin for PlacementPlugin {
 
 fn read_placement_file(
     asset_server: Res<AssetServer>,
-    mut placement_config_struct: ResMut<PlacementConfig>,
+    mut placement_config_struct: ResMut<PlacementConfig>
 ) {
     // Load placement configuration file
     let placement_config = match serialize::parse_file(PLACEMENT_CONFIG_PATH) {
@@ -82,7 +82,7 @@ fn read_placement_file(
 
 fn process_pending_entries(
     mut placement_config_struct: ResMut<PlacementConfig>,
-    gltf_assets: Res<Assets<GltfAsset>>,
+    gltf_assets: Res<Assets<GltfAsset>>
 ) {
     if placement_config_struct.pending_entries.is_empty() {
         return;
@@ -119,7 +119,7 @@ fn process_pending_entries(
                 asset: asset_handle.clone(),
                 extent,
                 anchors_in,
-                anchors_out,
+                anchors_out
             });
             processed_labels.push(label);
         } else {

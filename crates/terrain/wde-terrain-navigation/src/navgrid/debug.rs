@@ -1,22 +1,28 @@
 use bevy::prelude::*;
+use wde_editor::prelude::*;
 use wde_gizmos::prelude::*;
 use wde_renderer::prelude::Color;
-use wde_editor::prelude::*;
 
 use crate::navgrid::NavMap;
 
 pub struct NavMapDebugPlugin;
 impl Plugin for NavMapDebugPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<NavMapDebugSettings>()
-            .add_systems(Update, (manage_debug_settings, interior_show_nav_map, exterior_show_nav_map));
+        app.init_resource::<NavMapDebugSettings>().add_systems(
+            Update,
+            (
+                manage_debug_settings,
+                interior_show_nav_map,
+                exterior_show_nav_map
+            )
+        );
     }
 }
 
 #[derive(Resource, Default)]
 struct NavMapDebugSettings {
     pub show_interior_nav_map: bool,
-    pub show_exterior_nav_map: bool,
+    pub show_exterior_nav_map: bool
 }
 
 fn manage_debug_settings(
@@ -40,9 +46,12 @@ fn manage_debug_settings(
         });
 }
 
-
 /// Draws every node and every connection exactly once.
-fn interior_show_nav_map(nav_map: Res<NavMap>, mut gizmos: ResMut<Gizmos>, settings: Res<NavMapDebugSettings>) {
+fn interior_show_nav_map(
+    nav_map: Res<NavMap>,
+    mut gizmos: ResMut<Gizmos>,
+    settings: Res<NavMapDebugSettings>
+) {
     // Only draw if interior nav map debug is enabled
     if !settings.show_interior_nav_map {
         return;
@@ -58,7 +67,7 @@ fn interior_show_nav_map(nav_map: Res<NavMap>, mut gizmos: ResMut<Gizmos>, setti
                 Color::GREEN
             } else {
                 Color::RED
-            },
+            }
         );
 
         for &other_id in &node.connections {
@@ -77,13 +86,17 @@ fn interior_show_nav_map(nav_map: Res<NavMap>, mut gizmos: ResMut<Gizmos>, setti
             gizmos.line(
                 Vec3::new(node.position.x, 0.2, node.position.y),
                 Vec3::new(other_node.position.x, 0.2, other_node.position.y),
-                color,
+                color
             );
         }
     }
 }
 
-fn exterior_show_nav_map(nav_map: Res<NavMap>, mut gizmos: ResMut<Gizmos>, settings: Res<NavMapDebugSettings>) {
+fn exterior_show_nav_map(
+    nav_map: Res<NavMap>,
+    mut gizmos: ResMut<Gizmos>,
+    settings: Res<NavMapDebugSettings>
+) {
     // Only draw if exterior nav map debug is enabled
     if !settings.show_exterior_nav_map {
         return;

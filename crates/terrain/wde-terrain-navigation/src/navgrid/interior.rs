@@ -12,30 +12,29 @@ impl Plugin for NavMapInteriorPlugin {
     }
 }
 
-
 #[derive(Default)]
 pub struct InteriorNavMap {
     pub nodes: Vec<InteriorNavMapNode>,
-    pub entity_nodes: HashMap<Entity, u32>,
+    pub entity_nodes: HashMap<Entity, u32>
 }
 
 pub struct InteriorNavMapNode {
     pub position: Vec2,
     pub connections: Vec<u32>,
     /// Nodes are never removed from `nodes` so a removed entity's node is disconnected and marked dead
-    pub alive: bool,
+    pub alive: bool
 }
 
 fn handle_grid_events(
     mut grid_events: MessageReader<GridEntityEvent>,
-    mut nav_map: ResMut<NavMap>,
+    mut nav_map: ResMut<NavMap>
 ) {
     let nav_map = &mut nav_map.interior;
     for event in grid_events.read() {
         match event {
             GridEntityEvent::Placed {
                 entity,
-                grid_entity,
+                grid_entity
             } => {
                 let entry = grid_entity.entry();
 
@@ -49,7 +48,7 @@ fn handle_grid_events(
                 nav_map.nodes.push(InteriorNavMapNode {
                     position: grid_entity.center(),
                     connections: Vec::new(),
-                    alive: true,
+                    alive: true
                 });
                 nav_map.entity_nodes.insert(*entity, new_node_parent_index);
                 for anchor_in in &entry.anchors_in {
@@ -62,7 +61,7 @@ fn handle_grid_events(
                         nav_map.nodes.push(InteriorNavMapNode {
                             position,
                             connections: Vec::new(),
-                            alive: true,
+                            alive: true
                         });
                         new_node_index
                     });
@@ -109,7 +108,7 @@ fn rotate_anchor(anchor: Vec2, rotation: GridRotation) -> Vec2 {
     let (sin, cos) = rotation.rotation().sin_cos();
     Vec2::new(
         anchor.x * cos + anchor.y * sin,
-        anchor.y * cos - anchor.x * sin,
+        anchor.y * cos - anchor.x * sin
     )
 }
 

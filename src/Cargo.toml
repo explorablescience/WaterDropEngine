@@ -14,7 +14,7 @@ wde-pbr-outline = { path = "../crates/render/wde-pbr-outline" }
 [dependencies.wde]
 path = "../crates/core/wde"
 features = [
-    "editor"
+    "editor", "atmosphere"
 ]
 
 [build-dependencies]

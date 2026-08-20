@@ -1,7 +1,11 @@
 use bevy::prelude::*;
 
 use crate::{
-    core::{entries::PlacementConfigEntry, grid::{GridTilePos, TILE_SIZE}}, prelude::Grid
+    core::{
+        entries::PlacementConfigEntry,
+        grid::{GridTilePos, TILE_SIZE}
+    },
+    prelude::Grid
 };
 
 /// Local rotation of an entity on the grid around its center, in 90 degree increments.
@@ -37,7 +41,7 @@ pub struct GridEntity {
 }
 impl GridEntity {
     /// Creates a new GridEntity with the given center position, rotation, and placement configuration entry.
-    /// 
+    ///
     /// # Arguments
     /// * `center` - The center position of the entity in world coordinates. Note that this is not necessarily the center of the footprint, but the position used to place the entity on the grid. It will be adjusted to the nearest grid tile.
     /// * `rotation` - The rotation of the entity on the grid, in 90 degree increments. This will affect the footprint of the entity.

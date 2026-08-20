@@ -10,7 +10,7 @@ impl Plugin for NavMapPlugin {
         app.add_plugins((
             interior::NavMapInteriorPlugin,
             debug::NavMapDebugPlugin,
-            exterior::NavMapExteriorPlugin,
+            exterior::NavMapExteriorPlugin
         ))
         .init_resource::<NavMap>();
     }
@@ -19,5 +19,5 @@ impl Plugin for NavMapPlugin {
 #[derive(Resource, Default)]
 struct NavMap {
     interior: interior::InteriorNavMap,
-    exterior: exterior::ExteriorNavMap,
+    exterior: exterior::ExteriorNavMap
 }

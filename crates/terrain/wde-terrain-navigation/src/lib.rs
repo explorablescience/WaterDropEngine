@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-mod navigation;
 mod navgrid;
+mod navigation;
 
 pub mod prelude {
     pub use super::TerrainNavigator;

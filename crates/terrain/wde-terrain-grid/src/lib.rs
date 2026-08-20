@@ -11,7 +11,7 @@ mod render;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use super::core::grid::{Grid, GridTilePos, GridEntityEvent};
+    pub use super::core::grid::{Grid, GridEntityEvent, GridTilePos};
     pub use super::core::grid_entity::{GridEntity, GridRotation};
 }
 

@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use bevy::math::Vec3;
+use std::collections::HashMap;
 use wde_logger::prelude::*;
 
 use crate::error::GltfError;

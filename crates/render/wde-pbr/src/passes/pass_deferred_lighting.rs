@@ -51,8 +51,11 @@ impl RenderBinding for LightsDataBinding {
         builder: &mut RenderBindingBuilder
     ) {
         builder
-            .add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX)
-            .add_buffer(lights_data, LightsData::ATMOSPHERE_PARAMS_BUFFER_IDX)
+            .add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX);
+        #[cfg(feature = "atmosphere")]
+        builder
+            .add_buffer(lights_data, LightsData::ATMOSPHERE_PARAMS_BUFFER_IDX);
+        builder
             .add_buffer(lights_data, LightsData::PBR_PARAMS_BUFFER_IDX);
     }
 

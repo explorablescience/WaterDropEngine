@@ -9,7 +9,8 @@ use wde_renderer::prelude::Color;
 use wde_terrain::prelude::*;
 
 use crate::{
-    core::{entries::PlacementConfig, grid::GridEntityEvent}, placement::{TerrainPlacementManager, TerrainPlacementMode}
+    core::{entries::PlacementConfig, grid::GridEntityEvent},
+    placement::{TerrainPlacementManager, TerrainPlacementMode}
 };
 
 #[derive(Component)]

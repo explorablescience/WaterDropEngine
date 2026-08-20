@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-use wde_terrain_grid::{core::grid::{CHUNK_GRID_SUBDIVISIONS, GridChunkPos, GridLocalPos}, prelude::*};
+use wde_terrain_grid::{
+    core::grid::{CHUNK_GRID_SUBDIVISIONS, GridChunkPos, GridLocalPos},
+    prelude::*
+};
 
 use crate::navgrid::NavMap;
 
@@ -16,7 +19,7 @@ impl Plugin for NavMapExteriorPlugin {
 enum TileStatus {
     Empty,
     Building,
-    Road,
+    Road
 }
 
 struct Chunk {
@@ -25,7 +28,10 @@ struct Chunk {
 impl Default for Chunk {
     fn default() -> Self {
         Chunk {
-            tiles: vec![TileStatus::Empty; (CHUNK_GRID_SUBDIVISIONS * CHUNK_GRID_SUBDIVISIONS * 4) as usize]
+            tiles: vec![
+                TileStatus::Empty;
+                (CHUNK_GRID_SUBDIVISIONS * CHUNK_GRID_SUBDIVISIONS * 4) as usize
+            ]
         }
     }
 }
@@ -48,34 +54,25 @@ impl Chunk {
     }
 }
 
-
 #[derive(Default)]
 pub struct ExteriorNavMap {
-    chunks: HashMap<GridChunkPos, Chunk>,
+    chunks: HashMap<GridChunkPos, Chunk>
 }
-
-
-
-
-
 
 fn handle_grid_events(
     mut grid_events: MessageReader<GridEntityEvent>,
-    mut nav_map: ResMut<NavMap>,
+    mut nav_map: ResMut<NavMap>
 ) {
     let nav_map = &mut nav_map.exterior;
     for event in grid_events.read() {
         match event {
             GridEntityEvent::Placed {
                 entity,
-                grid_entity,
+                grid_entity
             } => {
                 let entry = grid_entity.entry();
-
-                
             }
-            GridEntityEvent::Removed { entity } => {
-            }
+            GridEntityEvent::Removed { entity } => {}
         }
     }
 }

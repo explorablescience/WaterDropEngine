@@ -1,6 +1,9 @@
 use wde_terrain::TERRAIN_BUILDINGS_COLLIDER_GROUP;
 
-use crate::{core::{entries::PlacementConfigEntry, grid::GridEntityEvent}, placement::TerrainCursorPos};
+use crate::{
+    core::{entries::PlacementConfigEntry, grid::GridEntityEvent},
+    placement::TerrainCursorPos
+};
 use bevy::prelude::*;
 use wde_editor::prelude::*;
 use wde_gltf::prelude::*;
@@ -12,7 +15,7 @@ use crate::{
     core::entries::PlacementConfig,
     placement::{TerrainPlacementManager, TerrainPlacementMode},
     prelude::{Grid, GridEntity, GridRotation},
-    render::ghost::ghost_material::GhostMaterial,
+    render::ghost::ghost_material::GhostMaterial
 };
 
 #[derive(Component)]
@@ -20,7 +23,7 @@ pub(crate) struct GhostMaterialStorer {
     pbr_material: Handle<PbrMaterial>,
     ok_material: Handle<GhostMaterial>,
     nok_material: Handle<GhostMaterial>,
-    current_validity: bool,
+    current_validity: bool
 }
 
 pub fn ui_place_entity(
@@ -29,7 +32,7 @@ pub fn ui_place_entity(
     manager: &mut TerrainPlacementManager,
     config: &PlacementConfig,
     gltf_models: &Assets<GltfAsset>,
-    asset_server: &AssetServer,
+    asset_server: &AssetServer
 ) {
     // Select entity to place
     ui.label("Placement Entity:");
@@ -40,7 +43,7 @@ pub fn ui_place_entity(
             ui.selectable_value(
                 &mut manager.place_selected_entry_label,
                 Some(entry.label.clone()),
-                entry.label.clone(),
+                entry.label.clone()
             );
         }
     });
@@ -64,7 +67,7 @@ pub fn handle_new_entity_to_place(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
     mut manager: ResMut<TerrainPlacementManager>,
-    gltf_models: Res<Assets<GltfAsset>>,
+    gltf_models: Res<Assets<GltfAsset>>
 ) {
     let Some(ref entry) = manager.new_entry_to_place else {
         return;
@@ -75,7 +78,7 @@ pub fn handle_new_entity_to_place(
         &entry.clone(),
         &gltf_models,
         &asset_server,
-        &mut manager,
+        &mut manager
     );
     manager.place_selected_entry_label = Some(label);
     manager.new_entry_to_place = None;
@@ -86,14 +89,14 @@ fn spawn_new_ghost_entity(
     entry: &PlacementConfigEntry,
     gltf_models: &Assets<GltfAsset>,
     asset_server: &AssetServer,
-    manager: &mut TerrainPlacementManager,
+    manager: &mut TerrainPlacementManager
 ) {
     manager.place_selected_entry = Some(entry.clone());
 
     // Get the model to place
     let model = match gltf_models.get(&entry.asset) {
         Some(model) => model,
-        None => return, // Model not loaded yet, will try again in the next frame
+        None => return // Model not loaded yet, will try again in the next frame
     };
 
     // Add the elements as children of the placement entity
@@ -130,8 +133,8 @@ fn spawn_new_ghost_entity(
                         pbr_material: material.clone(),
                         ok_material,
                         nok_material,
-                        current_validity: true,
-                    },
+                        current_validity: true
+                    }
                 ))
                 .id()
         })
@@ -150,7 +153,7 @@ pub fn place_update(
     children_query: Query<&Children>,
     mut material_query: Query<(&Mesh3d, &mut GhostMaterialStorer)>,
     gltf_models: Res<Assets<GltfAsset>>,
-    mut grid_entity_events: MessageWriter<GridEntityEvent>,
+    mut grid_entity_events: MessageWriter<GridEntityEvent>
 ) {
     if manager.place_selected_entry.is_none()
         || (manager.mode != TerrainPlacementMode::Place
@@ -165,7 +168,7 @@ pub fn place_update(
             GridRotation::R0 => GridRotation::R90,
             GridRotation::R90 => GridRotation::R180,
             GridRotation::R180 => GridRotation::R270,
-            GridRotation::R270 => GridRotation::R0,
+            GridRotation::R270 => GridRotation::R0
         };
     }
 
@@ -175,12 +178,12 @@ pub fn place_update(
         let grid_entity = GridEntity::new(
             Vec2::new(pos.x, pos.z),
             *local_rot,
-            manager.place_selected_entry.clone().unwrap(),
+            manager.place_selected_entry.clone().unwrap()
         );
         commands.entity(manager.entity).insert(
             Transform::from_rotation(Quat::from_rotation_y(local_rot.rotation())).with_translation(
-                Vec3::new(grid_entity.center().x, 0.0, grid_entity.center().y),
-            ),
+                Vec3::new(grid_entity.center().x, 0.0, grid_entity.center().y)
+            )
         );
 
         // Check for placement validity and update ghost material accordingly
@@ -205,7 +208,7 @@ pub fn place_update(
             let grid_entity = GridEntity::new(
                 Vec2::new(pos.x, pos.z),
                 *local_rot,
-            manager.place_selected_entry.clone().unwrap(),
+                manager.place_selected_entry.clone().unwrap()
             );
 
             // Spawn parent
@@ -216,16 +219,16 @@ pub fn place_update(
                             .place_selected_entry_label
                             .as_ref()
                             .unwrap()
-                            .to_string(),
+                            .to_string()
                     ),
                     Transform::from_rotation(Quat::from_rotation_y(local_rot.rotation()))
                         .with_translation(Vec3::new(
                             grid_entity.center().x,
                             0.0,
-                            grid_entity.center().y,
+                            grid_entity.center().y
                         )),
                     grid_entity.clone(),
-                    ChildOf(grid.get_parent().unwrap()),
+                    ChildOf(grid.get_parent().unwrap())
                 ))
                 .id();
 
@@ -233,21 +236,21 @@ pub fn place_update(
             let bbox = match gltf_models.get(&manager.place_selected_entry.as_ref().unwrap().asset)
             {
                 Some(model) => &model.bbox,
-                None => return, // Model not loaded yet, should not happen since we check this in the UI code, but just in case
+                None => return // Model not loaded yet, should not happen since we check this in the UI code, but just in case
             };
             let bbox_extent = bbox.max - bbox.min;
             let bbox_offset = Vec3::new(
                 bbox.min.x + bbox_extent.x / 2.0,
                 bbox.min.y + bbox_extent.y / 2.0,
-                bbox.min.z + bbox_extent.z / 2.0,
+                bbox.min.z + bbox_extent.z / 2.0
             );
             commands.spawn((
                 Name::new("Collider"),
                 Transform::from_translation(bbox_offset),
                 Collider::from(
-                    BoxCollider::new(bbox_extent).with_group(TERRAIN_BUILDINGS_COLLIDER_GROUP),
+                    BoxCollider::new(bbox_extent).with_group(TERRAIN_BUILDINGS_COLLIDER_GROUP)
                 ),
-                ChildOf(parent),
+                ChildOf(parent)
             ));
 
             // Spawn mesh children
@@ -261,14 +264,14 @@ pub fn place_update(
                     grid_entity.clone(),
                     Mesh3d(match material_query.get(child) {
                         Ok((mesh, _)) => mesh.0.clone(),
-                        Err(_) => continue,
+                        Err(_) => continue
                     }),
                     PbrMaterial3d(match material_query.get(child) {
                         Ok((_, material_storer)) => material_storer.pbr_material.clone(),
-                        Err(_) => continue,
+                        Err(_) => continue
                     }),
                     CastShadow,
-                    ChildOf(parent),
+                    ChildOf(parent)
                 ));
             }
 

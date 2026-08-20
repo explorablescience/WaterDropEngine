@@ -63,7 +63,7 @@ mod debug;
 
 /// Custom Bevy plugins for WaterDropEngine default plugins.
 #[derive(Default)]
-struct CustomBevyPlugins;
+pub struct CustomBevyPlugins;
 impl Plugin for CustomBevyPlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((
@@ -185,3 +185,24 @@ pub mod prelude {
     #[cfg(feature = "pbr")]
     pub use wde_pbr::prelude::*;
 }
+
+// Re-export the modules for external use
+pub use wde_camera;
+pub use wde_camera_controller;
+pub use wde_gltf;
+pub use wde_logger;
+pub use wde_pbr_outline;
+pub use wde_physics;
+pub use wde_renderer;
+pub use wde_scene;
+pub use wde_terrain;
+pub use wde_terrain_editor;
+pub use wde_terrain_grid;
+pub use wde_terrain_navigation;
+
+#[cfg(feature = "editor")]
+pub use wde_editor;
+#[cfg(feature = "gizmos")]
+pub use wde_gizmos;
+#[cfg(feature = "pbr")]
+pub use wde_pbr;

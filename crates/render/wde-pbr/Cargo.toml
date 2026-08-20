@@ -14,5 +14,5 @@ bytemuck = { workspace = true }
 uuid = "1.23"
 
 [features]
-default = ["atmosphere"]
+default = []
 atmosphere = []
