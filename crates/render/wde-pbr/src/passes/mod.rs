@@ -2,7 +2,6 @@ use bevy::prelude::*;
 use pass_resolve::*;
 use wde_renderer::prelude::*;
 
-#[cfg(feature = "atmosphere")]
 mod atmosphere;
 mod pass_deferred_gbuffer;
 mod pass_deferred_lighting;
@@ -10,7 +9,6 @@ mod pass_resolve;
 mod pass_transparent;
 pub mod shadow;
 
-#[cfg(feature = "atmosphere")]
 pub use atmosphere::*;
 pub use pass_deferred_gbuffer::*;
 pub use pass_deferred_lighting::*;

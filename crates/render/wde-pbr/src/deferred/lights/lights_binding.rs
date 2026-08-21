@@ -18,6 +18,7 @@ impl Plugin for LightsBindingPlugin {
         #[cfg(feature = "atmosphere")]
         app.init_resource::<AtmosphereSettings>()
             .register_type::<AtmosphereSettings>();
+
         app.init_resource::<PbrSettings>()
             .register_type::<PbrSettings>()
             .add_plugins(RenderDataRegisterPlugin::<LightsData>::default());
@@ -28,9 +29,14 @@ impl Plugin for LightsBindingPlugin {
             .init_resource::<ExtractedLights>();
 
         #[cfg(feature = "atmosphere")]
-        app.init_resource::<AtmosphereParamsUniform>()
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .init_resource::<AtmosphereParamsUniform>()
             .add_systems(Extract, extract_atmosphere_params);
-        app.init_resource::<PbrParamsUniform>()
+
+        app.get_sub_app_mut(RenderApp)
+            .unwrap()
+            .init_resource::<PbrParamsUniform>()
             .add_systems(Extract, extract)
             .add_systems(Extract, extract_pbr_params)
             .add_systems(Render, update_lights_buffer.in_set(RenderSet::Prepare));
@@ -67,46 +73,26 @@ impl RenderData for LightsData {
                     usage: BufferUsage::COPY_SRC | BufferUsage::COPY_DST,
                     content: None,
                 },
-            )
-            .add_buffer(
-                Self::ATMOSPHERE_PARAMS_BUFFER_IDX,
-                Buffer {
-                    label: "atmosphere-params".to_string(),
-                    size: {
-                        #[cfg(feature = "atmosphere")]
-                        {
-                            std::mem::size_of::<AtmosphereParamsUniform>()
-                        }
-                        #[cfg(not(feature = "atmosphere"))]
-                        {
-                            0
-                        }
-                    },
-                    usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                    content: {
-                        #[cfg(feature = "atmosphere")]
-                        {
-                            Some(
-                                bytemuck::cast_slice(&[AtmosphereParamsUniform::default()])
-                                    .to_vec(),
-                            )
-                        }
-                        #[cfg(not(feature = "atmosphere"))]
-                        {
-                            None
-                        }
-                    },
-                },
-            )
-            .add_buffer(
-                Self::PBR_PARAMS_BUFFER_IDX,
-                Buffer {
-                    label: "pbr-params".to_string(),
-                    size: std::mem::size_of::<PbrParamsUniform>(),
-                    usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                    content: Some(bytemuck::cast_slice(&[PbrParamsUniform::default()]).to_vec()),
-                },
             );
+        #[cfg(feature = "atmosphere")]
+        builder.add_buffer(
+            Self::ATMOSPHERE_PARAMS_BUFFER_IDX,
+            Buffer {
+                label: "atmosphere-params".to_string(),
+                size: std::mem::size_of::<AtmosphereParamsUniform>(),
+                usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                content: Some(bytemuck::cast_slice(&[AtmosphereParamsUniform::default()]).to_vec()),
+            },
+        );
+        builder.add_buffer(
+            Self::PBR_PARAMS_BUFFER_IDX,
+            Buffer {
+                label: "pbr-params".to_string(),
+                size: std::mem::size_of::<PbrParamsUniform>(),
+                usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+                content: Some(bytemuck::cast_slice(&[PbrParamsUniform::default()]).to_vec()),
+            },
+        );
     }
 }
 
