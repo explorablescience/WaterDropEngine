@@ -113,7 +113,13 @@ pub struct LogPlugin {
     /// Override the default [`tracing_subscriber::fmt::Layer`] with a custom one.
     /// For example, you can use [`tracing_subscriber::fmt::Layer::without_time`] to remove the
     /// timestamp from the log output.
-    pub fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>
+    pub fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>,
+
+    /// Path of the file logs are written to. The previous log file, if any, is renamed
+    /// alongside it with a `-old` suffix before its extension (e.g. `log.txt` -> `log-old.txt`).
+    ///
+    /// Defaults to `<temp_dir>/waterdropengine/log.txt`.
+    pub log_file: std::path::PathBuf
 }
 impl Default for LogPlugin {
     fn default() -> Self {
@@ -121,7 +127,8 @@ impl Default for LogPlugin {
             filter: DEFAULT_FILTER.to_string(),
             level: LogLevel::INFO,
             custom_layer: |_| None,
-            fmt_layer: |_| None
+            fmt_layer: |_| None,
+            log_file: std::env::temp_dir().join("waterdropengine").join("log.txt")
         }
     }
 }
@@ -147,6 +154,18 @@ impl LogPlugin {
         }
         self
     }
+
+    /// Overrides the log level for a specific crate/module target, regardless of the global `level`.
+    ///
+    /// This is useful to keep the engine's own logs quiet (e.g. `LogLevel::INFO`) while enabling
+    /// more verbose logging (e.g. `LogLevel::DEBUG`) for your own game/application crate.
+    ///
+    /// `target` should be the crate's module path as used by `tracing` (i.e. the crate name with
+    /// `-` replaced by `_`), such as `"my_game"`.
+    pub fn with_crate_level(mut self, target: &str, level: LogLevel) -> Self {
+        self.filter = format!("{},{target}={level}", self.filter);
+        self
+    }
 }
 impl Plugin for LogPlugin {
     fn build(&self, app: &mut App) {
@@ -159,7 +178,8 @@ impl Plugin for LogPlugin {
             self.level,
             &self.filter,
             self.custom_layer,
-            self.fmt_layer
+            self.fmt_layer,
+            &self.log_file
         );
         app.insert_resource(LoggerGuard(_guard));
 
@@ -169,13 +189,7 @@ impl Plugin for LogPlugin {
 
         // Initial log message
         info!("Starting WaterDropEngine.");
-        info!(
-            "Logs will be written to {}.",
-            std::env::temp_dir()
-                .join("waterdropengine")
-                .join("log.txt")
-                .display()
-        );
+        info!("Logs will be written to {}.", self.log_file.display());
 
         // Log errors if we failed to set the global logger or subscriber, likely due to another logger/subscriber already being set.
         match (logger_already_set, subscriber_already_set) {
@@ -221,7 +235,8 @@ fn configure_subscriber(
     level: LogLevel,
     filter: &str,
     custom_layer: fn(app: &mut App) -> Option<BoxedLayer>,
-    fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>
+    fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>,
+    log_file: &std::path::Path
 ) -> (
     impl tracing::Subscriber + Send + Sync,
     tracing_appender::non_blocking::WorkerGuard
@@ -271,16 +286,25 @@ fn configure_subscriber(
     let subscriber = subscriber.with(panic_report_layer::PanicReportLogLayer);
 
     // Rename old log file
-    let path = std::env::temp_dir().join("waterdropengine");
-    let _ = std::fs::create_dir_all(&path);
-    let log_file = path.join("log.txt");
+    let path = log_file.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let _ = std::fs::create_dir_all(path);
+    let file_name = log_file
+        .file_name()
+        .unwrap_or_else(|| std::ffi::OsStr::new("log.txt"));
     if log_file.exists() {
-        let archived_log_file = path.join("log-old.txt");
-        let _ = std::fs::rename(&log_file, &archived_log_file);
+        let archived_log_file = {
+            let stem = log_file.file_stem().unwrap_or(file_name).to_string_lossy();
+            let ext = log_file
+                .extension()
+                .map(|ext| format!(".{}", ext.to_string_lossy()))
+                .unwrap_or_default();
+            path.join(format!("{stem}-old{ext}"))
+        };
+        let _ = std::fs::rename(log_file, &archived_log_file);
     }
 
     // Set up file appender layer with a non-blocking writer
-    let file_appender = tracing_appender::rolling::never(&path, "log.txt");
+    let file_appender = tracing_appender::rolling::never(path, file_name);
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
     let subscriber = subscriber.with(
         tracing_subscriber::fmt::Layer::default()
