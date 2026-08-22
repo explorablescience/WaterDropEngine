@@ -36,6 +36,22 @@ pub(crate) fn handle_input(
 
     // Get mouse position
     let window = windows.iter().next().unwrap();
+
+    // Report the real window size and scale factor, so egui can lay out full-screen panels
+    // (e.g. `CentralPanel`) correctly. Without this, `screen_rect` stays `None` and egui falls
+    // back to an arbitrary large default screen size, unrelated to the actual window.
+    raw_input.screen_rect = Some(egui::Rect::from_min_size(
+        egui::Pos2::ZERO,
+        egui::vec2(window.width(), window.height())
+    ));
+    raw_input.viewports.insert(
+        raw_input.viewport_id,
+        egui::ViewportInfo {
+            native_pixels_per_point: Some(window.scale_factor()),
+            ..Default::default()
+        }
+    );
+
     let mouse_position = window
         .cursor_position()
         .map(|pos| egui::Pos2 { x: pos.x, y: pos.y });

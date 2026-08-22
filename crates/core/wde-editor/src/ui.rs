@@ -4,19 +4,28 @@ use wde_egui::prelude::*;
 
 use crate::ui_textures::UITexturesPlugin;
 
+/// System set containing the menu bar's draw system.
+///
+/// Since the menu bar reserves a top strip of the screen via a [`egui::TopBottomPanel`],
+/// any other plugin that draws a screen-filling panel (e.g. a [`egui::CentralPanel`],
+/// as required by most docking crates) must run its own drawing system after this set,
+/// otherwise both panels will compute their layout before the other has claimed its space.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EditorMenuBarSet;
+
 /// The editor plugin that manages the UI menu
 pub struct EditorUIMenu;
 impl Plugin for EditorUIMenu {
     fn build(&self, app: &mut App) {
         app.add_plugins(UITexturesPlugin)
             .init_resource::<UIMenu>()
-            .add_systems(Update, draw);
+            .add_systems(Update, draw.in_set(EditorMenuBarSet));
     }
 }
 
 /// Callback to draw the ui menu
 fn draw(ctx: Res<EguiContext>, mut menu: ResMut<UIMenu>) {
-    egui::CentralPanel::default()
+    egui::TopBottomPanel::top("wde_editor_menu_bar")
         .frame(egui::Frame::NONE)
         .show(&ctx.0, |ui| {
             menu.draw(ui);
