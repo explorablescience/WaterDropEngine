@@ -67,6 +67,20 @@ pub(crate) fn handle_input(
         // We just need to consume the messages here
     }
 
+    // Track modifiers. Must happen before forwarding wheel/button/key events below, since those
+    // read `raw_input.modifiers` (e.g. Ctrl+scroll-to-zoom depends on it being set correctly).
+    let modifiers = egui::Modifiers {
+        ctrl: keyboard_input.pressed(KeyCode::ControlLeft)
+            || keyboard_input.pressed(KeyCode::ControlRight),
+        shift: keyboard_input.pressed(KeyCode::ShiftLeft)
+            || keyboard_input.pressed(KeyCode::ShiftRight),
+        alt: keyboard_input.pressed(KeyCode::AltLeft) || keyboard_input.pressed(KeyCode::AltRight),
+        mac_cmd: false, // Can add Mac support if needed
+        command: keyboard_input.pressed(KeyCode::ControlLeft)
+            || keyboard_input.pressed(KeyCode::ControlRight)
+    };
+    raw_input.modifiers = modifiers;
+
     // Forward wheel scrolling to egui.
     for event in mouse_wheel_messages.read() {
         let unit = match event.unit {
@@ -80,19 +94,6 @@ pub(crate) fn handle_input(
             modifiers: raw_input.modifiers
         });
     }
-
-    // Track modifiers
-    let modifiers = egui::Modifiers {
-        ctrl: keyboard_input.pressed(KeyCode::ControlLeft)
-            || keyboard_input.pressed(KeyCode::ControlRight),
-        shift: keyboard_input.pressed(KeyCode::ShiftLeft)
-            || keyboard_input.pressed(KeyCode::ShiftRight),
-        alt: keyboard_input.pressed(KeyCode::AltLeft) || keyboard_input.pressed(KeyCode::AltRight),
-        mac_cmd: false, // Can add Mac support if needed
-        command: keyboard_input.pressed(KeyCode::ControlLeft)
-            || keyboard_input.pressed(KeyCode::ControlRight)
-    };
-    raw_input.modifiers = modifiers;
 
     // Handle mouse buttons
     for event in mouse_button_input_messages.read() {
