@@ -386,6 +386,7 @@ where
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (binding_params, render_instance, gpu_buffers, gpu_textures): &mut SystemParamItem<
             Self::Params

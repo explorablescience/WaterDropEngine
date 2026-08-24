@@ -22,6 +22,7 @@ impl RenderAsset for StencilWriteRenderPipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, ssbo_mesh, camera, transforms): &mut SystemParamItem<
             Self::Params

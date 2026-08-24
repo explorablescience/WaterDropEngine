@@ -28,6 +28,7 @@ impl RenderAsset for TerrainRenderPipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, camera, material_arrays, terrain_buffer, chunk_array): &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {

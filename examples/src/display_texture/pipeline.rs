@@ -17,6 +17,7 @@ impl RenderAsset for GpuDisplayTexturePipeline {
     );
 
     fn prepare(
+            _id: AssetId<Self::SourceAsset>,
             _asset: Self::SourceAsset,
             (assets_server, pipeline_manager): &mut SystemParamItem<Self::Params>
         ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {

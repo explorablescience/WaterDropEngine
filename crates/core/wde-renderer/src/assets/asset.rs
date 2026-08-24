@@ -27,7 +27,10 @@ pub trait RenderAsset: Send + Sync + 'static + Sized {
     type Params: SystemParam;
 
     /// Prepare the GPU asset from the CPU source [bevy::prelude::Asset] using the render-world system params.
+    /// `id` is the stable ID of the source asset, allowing implementations to recognize a re-prepare of a
+    /// previously seen asset (e.g. to reuse a GPU allocation in place instead of making a new one).
     fn prepare(
+        id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         params: &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>>;
@@ -212,7 +215,7 @@ fn prepare_assets<A: RenderAsset>(
         }
 
         // Load the asset to the GPU from the CPU
-        match A::prepare(extracted_asset, &mut params) {
+        match A::prepare(id, extracted_asset, &mut params) {
             Ok(prepared_asset) => {
                 // Add the asset to the render world
                 render_assets.insert(id, prepared_asset);
@@ -248,7 +251,7 @@ fn prepare_assets<A: RenderAsset>(
         render_assets.remove(id);
 
         // Load the asset to the GPU from the CPU
-        match A::prepare(extracted_asset, &mut params) {
+        match A::prepare(id, extracted_asset, &mut params) {
             Ok(prepared_asset) => {
                 // Add the asset to the render world
                 render_assets.insert(id, prepared_asset);

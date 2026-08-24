@@ -50,13 +50,10 @@ impl RenderBinding for LightsDataBinding {
         lights_data: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
-        builder
-            .add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX);
+        builder.add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX);
         #[cfg(feature = "atmosphere")]
-        builder
-            .add_buffer(lights_data, LightsData::ATMOSPHERE_PARAMS_BUFFER_IDX);
-        builder
-            .add_buffer(lights_data, LightsData::PBR_PARAMS_BUFFER_IDX);
+        builder.add_buffer(lights_data, LightsData::ATMOSPHERE_PARAMS_BUFFER_IDX);
+        builder.add_buffer(lights_data, LightsData::PBR_PARAMS_BUFFER_IDX);
     }
 
     fn label(&self) -> &str {
@@ -111,6 +108,7 @@ impl RenderAsset for DeferredLightingPipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, camera, render_binding, lights_buffer, shadow_binding): &mut SystemParamItem<
             Self::Params,

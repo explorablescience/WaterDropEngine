@@ -215,6 +215,7 @@ impl<R: RenderData + Clone + Asset> RenderAsset for GpuRenderData<R> {
     type Params = SRes<AssetServer>;
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         asset_server: &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {

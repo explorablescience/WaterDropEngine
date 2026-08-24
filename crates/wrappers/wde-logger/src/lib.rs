@@ -286,7 +286,9 @@ fn configure_subscriber(
     let subscriber = subscriber.with(panic_report_layer::PanicReportLogLayer);
 
     // Rename old log file
-    let path = log_file.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let path = log_file
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."));
     let _ = std::fs::create_dir_all(path);
     let file_name = log_file
         .file_name()

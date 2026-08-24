@@ -22,6 +22,7 @@ impl RenderAsset for TerrainGridRenderPipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, camera, terrain_grid_buffer): &mut SystemParamItem<
             Self::Params

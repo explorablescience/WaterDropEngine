@@ -40,6 +40,7 @@ impl RenderAsset for ResolveRenderPipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, render_texture): &mut bevy::ecs::system::SystemParamItem<
             Self::Params

@@ -78,6 +78,7 @@ impl RenderAsset for AtmospherePipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, camera, depth_binding, lights): &mut SystemParamItem<
             Self::Params

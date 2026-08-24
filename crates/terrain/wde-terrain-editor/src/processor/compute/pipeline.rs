@@ -24,6 +24,7 @@ impl RenderAsset for PaintComputePipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, commands_buffer, compute_array): &mut SystemParamItem<
             Self::Params

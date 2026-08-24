@@ -20,7 +20,12 @@ impl Plugin for EguiRenderPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             PreUpdate,
-            (handle_input.in_set(EguiInputSet), preupdate, clear_egui_inputs).chain()
+            (
+                handle_input.in_set(EguiInputSet),
+                preupdate,
+                clear_egui_inputs
+            )
+                .chain()
         )
         .add_systems(PostUpdate, (postupdate, tessellate).chain());
     }

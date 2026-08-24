@@ -62,8 +62,8 @@ impl RenderData for LightsData {
                     label: "lights-buffer-gpu".to_string(),
                     size: std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
                     usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
-                    content: None,
-                },
+                    content: None
+                }
             )
             .add_buffer(
                 Self::LIGHTS_BUFFER_STAGING_IDX,
@@ -71,8 +71,8 @@ impl RenderData for LightsData {
                     label: "lights-buffer-staging".to_string(),
                     size: std::mem::size_of::<LightsStorageElement>() * MAX_LIGHTS,
                     usage: BufferUsage::COPY_SRC | BufferUsage::COPY_DST,
-                    content: None,
-                },
+                    content: None
+                }
             );
         #[cfg(feature = "atmosphere")]
         builder.add_buffer(
@@ -81,8 +81,8 @@ impl RenderData for LightsData {
                 label: "atmosphere-params".to_string(),
                 size: std::mem::size_of::<AtmosphereParamsUniform>(),
                 usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                content: Some(bytemuck::cast_slice(&[AtmosphereParamsUniform::default()]).to_vec()),
-            },
+                content: Some(bytemuck::cast_slice(&[AtmosphereParamsUniform::default()]).to_vec())
+            }
         );
         builder.add_buffer(
             Self::PBR_PARAMS_BUFFER_IDX,
@@ -90,8 +90,8 @@ impl RenderData for LightsData {
                 label: "pbr-params".to_string(),
                 size: std::mem::size_of::<PbrParamsUniform>(),
                 usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                content: Some(bytemuck::cast_slice(&[PbrParamsUniform::default()]).to_vec()),
-            },
+                content: Some(bytemuck::cast_slice(&[PbrParamsUniform::default()]).to_vec())
+            }
         );
     }
 }
@@ -100,14 +100,14 @@ impl RenderData for LightsData {
 struct ExtractedLights {
     pub directional_lights: Vec<DirectionalLight>,
     pub point_lights: Vec<PointLight>,
-    pub spot_lights: Vec<SpotLight>,
+    pub spot_lights: Vec<SpotLight>
 }
 
 fn extract(
     lights_directional: ExtractWorld<Query<&DirectionalLight>>,
     lights_point: ExtractWorld<Query<&PointLight>>,
     lights_spot: ExtractWorld<Query<&SpotLight>>,
-    mut extracted_lights: ResMut<ExtractedLights>,
+    mut extracted_lights: ResMut<ExtractedLights>
 ) {
     // Extract lights each frame. This is necessary to keep the lights buffer up to date, and to handle dynamic lights.
     extracted_lights.directional_lights = lights_directional.iter().copied().collect();
@@ -119,7 +119,7 @@ fn extract(
 fn extract_atmosphere_params(
     settings: ExtractWorld<Res<AtmosphereSettings>>,
     time: ExtractWorld<Res<Time>>,
-    mut uniform: ResMut<AtmosphereParamsUniform>,
+    mut uniform: ResMut<AtmosphereParamsUniform>
 ) {
     let day_length = settings.day_length_seconds.max(1.0);
     let time_of_day = if settings.animate_time {
@@ -132,7 +132,7 @@ fn extract_atmosphere_params(
 
 fn extract_pbr_params(
     settings: ExtractWorld<Res<PbrSettings>>,
-    mut uniform: ResMut<PbrParamsUniform>,
+    mut uniform: ResMut<PbrParamsUniform>
 ) {
     *uniform = PbrParamsUniform::from_settings(&settings);
 }
@@ -143,19 +143,19 @@ fn update_lights_buffer(
     render_instance: Res<RenderInstance>,
     extracted_lights: Res<ExtractedLights>,
     #[cfg(feature = "atmosphere")] atmosphere_uniform: Res<AtmosphereParamsUniform>,
-    pbr_uniform: Res<PbrParamsUniform>,
+    pbr_uniform: Res<PbrParamsUniform>
 ) {
     // Get the lights buffer
     let lights_buffer_cpu = match lights_buffer.iter().next() {
         Some((_, buffer)) => match buffers.get(
             &buffer
                 .get_buffer(LightsData::LIGHTS_BUFFER_STAGING_IDX)
-                .unwrap(),
+                .unwrap()
         ) {
             Some(lights_buffer) => lights_buffer,
-            None => return,
+            None => return
         },
-        None => return,
+        None => return
     };
 
     let render_instance = render_instance.0.read().unwrap();
@@ -165,7 +165,7 @@ fn update_lights_buffer(
         lights_buffer_cpu.buffer.write(
             &render_instance,
             bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>(),
+            offset * std::mem::size_of::<LightsStorageElement>()
         );
         offset += 1;
     }
@@ -174,7 +174,7 @@ fn update_lights_buffer(
         lights_buffer_cpu.buffer.write(
             &render_instance,
             bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>(),
+            offset * std::mem::size_of::<LightsStorageElement>()
         );
         offset += 1;
     }
@@ -183,7 +183,7 @@ fn update_lights_buffer(
         lights_buffer_cpu.buffer.write(
             &render_instance,
             bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>(),
+            offset * std::mem::size_of::<LightsStorageElement>()
         );
         offset += 1;
     }
@@ -202,10 +202,10 @@ fn update_lights_buffer(
             .unwrap()
             .1
             .get_buffer(LightsData::LIGHTS_BUFFER_IDX)
-            .unwrap(),
+            .unwrap()
     ) {
         Some(buffer) => buffer,
-        None => return,
+        None => return
     };
     lights_buffer_gpu
         .buffer
@@ -221,15 +221,15 @@ fn update_lights_buffer(
                 .unwrap()
                 .1
                 .get_buffer(LightsData::ATMOSPHERE_PARAMS_BUFFER_IDX)
-                .unwrap(),
+                .unwrap()
         ) {
             Some(buffer) => buffer,
-            None => return,
+            None => return
         };
         atmosphere_buffer.buffer.write(
             &render_instance,
             bytemuck::cast_slice(&[*atmosphere_uniform]),
-            0,
+            0
         );
     }
 
@@ -240,10 +240,10 @@ fn update_lights_buffer(
             .unwrap()
             .1
             .get_buffer(LightsData::PBR_PARAMS_BUFFER_IDX)
-            .unwrap(),
+            .unwrap()
     ) {
         Some(buffer) => buffer,
-        None => return,
+        None => return
     };
     pbr_buffer
         .buffer

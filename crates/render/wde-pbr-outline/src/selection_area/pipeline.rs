@@ -25,6 +25,7 @@ impl RenderAsset for SelectionAreaRenderPipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, ssbo_mesh, camera, transforms, materials): &mut SystemParamItem<
             Self::Params,

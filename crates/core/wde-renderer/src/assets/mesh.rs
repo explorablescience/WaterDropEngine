@@ -6,6 +6,7 @@ use bevy::{
         SystemParamItem,
         lifetimeless::{SRes, SResMut}
     },
+    platform::collections::HashMap,
     prelude::*
 };
 use serde::{Deserialize, Serialize};
@@ -73,18 +74,36 @@ pub struct GpuMesh {
     pub index_count: u32,
     pub bounding_box: MeshBbox
 }
+
+/// The SSBO region a given CPU [`Mesh`] asset currently occupies.
+struct MeshSsboAllocation {
+    first_vertex: u32,
+    first_index: u32,
+    vertex_count: u32,
+    index_count: u32
+}
+
+/// Tracks the SSBO region owned by each [`Mesh`] asset, keyed by its stable asset ID.
+/// When a mesh is re-prepared (e.g. after its vertex data is edited in place) with the same vertex and
+/// index count as before, its existing region is reused and overwritten instead of bump-allocating a new
+/// one from [`SsboMeshDescriptor`], which never reclaims freed regions.
+#[derive(Resource, Default)]
+pub struct MeshSsboAllocations(HashMap<AssetId<Mesh>, MeshSsboAllocation>);
+
 impl RenderAsset for GpuMesh {
     type SourceAsset = Mesh;
     type Params = (
         SRes<RenderInstance>,
         SResMut<SsboMeshDescriptor>,
         SRenderData<SsboMesh>,
-        SRes<RenderAssets<GpuBuffer>>
+        SRes<RenderAssets<GpuBuffer>>,
+        SResMut<MeshSsboAllocations>
     );
 
     fn prepare(
+        id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
-        (render_instance, ssbo_descriptor, ssbo_mesh, gpu_buffers): &mut SystemParamItem<
+        (render_instance, ssbo_descriptor, ssbo_mesh, gpu_buffers, mesh_allocations): &mut SystemParamItem<
             Self::Params
         >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
@@ -148,11 +167,31 @@ impl RenderAsset for GpuMesh {
             });
         }
 
-        // Copy to GPU buffers
-        let first_vertex = ssbo_descriptor.vertex_buffer_offset;
-        let first_index = ssbo_descriptor.index_buffer_offset;
+        // Copy to GPU buffers, reusing this asset's existing SSBO region if its vertex/index count
+        // hasn't changed since last time, instead of bump-allocating a new one
         let vertices_count = asset.vertices.len() as u32;
         let indices_count = asset.indices.len() as u32;
+
+        let reused = mesh_allocations
+            .0
+            .get(&id)
+            .filter(|alloc| alloc.vertex_count == vertices_count && alloc.index_count == indices_count);
+        let (first_vertex, first_index) = match reused {
+            Some(alloc) => (alloc.first_vertex, alloc.first_index),
+            None => {
+                let first_vertex = ssbo_descriptor.vertex_buffer_offset;
+                let first_index = ssbo_descriptor.index_buffer_offset;
+                ssbo_descriptor.vertex_buffer_offset += vertices_count;
+                ssbo_descriptor.index_buffer_offset += indices_count;
+                mesh_allocations.0.insert(id, MeshSsboAllocation {
+                    first_vertex,
+                    first_index,
+                    vertex_count: vertices_count,
+                    index_count: indices_count
+                });
+                (first_vertex, first_index)
+            }
+        };
 
         // Calculate byte offsets and sizes for buffer copy operations
         let vertices_offset_bytes = (first_vertex as u64) * (std::mem::size_of::<Vertex>() as u64);
@@ -167,7 +206,6 @@ impl RenderAsset for GpuMesh {
             vertices_offset_bytes,
             vertices_size_bytes
         );
-        ssbo_descriptor.vertex_buffer_offset += vertices_count;
 
         ssbo_index_buffer.buffer.copy_from_buffer_offset(
             &render_instance,
@@ -176,7 +214,6 @@ impl RenderAsset for GpuMesh {
             indices_offset_bytes,
             indices_size_bytes
         );
-        ssbo_descriptor.index_buffer_offset += indices_count;
 
         Ok(GpuMesh {
             label: asset.label,

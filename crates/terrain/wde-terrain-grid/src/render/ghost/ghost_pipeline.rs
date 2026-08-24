@@ -25,6 +25,7 @@ impl RenderAsset for GhostRenderPipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, camera, ssbo_mesh, ssbo_transform, materials): &mut SystemParamItem<
             Self::Params,

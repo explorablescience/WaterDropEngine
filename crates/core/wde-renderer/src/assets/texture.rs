@@ -73,6 +73,7 @@ impl RenderAsset for GpuTexture {
     type Params = SRes<RenderInstance>;
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {

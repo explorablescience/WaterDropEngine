@@ -206,6 +206,9 @@ impl Plugin for AssetsPlugin {
         app.add_plugins(RenderAssetsPlugin::<GpuMesh>::default())
             .add_plugins(RenderAssetsPlugin::<GpuTexture>::default())
             .add_plugins(RenderAssetsPlugin::<GpuBuffer>::default());
+        app.get_sub_app_mut(crate::core::RenderApp)
+            .unwrap()
+            .init_resource::<MeshSsboAllocations>();
 
         // Register the components to the reflect system
         app.register_type::<Mesh3d>();

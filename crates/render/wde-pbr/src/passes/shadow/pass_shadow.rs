@@ -54,6 +54,7 @@ impl RenderAsset for ShadowMapPipeline {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, ssbo_mesh, shadow_params, ssbo_transform): &mut SystemParamItem<
             Self::Params
@@ -258,6 +259,7 @@ impl RenderAsset for ShadowMapPipeline1 {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, ssbo_mesh, shadow_params, ssbo_transform): &mut SystemParamItem<
             Self::Params
@@ -385,6 +387,7 @@ impl RenderAsset for ShadowMapPipeline2 {
     );
 
     fn prepare(
+        _id: AssetId<Self::SourceAsset>,
         asset: Self::SourceAsset,
         (assets_server, pipeline_manager, ssbo_mesh, shadow_params, ssbo_transform): &mut SystemParamItem<
             Self::Params
