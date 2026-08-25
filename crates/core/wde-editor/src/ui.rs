@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use puffin_egui::egui::{RichText, Stroke};
 use std::collections::{HashMap, hash_map::Entry};
 use wde_egui::prelude::*;
 
@@ -25,10 +26,17 @@ impl Plugin for EditorUIMenu {
 
 /// Callback to draw the ui menu
 fn draw(ctx: Res<EguiContext>, mut menu: ResMut<UIMenu>) {
+    let style = ctx.0.style();
+    let frame = egui::Frame::NONE
+        .fill(style.visuals.extreme_bg_color)
+        .stroke(Stroke::NONE)
+        .inner_margin(egui::Margin { left: 8, right: 8, top: 12, bottom: 16 });
+
     egui::TopBottomPanel::top("wde_editor_menu_bar")
-        .frame(egui::Frame::NONE)
+        .frame(frame)
         .show(&ctx.0, |ui| {
-            menu.draw(ui);
+            let style = menu.style.clone();
+            menu.draw(ui, style);
         });
 }
 
@@ -56,9 +64,17 @@ pub struct UIMenu {
     /// The key is the path of the menu item (e.g. "File/Open/Recent").
     clicked: HashMap<String, bool>,
     /// Monotonic counter used to assign insertion order to newly created menu items.
-    next_order: usize
+    next_order: usize,
+
+    /// Style of the menu bar, used to draw the menu bar with a custom style.
+    style: Option<egui::Style>,
 }
 impl UIMenu {
+    /// Set the style of the menu bar, used to draw the menu bar with a custom style.
+    pub fn set_style(&mut self, style: Option<egui::Style>) {
+        self.style = style;
+    }
+
     /// Add a menu item to the menu, given its path (e.g. "File/Open/Recent"). The path is split by '/' to determine the hierarchy of the menu items.
     /// If any of the intermediate items do not exist, they are created as non-leaf items. The final item is created as a leaf item.
     fn push(&mut self, path: &str) {
@@ -116,14 +132,35 @@ impl UIMenu {
     }
 
     /// Draw the menu using egui
-    fn draw(&mut self, ui: &mut egui::Ui) {
-        egui::MenuBar::new().ui(ui, |ui| {
-            let mut ordered_roots: Vec<_> = self.roots.iter().collect();
-            ordered_roots.sort_by_key(|(_, item)| item.order);
+    fn draw(&mut self, ui: &mut egui::Ui, style: Option<egui::Style>) {
+        // Draw a background for the menu bar
+        let visuals = style.as_ref().map(|s| &s.visuals).unwrap_or(&ui.style().visuals);
+        let bg_color = visuals.extreme_bg_color;
+        let rect = ui.available_rect_before_wrap();
+        ui.painter().rect_filled(rect, 0.0, bg_color);
 
-            for (name, item) in ordered_roots {
-                Self::draw_item(ui, item, name, &mut self.clicked);
-            }
+        // Draw the menu bar
+        ui.scope(|ui| {
+            egui::MenuBar::new().ui(ui, |ui| {
+                if let Some(style) = style {
+                    ui.set_style(style);
+                }
+
+                // Write "WDE" on the left side of the menu bar
+                egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(18, 5))
+                    .show(ui, |ui| {
+                        ui.label(RichText::new("WDE").heading().strong());
+                    });
+                ui.add_space(14.0);
+
+                // Draw the menu items in order of their insertion
+                let mut ordered_roots: Vec<_> = self.roots.iter().collect();
+                ordered_roots.sort_by_key(|(_, item)| item.order);
+                for (name, item) in ordered_roots {
+                    Self::draw_item(ui, item, name, &mut self.clicked);
+                }
+            });
         });
     }
     fn draw_item(
