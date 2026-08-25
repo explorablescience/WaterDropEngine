@@ -149,16 +149,20 @@ impl UIMenu {
 
         // Draw the menu bar
         ui.scope(|ui| {
-            egui::MenuBar::new().ui(ui, |ui| {
-                let button_padding = style
-                    .as_ref()
-                    .map(|s| s.spacing.button_padding)
-                    .unwrap_or(ui.style().spacing.button_padding);
+            let button_padding = style
+                .as_ref()
+                .map(|s| s.spacing.button_padding)
+                .unwrap_or(ui.style().spacing.button_padding);
 
-                if let Some(style) = style {
-                    ui.set_style(style);
-                }
+            // Apply the custom style
+            let mut menu_bar = egui::MenuBar::new();
+            if let Some(style) = style.clone() {
+                menu_bar = menu_bar
+                    .style(style.clone())
+                    .config(egui::containers::menu::MenuConfig::new().style(style));
+            }
 
+            menu_bar.ui(ui, |ui| {
                 // Write "WDE" on the left side of the menu bar
                 egui::Frame::NONE
                     .inner_margin(egui::Margin::symmetric(button_padding.x as i8, button_padding.y as i8))
