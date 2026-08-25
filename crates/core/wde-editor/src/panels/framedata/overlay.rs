@@ -4,6 +4,7 @@ use bevy::window::PrimaryWindow;
 use wde_egui::prelude::*;
 
 use crate::panels::framedata::read_diagnostic;
+use crate::ui::UIMenu;
 
 #[derive(Resource, Default)]
 pub struct FrameDataAverages {
@@ -45,7 +46,8 @@ pub fn draw_framedata_overlay(
     ctx: Res<EguiContext>,
     diagnostics: Res<DiagnosticsStore>,
     averages: Res<FrameDataAverages>,
-    window: Query<&Window, With<PrimaryWindow>>
+    window: Query<&Window, With<PrimaryWindow>>,
+    ui_menu: Res<UIMenu>
 ) {
     let Some(window) = window.single().ok() else {
         return; // No primary window, can't draw overlay
@@ -70,16 +72,19 @@ pub fn draw_framedata_overlay(
     let text = lines.join("\n");
     let painter = ctx.0.debug_painter();
     let font = egui::FontId::monospace(12.0);
+    let galley = painter.layout_no_wrap(text, font, text_color);
 
-    // Position in the lower-left corner with some padding
-    let pos = [10.0, window.height() - 38.0 - font.size]; // 10px padding from bottom and left
-
-    // Draw main text
-    painter.text(
-        egui::pos2(pos[0], pos[1]),
-        egui::Align2::LEFT_TOP,
-        &text,
-        font,
-        text_color
+    // Position in the lower-left corner with some padding, backed by a rounded card so the
+    // text stays legible over any background (viewport, grid, etc).
+    let margin = 10.0;
+    let padding = egui::vec2(8.0, 6.0);
+    let card_size = galley.size() + padding * 2.0;
+    let card_rect = egui::Rect::from_min_size(
+        egui::pos2(margin, window.height() - margin - card_size.y),
+        card_size
     );
+
+    let bg_color = ui_menu.style().map_or(egui::Color32::from_gray(0), |style| style.visuals.extreme_bg_color);
+    painter.rect_filled(card_rect, 6.0, bg_color);
+    painter.galley(card_rect.min + padding, galley, text_color);
 }

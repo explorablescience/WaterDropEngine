@@ -72,12 +72,24 @@ pub struct UIMenu {
     next_order: usize,
 
     /// Style of the menu bar, used to draw the menu bar with a custom style.
-    style: Option<egui::Style>
+    style: Option<egui::Style>,
+    /// Color of the "WDE" title drawn on the left side of the menu bar. Defaults to the ambient
+    /// text color when unset.
+    title_color: Option<egui::Color32>
 }
 impl UIMenu {
     /// Set the style of the menu bar, used to draw the menu bar with a custom style.
     pub fn set_style(&mut self, style: Option<egui::Style>) {
         self.style = style;
+    }
+    pub fn style(&self) -> Option<&egui::Style> {
+        self.style.as_ref()
+    }
+
+    /// Set the color of the "WDE" title drawn on the left side of the menu bar. Pass `None` to
+    /// fall back to the ambient text color.
+    pub fn set_title_color(&mut self, color: Option<egui::Color32>) {
+        self.title_color = color;
     }
 
     /// Add a menu item to the menu, given its path (e.g. "File/Open/Recent"). The path is split by '/' to determine the hierarchy of the menu items.
@@ -167,9 +179,12 @@ impl UIMenu {
                 egui::Frame::NONE
                     .inner_margin(egui::Margin::symmetric(button_padding.x as i8, button_padding.y as i8))
                     .show(ui, |ui| {
-                        ui.label(RichText::new("WDE").heading().strong());
+                        let mut title = RichText::new("WDE").heading().strong();
+                        if let Some(color) = self.title_color {
+                            title = title.color(color);
+                        }
+                        ui.label(title);
                     });
-                ui.add_space(14.0);
 
                 // Draw the menu items in order of their insertion
                 let mut ordered_roots: Vec<_> = self.roots.iter().collect();

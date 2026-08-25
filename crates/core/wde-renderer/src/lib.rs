@@ -50,14 +50,40 @@ pub mod passes;
 pub mod sync;
 pub mod utils;
 
-use crate::{assets::AssetsPlugin, core::RenderCorePlugin, sync::SyncPlugin, utils::UtilsPlugin};
+use crate::{
+    assets::AssetsPlugin,
+    core::{RenderCorePlugin, WindowIcon},
+    sync::SyncPlugin,
+    utils::UtilsPlugin
+};
 use bevy::prelude::*;
 
-pub struct RenderPlugin;
+/// The main renderer plugin. Also responsible for creating the primary window.
+pub struct RenderPlugin {
+    /// Title shown in the window's title bar.
+    pub window_title: String,
+    /// Initial size (width, height) of the window, in logical pixels.
+    pub window_resolution: (u32, u32),
+    /// Icon shown in the OS taskbar/title bar. See [`WindowIcon::from_bytes`].
+    pub window_icon: Option<WindowIcon>
+}
+impl Default for RenderPlugin {
+    fn default() -> Self {
+        Self {
+            window_title: "WaterDropEngine".into(),
+            window_resolution: (600, 500),
+            window_icon: None
+        }
+    }
+}
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
         // First, add the core plugin
-        app.add_plugins(RenderCorePlugin);
+        app.add_plugins(RenderCorePlugin {
+            window_title: self.window_title.clone(),
+            window_resolution: self.window_resolution,
+            window_icon: self.window_icon.clone()
+        });
 
         // Finally, add the other plugins
         app.add_plugins((SyncPlugin, UtilsPlugin, AssetsPlugin));

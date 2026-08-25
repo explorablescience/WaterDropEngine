@@ -19,6 +19,10 @@ version = "0.25"
 default-features = false
 features = ["png", "jpeg"]
 
+[dependencies.winit]
+version = "0.30"
+default-features = false
+
 [features]
 default = []
 editor = []

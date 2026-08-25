@@ -70,7 +70,7 @@ mod render_multithread;
 mod window;
 
 pub use extract_macros::ExtractWorld;
-pub use window::SurfaceResized;
+pub use window::{SurfaceResized, WindowIcon};
 
 use bevy::{
     app::AppLabel,
@@ -90,7 +90,7 @@ use std::{
     sync::{Arc, RwLock}
 };
 use wde_wgpu::instance::{Limits, RenderTexture, create_instance};
-use window::{WindowPlugins, extract_surface_size, send_surface_resized};
+use window::{PrimaryWindowIcon, WindowPlugins, apply_window_icon, extract_surface_size, send_surface_resized};
 
 use crate::passes::{PipelineManagerPlugin, RenderGraph};
 
@@ -170,14 +170,23 @@ pub struct SwapchainFrame {
 }
 
 /// The plugin that is responsible for the renderer.
-pub(crate) struct RenderCorePlugin;
+pub(crate) struct RenderCorePlugin {
+    pub window_title: String,
+    pub window_resolution: (u32, u32),
+    pub window_icon: Option<WindowIcon>
+}
 impl Plugin for RenderCorePlugin {
     fn build(&self, app: &mut App) {
         // === MAIN APP ===
         // Add window
-        app.add_plugins(WindowPlugins)
-            .add_message::<SurfaceResized>()
-            .add_systems(Update, send_surface_resized);
+        app.add_plugins(WindowPlugins {
+            title: self.window_title.clone(),
+            resolution: self.window_resolution
+        })
+        .insert_resource(PrimaryWindowIcon(self.window_icon.clone()))
+        .add_systems(Startup, apply_window_icon)
+        .add_message::<SurfaceResized>()
+        .add_systems(Update, send_surface_resized);
 
         // Add empty world component
         app.add_systems(Startup, init_main_world);
