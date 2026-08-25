@@ -30,7 +30,12 @@ fn draw(ctx: Res<EguiContext>, mut menu: ResMut<UIMenu>) {
     let frame = egui::Frame::NONE
         .fill(style.visuals.extreme_bg_color)
         .stroke(Stroke::NONE)
-        .inner_margin(egui::Margin { left: 8, right: 8, top: 12, bottom: 16 });
+        .inner_margin(egui::Margin {
+            left: 8,
+            right: 8,
+            top: 12,
+            bottom: 16
+        });
 
     egui::TopBottomPanel::top("wde_editor_menu_bar")
         .frame(frame)
@@ -67,7 +72,7 @@ pub struct UIMenu {
     next_order: usize,
 
     /// Style of the menu bar, used to draw the menu bar with a custom style.
-    style: Option<egui::Style>,
+    style: Option<egui::Style>
 }
 impl UIMenu {
     /// Set the style of the menu bar, used to draw the menu bar with a custom style.
@@ -134,7 +139,10 @@ impl UIMenu {
     /// Draw the menu using egui
     fn draw(&mut self, ui: &mut egui::Ui, style: Option<egui::Style>) {
         // Draw a background for the menu bar
-        let visuals = style.as_ref().map(|s| &s.visuals).unwrap_or(&ui.style().visuals);
+        let visuals = style
+            .as_ref()
+            .map(|s| &s.visuals)
+            .unwrap_or(&ui.style().visuals);
         let bg_color = visuals.extreme_bg_color;
         let rect = ui.available_rect_before_wrap();
         ui.painter().rect_filled(rect, 0.0, bg_color);
