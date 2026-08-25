@@ -172,10 +172,9 @@ impl RenderAsset for GpuMesh {
         let vertices_count = asset.vertices.len() as u32;
         let indices_count = asset.indices.len() as u32;
 
-        let reused = mesh_allocations
-            .0
-            .get(&id)
-            .filter(|alloc| alloc.vertex_count == vertices_count && alloc.index_count == indices_count);
+        let reused = mesh_allocations.0.get(&id).filter(|alloc| {
+            alloc.vertex_count == vertices_count && alloc.index_count == indices_count
+        });
         let (first_vertex, first_index) = match reused {
             Some(alloc) => (alloc.first_vertex, alloc.first_index),
             None => {
@@ -183,12 +182,15 @@ impl RenderAsset for GpuMesh {
                 let first_index = ssbo_descriptor.index_buffer_offset;
                 ssbo_descriptor.vertex_buffer_offset += vertices_count;
                 ssbo_descriptor.index_buffer_offset += indices_count;
-                mesh_allocations.0.insert(id, MeshSsboAllocation {
-                    first_vertex,
-                    first_index,
-                    vertex_count: vertices_count,
-                    index_count: indices_count
-                });
+                mesh_allocations.0.insert(
+                    id,
+                    MeshSsboAllocation {
+                        first_vertex,
+                        first_index,
+                        vertex_count: vertices_count,
+                        index_count: indices_count
+                    }
+                );
                 (first_vertex, first_index)
             }
         };
