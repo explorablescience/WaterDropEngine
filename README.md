@@ -22,6 +22,14 @@ As its name suggests, it is designed to be *small, simple and efficient*. It is 
 I will not take into account pull requests or issues from other people, but I will be happy to answer any questions or give any advice to anyone who wants to learn game engine development.*
 
 
+## Demo
+**[WaterDrop Terrain Editor](https://github.com/explorablescience/WaterDropTerrainEditor)** is a node-based terrain generation and erosion editor built on top of *WaterDropEngine*, and is the main project currently exercising it.
+
+<p align="center">
+    <img src="waterdrop-terrain-editor.png" alt="WaterDrop Terrain Editor screenshot" width="90%"/>
+</p>
+
+
 ## Documentation
 The documentation of the engine is available on the Github Pages of the project **[at this link](https://explorablescience.github.io/WaterDropEngine/wde/)**. It is generated using GitHub Actions, so it is automatically updated every time I push a new commit to the main branch.
 
