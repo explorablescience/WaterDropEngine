@@ -23,10 +23,10 @@ I will not take into account pull requests or issues from other people, but I wi
 
 
 ## Demo
-**[WaterDrop Terrain Editor](https://github.com/explorablescience/WaterDropTerrainEditor)** is a node-based terrain generation and erosion editor built on top of *WaterDropEngine*, and is the main project currently exercising it.
+**[WaterDrop Terrain Generator](https://github.com/explorablescience/WaterDropTerrainGenerator)** is a node-based terrain generation and erosion tool built on top of *WaterDropEngine*, and is the main project currently exercising it.
 
 <p align="center">
-    <img src="waterdrop-terrain-editor.png" alt="WaterDrop Terrain Editor screenshot" width="90%"/>
+    <img src="waterdrop-terrain-generator.png" alt="WaterDrop Terrain Generator screenshot" width="90%"/>
 </p>
 
 
