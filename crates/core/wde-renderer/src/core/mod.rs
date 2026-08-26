@@ -90,7 +90,9 @@ use std::{
     sync::{Arc, RwLock}
 };
 use wde_wgpu::instance::{Limits, RenderTexture, create_instance};
-use window::{PrimaryWindowIcon, WindowPlugins, apply_window_icon, extract_surface_size, send_surface_resized};
+use window::{
+    PrimaryWindowIcon, WindowPlugins, apply_window_icon, extract_surface_size, send_surface_resized
+};
 
 use crate::passes::{PipelineManagerPlugin, RenderGraph};
 

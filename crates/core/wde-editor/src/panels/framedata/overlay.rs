@@ -12,6 +12,19 @@ pub struct FrameDataAverages {
     frame_ms_long_avg: Option<f64>
 }
 
+/// Controls the built-in frame-data overlay (the FPS/frame time/frame count card drawn in the
+/// lower-left corner). Consuming apps that build their own status/footer UI showing the same
+/// data can set `enabled` to `false` here to avoid drawing both.
+#[derive(Resource)]
+pub struct FrameDataOverlayConfig {
+    pub enabled: bool
+}
+impl Default for FrameDataOverlayConfig {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
 pub fn update_long_averages(
     time: Res<Time>,
     diagnostics: Res<DiagnosticsStore>,
@@ -47,8 +60,12 @@ pub fn draw_framedata_overlay(
     diagnostics: Res<DiagnosticsStore>,
     averages: Res<FrameDataAverages>,
     window: Query<&Window, With<PrimaryWindow>>,
-    ui_menu: Res<UIMenu>
+    ui_menu: Res<UIMenu>,
+    config: Res<FrameDataOverlayConfig>
 ) {
+    if !config.enabled {
+        return;
+    }
     let Some(window) = window.single().ok() else {
         return; // No primary window, can't draw overlay
     };
@@ -84,7 +101,11 @@ pub fn draw_framedata_overlay(
         card_size
     );
 
-    let bg_color = ui_menu.style().map_or(egui::Color32::from_gray(0), |style| style.visuals.extreme_bg_color);
+    let bg_color = ui_menu
+        .style()
+        .map_or(egui::Color32::from_gray(0), |style| {
+            style.visuals.extreme_bg_color
+        });
     painter.rect_filled(card_rect, 6.0, bg_color);
     painter.galley(card_rect.min + padding, galley, text_color);
 }

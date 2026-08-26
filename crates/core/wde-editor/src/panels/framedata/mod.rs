@@ -3,6 +3,8 @@ use bevy::prelude::*;
 
 mod overlay;
 
+pub use overlay::FrameDataOverlayConfig;
+
 // Display frame timing and other per-frame data in the editor UI. This is a separate plugin to avoid adding the overhead of these systems when not in editor mode.
 pub struct UIFrameDataPlugin;
 impl Plugin for UIFrameDataPlugin {
@@ -10,6 +12,7 @@ impl Plugin for UIFrameDataPlugin {
         // Add the overlay that displays stats on the screen (frame time)
         app.add_plugins(FrameTimeDiagnosticsPlugin::default())
             .init_resource::<overlay::FrameDataAverages>()
+            .init_resource::<FrameDataOverlayConfig>()
             .add_systems(
                 Update,
                 (

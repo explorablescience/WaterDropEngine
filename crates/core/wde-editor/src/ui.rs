@@ -177,7 +177,10 @@ impl UIMenu {
             menu_bar.ui(ui, |ui| {
                 // Write "WDE" on the left side of the menu bar
                 egui::Frame::NONE
-                    .inner_margin(egui::Margin::symmetric(button_padding.x as i8, button_padding.y as i8))
+                    .inner_margin(egui::Margin::symmetric(
+                        button_padding.x as i8,
+                        button_padding.y as i8
+                    ))
                     .show(ui, |ui| {
                         let mut title = RichText::new("WDE").heading().strong();
                         if let Some(color) = self.title_color {

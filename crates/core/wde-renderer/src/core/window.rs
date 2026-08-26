@@ -30,7 +30,11 @@ impl WindowIcon {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, image::ImageError> {
         let image = image::load_from_memory(bytes)?.into_rgba8();
         let (width, height) = image.dimensions();
-        Ok(Self { rgba: image.into_raw(), width, height })
+        Ok(Self {
+            rgba: image.into_raw(),
+            width,
+            height
+        })
     }
 }
 
@@ -50,10 +54,14 @@ pub(crate) fn apply_window_icon(
     primary_window: Query<Entity, With<PrimaryWindow>>
 ) {
     let Some(icon) = &icon.0 else { return };
-    let Ok(entity) = primary_window.single() else { return };
+    let Ok(entity) = primary_window.single() else {
+        return;
+    };
 
     WINIT_WINDOWS.with_borrow(|winit_windows| {
-        let Some(winit_window) = winit_windows.get_window(entity) else { return };
+        let Some(winit_window) = winit_windows.get_window(entity) else {
+            return;
+        };
 
         match winit::window::Icon::from_rgba(icon.rgba.clone(), icon.width, icon.height) {
             Ok(winit_icon) => winit_window.set_window_icon(Some(winit_icon)),
@@ -76,7 +84,10 @@ pub(crate) struct WindowPlugins {
 }
 impl Default for WindowPlugins {
     fn default() -> Self {
-        Self { title: "WaterDropEngine".into(), resolution: (600, 500) }
+        Self {
+            title: "WaterDropEngine".into(),
+            resolution: (600, 500)
+        }
     }
 }
 impl PluginGroup for WindowPlugins {

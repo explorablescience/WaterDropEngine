@@ -6,6 +6,8 @@ mod logs;
 mod profiler;
 mod rendergraph;
 
+pub use framedata::FrameDataOverlayConfig;
+
 pub struct PanelsPlugin;
 impl Plugin for PanelsPlugin {
     fn build(&self, app: &mut App) {
