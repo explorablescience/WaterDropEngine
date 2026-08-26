@@ -5,13 +5,13 @@ use wde_logger::{
     prelude::*
 };
 
-use crate::ui::UIMenu;
+use crate::ui::{EngineUiSet, UIMenu};
 
 pub struct LogsPanelPlugin;
 impl Plugin for LogsPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<LogFilters>()
-            .add_systems(Update, draw_logs_panel);
+            .add_systems(Update, draw_logs_panel.in_set(EngineUiSet));
     }
 }
 

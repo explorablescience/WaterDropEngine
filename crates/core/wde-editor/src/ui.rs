@@ -14,11 +14,40 @@ use crate::ui_textures::UITexturesPlugin;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EditorMenuBarSet;
 
+/// System set containing every system that contributes one of WaterDropEngine's own built-in
+/// UI menu items (its default panels, as well as the per-plugin debug windows exposed by crates
+/// such as `wde_camera` or `wde_pbr`). It is gated by [`EngineUiConfig`], so a project building
+/// its own editor UI on top of `wde_editor` can add its own items to the same [`UIMenu`] without
+/// the engine's own items showing up alongside them.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EngineUiSet;
+
+/// Controls whether WaterDropEngine's own built-in UI menu items (see [`EngineUiSet`]) are
+/// added. Defaults to enabled, preserving the engine's previous always-on behavior.
+///
+/// A consuming project that wants to hide these should insert this resource with
+/// `enabled: false` *before* adding the engine's plugins: plugins only fill in the default via
+/// `init_resource`, so an explicit value inserted first is left untouched.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct EngineUiConfig {
+    pub enabled: bool
+}
+impl Default for EngineUiConfig {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
 /// The editor plugin that manages the UI menu
 pub struct EditorUIMenu;
 impl Plugin for EditorUIMenu {
     fn build(&self, app: &mut App) {
-        app.add_plugins(UITexturesPlugin)
+        app.init_resource::<EngineUiConfig>()
+            .configure_sets(
+                Update,
+                EngineUiSet.run_if(|config: Res<EngineUiConfig>| config.enabled)
+            )
+            .add_plugins(UITexturesPlugin)
             .init_resource::<UIMenu>()
             .add_systems(Update, draw.in_set(EditorMenuBarSet));
     }

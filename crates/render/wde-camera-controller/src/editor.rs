@@ -7,7 +7,7 @@ use crate::prelude::ThirdPersonController;
 pub struct CameraPropertiesEditor;
 impl Plugin for CameraPropertiesEditor {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, edit_controller_params);
+        app.add_systems(Update, edit_controller_params.in_set(EngineUiSet));
     }
 }
 

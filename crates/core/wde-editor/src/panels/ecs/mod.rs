@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::ui::EngineUiSet;
+
 mod assets;
 pub(crate) mod entities_edit_components;
 pub(crate) mod entities_list;
@@ -15,11 +17,12 @@ impl Plugin for UIEcsPanelPlugin {
                     entities_list::draw_entities_panel,
                     entities_edit_components::draw_selected_entity_components_panel
                 )
+                    .in_set(EngineUiSet)
             );
 
         // Assets
         app.init_resource::<assets::AssetCatalog>()
             .add_systems(PostStartup, assets::init_asset_catalog)
-            .add_systems(Update, assets::draw_assets_panel);
+            .add_systems(Update, assets::draw_assets_panel.in_set(EngineUiSet));
     }
 }

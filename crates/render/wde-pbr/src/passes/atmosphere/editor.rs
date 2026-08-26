@@ -6,7 +6,7 @@ use crate::prelude::AtmosphereSettings;
 pub(crate) struct AtmosphereEditorPlugin;
 impl Plugin for AtmosphereEditorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, edit_atmosphere_settings);
+        app.add_systems(Update, edit_atmosphere_settings.in_set(EngineUiSet));
     }
 }
 

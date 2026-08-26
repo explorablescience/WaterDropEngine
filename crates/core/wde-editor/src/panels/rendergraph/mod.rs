@@ -24,7 +24,7 @@ impl Plugin for RenderGraphPanelPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ScreenshotRequest>()
             .add_systems(Startup, init_render)
-            .add_systems(Update, (draw_ui, resize));
+            .add_systems(Update, (draw_ui.in_set(EngineUiSet), resize));
 
         app.get_sub_app_mut(RenderApp)
             .unwrap()

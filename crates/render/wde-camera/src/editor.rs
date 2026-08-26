@@ -5,7 +5,7 @@ use wde_editor::prelude::*;
 pub(crate) struct CameraPropertiesEditor;
 impl Plugin for CameraPropertiesEditor {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, edit_view_params);
+        app.add_systems(Update, edit_view_params.in_set(EngineUiSet));
     }
 }
 

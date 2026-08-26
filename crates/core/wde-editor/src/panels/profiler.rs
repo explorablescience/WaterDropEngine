@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use puffin_egui::puffin;
 use wde_egui::prelude::{EguiContext, egui};
 
-use crate::ui::UIMenu;
+use crate::ui::{EngineUiSet, UIMenu};
 
 pub struct ProfilerPlugin;
 impl Plugin for ProfilerPlugin {
@@ -11,7 +11,7 @@ impl Plugin for ProfilerPlugin {
         puffin::set_scopes_on(true);
 
         // Add profiler
-        app.add_systems(Update, draw_profiler_panel);
+        app.add_systems(Update, draw_profiler_panel.in_set(EngineUiSet));
     }
 }
 

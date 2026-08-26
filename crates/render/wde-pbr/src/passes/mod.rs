@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use pass_resolve::*;
+use wde_editor::prelude::EngineUiSet;
 use wde_renderer::prelude::*;
 
 mod atmosphere;
@@ -57,7 +58,7 @@ impl Plugin for PassesPlugin {
 
         // Add the ui
         #[cfg(debug_assertions)]
-        app.add_systems(Update, shadow::params_data_ui);
+        app.add_systems(Update, shadow::params_data_ui.in_set(EngineUiSet));
 
         // Add the pipelines and bindings
         app.add_plugins((

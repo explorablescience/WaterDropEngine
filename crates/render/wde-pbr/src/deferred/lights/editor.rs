@@ -6,7 +6,7 @@ use crate::prelude::PbrSettings;
 pub(crate) struct PbrLightingEditorPlugin;
 impl Plugin for PbrLightingEditorPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, edit_pbr_settings);
+        app.add_systems(Update, edit_pbr_settings.in_set(EngineUiSet));
     }
 }
 
