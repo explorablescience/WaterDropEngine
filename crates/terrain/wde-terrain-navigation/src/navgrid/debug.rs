@@ -93,13 +93,12 @@ fn interior_show_nav_map(
 }
 
 fn exterior_show_nav_map(
-    nav_map: Res<NavMap>,
-    mut gizmos: ResMut<Gizmos>,
+    _nav_map: Res<NavMap>,
+    _gizmos: ResMut<Gizmos>,
     settings: Res<NavMapDebugSettings>
 ) {
     // Only draw if exterior nav map debug is enabled
     if !settings.show_exterior_nav_map {
-        return;
     }
 
     // TODO:

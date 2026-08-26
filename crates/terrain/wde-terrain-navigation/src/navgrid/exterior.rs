@@ -63,16 +63,16 @@ fn handle_grid_events(
     mut grid_events: MessageReader<GridEntityEvent>,
     mut nav_map: ResMut<NavMap>
 ) {
-    let nav_map = &mut nav_map.exterior;
+    let _nav_map = &mut nav_map.exterior;
     for event in grid_events.read() {
         match event {
             GridEntityEvent::Placed {
-                entity,
+                entity: _,
                 grid_entity
             } => {
-                let entry = grid_entity.entry();
+                let _entry = grid_entity.entry();
             }
-            GridEntityEvent::Removed { entity } => {}
+            GridEntityEvent::Removed { entity: _ } => {}
         }
     }
 }
