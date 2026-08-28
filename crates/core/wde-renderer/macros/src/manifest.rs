@@ -99,9 +99,9 @@ impl WdeManifest {
             };
 
             let mut path = Self::parse_str::<syn::Path>(&format!("::{package}"));
-            if let Some(module) = name.strip_prefix("bevy_") {
-                path.segments.push(Self::parse_str(module));
-            }
+            // `wde` re-exports its sub-crates verbatim (e.g. `pub use wde_renderer;`),
+            // so the submodule segment is the full dependency name, not a stripped suffix.
+            path.segments.push(Self::parse_str(name));
             Some(path)
         };
 
