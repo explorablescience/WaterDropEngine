@@ -498,7 +498,18 @@ where
                         )
                     }
                     RenderBindingType::TextureArrayView => {
-                        builder.add_texture_array_view(binding as u32, vis)
+                        let Some(texture) =
+                            gpu_textures.get(asset_builder.textures[*idx as usize].unwrap())
+                        else {
+                            trace!(
+                                "Texture (ArrayView) {} for render binding {} is not ready, retrying...",
+                                asset_builder.textures[*idx as usize].unwrap(),
+                                asset.label()
+                            );
+                            is_err = true;
+                            return;
+                        };
+                        builder.add_texture_array_view(binding as u32, vis, texture.texture.filterable)
                     }
                     RenderBindingType::TextureSampler => {
                         builder.add_texture_sampler(binding as u32, vis)

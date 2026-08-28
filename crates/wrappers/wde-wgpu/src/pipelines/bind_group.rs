@@ -230,7 +230,15 @@ impl BindGroupLayoutBuilder {
     ///
     /// * `binding` - The binding index of the texture array.
     /// * `visibility` - The shader stages that can access the texture array.
-    pub fn add_texture_array_view(&mut self, binding: u32, visibility: ShaderStages) -> &mut Self {
+    /// * `filterable` - Whether the texture is filterable. Formats that aren't filterable by
+    ///   default (e.g. `R32Float`) must pass `false` here and be read with `textureLoad` in the
+    ///   shader, not `textureSample`.
+    pub fn add_texture_array_view(
+        &mut self,
+        binding: u32,
+        visibility: ShaderStages,
+        filterable: bool
+    ) -> &mut Self {
         // Create bind group layout
         self.layout_entries.push(wgpu::BindGroupLayoutEntry {
             binding,
@@ -238,7 +246,7 @@ impl BindGroupLayoutBuilder {
             ty: wgpu::BindingType::Texture {
                 multisampled: false,
                 view_dimension: wgpu::TextureViewDimension::D2Array,
-                sample_type: wgpu::TextureSampleType::Float { filterable: true }
+                sample_type: wgpu::TextureSampleType::Float { filterable }
             },
             count: None
         });
