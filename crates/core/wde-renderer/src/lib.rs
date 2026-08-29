@@ -28,6 +28,7 @@ extern crate self as wde_renderer;
 #[doc(hidden)]
 pub mod prelude {
     pub use crate::assets::*;
+    pub use crate::compute::*;
     pub use crate::core::*;
     pub use crate::passes::*;
     pub use crate::sync::*;
@@ -45,6 +46,7 @@ pub mod wgpu_utils {
 }
 
 pub mod assets;
+pub mod compute;
 pub mod core;
 pub mod passes;
 pub mod sync;
