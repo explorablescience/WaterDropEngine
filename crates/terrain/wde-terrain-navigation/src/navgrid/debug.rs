@@ -98,8 +98,7 @@ fn exterior_show_nav_map(
     settings: Res<NavMapDebugSettings>
 ) {
     // Only draw if exterior nav map debug is enabled
-    if !settings.show_exterior_nav_map {
-    }
+    if !settings.show_exterior_nav_map {}
 
     // TODO:
 }

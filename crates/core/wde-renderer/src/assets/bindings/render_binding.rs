@@ -509,7 +509,11 @@ where
                             is_err = true;
                             return;
                         };
-                        builder.add_texture_array_view(binding as u32, vis, texture.texture.filterable)
+                        builder.add_texture_array_view(
+                            binding as u32,
+                            vis,
+                            texture.texture.filterable
+                        )
                     }
                     RenderBindingType::TextureSampler => {
                         builder.add_texture_sampler(binding as u32, vis)

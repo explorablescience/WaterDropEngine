@@ -83,7 +83,11 @@ pub struct PbrMaterial {
     pub stencil_value: Option<u32>,
 
     /// The buffer containing the material data. It is automatically created and updated if not set.
-    pub uniform_buffer: Option<Handle<Buffer>>
+    pub uniform_buffer: Option<Handle<Buffer>>,
+    /// Uniform bytes last written to `uniform_buffer`, so `describe` (which reruns on every retry
+    /// attempt, not just on an actual material change) doesn't recreate the buffer - and orphan a
+    /// not-yet-ready one - on every attempt.
+    pub last_uniform: Option<Vec<u8>>
 }
 impl Default for PbrMaterial {
     fn default() -> Self {
@@ -102,7 +106,8 @@ impl Default for PbrMaterial {
 
             stencil_value: None,
 
-            uniform_buffer: None
+            uniform_buffer: None,
+            last_uniform: None
         }
     }
 }
@@ -131,14 +136,22 @@ impl RenderBinding for PbrMaterial {
             roughness: self.roughness,
             _padding: [0.0, 0.0]
         };
-        if self.uniform_buffer.is_none() {
+        // `describe` reruns on every retry attempt (not just when the material asset actually
+        // changed) - recreating the buffer unconditionally used to orphan a not-yet-ready one on
+        // every attempt, so it could never converge. Only recreating it when the uniform content
+        // actually changed keeps a pending buffer stable across retries, while still refreshing a
+        // real change (e.g. `albedo_t` set after the first `describe` call used to leave
+        // `flags.x` at 0 forever).
+        let content = bytemuck::cast_slice(&[uniform]).to_vec();
+        if self.uniform_buffer.is_none() || self.last_uniform.as_deref() != Some(&content[..]) {
             let uniform_handle = asset_server.add(Buffer {
                 label: format!("{}-uniform-buffer", self.label),
                 size: std::mem::size_of::<PbrMaterialUniform>(),
                 usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                content: Some(bytemuck::cast_slice(&[uniform]).to_vec())
+                content: Some(content.clone())
             });
             self.uniform_buffer = Some(uniform_handle);
+            self.last_uniform = Some(content);
         }
 
         // Build the material

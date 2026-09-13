@@ -7,30 +7,51 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use wde_wgpu::bind_group::{BindGroupBuilder, BindGroupLayout, WgpuBindGroupLayout};
+use wde_wgpu::bind_group::{BindGroup, BindGroupBuilder, BindGroupLayout, WgpuBindGroupLayout};
 use wde_wgpu::buffer::{Buffer, BufferBindingType, BufferUsage};
 use wde_wgpu::command_buffer::CommandBuffer;
 use wde_wgpu::compute_pipeline::ComputePipeline;
+use wde_wgpu::instance::RenderInstanceData;
 use wde_wgpu::render_pipeline::ShaderStages;
 
 use crate::core::RenderInstance;
 
-struct CachedCompute {
+struct CachedPipeline {
     pipeline: ComputePipeline,
     layout: WgpuBindGroupLayout
 }
 
-/// Caches a compiled pipeline + bind group layout per label, so repeat dispatches skip WGSL
-/// parsing/validation. Blocks the calling thread until the result is read back.
+/// One dispatch's GPU-side working set, checked out of the pool for the call's duration.
+struct BufferSet {
+    params: Buffer,
+    output: Buffer,
+    inputs: Vec<Buffer>,
+    staging: Buffer,
+    bind_group: BindGroup
+}
+
+/// Identifies interchangeable buffer sets: same label, params size, output/input lengths.
+#[derive(PartialEq, Eq, Hash, Clone)]
+struct BufferShape {
+    label: &'static str,
+    params_size: usize,
+    output_len: usize,
+    input_lens: Vec<usize>
+}
+
+/// Caches a compiled pipeline per label and pools GPU buffers (+ bind group) by shape, so a
+/// repeat dispatch only re-uploads buffer contents. Blocks until the result is read back.
 pub struct ComputeDispatcher {
     instance: RenderInstance,
-    cache: Mutex<HashMap<&'static str, Arc<CachedCompute>>>
+    pipelines: Mutex<HashMap<&'static str, Arc<CachedPipeline>>>,
+    buffer_pool: Mutex<HashMap<BufferShape, Vec<BufferSet>>>
 }
 impl ComputeDispatcher {
     pub fn new(instance: &RenderInstance) -> Self {
         Self {
             instance: RenderInstance(instance.0.clone()),
-            cache: Mutex::new(HashMap::new())
+            pipelines: Mutex::new(HashMap::new()),
+            buffer_pool: Mutex::new(HashMap::new())
         }
     }
 
@@ -53,104 +74,159 @@ impl ComputeDispatcher {
             .read()
             .map_err(|_| "render instance lock poisoned".to_string())?;
 
-        let cached = {
-            let mut cache = self.cache.lock().unwrap();
-            if let Some(cached) = cache.get(label) {
-                cached.clone()
-            } else {
-                let layout = BindGroupLayout::new(label, |b| {
-                    b.add_buffer(0, ShaderStages::COMPUTE, BufferBindingType::Uniform);
-                    b.add_buffer(
-                        1,
-                        ShaderStages::COMPUTE,
-                        BufferBindingType::Storage { read_only: false }
-                    );
-                    for i in 0..inputs.len() {
-                        b.add_buffer(
-                            2 + i as u32,
-                            ShaderStages::COMPUTE,
-                            BufferBindingType::Storage { read_only: true }
-                        );
-                    }
-                });
-                let wgpu_layout = layout.build(&data).map_err(|e| format!("{label}: {e:?}"))?;
-                let mut pipeline = ComputePipeline::new(label);
-                pipeline
-                    .set_shader(shader)
-                    .set_bind_groups(vec![wgpu_layout.clone()]);
-                pipeline.init(&data).map_err(|e| format!("{label}: {e:?}"))?;
-                let cached = Arc::new(CachedCompute {
-                    pipeline,
-                    layout: wgpu_layout
-                });
-                cache.insert(label, cached.clone());
-                cached
-            }
+        let pipeline = self.pipeline_for(label, shader, inputs.len(), &data)?;
+        let shape = BufferShape {
+            label,
+            params_size: std::mem::size_of::<P>(),
+            output_len,
+            input_lens: inputs.iter().map(|slice| slice.len()).collect()
         };
+        let buffers = self.checkout_buffers(shape.clone(), &pipeline, &data)?;
 
-        let params_buf = Buffer::new(
-            &data,
-            &format!("{label}-params"),
-            std::mem::size_of::<P>(),
-            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-            Some(bytemuck::bytes_of(params))
-        );
-        let output_size = output_len * std::mem::size_of::<f32>();
-        let output_buf = Buffer::new(
-            &data,
-            &format!("{label}-output"),
-            output_size,
-            BufferUsage::STORAGE | BufferUsage::COPY_SRC,
-            None
-        );
-        let input_bufs: Vec<Buffer> = inputs
-            .iter()
-            .enumerate()
-            .map(|(i, slice)| {
-                Buffer::new(
-                    &data,
-                    &format!("{label}-input{i}"),
-                    std::mem::size_of_val(*slice),
-                    BufferUsage::STORAGE | BufferUsage::COPY_DST,
-                    Some(bytemuck::cast_slice(slice))
-                )
-            })
-            .collect();
-
-        let mut entries = vec![
-            BindGroupBuilder::buffer(0, &params_buf),
-            BindGroupBuilder::buffer(1, &output_buf),
-        ];
-        for (i, buf) in input_bufs.iter().enumerate() {
-            entries.push(BindGroupBuilder::buffer(2 + i as u32, buf));
+        buffers.params.write(&data, bytemuck::bytes_of(params), 0);
+        for (buf, input) in buffers.inputs.iter().zip(inputs) {
+            buf.write(&data, bytemuck::cast_slice(input), 0);
         }
-        let bind_group = BindGroupBuilder::build(label, &data, &cached.layout, &entries)
-            .map_err(|e| format!("{label}: {e:?}"))?;
 
         let mut cmd = CommandBuffer::new(&data, label);
         {
             let mut pass = cmd.create_compute_pass(label);
-            pass.set_pipeline(&cached.pipeline)
+            pass.set_pipeline(&pipeline.pipeline)
                 .map_err(|e| format!("{label}: {e:?}"))?
-                .set_bind_group(0, &bind_group);
+                .set_bind_group(0, &buffers.bind_group);
             pass.dispatch(workgroups.0, workgroups.1, workgroups.2)
                 .map_err(|e| format!("{label}: {e:?}"))?;
         }
         cmd.submit(&data);
 
+        buffers.staging.copy_from_buffer(&data, &buffers.output);
+        let mut result = vec![0.0f32; output_len];
+        buffers.staging.map_read(&data, |view| {
+            result.copy_from_slice(bytemuck::cast_slice(&view));
+        });
+
+        self.buffer_pool
+            .lock()
+            .unwrap()
+            .entry(shape)
+            .or_default()
+            .push(buffers);
+        Ok(result)
+    }
+
+    fn pipeline_for(
+        &self,
+        label: &'static str,
+        shader: &str,
+        input_count: usize,
+        data: &RenderInstanceData
+    ) -> Result<Arc<CachedPipeline>, String> {
+        let mut cache = self.pipelines.lock().unwrap();
+        if let Some(cached) = cache.get(label) {
+            return Ok(cached.clone());
+        }
+
+        let layout = BindGroupLayout::new(label, |b| {
+            b.add_buffer(0, ShaderStages::COMPUTE, BufferBindingType::Uniform);
+            b.add_buffer(
+                1,
+                ShaderStages::COMPUTE,
+                BufferBindingType::Storage { read_only: false }
+            );
+            for i in 0..input_count {
+                b.add_buffer(
+                    2 + i as u32,
+                    ShaderStages::COMPUTE,
+                    BufferBindingType::Storage { read_only: true }
+                );
+            }
+        });
+        let wgpu_layout = layout.build(data).map_err(|e| format!("{label}: {e:?}"))?;
+        let mut pipeline = ComputePipeline::new(label);
+        pipeline
+            .set_shader(shader)
+            .set_bind_groups(vec![wgpu_layout.clone()]);
+        pipeline.init(data).map_err(|e| format!("{label}: {e:?}"))?;
+
+        let cached = Arc::new(CachedPipeline {
+            pipeline,
+            layout: wgpu_layout
+        });
+        cache.insert(label, cached.clone());
+        Ok(cached)
+    }
+
+    /// Pops an idle buffer set matching `shape`, or builds a fresh one.
+    fn checkout_buffers(
+        &self,
+        shape: BufferShape,
+        pipeline: &CachedPipeline,
+        data: &RenderInstanceData
+    ) -> Result<BufferSet, String> {
+        if let Some(set) = self
+            .buffer_pool
+            .lock()
+            .unwrap()
+            .get_mut(&shape)
+            .and_then(Vec::pop)
+        {
+            return Ok(set);
+        }
+
+        let label = shape.label;
+        let params = Buffer::new(
+            data,
+            &format!("{label}-params"),
+            shape.params_size,
+            BufferUsage::UNIFORM | BufferUsage::COPY_DST,
+            None
+        );
+        let output_size = shape.output_len * std::mem::size_of::<f32>();
+        let output = Buffer::new(
+            data,
+            &format!("{label}-output"),
+            output_size,
+            BufferUsage::STORAGE | BufferUsage::COPY_SRC,
+            None
+        );
+        let inputs: Vec<Buffer> = shape
+            .input_lens
+            .iter()
+            .enumerate()
+            .map(|(i, &len)| {
+                Buffer::new(
+                    data,
+                    &format!("{label}-input{i}"),
+                    len * std::mem::size_of::<f32>(),
+                    BufferUsage::STORAGE | BufferUsage::COPY_DST,
+                    None
+                )
+            })
+            .collect();
         let staging = Buffer::new(
-            &data,
+            data,
             &format!("{label}-staging"),
             output_size,
             BufferUsage::MAP_READ | BufferUsage::COPY_DST,
             None
         );
-        staging.copy_from_buffer(&data, &output_buf);
 
-        let mut result = vec![0.0f32; output_len];
-        staging.map_read(&data, |view| {
-            result.copy_from_slice(bytemuck::cast_slice(&view));
-        });
-        Ok(result)
+        let mut entries = vec![
+            BindGroupBuilder::buffer(0, &params),
+            BindGroupBuilder::buffer(1, &output),
+        ];
+        for (i, buf) in inputs.iter().enumerate() {
+            entries.push(BindGroupBuilder::buffer(2 + i as u32, buf));
+        }
+        let bind_group = BindGroupBuilder::build(label, data, &pipeline.layout, &entries)
+            .map_err(|e| format!("{label}: {e:?}"))?;
+
+        Ok(BufferSet {
+            params,
+            output,
+            inputs,
+            staging,
+            bind_group
+        })
     }
 }
