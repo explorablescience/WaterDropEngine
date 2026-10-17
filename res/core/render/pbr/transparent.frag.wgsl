@@ -47,6 +47,13 @@ fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @locatio
     var lo = vec3<f32>(0.0);
     let lights_count = i32(arrayLength(&in_lights));
     for (var i = 0; i < lights_count; i = i + 1) {
+        let light_type = i32(in_lights[i].color_type.w);
+        if light_type < 0 {
+            break; // End of the lights in use
+        }
+        if light_type > 0 && distance(in_lights[i].position_intensity.xyz, in.world_pos) > in_lights[i].direction_range.w {
+            continue; // Out of range
+        }
         let light_data = get_light_data(in_lights[i], in.world_pos);
         let n_dot_l = max(dot(normal, light_data.light_dir), 0.0);
         lo += brdf_for_light(normal, view_dir, light_data.light_dir, albedo.rgb, metallic, roughness, f0)

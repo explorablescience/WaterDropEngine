@@ -3,6 +3,29 @@
     "generator": "Khronos glTF Blender I/O v5.0.21",
     "version": "2.0"
   },
+  "extensionsUsed": [
+    "KHR_lights_punctual"
+  ],
+  "extensionsRequired": [
+    "KHR_lights_punctual"
+  ],
+  "extensions": {
+    "KHR_lights_punctual": {
+      "lights": [
+        {
+          "color": [
+            1,
+            0.7599999904632568,
+            0.5
+          ],
+          "intensity": 0.15000000596046448,
+          "type": "point",
+          "name": "Residence_Light",
+          "range": 1.6
+        }
+      ]
+    }
+  },
   "scene": 0,
   "scenes": [
     {
@@ -11,7 +34,8 @@
         0,
         1,
         2,
-        3
+        3,
+        4
       ]
     }
   ],
@@ -51,6 +75,25 @@
     {
       "mesh": 3,
       "name": "Residence"
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 0
+        }
+      },
+      "name": "Residence_Light",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        0,
+        0.8999999761581421,
+        0
+      ]
     }
   ],
   "materials": [

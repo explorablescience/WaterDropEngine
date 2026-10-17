@@ -3,6 +3,95 @@
     "generator": "Khronos glTF Blender I/O v5.0.21",
     "version": "2.0"
   },
+  "extensionsUsed": [
+    "KHR_lights_punctual"
+  ],
+  "extensionsRequired": [
+    "KHR_lights_punctual"
+  ],
+  "extensions": {
+    "KHR_lights_punctual": {
+      "lights": [
+        {
+          "color": [
+            1,
+            0.7599999904632568,
+            0.5
+          ],
+          "intensity": 0.8999999761581421,
+          "type": "point",
+          "name": "Dome_Light",
+          "range": 7.22
+        },
+        {
+          "color": [
+            1,
+            0.7599999904632568,
+            0.5
+          ],
+          "intensity": 0.25,
+          "type": "point",
+          "name": "Dome_RingLight",
+          "range": 4.704
+        },
+        {
+          "color": [
+            1,
+            0.7599999904632568,
+            0.5
+          ],
+          "intensity": 0.25,
+          "type": "point",
+          "name": "Dome_RingLight.001",
+          "range": 4.704
+        },
+        {
+          "color": [
+            1,
+            0.7599999904632568,
+            0.5
+          ],
+          "intensity": 0.25,
+          "type": "point",
+          "name": "Dome_RingLight.002",
+          "range": 4.704
+        },
+        {
+          "color": [
+            1,
+            0.7599999904632568,
+            0.5
+          ],
+          "intensity": 0.25,
+          "type": "point",
+          "name": "Dome_RingLight.003",
+          "range": 4.704
+        },
+        {
+          "color": [
+            1,
+            0.7599999904632568,
+            0.5
+          ],
+          "intensity": 0.25,
+          "type": "point",
+          "name": "Dome_RingLight.004",
+          "range": 4.704
+        },
+        {
+          "color": [
+            1,
+            0.7599999904632568,
+            0.5
+          ],
+          "intensity": 0.25,
+          "type": "point",
+          "name": "Dome_RingLight.005",
+          "range": 4.704
+        }
+      ]
+    }
+  },
   "scene": 0,
   "scenes": [
     {
@@ -23,7 +112,14 @@
         12,
         13,
         14,
-        15
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22
       ]
     }
   ],
@@ -156,6 +252,139 @@
     {
       "mesh": 15,
       "name": "%V%AnchorIn.003+"
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 0
+        }
+      },
+      "name": "Dome_Light",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        0,
+        3.5280001163482666,
+        0
+      ]
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 1
+        }
+      },
+      "name": "Dome_RingLight",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        3.608208179473877,
+        1.2999999523162842,
+        -2.083199977874756
+      ]
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 2
+        }
+      },
+      "name": "Dome_RingLight.001",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        0,
+        1.2999999523162842,
+        -4.166399955749512
+      ]
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 3
+        }
+      },
+      "name": "Dome_RingLight.002",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        -3.608208179473877,
+        1.2999999523162842,
+        -2.083199977874756
+      ]
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 4
+        }
+      },
+      "name": "Dome_RingLight.003",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        -3.608208179473877,
+        1.2999999523162842,
+        2.083199977874756
+      ]
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 5
+        }
+      },
+      "name": "Dome_RingLight.004",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        0,
+        1.2999999523162842,
+        4.166399955749512
+      ]
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 6
+        }
+      },
+      "name": "Dome_RingLight.005",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        3.608208179473877,
+        1.2999999523162842,
+        2.083199977874756
+      ]
     }
   ],
   "materials": [

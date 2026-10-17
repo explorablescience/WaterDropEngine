@@ -3,6 +3,40 @@
     "generator": "Khronos glTF Blender I/O v5.0.21",
     "version": "2.0"
   },
+  "extensionsUsed": [
+    "KHR_lights_punctual"
+  ],
+  "extensionsRequired": [
+    "KHR_lights_punctual"
+  ],
+  "extensions": {
+    "KHR_lights_punctual": {
+      "lights": [
+        {
+          "color": [
+            1,
+            0.44999998807907104,
+            0.8500000238418579
+          ],
+          "intensity": 0.18000000715255737,
+          "type": "point",
+          "name": "Farm_GrowLight",
+          "range": 1.8
+        },
+        {
+          "color": [
+            1,
+            0.44999998807907104,
+            0.8500000238418579
+          ],
+          "intensity": 0.18000000715255737,
+          "type": "point",
+          "name": "Farm_GrowLight.001",
+          "range": 1.8
+        }
+      ]
+    }
+  },
   "scene": 0,
   "scenes": [
     {
@@ -11,7 +45,9 @@
         0,
         1,
         2,
-        3
+        3,
+        4,
+        5
       ]
     }
   ],
@@ -56,6 +92,44 @@
     {
       "mesh": 3,
       "name": "HydroponicFarm"
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 0
+        }
+      },
+      "name": "Farm_GrowLight.003",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        0.800000011920929,
+        0.8999999761581421,
+        0
+      ]
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 1
+        }
+      },
+      "name": "Farm_GrowLight.004",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        -0.800000011920929,
+        0.8999999761581421,
+        0
+      ]
     }
   ],
   "materials": [

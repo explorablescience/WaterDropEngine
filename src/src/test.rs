@@ -103,7 +103,24 @@ const DEMO_BASE: &[(&str, [f32; 2], GridRotation)] = &[
     ("Water Extractor", [-16.0, 4.0], GridRotation::R0),
     ("Water Tank", [-15.0, 1.0], GridRotation::R0),
     ("Storage", [-17.0, -3.0], GridRotation::R0),
-    ("Landing Pad", [-17.0, -9.0], GridRotation::R0)
+    ("Landing Pad", [-17.0, -9.0], GridRotation::R0),
+    // Modules in the medium dome
+    ("Living Quarters", [4.0, 0.0], GridRotation::R0),
+    ("Hydroponic Farm", [-2.0, 0.0], GridRotation::R0),
+    ("Garden", [1.0, 1.0], GridRotation::R0),
+    ("Diner", [1.0, 5.0], GridRotation::R270),
+    ("Grocery", [3.0, 5.0], GridRotation::R270),
+    ("Residence", [-1.0, 5.0], GridRotation::R270),
+    ("Residence", [1.0, -3.0], GridRotation::R90),
+    ("Infirmary", [3.0, -3.0], GridRotation::R90),
+    // Modules in the north dome
+    ("Research Lab", [2.0, 17.0], GridRotation::R0),
+    ("Infirmary", [-1.0, 17.0], GridRotation::R180),
+    ("Garden", [1.0, 19.0], GridRotation::R0),
+    // Modules in the east dome
+    ("Residence", [17.0, 1.0], GridRotation::R180),
+    ("Residence", [19.0, 3.0], GridRotation::R270),
+    ("Grocery", [21.0, -1.0], GridRotation::R0)
 ];
 
 /// Floor height of the domes.
@@ -111,12 +128,12 @@ const DOME_FLOOR: f32 = 0.17;
 
 /// Demo colonists: position and whether they start indoors.
 const DEMO_COLONISTS: &[([f32; 3], bool)] = &[
-    ([-1.0, DOME_FLOOR, -1.0], true),
-    ([2.5, DOME_FLOOR, 2.0], true),
-    ([3.0, DOME_FLOOR, -2.0], true),
-    ([0.0, DOME_FLOOR, 3.5], true),
-    ([18.0, DOME_FLOOR, 0.0], true),
-    ([20.0, DOME_FLOOR, 2.0], true),
+    ([3.0, DOME_FLOOR, 3.0], true),
+    ([-1.0, DOME_FLOOR, 3.0], true),
+    ([-1.0, DOME_FLOOR, -3.0], true),
+    ([1.0, DOME_FLOOR, 3.0], true),
+    ([19.0, DOME_FLOOR, -1.0], true),
+    ([21.0, DOME_FLOOR, 1.0], true),
     ([-9.0, 0.0, 12.5], false),
     ([-8.0, 0.0, 13.5], false)
 ];
@@ -140,45 +157,6 @@ fn init_scene(
     for (label, [x, z], rotation) in DEMO_BASE {
         placement_queue.place(*label, Vec2::new(*x, *z), *rotation);
     }
-
-    // Spawn the lights
-    let entity = commands.spawn(Name::new("Lights")).id();
-    commands.spawn((
-        Name::new("Red Light"),
-        PointLight {
-            position: Vec3::new(5.0, 15.0, 5.0),
-            color: WdeColor::from_srgba(0.8, 0.2, 0.2, 1.0),
-            ..Default::default()
-        },
-        ChildOf(entity)
-    ));
-    commands.spawn((
-        Name::new("Green Light"),
-        PointLight {
-            position: Vec3::new(-5.0, 10.0, 5.0),
-            color: WdeColor::from_srgba(0.2, 0.8, 0.2, 1.0),
-            ..Default::default()
-        },
-        ChildOf(entity)
-    ));
-    commands.spawn((
-        Name::new("Blue Light"),
-        PointLight {
-            position: Vec3::new(0.0, 8.0, -5.0),
-            color: WdeColor::from_srgba(0.2, 0.2, 0.8, 1.0),
-            ..Default::default()
-        },
-        ChildOf(entity)
-    ));
-    // commands.spawn((
-    //     Name::new("Directional Light"),
-    //     DirectionalLight {
-    //         direction: Vec3::new(-1.0, -2.0, -1.0).normalize(),
-    //         intensity: 0.1,
-    //         ..Default::default()
-    //     },
-    //     ChildOf(entity)
-    // ));
 
     commands.insert_resource(SelectionOutlineMaterial {
         selected: asset_server.add(OutlineMaterial {

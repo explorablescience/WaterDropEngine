@@ -7,8 +7,8 @@ use crate::accessor::parse_attribute_as_f32;
 use crate::error::GltfError;
 use crate::material::GltfMaterial;
 use crate::model::{
-    AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBone, GltfBuffer, GltfMesh,
-    GltfModel, MeshPrimitive, ModelCondition
+    AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBone, GltfBuffer, GltfLight,
+    GltfLightKind, GltfMesh, GltfModel, MeshPrimitive, ModelCondition
 };
 use base64::{Engine, engine::general_purpose};
 use serde_json::Value;
@@ -19,6 +19,8 @@ const PROPERTY_MESH_PREFIX: &str = "%P%";
 /// Prefix marking a node as a bone of a rigged model: its mesh stays in the bone's space, and
 /// animations move it at runtime. Only bones may have children, which must be bones too.
 const BONE_NODE_PREFIX: &str = "%B%";
+/// Range of the lights without one, in world units.
+const DEFAULT_LIGHT_RANGE: f32 = 6.0;
 
 /// Parse a glTF 2.0 JSON file from `res/` and build an in-memory `GltfModel`.
 pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
@@ -137,6 +139,7 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
     let mut material_map: HashMap<i64, usize> = HashMap::new();
     let mut bones: Vec<GltfBone> = Vec::new();
     let mut node_bones: HashMap<usize, usize> = HashMap::new();
+    let mut lights: Vec<GltfLight> = Vec::new();
     let mut stack: Vec<(usize, Option<usize>)> = nodes_list
         .iter()
         .rev()
@@ -200,6 +203,23 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
                 ]
             })
             .unwrap_or([1.0, 1.0, 1.0]);
+
+        // Light nodes
+        if let Some(light) = node
+            .pointer("/extensions/KHR_lights_punctual/light")
+            .and_then(|v| v.as_u64())
+        {
+            let transform = Transform {
+                translation: Vec3::from(translation),
+                rotation: Quat::from_array(rotation),
+                scale: Vec3::ONE
+            };
+            match parse_light(&json, light as usize, name, transform) {
+                Some(light) => lights.push(light),
+                None => warn!("Ignoring invalid light '{}' in '{}'.", name, path)
+            }
+            continue;
+        }
 
         let children = node.get("children").and_then(|v| v.as_array());
         let bone = match name.strip_prefix(BONE_NODE_PREFIX) {
@@ -434,7 +454,47 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
         materials: material_datas,
         properties,
         bones,
-        animations
+        animations,
+        lights
+    })
+}
+
+/// Parse a `KHR_lights_punctual` light, placed by its node transform.
+fn parse_light(json: &Value, index: usize, name: &str, transform: Transform) -> Option<GltfLight> {
+    let light = json.pointer(&format!("/extensions/KHR_lights_punctual/lights/{index}"))?;
+    let number = |v: &Value| v.as_f64().map(|f| f as f32);
+    let color = light
+        .get("color")
+        .and_then(|c| c.as_array())
+        .and_then(|c| {
+            let channel = |i: usize| c.get(i).and_then(number);
+            Some(Vec3::new(channel(0)?, channel(1)?, channel(2)?))
+        })
+        .unwrap_or(Vec3::ONE);
+    let kind = match light.get("type")?.as_str()? {
+        "point" => GltfLightKind::Point,
+        "spot" => GltfLightKind::Spot {
+            inner_cone: light
+                .pointer("/spot/innerConeAngle")
+                .and_then(number)
+                .unwrap_or(0.0),
+            outer_cone: light
+                .pointer("/spot/outerConeAngle")
+                .and_then(number)
+                .unwrap_or(std::f32::consts::FRAC_PI_4)
+        },
+        _ => return None
+    };
+    Some(GltfLight {
+        name: name.to_string(),
+        kind,
+        transform,
+        color,
+        intensity: light.get("intensity").and_then(number).unwrap_or(1.0),
+        range: light
+            .get("range")
+            .and_then(number)
+            .unwrap_or(DEFAULT_LIGHT_RANGE)
     })
 }
 

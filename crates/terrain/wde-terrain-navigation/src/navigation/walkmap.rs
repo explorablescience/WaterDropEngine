@@ -5,10 +5,10 @@
 //! head height above it. Parts shown only for some connection states (`%V%` variants, e.g. a
 //! wall closing an unused doorway) are kept apart, so that placed buildings combine the parts
 //! matching their connections. Doors (`%P%Door*` boxes) open for colonists: their geometry does
-//! not block.
+//! not block. Modules placed inside a building replace its cells under their footprint.
 
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{BTreeSet, HashMap, HashSet, VecDeque},
     sync::Arc
 };
 
@@ -164,6 +164,34 @@ impl ModelWalkMap {
     }
 }
 
+impl ModelWalkMap {
+    fn index(&self, c: IVec2) -> usize {
+        (c.y * self.size.x as i32 + c.x) as usize
+    }
+
+    /// Center of a cell, in local space.
+    fn local_center(&self, c: IVec2) -> Vec2 {
+        (c.as_vec2() + 0.5) * CELL_SIZE - self.size.as_vec2() * CELL_SIZE / 2.0
+    }
+
+    /// Cells blocked by the parts shown for these connections, or without floor.
+    fn blocked(&self, connections: &BTreeSet<String>) -> Vec<bool> {
+        let mut blocked: Vec<bool> = self.floor.iter().map(Option::is_none).collect();
+        for layer in &self.layers {
+            let shown = layer
+                .condition
+                .as_ref()
+                .is_none_or(|c| connections.contains(&c.anchor) == c.connected);
+            if shown {
+                for (b, layer_blocked) in blocked.iter_mut().zip(&layer.blocked) {
+                    *b |= *layer_blocked;
+                }
+            }
+        }
+        blocked
+    }
+}
+
 /// A walkable cell inside a building.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct WalkCell {
@@ -180,6 +208,26 @@ pub(crate) struct WalkMap {
     incomplete: bool
 }
 impl WalkMap {
+    /// Walk map of a model, baked on first use. `None` (and marked incomplete) while loading.
+    fn model(
+        &mut self,
+        gltf_assets: &Assets<GltfAsset>,
+        handle: &Handle<GltfAsset>,
+        extent: UVec2,
+        ground_floor: bool
+    ) -> Option<Arc<ModelWalkMap>> {
+        if let Some(model) = self.models.get(&handle.id()) {
+            return Some(model.clone());
+        }
+        let Some(asset) = gltf_assets.get(handle) else {
+            self.incomplete = true;
+            return None;
+        };
+        let model = Arc::new(ModelWalkMap::bake(asset, extent, ground_floor));
+        self.models.insert(handle.id(), model.clone());
+        Some(model)
+    }
+
     pub fn cell_key(pos: Vec2) -> IVec2 {
         (pos / CELL_SIZE).floor().as_ivec2()
     }
@@ -204,21 +252,45 @@ pub(crate) fn is_airlock(building: &GridEntity) -> bool {
     building.entry().role.as_deref() == Some(AIRLOCK_ROLE)
 }
 
-/// Rebuilds the [`WalkMap`] when buildings are placed, removed or reconnected.
+/// Rebuilds the [`WalkMap`] when buildings or modules are placed, removed or reconnected.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn rebuild_walk_map(
     mut walk_map: ResMut<WalkMap>,
     changed: Query<(), Changed<BuildingConnections>>,
     mut removed: RemovedComponents<BuildingConnections>,
+    added_modules: Query<(), Added<InteriorModule>>,
+    mut removed_modules: RemovedComponents<InteriorModule>,
     placed: Query<(Entity, &GridEntity, &BuildingConnections)>,
+    modules: Query<(&GridEntity, &Transform), With<InteriorModule>>,
     gltf_assets: Res<Assets<GltfAsset>>
 ) {
-    let removed_any = removed.read().count() > 0;
-    if changed.is_empty() && !removed_any && !walk_map.incomplete {
+    let removed_any = removed.read().count() + removed_modules.read().count() > 0;
+    if changed.is_empty() && added_modules.is_empty() && !removed_any && !walk_map.incomplete {
         return;
     }
     let walk_map = walk_map.as_mut();
     walk_map.cells.clear();
     walk_map.incomplete = false;
+
+    // Modules: their floor (world height) or `None` where they block
+    let mut overlay: HashMap<IVec2, Option<f32>> = HashMap::new();
+    for (module, transform) in &modules {
+        let entry = module.entry();
+        let Some(model) = walk_map.model(&gltf_assets, &entry.asset, entry.extent, true) else {
+            continue;
+        };
+        let blocked = model.blocked(&BTreeSet::new());
+        for y in 0..model.size.y as i32 {
+            for x in 0..model.size.x as i32 {
+                let c = IVec2::new(x, y);
+                let i = model.index(c);
+                let key = WalkMap::cell_key(module.anchor_world(model.local_center(c)));
+                let floor = transform.translation.y + model.floor[i].unwrap_or(0.0);
+                overlay.insert(key, (!blocked[i]).then_some(floor));
+            }
+        }
+    }
+
     for (entity, building, connections) in &placed {
         if is_path_piece(building) {
             continue;
@@ -226,58 +298,55 @@ pub(crate) fn rebuild_walk_map(
         // The cutaway variant shows the interior (the full one may be closed)
         let entry = building.entry();
         let handle = entry.asset_cut.as_ref().unwrap_or(&entry.asset);
-        let model = match walk_map.models.get(&handle.id()) {
-            Some(model) => model.clone(),
-            None => {
-                let Some(asset) = gltf_assets.get(handle) else {
-                    walk_map.incomplete = true;
-                    continue;
-                };
-                let model = Arc::new(ModelWalkMap::bake(
-                    asset,
-                    entry.extent,
-                    !is_pressurized(building)
-                ));
-                walk_map.models.insert(handle.id(), model.clone());
-                model
-            }
+        let Some(model) = walk_map.model(
+            &gltf_assets,
+            handle,
+            entry.extent,
+            !is_pressurized(building)
+        ) else {
+            continue;
         };
-        add_building(&mut walk_map.cells, entity, building, connections, &model);
+        add_building(
+            &mut walk_map.cells,
+            entity,
+            building,
+            &connections.0,
+            &model,
+            &overlay
+        );
     }
 }
 
-/// Adds the walkable cells of a placed building: the parts matching its connections, away from
-/// obstacles, and only the regions reachable from its doorways (or from outside).
+/// Adds the walkable cells of a placed building: the parts matching its connections and the
+/// modules inside it, away from obstacles, and only the regions reachable from its doorways (or
+/// from outside).
 fn add_building(
     cells: &mut HashMap<IVec2, WalkCell>,
     entity: Entity,
     building: &GridEntity,
-    connections: &BuildingConnections,
-    model: &ModelWalkMap
+    connections: &BTreeSet<String>,
+    model: &ModelWalkMap,
+    overlay: &HashMap<IVec2, Option<f32>>
 ) {
     let size = model.size.as_ivec2();
-    let index = |c: IVec2| (c.y * size.x + c.x) as usize;
     let inside = |c: IVec2| c.x >= 0 && c.y >= 0 && c.x < size.x && c.y < size.y;
-
-    // Blocked by the parts shown for these connections, or without floor
-    let mut blocked: Vec<bool> = model.floor.iter().map(Option::is_none).collect();
-    for layer in &model.layers {
-        let shown = layer
-            .condition
-            .as_ref()
-            .is_none_or(|c| connections.0.contains(&c.anchor) == c.connected);
-        if shown {
-            for (b, layer_blocked) in blocked.iter_mut().zip(&layer.blocked) {
-                *b |= *layer_blocked;
+    let world_key = |c: IVec2| WalkMap::cell_key(building.anchor_world(model.local_center(c)));
+    let floor = |c: IVec2| match overlay.get(&world_key(c)) {
+        Some(module_floor) => *module_floor,
+        None => model.floor[model.index(c)]
+    };
+    let blocked = model.blocked(connections);
+    let walkable = |c: IVec2| {
+        inside(c)
+            && match overlay.get(&world_key(c)) {
+                Some(module_floor) => module_floor.is_some(),
+                None => !blocked[model.index(c)]
             }
-        }
-    }
-    let walkable: Vec<bool> = blocked.iter().map(|b| !b).collect();
+    };
 
-    // Local cell of a local position, and back
+    // Local cell of a local position
     let half = model.size.as_vec2() * CELL_SIZE / 2.0;
     let local_cell = |p: Vec2| ((p + half) / CELL_SIZE).floor().as_ivec2();
-    let local_center = |c: IVec2| (c.as_vec2() + 0.5) * CELL_SIZE - half;
 
     // Seeds: just inside each doorway and the center for pressurized buildings, the border for
     // outdoor ones
@@ -304,27 +373,23 @@ fn add_building(
 
     // Flood fill the regions reachable from the seeds
     let mut reached = HashSet::new();
-    let mut queue: VecDeque<IVec2> = seeds
-        .into_iter()
-        .filter(|c| inside(*c) && walkable[index(*c)])
-        .collect();
+    let mut queue: VecDeque<IVec2> = seeds.into_iter().filter(|c| walkable(*c)).collect();
     reached.extend(queue.iter().copied());
     while let Some(c) = queue.pop_front() {
         for d in [IVec2::X, IVec2::NEG_X, IVec2::Y, IVec2::NEG_Y] {
             let n = c + d;
-            if inside(n) && walkable[index(n)] && reached.insert(n) {
+            if walkable(n) && reached.insert(n) {
                 queue.push_back(n);
             }
         }
     }
 
     for c in reached {
-        let world = building.anchor_world(local_center(c));
         cells.insert(
-            WalkMap::cell_key(world),
+            world_key(c),
             WalkCell {
                 building: entity,
-                floor: model.floor[index(c)].unwrap_or(0.0)
+                floor: floor(c).unwrap_or(0.0)
             }
         );
     }

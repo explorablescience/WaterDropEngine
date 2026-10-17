@@ -137,6 +137,13 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     var lo = vec3<f32>(0.0);
     let lights_count = i32(arrayLength(&in_lights));
     for (var i = 0; i < lights_count; i = i + 1) {
+        let light_type = i32(in_lights[i].color_type.w);
+        if light_type < 0 {
+            break; // End of the lights in use
+        }
+        if light_type > 0 && distance(in_lights[i].position_intensity.xyz, world_position) > in_lights[i].direction_range.w {
+            continue; // Out of range
+        }
         let light_data = get_light_data(in_lights[i], world_position);
         let n_dot_l = max(dot(normal, light_data.light_dir), 0.0);
         let light_contribution = brdf_for_light(normal, view_dir, light_data.light_dir, albedo, metallic, roughness, f0)
@@ -144,7 +151,6 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
             * n_dot_l
             * in_pbr_params.lighting_params.x;
         // Only the directional light (type 0) is attenuated by the shadow map
-        let light_type = i32(in_lights[i].color_type.w);
         let attenuation = select(1.0, shadow, light_type == 0);
         lo += light_contribution * attenuation;
     }

@@ -41,6 +41,70 @@
                 "role": "control_room"
             },
             {
+                "label": "Living Quarters",
+                "category": "Modules",
+                "description": "Apartments housing a dozen colonists (2x2). Placed inside a dome.",
+                "icon": "core/icons/buildings/living_quarters_2x2.png",
+                "model": "models/modules/living_quarters/living_quarters_2x2.gltf",
+                "placement": "module"
+            },
+            {
+                "label": "Residence",
+                "category": "Modules",
+                "description": "Small home for a few colonists. Placed inside a dome.",
+                "icon": "core/icons/buildings/residence_1x1.png",
+                "model": "models/modules/residence/residence_1x1.gltf",
+                "placement": "module"
+            },
+            {
+                "label": "Hydroponic Farm",
+                "category": "Modules",
+                "description": "Grows food under grow lights (2x2). Placed inside a dome.",
+                "icon": "core/icons/buildings/farm_2x2.png",
+                "model": "models/modules/farm/farm_2x2.gltf",
+                "placement": "module"
+            },
+            {
+                "label": "Research Lab",
+                "category": "Modules",
+                "description": "Laboratory advancing colony research (2x1). Placed inside a dome.",
+                "icon": "core/icons/buildings/research_lab_2x1.png",
+                "model": "models/modules/research_lab/research_lab_2x1.gltf",
+                "placement": "module"
+            },
+            {
+                "label": "Diner",
+                "category": "Modules",
+                "description": "Serves meals to the colonists. Placed inside a dome.",
+                "icon": "core/icons/buildings/diner_1x1.png",
+                "model": "models/modules/diner/diner_1x1.gltf",
+                "placement": "module"
+            },
+            {
+                "label": "Infirmary",
+                "category": "Modules",
+                "description": "Heals sick and injured colonists. Placed inside a dome.",
+                "icon": "core/icons/buildings/infirmary_1x1.png",
+                "model": "models/modules/infirmary/infirmary_1x1.gltf",
+                "placement": "module"
+            },
+            {
+                "label": "Garden",
+                "category": "Modules",
+                "description": "Green space where colonists relax. Placed inside a dome.",
+                "icon": "core/icons/buildings/garden_1x1.png",
+                "model": "models/modules/garden/garden_1x1.gltf",
+                "placement": "module"
+            },
+            {
+                "label": "Grocery",
+                "category": "Modules",
+                "description": "Distributes food to the dome. Placed inside a dome.",
+                "icon": "core/icons/buildings/grocery_1x1.png",
+                "model": "models/modules/grocery/grocery_1x1.gltf",
+                "placement": "module"
+            },
+            {
                 "label": "Tunnel Straight",
                 "category": "Network",
                 "description": "Pressurized walkway between buildings.",

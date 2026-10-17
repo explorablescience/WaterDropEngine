@@ -6,7 +6,7 @@ use wde_pbr::prelude::*;
 use wde_pbr_outline::prelude::*;
 use wde_physics::prelude::*;
 use wde_renderer::prelude::Color;
-use wde_terrain::prelude::*;
+use wde_terrain::{TERRAIN_MODULES_COLLIDER_GROUP, prelude::*};
 
 use crate::{
     core::{entries::PlacementConfig, grid::GridEntityEvent},
@@ -78,11 +78,19 @@ pub fn handle_over_material(
     let aspect_ratio = window.size().x / window.size().y;
     let ray = Ray::from_ndc(cursor_ndc, aspect_ratio, camera_transform, camera_view);
 
-    // Cast the ray
-    let entity = match phworld.cast_ray(
-        &ray,
-        &RayCastConfig::with_filter(TERRAIN_BUILDINGS_COLLIDER_GROUP)
-    ) {
+    // Cast the ray: modules first, as they are inside other buildings
+    let hit = phworld
+        .cast_ray(
+            &ray,
+            &RayCastConfig::with_filter(TERRAIN_MODULES_COLLIDER_GROUP)
+        )
+        .or_else(|| {
+            phworld.cast_ray(
+                &ray,
+                &RayCastConfig::with_filter(TERRAIN_BUILDINGS_COLLIDER_GROUP)
+            )
+        });
+    let entity = match hit {
         Some((entity, _toi)) => entity,
         None => {
             reset_hovered_entity(&mut commands, &mut move_delete_manager, children_query);

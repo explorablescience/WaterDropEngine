@@ -9,16 +9,26 @@ use crate::{
         entries::PlacementConfig,
         grid::{GridEntityEvent, GridTilePos}
     },
-    placement::place::spawn_building,
+    placement::{
+        cutaway::BuildingVariant,
+        modules::{InteriorModule, module_host, spawn_module},
+        place::spawn_building
+    },
     prelude::{Grid, GridEntity, GridRotation}
 };
 
-/// Buildings placed from code (e.g. a starting base), as if placed with the placement tool. They
-/// are placed together once all their models are loaded; a building whose tiles are taken is
-/// skipped with a warning.
+/// Time a queued module waits for a building to host it, in seconds.
+const MODULE_HOST_TIMEOUT: f32 = 2.0;
+
+/// Buildings placed from code (e.g. a starting base), as if placed with the placement tool.
+/// Buildings are placed together once all their models are loaded; modules then go in the
+/// building around them. A building whose tiles are taken, or a module without a building to
+/// host it, is skipped with a warning.
 #[derive(Resource, Default)]
 pub struct PlacementQueue {
-    pending: Vec<(String, Vec2, GridRotation)>
+    pending: Vec<(String, Vec2, GridRotation)>,
+    /// Modules waiting for their host, with the time waited.
+    modules: Vec<(GridEntity, f32)>
 }
 impl PlacementQueue {
     /// Places the placement config entry `label` centered at the world XZ position `center`.
@@ -27,15 +37,70 @@ impl PlacementQueue {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn process_placement_queue(
     mut commands: Commands,
     mut queue: ResMut<PlacementQueue>,
     config: Res<PlacementConfig>,
     grid: Res<Grid>,
     gltf_models: Res<Assets<GltfAsset>>,
+    buildings: Query<&GridEntity, With<BuildingVariant>>,
+    modules: Query<&GridEntity, With<InteriorModule>>,
+    time: Res<Time>,
     mut grid_entity_events: MessageWriter<GridEntityEvent>
 ) {
-    if queue.pending.is_empty() || grid.get_parent().is_none() {
+    if grid.get_parent().is_none() {
+        return;
+    }
+    place_buildings(
+        &mut commands,
+        &mut queue,
+        &config,
+        &grid,
+        &gltf_models,
+        &mut grid_entity_events
+    );
+
+    // Modules, once the buildings around them are on the grid
+    let mut placed: Vec<GridEntity> = Vec::new();
+    let mut waiting = Vec::new();
+    for (grid_entity, waited) in std::mem::take(&mut queue.modules) {
+        let others = modules.iter().chain(placed.iter());
+        match module_host(&grid, &buildings, others, &grid_entity) {
+            Some((host, floor)) => {
+                spawn_module(
+                    &mut commands,
+                    &grid,
+                    &gltf_models,
+                    &grid_entity,
+                    host,
+                    floor
+                );
+                placed.push(grid_entity);
+            }
+            None if waited < MODULE_HOST_TIMEOUT => {
+                waiting.push((grid_entity, waited + time.delta_secs()));
+            }
+            None => warn!(
+                "Cannot place module '{}' at {}: no building interior to host it there.",
+                grid_entity.entry().label,
+                grid_entity.center()
+            )
+        }
+    }
+    queue.modules = waiting;
+}
+
+/// Places the queued buildings, and moves the queued modules to their waiting list.
+fn place_buildings(
+    commands: &mut Commands,
+    queue: &mut PlacementQueue,
+    config: &PlacementConfig,
+    grid: &Grid,
+    gltf_models: &Assets<GltfAsset>,
+    grid_entity_events: &mut MessageWriter<GridEntityEvent>
+) {
+    if queue.pending.is_empty() {
         return;
     }
 
@@ -56,6 +121,10 @@ pub(crate) fn process_placement_queue(
     // Tiles are registered in the grid later on: also check against this batch
     let mut taken: HashSet<GridTilePos> = HashSet::new();
     for grid_entity in placements {
+        if grid_entity.entry().module {
+            queue.modules.push((grid_entity, 0.0));
+            continue;
+        }
         let free = grid.is_area_free(&grid_entity)
             && grid_entity.footprint().iter().all(|t| !taken.contains(t));
         if !free {
@@ -68,11 +137,11 @@ pub(crate) fn process_placement_queue(
         }
         taken.extend(grid_entity.footprint().iter().copied());
         spawn_building(
-            &mut commands,
-            &grid,
-            &gltf_models,
+            commands,
+            grid,
+            gltf_models,
             &grid_entity,
-            &mut grid_entity_events
+            grid_entity_events
         );
     }
 }

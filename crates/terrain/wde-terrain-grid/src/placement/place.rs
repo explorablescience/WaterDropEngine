@@ -4,7 +4,12 @@ use wde_terrain::TERRAIN_BUILDINGS_COLLIDER_GROUP;
 
 use crate::{
     core::{entries::PlacementConfigEntry, grid::GridEntityEvent},
-    placement::{TerrainCursorPos, connections::connected_anchors, cutaway::BuildingVariant}
+    placement::{
+        TerrainCursorPos,
+        connections::connected_anchors,
+        cutaway::BuildingVariant,
+        modules::{InteriorModule, module_host, spawn_module}
+    }
 };
 use bevy::prelude::*;
 use wde_editor::prelude::*;
@@ -438,7 +443,8 @@ pub fn place_update(
     gltf_models: Res<Assets<GltfAsset>>,
     mut grid_entity_events: MessageWriter<GridEntityEvent>,
     asset_server: Res<AssetServer>,
-    placed: Query<&GridEntity, With<BuildingVariant>>
+    placed: Query<&GridEntity, With<BuildingVariant>>,
+    modules: Query<&GridEntity, With<InteriorModule>>
 ) {
     if manager.place_selected_entry.is_none()
         || (manager.mode != TerrainPlacementMode::Place
@@ -459,21 +465,37 @@ pub fn place_update(
 
     // Cast the ray in the physics world
     if let Some(pos) = terrain_cursor_pos.pos() {
-        // Move the placement entity to the hit point with the correct rotation
+        // Move the placement entity to the hit point with the correct rotation (modules: on the
+        // floor of the building around them)
         let grid_entity = GridEntity::new(
             Vec2::new(pos.x, pos.z),
             *local_rot,
             manager.place_selected_entry.clone().unwrap()
         );
+        let is_module = grid_entity.entry().module;
+        let host = match is_module {
+            true => module_host(&grid, &placed, modules.iter(), &grid_entity),
+            false => None
+        };
         commands.entity(manager.entity).insert(
             Transform::from_rotation(Quat::from_rotation_y(local_rot.rotation())).with_translation(
-                Vec3::new(grid_entity.center().x, 0.0, grid_entity.center().y)
+                Vec3::new(
+                    grid_entity.center().x,
+                    host.map_or(0.0, |(_, floor)| floor),
+                    grid_entity.center().y
+                )
             )
         );
 
         // Preview the variant matching the neighbors at this position
-        let is_valid = grid.is_area_free(&grid_entity);
-        let connected = connected_anchors(&grid_entity, placed.iter());
+        let is_valid = match is_module {
+            true => host.is_some(),
+            false => grid.is_area_free(&grid_entity)
+        };
+        let connected = match is_module {
+            true => BTreeSet::new(),
+            false => connected_anchors(&grid_entity, placed.iter())
+        };
         let mut respawned = false;
         if manager.ghost_connections.as_ref() != Some(&connected) {
             let entry = manager.place_selected_entry.clone().unwrap();
@@ -527,13 +549,27 @@ pub fn place_update(
                 manager.place_selected_entry.clone().unwrap()
             );
 
-            spawn_building(
-                &mut commands,
-                &grid,
-                &gltf_models,
-                &grid_entity,
-                &mut grid_entity_events
-            );
+            match host {
+                Some((host, floor)) => {
+                    spawn_module(
+                        &mut commands,
+                        &grid,
+                        &gltf_models,
+                        &grid_entity,
+                        host,
+                        floor
+                    );
+                }
+                None => {
+                    spawn_building(
+                        &mut commands,
+                        &grid,
+                        &gltf_models,
+                        &grid_entity,
+                        &mut grid_entity_events
+                    );
+                }
+            }
 
             // Reset placement tool
             reset_placement_tool(&mut commands, &mut manager);
@@ -551,7 +587,8 @@ pub(crate) fn spawn_building(
     grid_entity_events: &mut MessageWriter<GridEntityEvent>
 ) -> Option<Entity> {
     let entry = grid_entity.entry();
-    let bbox = &gltf_models.get(&entry.asset)?.bbox;
+    let model = gltf_models.get(&entry.asset)?;
+    let bbox = &model.bbox;
     let parent = commands
         .spawn((
             Name::new(entry.label.clone()),
@@ -575,6 +612,7 @@ pub(crate) fn spawn_building(
         Collider::from(BoxCollider::new(bbox_extent).with_group(TERRAIN_BUILDINGS_COLLIDER_GROUP)),
         ChildOf(parent)
     ));
+    model.spawn_lights(commands, parent);
 
     grid_entity_events.write(GridEntityEvent::Placed {
         entity: parent,

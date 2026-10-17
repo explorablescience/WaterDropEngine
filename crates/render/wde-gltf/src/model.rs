@@ -22,7 +22,33 @@ pub struct GltfModel {
     /// Bones of a rigged model, parents first.
     pub bones: Vec<GltfBone>,
     /// Node animations of the bones.
-    pub animations: Vec<AnimationClip>
+    pub animations: Vec<AnimationClip>,
+    /// Lights of the model (`KHR_lights_punctual`).
+    pub lights: Vec<GltfLight>
+}
+
+/// Light of a model, shining along its local -Z.
+#[derive(Debug, Clone)]
+pub struct GltfLight {
+    pub name: String,
+    pub kind: GltfLightKind,
+    /// Position and orientation in model space.
+    pub transform: Transform,
+    /// Linear RGB color.
+    pub color: Vec3,
+    pub intensity: f32,
+    /// Distance beyond which the light has no effect.
+    pub range: f32
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum GltfLightKind {
+    Point,
+    /// Cone angles from the light axis, in radians.
+    Spot {
+        inner_cone: f32,
+        outer_cone: f32
+    }
 }
 
 /// Rigid part of a rigged model, from a node named `%B%<bone>`.

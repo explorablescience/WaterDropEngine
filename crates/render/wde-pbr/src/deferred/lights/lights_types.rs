@@ -32,7 +32,7 @@ impl Default for DirectionalLight {
 #[derive(Component, Clone, Copy, Reflect)]
 #[reflect(Component)]
 pub struct PointLight {
-    /// World space position of the light.
+    /// Position of the light: relative to its entity when it has a transform, else in world space.
     pub position: Vec3,
 
     /// Light color (RGB).
@@ -57,9 +57,9 @@ impl Default for PointLight {
 #[derive(Component, Clone, Copy, Reflect)]
 #[reflect(Component)]
 pub struct SpotLight {
-    /// World space position of the light.
+    /// Position of the light: relative to its entity when it has a transform, else in world space.
     pub position: Vec3,
-    /// World space direction of the light.
+    /// Direction of the light: relative to its entity when it has a transform, else in world space.
     pub direction: Vec3,
 
     /// Light color (RGB).
@@ -102,6 +102,14 @@ pub(crate) struct LightsStorageElement {
     pub spot_cone: [f32; 4]
 }
 impl LightsStorageElement {
+    /// Marks the end of the lights in use.
+    pub fn end_marker() -> Self {
+        Self {
+            color_type: [0.0, 0.0, 0.0, -1.0],
+            ..Default::default()
+        }
+    }
+
     pub fn from_directional(light: &DirectionalLight) -> Self {
         let color = light.color.to_linear_rgba();
         Self {

@@ -30,8 +30,22 @@ pub struct PlacementConfigEntry {
     pub anchors_in: Vec<PlacementAnchor>,
     /// Path connection points (`%P%AnchorOut*` properties).
     pub anchors_out: Vec<PlacementAnchor>,
+    /// Placed inside the interior of another building (`"placement": "module"`), not on the
+    /// ground.
+    pub module: bool,
+    /// Floor where modules can be placed (`%P%Interior` property).
+    pub interior: Option<InteriorArea>,
     /// Position in the config file, so entries keep that order whatever their load order.
     order: usize
+}
+
+/// Disc of a building floor where modules can be placed, in local space.
+#[derive(Clone, Copy, Debug, Reflect)]
+pub struct InteriorArea {
+    pub center: Vec2,
+    pub radius: f32,
+    /// Height of the floor.
+    pub floor: f32
 }
 
 /// Role of a piece in a network drawn by the line tool.
@@ -60,7 +74,8 @@ struct PendingEntry {
     role: Option<String>,
     icon: Option<Handle<Texture>>,
     asset: Handle<GltfAsset>,
-    asset_cut: Option<Handle<GltfAsset>>
+    asset_cut: Option<Handle<GltfAsset>>,
+    module: bool
 }
 
 /// Configuration for the placement of entities in the terrain grid.
@@ -154,6 +169,7 @@ fn read_placement_file(
                 .unwrap_or_default()
                 .to_string(),
             role: entity["role"].as_str().map(str::to_string),
+            module: entity["placement"].as_str() == Some("module"),
             network: entity["network"].as_str().map(|name| NetworkPiece {
                 name: name.to_string(),
                 junction: entity["piece"].as_str() == Some("junction")
@@ -205,6 +221,11 @@ fn process_pending_entries(
                     anchors_out.push(anchor);
                 }
             }
+            let interior = properties.get("Interior").map(|(pos, scale)| InteriorArea {
+                center: pos.xz(),
+                radius: scale.x,
+                floor: pos.y
+            });
             processed_labels.push(pending.label.clone());
             processed_entries.push(PlacementConfigEntry {
                 label: pending.label,
@@ -218,6 +239,8 @@ fn process_pending_entries(
                 extent,
                 anchors_in,
                 anchors_out,
+                module: pending.module,
+                interior,
                 order: pending.order
             });
         } else {

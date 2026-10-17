@@ -1,6 +1,7 @@
 use wde_logger::prelude::*;
 
 use bevy::{ecs::system::SystemParamItem, prelude::*};
+use wde_camera::prelude::ActiveCamera;
 use wde_renderer::prelude::*;
 
 use crate::deferred::lights::*;
@@ -8,8 +9,8 @@ use crate::deferred::lights::*;
 use crate::prelude::{AtmosphereParamsUniform, AtmosphereSettings};
 use crate::prelude::{PbrParamsUniform, PbrSettings};
 
-/// Maximum number of lights in the scene.
-pub const MAX_LIGHTS: usize = 64;
+/// Maximum number of lights rendered: beyond, the lights closest to the camera are kept.
+pub const MAX_LIGHTS: usize = 128;
 
 pub(crate) struct LightsBindingPlugin;
 impl Plugin for LightsBindingPlugin {
@@ -103,16 +104,72 @@ struct ExtractedLights {
     pub spot_lights: Vec<SpotLight>
 }
 
+/// Extracts the lights in world space (lights on entities with a transform follow it), keeping
+/// the [`MAX_LIGHTS`] most relevant: directional lights, then the closest to the camera.
 fn extract(
     lights_directional: ExtractWorld<Query<&DirectionalLight>>,
-    lights_point: ExtractWorld<Query<&PointLight>>,
-    lights_spot: ExtractWorld<Query<&SpotLight>>,
+    lights_point: ExtractWorld<Query<(&PointLight, Option<&GlobalTransform>)>>,
+    lights_spot: ExtractWorld<Query<(&SpotLight, Option<&GlobalTransform>)>>,
+    camera: ExtractWorld<Query<&GlobalTransform, With<ActiveCamera>>>,
     mut extracted_lights: ResMut<ExtractedLights>
 ) {
-    // Extract lights each frame. This is necessary to keep the lights buffer up to date, and to handle dynamic lights.
     extracted_lights.directional_lights = lights_directional.iter().copied().collect();
-    extracted_lights.point_lights = lights_point.iter().copied().collect();
-    extracted_lights.spot_lights = lights_spot.iter().copied().collect();
+    extracted_lights.point_lights = lights_point
+        .iter()
+        .map(|(light, transform)| PointLight {
+            position: transform.map_or(light.position, |t| t.transform_point(light.position)),
+            ..*light
+        })
+        .collect();
+    extracted_lights.spot_lights = lights_spot
+        .iter()
+        .map(|(light, transform)| match transform {
+            Some(t) => SpotLight {
+                position: t.transform_point(light.position),
+                direction: t.rotation() * light.direction,
+                ..*light
+            },
+            None => *light
+        })
+        .collect();
+
+    let budget = MAX_LIGHTS.saturating_sub(extracted_lights.directional_lights.len());
+    if extracted_lights.point_lights.len() + extracted_lights.spot_lights.len() > budget {
+        // Distance from the camera to the light's reach
+        let eye = camera.iter().next().map_or(Vec3::ZERO, |t| t.translation());
+        let gap = |position: Vec3, range: f32| (position.distance(eye) - range).max(0.0);
+        let mut by_gap: Vec<(f32, bool, usize)> = extracted_lights
+            .point_lights
+            .iter()
+            .enumerate()
+            .map(|(i, l)| (gap(l.position, l.range), false, i))
+            .chain(
+                extracted_lights
+                    .spot_lights
+                    .iter()
+                    .enumerate()
+                    .map(|(i, l)| (gap(l.position, l.range), true, i))
+            )
+            .collect();
+        by_gap.sort_unstable_by(|a, b| a.0.total_cmp(&b.0));
+        by_gap.truncate(budget);
+        let points = &extracted_lights.point_lights;
+        let spots = &extracted_lights.spot_lights;
+        let (kept_points, kept_spots) = (
+            by_gap
+                .iter()
+                .filter(|(_, spot, _)| !spot)
+                .map(|(_, _, i)| points[*i])
+                .collect(),
+            by_gap
+                .iter()
+                .filter(|(_, spot, _)| *spot)
+                .map(|(_, _, i)| spots[*i])
+                .collect()
+        );
+        extracted_lights.point_lights = kept_points;
+        extracted_lights.spot_lights = kept_spots;
+    }
 }
 
 #[cfg(feature = "atmosphere")]
@@ -158,41 +215,39 @@ fn update_lights_buffer(
         None => return
     };
 
+    // All the lights in one write, closed by an end marker so that the shaders never read the
+    // lights of previous frames
     let render_instance = render_instance.0.read().unwrap();
-    let mut offset = 0;
-    for light in extracted_lights.directional_lights.iter() {
-        let data = LightsStorageElement::from_directional(light);
-        lights_buffer_cpu.buffer.write(
-            &render_instance,
-            bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>()
-        );
-        offset += 1;
-    }
-    for light in extracted_lights.point_lights.iter() {
-        let data = LightsStorageElement::from_point(light);
-        lights_buffer_cpu.buffer.write(
-            &render_instance,
-            bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>()
-        );
-        offset += 1;
-    }
-    for light in extracted_lights.spot_lights.iter() {
-        let data = LightsStorageElement::from_spot(light);
-        lights_buffer_cpu.buffer.write(
-            &render_instance,
-            bytemuck::bytes_of(&data),
-            offset * std::mem::size_of::<LightsStorageElement>()
-        );
-        offset += 1;
-    }
-    if offset > MAX_LIGHTS {
+    let mut lights: Vec<LightsStorageElement> = extracted_lights
+        .directional_lights
+        .iter()
+        .map(LightsStorageElement::from_directional)
+        .chain(
+            extracted_lights
+                .point_lights
+                .iter()
+                .map(LightsStorageElement::from_point)
+        )
+        .chain(
+            extracted_lights
+                .spot_lights
+                .iter()
+                .map(LightsStorageElement::from_spot)
+        )
+        .collect();
+    if lights.len() > MAX_LIGHTS {
         warn!(
             "Number of lights exceeded the maximum of {}. Some lights will be ignored in rendering.",
             MAX_LIGHTS
         );
+        lights.truncate(MAX_LIGHTS);
     }
+    if lights.len() < MAX_LIGHTS {
+        lights.push(LightsStorageElement::end_marker());
+    }
+    lights_buffer_cpu
+        .buffer
+        .write(&render_instance, bytemuck::cast_slice(&lights), 0);
 
     // Update the buffer
     let lights_buffer_gpu = match buffers.get(

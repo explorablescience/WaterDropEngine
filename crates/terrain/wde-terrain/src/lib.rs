@@ -23,6 +23,8 @@ use crate::{
 
 pub const TERRAIN_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_1;
 pub const TERRAIN_BUILDINGS_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_2;
+/// Modules placed inside buildings, picked before the building around them.
+pub const TERRAIN_MODULES_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_4;
 
 pub(crate) mod manager;
 pub(crate) mod physics;

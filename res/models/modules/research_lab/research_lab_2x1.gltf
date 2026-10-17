@@ -3,6 +3,29 @@
     "generator": "Khronos glTF Blender I/O v5.0.21",
     "version": "2.0"
   },
+  "extensionsUsed": [
+    "KHR_lights_punctual"
+  ],
+  "extensionsRequired": [
+    "KHR_lights_punctual"
+  ],
+  "extensions": {
+    "KHR_lights_punctual": {
+      "lights": [
+        {
+          "color": [
+            0.4000000059604645,
+            0.8999999761581421,
+            1
+          ],
+          "intensity": 0.18000000715255737,
+          "type": "point",
+          "name": "Lab_Light",
+          "range": 1.8
+        }
+      ]
+    }
+  },
   "scene": 0,
   "scenes": [
     {
@@ -11,7 +34,8 @@
         0,
         1,
         2,
-        3
+        3,
+        4
       ]
     }
   ],
@@ -56,6 +80,25 @@
     {
       "mesh": 3,
       "name": "ResearchLab"
+    },
+    {
+      "extensions": {
+        "KHR_lights_punctual": {
+          "light": 0
+        }
+      },
+      "name": "Lab_Light",
+      "rotation": [
+        -0.7071068286895752,
+        0,
+        0,
+        0.7071068286895752
+      ],
+      "translation": [
+        0,
+        1,
+        0
+      ]
     }
   ],
   "materials": [

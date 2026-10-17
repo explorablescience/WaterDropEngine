@@ -27,6 +27,8 @@ use wde_renderer::prelude::*;
 pub mod prelude {
     pub use crate::GltfAsset;
     pub use crate::GltfError;
+    pub use crate::GltfLight;
+    pub use crate::GltfLightKind;
     pub use crate::GltfLoader;
     pub use crate::GltfLoaderSettings;
     pub use crate::GltfSpawnQueue;
@@ -42,7 +44,7 @@ mod model;
 mod parser;
 
 pub use error::GltfError;
-pub use model::{GltfBone, ModelCondition};
+pub use model::{GltfBone, GltfLight, GltfLightKind, ModelCondition};
 
 pub struct GltfPlugin;
 impl Plugin for GltfPlugin {
@@ -85,12 +87,51 @@ pub struct GltfAsset {
     /// Bone each entry of [`Self::models`] moves with (its vertices are then relative to the bone).
     pub model_bones: Vec<Option<usize>>,
     /// Animation clips of the bones, by name.
-    pub animations: HashMap<String, Handle<AnimationClip>>
+    pub animations: HashMap<String, Handle<AnimationClip>>,
+    /// Lights of the model, spawned with it (see [`Self::spawn_lights`]).
+    pub lights: Vec<GltfLight>
 }
 
 impl GltfAsset {
     pub fn animation(&self, name: &str) -> Option<&Handle<AnimationClip>> {
         self.animations.get(name)
+    }
+
+    /// Spawns the lights of the model under `parent`, following its transform.
+    pub fn spawn_lights(&self, commands: &mut Commands, parent: Entity) {
+        for light in &self.lights {
+            let color = wde_renderer::prelude::Color::LinearRgba(
+                light.color.x,
+                light.color.y,
+                light.color.z,
+                1.0
+            );
+            let mut entity = commands.spawn((
+                Name::new(format!("Light {}", light.name)),
+                light.transform,
+                ChildOf(parent)
+            ));
+            match light.kind {
+                GltfLightKind::Point => entity.insert(PointLight {
+                    position: Vec3::ZERO,
+                    color,
+                    intensity: light.intensity,
+                    range: light.range
+                }),
+                GltfLightKind::Spot {
+                    inner_cone,
+                    outer_cone
+                } => entity.insert(SpotLight {
+                    position: Vec3::ZERO,
+                    direction: Vec3::NEG_Z,
+                    color,
+                    intensity: light.intensity,
+                    range: light.range,
+                    inner_cone,
+                    outer_cone
+                })
+            };
+        }
     }
 
     /// Models whose connection condition holds, `connected` telling whether an anchor is connected.
@@ -247,7 +288,8 @@ impl AssetLoader for GltfAssetLoader {
             properties: model.properties,
             bones: model.bones,
             model_bones,
-            animations
+            animations,
+            lights: model.lights
         })
     }
 
@@ -305,6 +347,7 @@ impl GltfLoader {
                 ChildOf(mesh_parent)
             ));
         }
+        gltf_asset.spawn_lights(commands, parent);
         Some(())
     }
 }

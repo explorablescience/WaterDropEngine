@@ -86,6 +86,8 @@ PARTS = []
 PROPS = []           # `%P%` objects of the model being built
 VARIANT_GROUP = ""   # "" for always-shown parts, else "<anchor>+" / "<anchor>-"
 BONE_GROUP = ""      # rigged models: bone the parts being built are attached to
+LIGHTS = []          # light objects of the model being built
+LIGHT_RANGES = {}    # light name -> reach, exported as the glTF light range
 
 
 class variant:
@@ -1909,9 +1911,58 @@ MODELS = {
 # ---------------------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------
+# Model lights
+# ---------------------------------------------------------------------------------------
+WARM = (1.0, 0.76, 0.5)
+COOL = (0.78, 0.9, 1.0)
+AMBER = (1.0, 0.58, 0.18)
+CYAN = (0.4, 0.9, 1.0)
+GROW = (1.0, 0.45, 0.85)
+
+
+def dome_lamps(n):
+    R, Rz, _ = dome_metrics(n)
+    lamp("Dome_Light", (0, 0, Rz * 0.7), WARM, 0.9, R + 0.5)
+    count = {5: 4, 7: 6, 9: 8}[n]
+    for k in range(count):
+        a = TAU * (k + 0.5) / count
+        lamp("Dome_RingLight", (0.62 * R * cos(a), 0.62 * R * sin(a), 1.3), WARM, 0.25, 0.7 * R)
+
+
+def airlock_lamps():
+    lamp("Airlock_Light", (0, 0, 0.75), COOL, 0.12, 1.4)
+    bx, by, h = (-0.44, -0.66, 1.0) if CUT else (-0.25, -0.35, 1.25)
+    lamp("Airlock_Beacon", (bx, by, h + 0.25), AMBER, 0.12, 2.0)
+
+
+MODEL_LAMPS = {
+    "dome_5x5": lambda: dome_lamps(5),
+    "dome_7x7": lambda: dome_lamps(7),
+    "dome_9x9": lambda: dome_lamps(9),
+    "control_room": lambda: lamp("Ctrl_Light", (0, 0, 1.05), COOL, 0.45, 3.2),
+    "tunnel_2": lambda: lamp("Tunnel_Light", (0, 0, 0.62), COOL, 0.08, 1.3),
+    "tunnel_4": lambda: lamp("Tunnel_Light", (0, 0, 0.62), COOL, 0.08, 1.3),
+    "airlock": airlock_lamps,
+    "storage_3x3": lambda: lamp("Storage_Light", (0, 0, 1.6), WARM, 0.5, 4.0),
+    "landing_pad_3x3": lambda: [lamp("Pad_Light", (x * 2.6, y * 2.6, 0.35), AMBER, 0.12, 2.2)
+                                for x in (1, -1) for y in (1, -1)],
+    "living_quarters_2x2": lambda: [lamp("Quarters_Light", (x, 0, 1.0), WARM, 0.18, 1.8) for x in (0.8, -0.8)],
+    "residence_1x1": lambda: lamp("Residence_Light", (0, 0, 0.9), WARM, 0.15, 1.6),
+    "farm_2x2": lambda: [lamp("Farm_GrowLight", (x, 0, 0.9), GROW, 0.18, 1.8) for x in (0.8, -0.8)],
+    "research_lab_2x1": lambda: lamp("Lab_Light", (0, 0, 1.0), CYAN, 0.18, 1.8),
+    "diner_1x1": lambda: lamp("Diner_Light", (0, 0, 0.9), AMBER, 0.15, 1.6),
+    "infirmary_1x1": lambda: lamp("Infirmary_Light", (0, 0, 0.9), COOL, 0.15, 1.6),
+    "garden_1x1": lambda: lamp("Garden_Light", (0, 0, 0.7), WARM, 0.12, 1.5),
+    "grocery_1x1": lambda: lamp("Grocery_Light", (0.5, 0, 0.8), WARM, 0.12, 1.5),
+}
+
+
 def reset_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     PARTS.clear()
+    LIGHTS.clear()
+    LIGHT_RANGES.clear()
 
 
 def import_properties(gltf_path):
@@ -1930,6 +1981,20 @@ def import_properties(gltf_path):
             if d.users == 0:
                 coll.remove(d)
     return keep
+
+
+def lamp(name, loc, color, intensity, reach):
+    """Point light of the model (`KHR_lights_punctual`): `intensity` as used by the engine, lighting
+    up to `reach`."""
+    data = bpy.data.lights.new(name, "POINT")
+    data.energy = intensity
+    data.color = color
+    data.shadow_soft_size = 0.05
+    obj = bpy.data.objects.new(name, data)
+    bpy.context.scene.collection.objects.link(obj)
+    obj.location = loc
+    LIGHTS.append(obj)
+    LIGHT_RANGES[data.name] = reach
 
 
 def door_prop(name, loc, half):
@@ -2100,7 +2165,8 @@ def export(gltf_path, ao_png, clip_extras=None):
     kwargs = dict(
         filepath=gltf_path, export_format="GLTF_SEPARATE", use_selection=False, export_apply=True,
         export_yup=True, export_texcoord=True, export_normals=True, export_tangents=False,
-        export_materials="EXPORT", export_cameras=False, export_lights=False, export_extras=False,
+        export_materials="EXPORT", export_cameras=False, export_lights=True, export_extras=False,
+        export_import_convert_lighting_mode="RAW",
         export_animations=clip_extras is not None, export_skins=False, export_morph=False,
         export_image_format="NONE", export_vertex_color="NONE",
         # One glTF animation per action, with a channel per bone; times start at 0
@@ -2110,6 +2176,9 @@ def export(gltf_path, ao_png, clip_extras=None):
     bpy.ops.export_scene.gltf(**{k: v for k, v in kwargs.items() if k in props})
     with open(gltf_path) as f:
         g = json.load(f)
+    for light in g.get("extensions", {}).get("KHR_lights_punctual", {}).get("lights", []):
+        if light.get("name") in LIGHT_RANGES:
+            light["range"] = LIGHT_RANGES[light["name"]]
     for anim in g.get("animations", []):
         if (clip_extras or {}).get(anim["name"]):
             anim["extras"] = clip_extras[anim["name"]]
@@ -2131,7 +2200,7 @@ def export(gltf_path, ao_png, clip_extras=None):
 
 
 def validate(g, path):
-    """Only `%B%` bone nodes may lack a mesh or have children (bones only)."""
+    """Only `%B%` bone nodes and lights may lack a mesh, and only bones have children (bones)."""
     assert len(g["buffers"]) == 1, f"{path}: expected a single buffer"
     assert "scene" in g
     reached = list(g["scenes"][g["scene"]]["nodes"])
@@ -2139,7 +2208,8 @@ def validate(g, path):
         node = g["nodes"][idx]
         name = node.get("name", "")
         is_bone = name.startswith("%B%")
-        assert "mesh" in node or is_bone, f"{path}: node {name} has no mesh"
+        is_light = "KHR_lights_punctual" in node.get("extensions", {})
+        assert "mesh" in node or is_bone or is_light, f"{path}: node {name} has no mesh"
         for child in node.get("children", []):
             assert is_bone and g["nodes"][child].get("name", "").startswith("%B%"), \
                 f"{path}: node {name} has non-bone children"
@@ -2170,6 +2240,7 @@ def build(key, cut=False, bake=True):
         props = make_props(**props_spec)
     PROPS[:] = props
     spec["build"]()
+    MODEL_LAMPS.get(key, lambda: None)()
     rig = spec["rig"]() if "rig" in spec else None
     if rig:
         bones = join_bones(rig)

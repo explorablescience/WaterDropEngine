@@ -10,6 +10,7 @@ use wde_terrain::prelude::*;
 
 pub use connections::{AnchorLink, BuildingConnections, LinkKind, anchor_links, connected_anchors};
 pub use cutaway::BuildingCutaway;
+pub use modules::InteriorModule;
 pub use queue::PlacementQueue;
 
 /// Who currently uses the left mouse button, so other click interactions (e.g. drag selection)
@@ -46,6 +47,7 @@ fn update_input_capture(
 mod connections;
 mod cutaway;
 mod line_tool;
+mod modules;
 mod move_and_delete;
 mod place;
 mod queue;
@@ -70,6 +72,7 @@ impl Plugin for PlacementPlugin {
                     line_tool::line_tool_update,
                     update_input_capture,
                     queue::process_placement_queue,
+                    modules::remove_orphan_modules,
                     (
                         cutaway::toggle_cutaway,
                         connections::update_connections,
