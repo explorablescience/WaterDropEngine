@@ -50,6 +50,8 @@ PALETTE = {
     "Grass": ((0.10, 0.28, 0.05), 0.0, 0.9),
     "Water": ((0.04, 0.22, 0.28), 0.0, 0.05),
     "Steel": ((0.33, 0.34, 0.36), 0.4, 0.35),
+    "Skin": ((0.62, 0.36, 0.22), 0.0, 0.6),
+    "Hair": ((0.035, 0.02, 0.012), 0.0, 0.7),
 }
 
 # Opacity of the alpha-blended materials (exported with `alphaMode: BLEND`)
@@ -1092,8 +1094,11 @@ def build_storage_3x3():
 HUMAN_SCALE = 2.0  # authored at half size, scaled to the in-game colonist height (~0.63)
 
 
-def build_human():
-    """Stylized astronaut colonist. Feet at z=0, faces +X, ~0.63 tall."""
+def build_human(suit=True):
+    """Stylized colonist. Feet at z=0, faces +X, ~0.63 tall.
+
+    `suit`: outdoor model with helmet and life-support pack; otherwise the indoor model, head bare.
+    """
     for s in (1, -1):
         y = s * 0.022
         lathe("Leg", [(0, 0.025), (0.017, 0.025), (0.019, 0.07), (0.021, 0.12), (0, 0.12)], "Hull_White", 12,
@@ -1109,15 +1114,27 @@ def build_human():
     box("ChestPanel", (0.012, 0.04, 0.03), (0.04, 0.0, 0.165), "Frame_Graphite", 0.004)
     box("ChestLight", (0.004, 0.012, 0.008), (0.047, -0.008, 0.17), "Light_Cyan")
     box("ChestLight2", (0.004, 0.012, 0.008), (0.047, 0.01, 0.17), "Accent_Orange")
-    box("Pack", (0.035, 0.07, 0.09), (-0.05, 0, 0.17), "Hull_Grey", 0.01)
-    box("PackCap", (0.037, 0.072, 0.015), (-0.05, 0, 0.21), "Accent_Orange", 0.005)
+    if suit:
+        box("Pack", (0.035, 0.07, 0.09), (-0.05, 0, 0.17), "Hull_Grey", 0.01)
+        box("PackCap", (0.037, 0.072, 0.015), (-0.05, 0, 0.21), "Accent_Orange", 0.005)
     for s in (1, -1):
         y = s * 0.058
         arm = lathe("Arm", [(0, 0.0), (0.013, 0.004), (0.015, 0.05), (0.012, 0.085), (0, 0.09)], "Hull_White", 10)
         arm.data.transform(Matrix.Rotation(s * radians(12), 4, "X"))
         arm.data.transform(Matrix.Translation((0.0, y, 0.12)))
         ico("Shoulder", 0.02, (0.0, y * 0.95, 0.205), "Accent_Orange", 1, (1, 1, 0.9), 0.0, 0, flat=False)
-        ico("Glove", 0.014, (0.0, y + s * 0.009, 0.118), "Frame_Graphite", 1, (1, 1, 1.1), 0.0, 0, flat=False)
+        ico("Glove", 0.014, (0.0, y + s * 0.009, 0.118), "Frame_Graphite" if suit else "Skin", 1, (1, 1, 1.1),
+            0.0, 0, flat=False)
+    if not suit:
+        ring("Collar", 0.012, 0.03, 0.215, 0.228, "Accent_Orange", segs=16)
+        cyl("Neck", 0.014, 0.215, 0.24, "Skin", (0, 0), 10)
+        ico("Head", 0.04, (0.002, 0, 0.262), "Skin", 2, (0.95, 0.9, 1.05), 0.0, 0, flat=False)
+        ico("Hair", 0.042, (-0.008, 0, 0.274), "Hair", 2, (1.0, 0.98, 0.8), 0.0, 0, flat=False)
+        for s in (1, -1):
+            ico("Eye", 0.0055, (0.037, s * 0.014, 0.262), "Hair", 1, flat=False)
+        for p in PARTS:
+            p.data.transform(Matrix.Scale(HUMAN_SCALE, 4))
+        return
     ring("Collar", 0.02, 0.034, 0.215, 0.232, "Frame_Graphite", segs=16)
     ico("Helmet", 0.05, (0.0, 0, 0.263), "Hull_White", 2, (1, 1, 1), 0.0, 0, flat=False)
     ico("Visor", 0.04, (0.026, 0, 0.266), "Visor_Gold", 2, (0.7, 1.05, 0.72), 0.0, 0, flat=False)
@@ -1741,6 +1758,8 @@ MODELS = {
                         props=P((1, 1), ins=[(1, 0)])),
     # Entities
     "human": dict(rel="entities/human/human", build=build_human, tex=512, ao=0.08, name="Astronaut", props=False),
+    "human_indoor": dict(rel="entities/human/human_indoor", build=lambda: build_human(suit=False), tex=512,
+                         ao=0.08, name="Colonist", props=False),
     "rocket": dict(rel="entities/rocket/rocket", build=build_rocket, tex=1024, ao=0.6, name="Rocket", props=False),
 }
 
@@ -2146,7 +2165,7 @@ if __name__ == "__main__":
     keys = argv or list(MODELS)
     if icons:
         for k in keys:
-            if k not in ("human", "rocket"):
+            if k not in ("human", "human_indoor", "rocket"):
                 render_icon(k)
         sys.exit(0)
     for k in keys:

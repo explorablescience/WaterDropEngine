@@ -4,7 +4,10 @@ use wde_gizmos::prelude::*;
 use wde_renderer::prelude::Color;
 use wde_terrain_grid::prelude::LinkKind;
 
-use crate::navgrid::graph::{NavBuilding, NavGrid, fmt_pos};
+use crate::{
+    navgrid::graph::{NavBuilding, NavGrid, fmt_pos},
+    navigation::NavPath
+};
 
 /// Height of the debug graph above the ground.
 const GRAPH_HEIGHT: f32 = 1.2;
@@ -13,13 +16,14 @@ pub struct NavMapDebugPlugin;
 impl Plugin for NavMapDebugPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<NavMapDebugSettings>()
-            .add_systems(Update, (debug_ui, show_graph));
+            .add_systems(Update, (debug_ui, show_graph, show_paths));
     }
 }
 
 #[derive(Resource, Default)]
 struct NavMapDebugSettings {
     show_graph: bool,
+    show_paths: bool,
     list_network_pieces: bool
 }
 
@@ -38,6 +42,10 @@ fn debug_ui(
                 ui.add(Checkbox::new(
                     &mut settings.show_graph,
                     "Show network graph"
+                ));
+                ui.add(Checkbox::new(
+                    &mut settings.show_paths,
+                    "Show colonist paths"
                 ));
                 ui.add(Checkbox::new(
                     &mut settings.list_network_pieces,
@@ -206,5 +214,29 @@ fn show_graph(nav: Res<NavGrid>, mut gizmos: ResMut<Gizmos>, settings: Res<NavMa
             gizmos.line(at(building.center), at(neighbor.position), color);
             gizmos.line(at(neighbor.position), at(other.center), color);
         }
+    }
+}
+
+/// Draws the remaining path of every moving entity.
+fn show_paths(
+    moving: Query<(&Transform, &NavPath)>,
+    mut gizmos: ResMut<Gizmos>,
+    settings: Res<NavMapDebugSettings>
+) {
+    if !settings.show_paths {
+        return;
+    }
+    let lift = Vec3::Y * 0.05;
+    let color = Color::LinearRgba(1.0, 0.3, 0.9, 1.0);
+    for (transform, path) in &moving {
+        let mut from = transform.translation;
+        for waypoint in &path.waypoints {
+            gizmos.line(from + lift, waypoint.position + lift, color);
+            from = waypoint.position;
+        }
+        gizmos.cube(
+            Transform::from_translation(path.destination + lift).with_scale(Vec3::splat(0.12)),
+            color
+        );
     }
 }

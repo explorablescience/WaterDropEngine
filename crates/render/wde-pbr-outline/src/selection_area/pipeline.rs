@@ -47,13 +47,12 @@ impl RenderAsset for SelectionAreaRenderPipeline {
                         transforms.iter().next().map(|(_, t)| t.layout.clone()),
                         materials.iter().next().map(|(_, m)| m.layout.clone()),
                     ],
-                    // Normal depth test (occluded by hills/objects) but no depth write and no
-                    // stencil interaction, since (unlike the outline pass) we don't need to mask
-                    // out any silhouette — this is just a flat translucent decal.
+                    // Drawn over everything (no depth test, no depth write): the decal must stay
+                    // visible on building floors, e.g. inside domes and tunnels
                     depth: DepthDescriptor {
                         enabled: true,
                         write: false,
-                        compare: CompareFunction::Less,
+                        compare: CompareFunction::Always,
                         stencil: StencilState::default(),
                         format: None
                     },

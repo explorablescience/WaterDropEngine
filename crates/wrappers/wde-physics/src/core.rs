@@ -191,6 +191,17 @@ pub(crate) fn handle_changes(
                 }
             }
         }
+        // Without a simulation step, colliders only follow their moved body when asked to
+        if !updated_transform.is_empty() {
+            let rapier = &phworld.rapier;
+            rapier
+                .rigid_body_set
+                .write()
+                .unwrap()
+                .propagate_modified_body_positions_to_colliders(
+                    &mut rapier.collider_set.write().unwrap()
+                );
+        }
         drop(_span);
     }
 

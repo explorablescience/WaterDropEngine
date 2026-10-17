@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, window::PrimaryWindow};
 use wde::prelude::{Color as WdeColor, *};
 
 pub struct TestPlugin;
@@ -10,6 +10,8 @@ impl Plugin for TestPlugin {
                 add_human_collider,
                 select_entity,
                 set_entities_target,
+                swap_colonist_model,
+                outline_new_meshes,
                 draw_gizmo_smoke_test
             )
         );
@@ -24,9 +26,26 @@ struct EntityMarker;
 #[derive(Component)]
 struct PendingHumanCollider(Handle<GltfAsset>);
 
-/// The outline material used to draw the contour line around selected entities.
+/// Colonist models: with a suit outdoors, bare-headed in pressurized places.
 #[derive(Resource)]
-struct SelectionOutlineMaterial(Handle<OutlineMaterial>);
+struct ColonistModels {
+    suit: Handle<GltfAsset>,
+    indoor: Handle<GltfAsset>
+}
+
+/// Outline materials of selected and hovered entities.
+#[derive(Resource)]
+struct SelectionOutlineMaterial {
+    selected: Handle<OutlineMaterial>,
+    hovered: Handle<OutlineMaterial>
+}
+
+/// Collision group of the colonist picking colliders.
+const COLONIST_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_3;
+/// Colonist picking colliders are wider than the model, to be easier to click.
+const COLONIST_PICK_MARGIN: f32 = 1.6;
+/// Cursor travel (in pixels) beyond which a press becomes a drag selection.
+const DRAG_THRESHOLD: f32 = 6.0;
 
 /// The mesh and translucent material used to draw the RTS-style drag-selection ground decal.
 #[derive(Resource)]
@@ -94,13 +113,19 @@ fn init_scene(
     //     ChildOf(entity)
     // ));
 
-    commands.insert_resource(SelectionOutlineMaterial(asset_server.add(
-        OutlineMaterial {
+    commands.insert_resource(SelectionOutlineMaterial {
+        selected: asset_server.add(OutlineMaterial {
             label: "selection-outline".to_string(),
             color: WdeColor::from_srgba(1.0, 0.85, 0.0, 1.0),
             ..Default::default()
-        }
-    )));
+        }),
+        hovered: asset_server.add(OutlineMaterial {
+            label: "hover-outline".to_string(),
+            color: WdeColor::from_srgba(1.0, 1.0, 1.0, 0.55),
+            thickness: 0.0025,
+            ..Default::default()
+        })
+    });
 
     commands.insert_resource(SelectionAreaAssets {
         mesh: asset_server.add(PlaneMesh::from("selection-area-quad", 1, Vec3::Y, true)),
@@ -115,6 +140,10 @@ fn init_scene(
         .spawn((Name::new("Global Parent"), Transform::default()))
         .id();
     let gltf_asset: Handle<GltfAsset> = asset_server.load("models/entities/human/human.gltf");
+    commands.insert_resource(ColonistModels {
+        suit: gltf_asset.clone(),
+        indoor: asset_server.load("models/entities/human/human_indoor.gltf")
+    });
     for i in 0..10 {
         let parent = commands
             .spawn((
@@ -144,12 +173,13 @@ fn add_human_collider(
         let bbox = &gltf_asset.bbox;
         let bbox_extent = bbox.max - bbox.min;
         let bbox_offset = bbox.min + bbox_extent / 2.0;
+        let pick_extent = bbox_extent * Vec3::new(COLONIST_PICK_MARGIN, 1.0, COLONIST_PICK_MARGIN);
 
         commands.entity(entity).remove::<PendingHumanCollider>();
         commands.spawn((
             Name::new("Human Collider"),
             Transform::from_translation(bbox_offset),
-            Collider::from(BoxCollider::new(bbox_extent)),
+            Collider::from(BoxCollider::new(pick_extent).with_group(COLONIST_COLLIDER_GROUP)),
             ChildOf(entity)
         ));
     }
@@ -158,98 +188,175 @@ fn add_human_collider(
 #[derive(Component)]
 struct EntitySelectedMarker;
 
+/// Drag state of the selection: where the press started, on screen and on the terrain.
+#[derive(Default)]
+struct SelectionDrag {
+    press: Option<(Vec2, Vec3)>,
+    decal: Option<Entity>
+}
+
+/// Colonist under the cursor, through the colonist picking colliders.
+fn colonist_under_cursor(
+    window: &Window,
+    camera: &Query<(&GlobalTransform, &CameraView), With<Camera>>,
+    physics: &PhysicsWorld,
+    colliders: &Query<&ChildOf, With<Collider>>
+) -> Option<Entity> {
+    let cursor = window.cursor_position()?;
+    let (camera_transform, camera_view) = camera.single().ok()?;
+    let aspect_ratio = window.size().x / window.size().y;
+    let ray = Ray::from_ndc(
+        cursor / window.size(),
+        aspect_ratio,
+        camera_transform,
+        camera_view
+    );
+    let (collider, _) =
+        physics.cast_ray(&ray, &RayCastConfig::with_filter(COLONIST_COLLIDER_GROUP))?;
+    colliders
+        .get(collider)
+        .ok()
+        .map(|child_of| child_of.parent())
+}
+
+/// Selects colonists: click one (Shift to add / remove), drag a rectangle on the ground, or
+/// click the ground to clear. Hovered colonists get a light outline.
 #[allow(clippy::too_many_arguments)]
 fn select_entity(
     mut commands: Commands,
-    mut is_selecting_area: Local<Option<Vec3>>,
-    mut selection_area_quad: Local<Option<Entity>>,
-    mouse_input: Res<ButtonInput<MouseButton>>,
-    cursor_pos: Res<TerrainCursorPos>,
-    outline_material: Res<SelectionOutlineMaterial>,
+    mut drag: Local<SelectionDrag>,
+    mut hovered: Local<Option<Entity>>,
+    (mouse_input, keys, cursor_pos, input_capture): (
+        Res<ButtonInput<MouseButton>>,
+        Res<ButtonInput<KeyCode>>,
+        Res<TerrainCursorPos>,
+        Res<PlacementInputCapture>
+    ),
+    (window, camera, physics, colliders): (
+        Single<&Window, With<PrimaryWindow>>,
+        Query<(&GlobalTransform, &CameraView), With<Camera>>,
+        Res<PhysicsWorld>,
+        Query<&ChildOf, With<Collider>>
+    ),
+    outlines: Res<SelectionOutlineMaterial>,
     selection_area_assets: Res<SelectionAreaAssets>,
     selected_entities: Query<Entity, With<EntitySelectedMarker>>,
-    entities_query: Query<
-        (Entity, &Transform),
-        (With<EntityMarker>, Without<SelectionAreaQuadMarker>)
-    >,
+    colonists: Query<(Entity, &Transform), (With<EntityMarker>, Without<SelectionAreaQuadMarker>)>,
     children_query: Query<&Children>,
     mesh_query: Query<(), With<Mesh3d>>,
-    mut quad_transform_query: Query<&mut Transform, With<SelectionAreaQuadMarker>>,
-    input_capture: Res<PlacementInputCapture>
+    mut quad_transform_query: Query<&mut Transform, With<SelectionAreaQuadMarker>>
 ) {
+    let set_outline =
+        |commands: &mut Commands, entity: Entity, material: Option<&Handle<OutlineMaterial>>| {
+            set_entity_outline(commands, &children_query, &mesh_query, entity, material);
+        };
+
+    // Hover: light outline on the colonist under the cursor (selected ones keep theirs)
+    let under_cursor = match input_capture.is_captured() || drag.decal.is_some() {
+        true => None,
+        false => colonist_under_cursor(&window, &camera, &physics, &colliders)
+            .filter(|e| colonists.contains(*e))
+    };
+    if *hovered != under_cursor {
+        if let Some(previous) = *hovered
+            && !selected_entities.contains(previous)
+        {
+            set_outline(&mut commands, previous, None);
+        }
+        if let Some(entity) = under_cursor
+            && !selected_entities.contains(entity)
+        {
+            set_outline(&mut commands, entity, Some(&outlines.hovered));
+        }
+        *hovered = under_cursor;
+    }
+
     // Placement tools own the mouse: cancel any drag in progress and stand by
     if input_capture.tool {
-        *is_selecting_area = None;
-        if let Some(entity) = selection_area_quad.take() {
-            commands.entity(entity).despawn();
+        drag.press = None;
+        if let Some(decal) = drag.decal.take() {
+            commands.entity(decal).despawn();
         }
         return;
     }
 
+    let Some(cursor_screen) = window.cursor_position() else {
+        return;
+    };
     if mouse_input.just_pressed(MouseButton::Left) && !input_capture.over_ui {
-        let start_pos = cursor_pos.pos_or_last();
-        *is_selecting_area = Some(start_pos);
+        drag.press = Some((cursor_screen, cursor_pos.pos_or_last()));
+        return;
+    }
+    let Some((press_screen, press_world)) = drag.press else {
+        return;
+    };
+    let is_drag = drag.decal.is_some() || press_screen.distance(cursor_screen) > DRAG_THRESHOLD;
+    let end_world = cursor_pos.pos_or_last();
+    let (min, max) = (press_world.min(end_world), press_world.max(end_world));
 
-        // Spawn the ground selection decal, starting as a zero-size quad at the drag origin
-        let entity = commands
-            .spawn((
-                Name::new("Selection Area Decal"),
-                SelectionAreaQuadMarker,
-                Mesh3d(selection_area_assets.mesh.clone()),
-                PbrMaterial3d(selection_area_assets.material.clone()),
-                Transform::from_translation(
-                    start_pos + Vec3::new(0.0, SELECTION_AREA_Y_OFFSET, 0.0)
-                )
-                .with_scale(Vec3::new(0.0, 1.0, 0.0)),
-                PbrSsboTransformUuid::default()
-            ))
-            .id();
-        *selection_area_quad = Some(entity);
-    } else if mouse_input.just_released(MouseButton::Left) {
-        if let Some(start_pos) = *is_selecting_area {
-            let end_pos = cursor_pos.pos_or_last();
-            let min = start_pos.min(end_pos);
-            let max = start_pos.max(end_pos);
-            let selection_rect = Rect::new(min.x, min.z, max.x, max.z);
+    if mouse_input.just_released(MouseButton::Left) {
+        drag.press = None;
+        if let Some(decal) = drag.decal.take() {
+            commands.entity(decal).despawn();
+        }
+        let additive = keys.pressed(KeyCode::ShiftLeft) || keys.pressed(KeyCode::ShiftRight);
 
-            // Deselect all previously selected entities and remove their contour outline
-            for entity in &selected_entities {
-                commands.entity(entity).remove::<EntitySelectedMarker>();
-                set_entity_outline(&mut commands, &children_query, &mesh_query, entity, None);
+        // Colonists picked by this click or drag
+        let picked: Vec<Entity> = match is_drag {
+            true => {
+                let rect = Rect::new(min.x, min.z, max.x, max.z);
+                colonists
+                    .iter()
+                    .filter(|(_, t)| rect.contains(t.translation.xz()))
+                    .map(|(e, _)| e)
+                    .collect()
             }
+            false => under_cursor.into_iter().collect()
+        };
 
-            // Select entities within the selection rectangle and add their contour outline
-            for (entity, transform) in entities_query.iter() {
-                let entity_pos = transform.translation;
-                if selection_rect.contains(Vec2::new(entity_pos.x, entity_pos.z)) {
-                    commands.entity(entity).insert(EntitySelectedMarker);
-                    set_entity_outline(
-                        &mut commands,
-                        &children_query,
-                        &mesh_query,
-                        entity,
-                        Some(&outline_material.0)
-                    );
+        // A plain click on a selected colonist with Shift removes it from the selection
+        if additive
+            && !is_drag
+            && let Some(&entity) = picked.first()
+            && selected_entities.contains(entity)
+        {
+            commands.entity(entity).remove::<EntitySelectedMarker>();
+            set_outline(&mut commands, entity, Some(&outlines.hovered));
+            return;
+        }
+        if !additive {
+            for entity in &selected_entities {
+                if !picked.contains(&entity) {
+                    commands.entity(entity).remove::<EntitySelectedMarker>();
+                    set_outline(&mut commands, entity, None);
                 }
             }
         }
-        *is_selecting_area = None;
-
-        // Despawn the selection decal now that the drag has ended
-        if let Some(entity) = selection_area_quad.take() {
-            commands.entity(entity).despawn();
+        for entity in picked {
+            commands.entity(entity).insert(EntitySelectedMarker);
+            set_outline(&mut commands, entity, Some(&outlines.selected));
         }
-    } else if let Some(start_pos) = *is_selecting_area {
-        // Still dragging: update the decal's transform to match the current drag rectangle
-        if let Some(entity) = *selection_area_quad
-            && let Ok(mut transform) = quad_transform_query.get_mut(entity)
-        {
-            let end_pos = cursor_pos.pos_or_last();
-            let min = start_pos.min(end_pos);
-            let max = start_pos.max(end_pos);
-            let center = (min + max) * 0.5;
+        return;
+    }
 
-            transform.translation = Vec3::new(center.x, SELECTION_AREA_Y_OFFSET, center.z);
+    // Dragging: show the ground decal over the rectangle
+    if is_drag {
+        let decal = *drag.decal.get_or_insert_with(|| {
+            commands
+                .spawn((
+                    Name::new("Selection Area Decal"),
+                    SelectionAreaQuadMarker,
+                    Mesh3d(selection_area_assets.mesh.clone()),
+                    PbrMaterial3d(selection_area_assets.material.clone()),
+                    Transform::from_scale(Vec3::new(0.0, 1.0, 0.0)),
+                    PbrSsboTransformUuid::default()
+                ))
+                .id()
+        });
+        if let Ok(mut transform) = quad_transform_query.get_mut(decal) {
+            let center = (min + max) * 0.5;
+            transform.translation =
+                Vec3::new(center.x, center.y + SELECTION_AREA_Y_OFFSET, center.z);
             transform.scale = Vec3::new(
                 (max.x - min.x).max(f32::EPSILON),
                 1.0,
@@ -288,6 +395,44 @@ fn set_entity_outline(
                     .entity(child)
                     .remove::<PbrMaterial3d<OutlineMaterial>>();
             }
+        }
+    }
+}
+
+/// Swaps colonists between their suit and indoor models when they cross an airlock.
+fn swap_colonist_model(
+    mut commands: Commands,
+    models: Res<ColonistModels>,
+    changed: Query<(Entity, &Indoors, Option<&Children>), Changed<Indoors>>,
+    meshes: Query<(), With<Mesh3d>>,
+    mut gltf_spawn_queue: ResMut<GltfSpawnQueue>
+) {
+    for (entity, indoors, children) in &changed {
+        for child in children.into_iter().flatten() {
+            if meshes.contains(*child) {
+                commands.entity(*child).despawn();
+            }
+        }
+        let model = match indoors.0 {
+            true => models.indoor.clone(),
+            false => models.suit.clone()
+        };
+        GltfLoader::spawn(&mut gltf_spawn_queue, model, entity);
+    }
+}
+
+/// Keeps the selection outline on meshes spawned under a selected entity (e.g. model swaps).
+fn outline_new_meshes(
+    mut commands: Commands,
+    outline_material: Res<SelectionOutlineMaterial>,
+    new_meshes: Query<(Entity, &ChildOf), Added<Mesh3d>>,
+    selected: Query<(), With<EntitySelectedMarker>>
+) {
+    for (mesh, child_of) in &new_meshes {
+        if selected.contains(child_of.parent()) {
+            commands
+                .entity(mesh)
+                .insert(PbrMaterial3d(outline_material.selected.clone()));
         }
     }
 }
