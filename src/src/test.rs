@@ -12,8 +12,7 @@ impl Plugin for TestPlugin {
                 set_entities_target,
                 swap_colonist_model,
                 animate_colonists,
-                outline_new_meshes,
-                draw_gizmo_smoke_test
+                outline_new_meshes
             )
         );
     }
@@ -62,18 +61,85 @@ struct SelectionAreaQuadMarker;
 /// Vertical offset applied to the selection-area decal above the terrain hit point, to avoid z-fighting.
 const SELECTION_AREA_Y_OFFSET: f32 = 0.03;
 
+/// Demo base: a control room and three domes linked by tunnels, and an airlock opening on a path
+/// that serves the outdoor production buildings.
+const DEMO_BASE: &[(&str, [f32; 2], GridRotation)] = &[
+    // Habitat
+    ("Dome Medium", [1.0, 1.0], GridRotation::R0),
+    ("Control Room", [1.0, -9.0], GridRotation::R0),
+    ("Tunnel Straight", [9.0, 1.0], GridRotation::R0),
+    ("Tunnel Straight", [11.0, 1.0], GridRotation::R0),
+    ("Tunnel Straight", [13.0, 1.0], GridRotation::R0),
+    ("Dome Small", [19.0, 1.0], GridRotation::R0),
+    ("Tunnel Straight", [1.0, 9.0], GridRotation::R90),
+    ("Tunnel Straight", [1.0, 11.0], GridRotation::R90),
+    ("Dome Small", [1.0, 17.0], GridRotation::R0),
+    // Way out
+    ("Tunnel Straight", [-7.0, 1.0], GridRotation::R0),
+    ("Airlock", [-9.0, 1.0], GridRotation::R0),
+    ("Path Straight", [-11.0, 1.0], GridRotation::R0),
+    // Path spine along x = -13
+    ("Path Intersection", [-13.0, -9.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, -7.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, -5.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, -3.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, -1.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, 1.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, 3.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, 5.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, 7.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, 9.0], GridRotation::R0),
+    ("Path Intersection", [-13.0, 11.0], GridRotation::R0),
+    // Along the spine, toward the base
+    ("Solar Array", [-10.0, 4.0], GridRotation::R0),
+    ("Solar Array", [-10.0, 8.0], GridRotation::R0),
+    ("Sensor Tower", [-11.0, 11.0], GridRotation::R0),
+    ("Battery", [-11.0, -1.0], GridRotation::R0),
+    ("Oxygen Generator", [-10.0, -4.0], GridRotation::R0),
+    ("Fuel Refinery", [-10.0, -8.0], GridRotation::R0),
+    // Along the spine, away from the base
+    ("Concrete Extractor", [-16.0, 10.0], GridRotation::R0),
+    ("Oxygen Tank", [-15.0, 7.0], GridRotation::R0),
+    ("Water Extractor", [-16.0, 4.0], GridRotation::R0),
+    ("Water Tank", [-15.0, 1.0], GridRotation::R0),
+    ("Storage", [-17.0, -3.0], GridRotation::R0),
+    ("Landing Pad", [-17.0, -9.0], GridRotation::R0)
+];
+
+/// Floor height of the domes.
+const DOME_FLOOR: f32 = 0.17;
+
+/// Demo colonists: position and whether they start indoors.
+const DEMO_COLONISTS: &[([f32; 3], bool)] = &[
+    ([-1.0, DOME_FLOOR, -1.0], true),
+    ([2.5, DOME_FLOOR, 2.0], true),
+    ([3.0, DOME_FLOOR, -2.0], true),
+    ([0.0, DOME_FLOOR, 3.5], true),
+    ([18.0, DOME_FLOOR, 0.0], true),
+    ([20.0, DOME_FLOOR, 2.0], true),
+    ([-9.0, 0.0, 12.5], false),
+    ([-8.0, 0.0, 13.5], false)
+];
+
 fn init_scene(
     mut commands: Commands,
-    mut gltf_spawn_queue: ResMut<GltfSpawnQueue>,
+    mut placement_queue: ResMut<PlacementQueue>,
     asset_server: Res<AssetServer>
 ) {
-    // Main camera
+    // Main camera, above the base
     commands.spawn((
         Name::new("Main Camera"),
-        Transform::from_xyz(2.0, 2.0, 2.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(-1.0, 0.0, 3.0),
         ActiveCamera,
-        ThirdPersonController::default() // FreeCameraController::default()
+        ThirdPersonController {
+            distance: 42.0,
+            ..Default::default()
+        }
     ));
+
+    for (label, [x, z], rotation) in DEMO_BASE {
+        placement_queue.place(*label, Vec2::new(*x, *z), *rotation);
+    }
 
     // Spawn the lights
     let entity = commands.spawn(Name::new("Lights")).id();
@@ -145,20 +211,19 @@ fn init_scene(
         suit: gltf_asset.clone(),
         indoor: asset_server.load("models/entities/human/human_indoor.gltf")
     });
-    for i in 0..10 {
-        let parent = commands
-            .spawn((
-                Name::new(format!("Human {}", i)),
-                Transform::from_translation(Vec3::new(i as f32 * 1.0, 0.0, 0.0)),
-                PendingHumanCollider(gltf_asset.clone()),
-                EntityMarker,
-                AnimationPlayer::default(),
-                WalkTracker::default(),
-                NavAgent::default(),
-                ChildOf(global_parent)
-            ))
-            .id();
-        GltfLoader::spawn(&mut gltf_spawn_queue, gltf_asset.clone(), parent);
+    // Their model follows `Indoors` (see `swap_colonist_model`)
+    for (i, (position, indoors)) in DEMO_COLONISTS.iter().enumerate() {
+        commands.spawn((
+            Name::new(format!("Colonist {}", i)),
+            Transform::from_translation(Vec3::from(*position)),
+            Indoors(*indoors),
+            PendingHumanCollider(gltf_asset.clone()),
+            EntityMarker,
+            AnimationPlayer::default(),
+            WalkTracker::default(),
+            NavAgent::default(),
+            ChildOf(global_parent)
+        ));
     }
 }
 
@@ -500,31 +565,4 @@ fn set_entities_target(
         return;
     }
     navigator.add_group(selected_entities, cursor_pos.pos_or_last());
-}
-
-// TEMP: smoke test for wde-gizmos rendering, to be removed.
-fn draw_gizmo_smoke_test(mut gizmos: ResMut<Gizmos>) {
-    gizmos.cube(
-        Transform::from_xyz(0.0, 1.5, 0.0).with_scale(Vec3::splat(2.0)),
-        WdeColor::from_srgba(1.0, 0.0, 0.0, 1.0)
-    );
-    gizmos.line(
-        Vec3::new(-5.0, 0.1, 0.0),
-        Vec3::new(5.0, 0.1, 0.0),
-        WdeColor::from_srgba(0.0, 1.0, 0.0, 1.0)
-    );
-    gizmos.line(
-        Vec3::new(0.0, 0.1, -5.0),
-        Vec3::new(0.0, 0.1, 5.0),
-        WdeColor::from_srgba(0.0, 0.5, 1.0, 1.0)
-    );
-    gizmos.quad(
-        [
-            Vec3::new(-2.0, 0.05, -2.0),
-            Vec3::new(2.0, 0.05, -2.0),
-            Vec3::new(2.0, 0.05, 2.0),
-            Vec3::new(-2.0, 0.05, 2.0)
-        ],
-        WdeColor::from_srgba(1.0, 1.0, 0.0, 0.35)
-    );
 }

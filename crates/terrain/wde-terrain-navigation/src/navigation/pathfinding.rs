@@ -1,15 +1,14 @@
 //! A* pathfinding over the colony.
 //!
-//! The search graph mixes two layers:
-//! - Outdoor grid tiles, walkable when empty or covered by a path piece (8 directions, no corner
-//!   cutting past obstacles).
-//! - The building network: each building is a node at its center linked to its anchors. Meeting
-//!   tunnel anchors are the same node, so colonists walk through connected tunnels, domes and
-//!   rooms. Path anchors (`AnchorOut`) open on the outdoor tile in front of them, so buildings are
-//!   entered through their accesses and the tunnel network through airlocks.
+//! The search graph mixes two resolutions:
+//! - Outdoor grid tiles, walkable when empty or covered by a path piece.
+//! - Walk cells inside buildings (see [`WalkMap`]), baked from their geometry, so that colonists
+//!   go around walls and furniture.
 //!
-//! Each step costs its length divided by the walking speed factor of its terrain (see
-//! [`WalkSpeeds`]), so colonists prefer paths and tunnels over bare ground.
+//! Moves between two buildings follow tunnel links, and moves between pressurized and outdoor
+//! places go through airlocks, where colonists stop for the airlock cycle. Each step costs its
+//! length divided by the walking speed factor of its terrain (see [`WalkSpeeds`]), so colonists
+//! prefer paths and tunnels over bare ground.
 
 use std::{
     cmp::Ordering,
@@ -19,43 +18,48 @@ use std::{
 use bevy::prelude::*;
 use wde_terrain_grid::{core::grid::TILE_SIZE, prelude::*};
 
-use crate::navigation::WalkSpeeds;
+use crate::{
+    navgrid::NavGrid,
+    navigation::{
+        WalkSpeeds,
+        walkmap::{CELL_SIZE, WalkMap, is_airlock, is_path_piece, is_pressurized}
+    }
+};
 
-/// Placement role of airlocks, where colonists stop to cycle between outside and inside.
+/// Placement role of the buildings linking the outdoors to the tunnel network.
 pub const AIRLOCK_ROLE: &str = "airlock";
 
-/// Building points are merged on a grid of this many cells per unit (tolerates anchors that are
-/// slightly off, as in the older models).
-const POINT_RESOLUTION: f32 = 4.0;
-/// Extra space searched around the start and goal, in world units.
+/// Margin around the start and goal within which outdoor tiles are searched.
 const SEARCH_MARGIN: f32 = 40.0;
-/// Upper bound of expanded nodes, to keep unreachable targets cheap.
-const MAX_EXPANSIONS: usize = 50_000;
-/// Height of waypoints inside buildings (tunnel and dome floors).
-const INDOOR_HEIGHT: f32 = 0.16;
-/// Distance kept between standing spots and the walls of a building.
-const WALL_MARGIN: f32 = 0.4;
+/// Node expansions after which the search gives up.
+const MAX_EXPANSIONS: usize = 80_000;
+/// How far an unreachable start or goal is moved to the nearest walkable place.
+const SNAP_DISTANCE: f32 = 3.0;
+/// Step between the samples checking that a straight line stays walkable.
+const LINE_STEP: f32 = CELL_SIZE * 0.5;
+/// Half width kept walkable on both sides of a straight line, so that bodies do not brush walls.
+const LINE_HALF_WIDTH: f32 = 0.08;
 /// Rings of candidate spots searched around a group destination.
 const MAX_FORMATION_RINGS: usize = 24;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 enum Node {
-    /// Outdoor tile, by tile index.
+    /// Outdoor tile (empty or path piece), by tile index.
     Tile(IVec2),
-    /// Building center or anchor, by quantized position.
-    Point(IVec2)
+    /// Walk cell inside a building, by cell index.
+    Cell(IVec2)
 }
 
 /// Kind of ground a node stands on.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-enum Terrain {
-    /// Bare outdoor ground.
+pub(crate) enum Terrain {
+    /// Bare outdoor ground, or an outdoor building.
     Ground,
-    /// Outdoor path, or the paved access of a building.
+    /// Outdoor path.
     Path,
     /// Pressurized building or tunnel.
     Indoor,
-    /// Center of an airlock, between outside and inside.
+    /// Airlock, between outside and inside.
     Airlock
 }
 impl Terrain {
@@ -67,7 +71,7 @@ impl Terrain {
         }
     }
 
-    fn pressurized(self) -> bool {
+    pub fn pressurized(self) -> bool {
         matches!(self, Terrain::Indoor | Terrain::Airlock)
     }
 }
@@ -89,10 +93,22 @@ pub(crate) struct Waypoint {
     pub wait: f32
 }
 
-/// Placed buildings and grid occupancy used to build the search graph.
+/// Walkable place.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) struct Location {
+    /// Building walked in, `None` outdoors (path pieces included).
+    pub building: Option<Entity>,
+    pub terrain: Terrain,
+    /// Floor height.
+    pub height: f32
+}
+
+/// Placed buildings, grid occupancy and walk cells used to build the search graph.
 pub(crate) struct NavWorld<'a> {
     pub grid: &'a Grid,
-    pub buildings: HashMap<Entity, &'a GridEntity>
+    pub buildings: HashMap<Entity, &'a GridEntity>,
+    pub walk: &'a WalkMap,
+    pub network: &'a NavGrid
 }
 
 impl NavWorld<'_> {
@@ -101,75 +117,429 @@ impl NavWorld<'_> {
     }
 
     fn tile_center(key: IVec2) -> Vec2 {
-        Grid::get_tile_world_pos(Grid::get_nearest_tile((key.as_vec2() + 0.5) * TILE_SIZE))
+        (key.as_vec2() + 0.5) * TILE_SIZE
     }
 
-    fn point_key(pos: Vec2) -> IVec2 {
-        (pos * POINT_RESOLUTION).round().as_ivec2()
-    }
-
-    fn occupant(&self, pos: Vec2) -> Option<&GridEntity> {
+    fn occupant(&self, pos: Vec2) -> Option<(Entity, &GridEntity)> {
         let (chunk, local) = Grid::get_nearest_tile(pos);
-        self.grid
-            .get_entity(chunk, local)
-            .and_then(|e| self.buildings.get(&e).copied())
+        let entity = self.grid.get_entity(chunk, local)?;
+        self.buildings.get(&entity).map(|b| (entity, *b))
     }
 
-    /// Outdoor network pieces (paths) are walked on like free tiles.
-    fn is_path_piece(building: &GridEntity) -> bool {
-        let entry = building.entry();
-        entry.network.is_some() && entry.anchors_in.is_empty()
+    /// Whether the tile at `pos` is walked as a whole (empty or path piece), rather than through
+    /// the walk cells of a building.
+    fn is_open_tile(&self, pos: Vec2) -> bool {
+        self.occupant(pos).is_none_or(|(_, b)| is_path_piece(b))
     }
 
-    /// Terrain of an outdoor tile, `None` when a building blocks it.
-    fn tile_terrain(&self, pos: Vec2) -> Option<Terrain> {
+    /// Walkable place at `pos`, `None` if blocked.
+    pub fn locate(&self, pos: Vec2) -> Option<Location> {
         match self.occupant(pos) {
-            None => Some(Terrain::Ground),
-            Some(b) if Self::is_path_piece(b) => Some(Terrain::Path),
-            Some(_) => None
+            None => Some(Location {
+                building: None,
+                terrain: Terrain::Ground,
+                height: 0.0
+            }),
+            Some((_, b)) if is_path_piece(b) => Some(Location {
+                building: None,
+                terrain: Terrain::Path,
+                height: 0.0
+            }),
+            Some((entity, b)) => {
+                let cell = self.walk.cells.get(&WalkMap::cell_key(pos))?;
+                (cell.building == entity).then(|| Location {
+                    building: Some(entity),
+                    terrain: match (is_airlock(b), is_pressurized(b)) {
+                        (true, _) => Terrain::Airlock,
+                        (false, true) => Terrain::Indoor,
+                        (false, false) => Terrain::Ground
+                    },
+                    height: cell.floor
+                })
+            }
         }
     }
 
-    fn walkable(&self, pos: Vec2) -> bool {
-        self.tile_terrain(pos).is_some()
+    /// Whether one can step from `a` to the neighboring place `b`: within a building or the
+    /// outdoors, between buildings linked by a tunnel, or through an airlock door.
+    pub fn can_cross(&self, a: &Location, b: &Location) -> bool {
+        if a.building == b.building {
+            return true;
+        }
+        match (a.terrain.pressurized(), b.terrain.pressurized()) {
+            (false, false) => true,
+            (true, true) => match (a.building, b.building) {
+                (Some(x), Some(y)) => self.network.buildings.get(&x).is_some_and(|building| {
+                    building
+                        .neighbors
+                        .iter()
+                        .any(|n| n.entity == y && n.kind == LinkKind::Tunnel)
+                }),
+                _ => false
+            },
+            _ => a.terrain == Terrain::Airlock || b.terrain == Terrain::Airlock
+        }
     }
 
-    /// Building (not a path piece) covering `pos`.
-    fn building_at(&self, pos: Vec2) -> Option<&GridEntity> {
-        self.occupant(pos).filter(|b| !Self::is_path_piece(b))
+    /// Whether the straight line from `a` to `b` can be walked, with some width, on the same
+    /// terrain all along.
+    fn line_walkable(&self, a: Vec2, b: Vec2) -> bool {
+        let side = (b - a).perp().normalize_or_zero() * LINE_HALF_WIDTH;
+        [Vec2::ZERO, side, -side]
+            .into_iter()
+            .all(|offset| self.strip_walkable(a + offset, b + offset))
     }
 
-    /// Whether `b` can be reached from `a` without crossing a wall: both in the same building, or
-    /// both on walkable outdoor tiles.
-    pub fn same_zone(&self, a: Vec2, b: Vec2) -> bool {
-        match (self.building_at(a), self.building_at(b)) {
-            (Some(x), Some(y)) => std::ptr::eq(x, y),
-            (None, None) => self.walkable(b),
-            _ => false
+    fn strip_walkable(&self, a: Vec2, b: Vec2) -> bool {
+        let Some(mut previous) = self.locate(a) else {
+            return false;
+        };
+        let steps = (a.distance(b) / LINE_STEP).ceil().max(1.0) as usize;
+        for i in 1..=steps {
+            let Some(here) = self.locate(a.lerp(b, i as f32 / steps as f32)) else {
+                return false;
+            };
+            if here.terrain != previous.terrain || !self.can_cross(&previous, &here) {
+                return false;
+            }
+            previous = here;
+        }
+        true
+    }
+
+    /// Nearest walkable place to `pos` within `max_distance`, accepted by `filter`.
+    fn nearest_walkable(
+        &self,
+        pos: Vec2,
+        max_distance: f32,
+        filter: impl Fn(&Location) -> bool
+    ) -> Option<(Vec2, Location)> {
+        if let Some(here) = self.locate(pos).filter(&filter) {
+            return Some((pos, here));
+        }
+        let rings = (max_distance / CELL_SIZE).ceil() as i32;
+        let origin = WalkMap::cell_key(pos);
+        let mut best: Option<(f32, Vec2, Location)> = None;
+        for ring in 1..=rings {
+            for dy in -ring..=ring {
+                for dx in -ring..=ring {
+                    if dx.abs() != ring && dy.abs() != ring {
+                        continue;
+                    }
+                    let p = WalkMap::cell_center(origin + IVec2::new(dx, dy));
+                    let distance = p.distance(pos);
+                    if distance > max_distance || best.is_some_and(|b| b.0 <= distance) {
+                        continue;
+                    }
+                    if let Some(here) = self.locate(p).filter(&filter) {
+                        best = Some((distance, p, here));
+                    }
+                }
+            }
+            // Later rings are at least `ring` cells away
+            if best.is_some_and(|b| b.0 <= ring as f32 * CELL_SIZE) {
+                break;
+            }
+        }
+        best.map(|(_, p, l)| (p, l))
+    }
+
+    /// Search node at a walkable position.
+    fn node_at(&self, pos: Vec2) -> Node {
+        match self.is_open_tile(pos) {
+            true => Node::Tile(Self::tile_key(pos)),
+            false => Node::Cell(WalkMap::cell_key(pos))
+        }
+    }
+
+    fn node_position(node: Node) -> Vec2 {
+        match node {
+            Node::Tile(key) => Self::tile_center(key),
+            Node::Cell(key) => WalkMap::cell_center(key)
+        }
+    }
+
+    /// Walkable neighbors of a node, with their location.
+    fn neighbors(&self, node: Node, from: &Location, out: &mut Vec<(Node, Location)>) {
+        let push = |pos: Vec2, out: &mut Vec<(Node, Location)>| {
+            if let Some(here) = self.locate(pos)
+                && self.can_cross(from, &here)
+            {
+                let next = self.node_at(pos);
+                if next != node && !out.iter().any(|(n, _)| *n == next) {
+                    out.push((next, here));
+                }
+            }
+        };
+        match node {
+            Node::Tile(key) => {
+                let center = Self::tile_center(key);
+                for d in DIRECTIONS {
+                    let next = Self::tile_center(key + d);
+                    let diagonal = d.x != 0 && d.y != 0;
+                    if self.is_open_tile(next) {
+                        // No corner cutting past a building
+                        if !diagonal
+                            || (self.is_open_tile(Self::tile_center(key + IVec2::new(d.x, 0)))
+                                && self.is_open_tile(Self::tile_center(key + IVec2::new(0, d.y))))
+                        {
+                            push(next, out);
+                        }
+                    } else if !diagonal {
+                        // Cells of the building along the shared side
+                        let side = d.as_vec2() * (TILE_SIZE + CELL_SIZE) / 2.0;
+                        let along = Vec2::new(d.y as f32, d.x as f32).abs();
+                        for i in 0..8 {
+                            let offset = (i as f32 - 3.5) * CELL_SIZE;
+                            push(center + side + along * offset, out);
+                        }
+                    }
+                }
+            }
+            Node::Cell(key) => {
+                for d in DIRECTIONS {
+                    // No corner cutting past an obstacle
+                    let diagonal = d.x != 0 && d.y != 0;
+                    if diagonal
+                        && (self
+                            .locate(WalkMap::cell_center(key + IVec2::new(d.x, 0)))
+                            .is_none()
+                            || self
+                                .locate(WalkMap::cell_center(key + IVec2::new(0, d.y)))
+                                .is_none())
+                    {
+                        continue;
+                    }
+                    push(WalkMap::cell_center(key + d), out);
+                }
+            }
         }
     }
 }
 
+const DIRECTIONS: [IVec2; 8] = [
+    IVec2::new(1, 0),
+    IVec2::new(-1, 0),
+    IVec2::new(0, 1),
+    IVec2::new(0, -1),
+    IVec2::new(1, 1),
+    IVec2::new(1, -1),
+    IVec2::new(-1, 1),
+    IVec2::new(-1, -1)
+];
+
+#[derive(PartialEq)]
+struct Open {
+    f: f32,
+    node: Node
+}
+impl Eq for Open {}
+impl PartialOrd for Open {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for Open {
+    // Min-heap on f
+    fn cmp(&self, other: &Self) -> Ordering {
+        other.f.total_cmp(&self.f)
+    }
+}
+
+/// Point of a path before it becomes waypoints.
+#[derive(Clone, Copy)]
+struct PathPoint {
+    position: Vec3,
+    terrain: Terrain,
+    /// Whether the colonist is on the pressurized side here (airlocks are both).
+    pressurized: bool,
+    /// Airlock cycle stop: kept by the smoothing.
+    wait: f32
+}
+
+/// Path from `start` to `goal`, through walkable places only. An unreachable goal is moved to
+/// the nearest walkable place.
+pub(crate) fn find_path(
+    world: &NavWorld,
+    speeds: &WalkSpeeds,
+    start: Vec3,
+    goal: Vec3
+) -> Option<Vec<Waypoint>> {
+    let (start, start_location) = world.nearest_walkable(start.xz(), SNAP_DISTANCE, |_| true)?;
+    let (goal, goal_location) = world.nearest_walkable(goal.xz(), SNAP_DISTANCE, |_| true)?;
+    let (start_node, goal_node) = (world.node_at(start), world.node_at(goal));
+    let bounds = Rect::from_corners(start, goal).inflate(SEARCH_MARGIN);
+
+    // Admissible heuristic: straight line at the fastest speed
+    let fastest = speeds.indoor.max(speeds.path).max(speeds.ground).max(0.01);
+    let goal_position = NavWorld::node_position(goal_node);
+    let heuristic = |pos: Vec2| pos.distance(goal_position) / fastest;
+
+    // A*
+    let mut open = BinaryHeap::from([Open {
+        f: heuristic(start),
+        node: start_node
+    }]);
+    let mut came_from: HashMap<Node, Node> = HashMap::new();
+    let mut cost: HashMap<Node, f32> = HashMap::from([(start_node, 0.0)]);
+    let mut locations: HashMap<Node, Location> =
+        HashMap::from([(start_node, start_location), (goal_node, goal_location)]);
+    let mut expansions = 0;
+    let mut neighbors = Vec::with_capacity(16);
+    while let Some(Open { node, .. }) = open.pop() {
+        if node == goal_node {
+            break;
+        }
+        expansions += 1;
+        if expansions > MAX_EXPANSIONS {
+            return None;
+        }
+        let location = locations[&node];
+        let position = NavWorld::node_position(node);
+        neighbors.clear();
+        world.neighbors(node, &location, &mut neighbors);
+        let node_cost = cost[&node];
+        for &(next, next_location) in &neighbors {
+            let next_position = NavWorld::node_position(next);
+            if !bounds.contains(next_position) {
+                continue;
+            }
+            let next_cost = node_cost
+                + position.distance(next_position)
+                    / step_speed(location.terrain, next_location.terrain, speeds);
+            if cost.get(&next).is_some_and(|c| *c <= next_cost) {
+                continue;
+            }
+            cost.insert(next, next_cost);
+            came_from.insert(next, node);
+            locations.insert(next, next_location);
+            open.push(Open {
+                f: next_cost + heuristic(next_position),
+                node: next
+            });
+        }
+    }
+    if !came_from.contains_key(&goal_node) && start_node != goal_node {
+        return None;
+    }
+
+    // Nodes from start to goal, with the exact start and goal positions at both ends
+    let mut nodes = vec![goal_node];
+    while let Some(previous) = came_from.get(nodes.last().unwrap()) {
+        nodes.push(*previous);
+    }
+    nodes.reverse();
+    let mut points: Vec<(Vec2, Location)> = nodes
+        .iter()
+        .map(|node| (NavWorld::node_position(*node), locations[node]))
+        .collect();
+    points[0] = (start, start_location);
+    if points.len() == 1 {
+        points.push((goal, goal_location));
+    }
+    let last = points.len() - 1;
+    points[last] = (goal, goal_location);
+
+    let points = airlock_stops(world, &points, speeds);
+    let points = smooth(world, &points);
+
+    // Waypoints: speed and environment of the segment leading to each
+    Some(
+        points
+            .windows(2)
+            .map(|pair| {
+                let (from, to) = (pair[0], pair[1]);
+                Waypoint {
+                    position: to.position,
+                    speed: step_speed(from.terrain, to.terrain, speeds),
+                    indoor: from.pressurized && to.pressurized,
+                    wait: to.wait
+                }
+            })
+            .collect()
+    )
+}
+
+/// Turns located points into path points, adding a stop at the center of each airlock crossed
+/// from one side to the other.
+fn airlock_stops(
+    world: &NavWorld,
+    points: &[(Vec2, Location)],
+    speeds: &WalkSpeeds
+) -> Vec<PathPoint> {
+    let point = |(p, l): (Vec2, Location), pressurized: bool, wait: f32| PathPoint {
+        position: Vec3::new(p.x, l.height, p.y),
+        terrain: l.terrain,
+        pressurized,
+        wait
+    };
+    let mut result = Vec::with_capacity(points.len() + 2);
+    let mut i = 0;
+    while i < points.len() {
+        if points[i].1.terrain != Terrain::Airlock {
+            result.push(point(points[i], points[i].1.terrain.pressurized(), 0.0));
+            i += 1;
+            continue;
+        }
+        // Run of airlock points, and the sides it joins
+        let end = (i..points.len())
+            .find(|&j| points[j].1.terrain != Terrain::Airlock)
+            .unwrap_or(points.len());
+        let before = i.checked_sub(1).map(|j| points[j].1.terrain.pressurized());
+        let after = points.get(end).map(|p| p.1.terrain.pressurized());
+        let side_in = before.or(after).unwrap_or(true);
+        let side_out = after.or(before).unwrap_or(true);
+        let center = (side_in != side_out)
+            .then(|| {
+                let airlock = points[i].1.building?;
+                let center = world.buildings.get(&airlock)?.center();
+                world.nearest_walkable(center, TILE_SIZE, |l| l.building == Some(airlock))
+            })
+            .flatten();
+        match center {
+            Some(center) => {
+                result.push(point(points[i], side_in, 0.0));
+                result.push(point(center, side_in, speeds.airlock_cycle));
+                result.push(point(points[end - 1], side_out, 0.0));
+            }
+            None => result.extend(points[i..end].iter().map(|p| point(*p, side_in, 0.0)))
+        }
+        i = end;
+    }
+    result
+}
+
+/// Skips the points that a straight walkable line on the same terrain can cut, keeping the
+/// airlock stops.
+fn smooth(world: &NavWorld, points: &[PathPoint]) -> Vec<PathPoint> {
+    let mut result = vec![points[0]];
+    let mut from = 0;
+    while from + 1 < points.len() {
+        let mut to = from + 1;
+        while to + 1 < points.len()
+            && points[to].wait <= 0.0
+            && points[to + 1].pressurized == points[from].pressurized
+            && world.line_walkable(points[from].position.xz(), points[to + 1].position.xz())
+        {
+            to += 1;
+        }
+        result.push(points[to]);
+        from = to;
+    }
+    result
+}
+
 /// Up to `count` standing spots around `center`, `spacing` apart on a hexagonal pattern, nearest
-/// first. Spots stay in the zone of `center` (its building, or outdoors), away from walls.
+/// first. Spots stay walkable and in the place of `center` (its building, or outdoors).
 pub(crate) fn formation_spots(
     world: &NavWorld,
     center: Vec3,
     count: usize,
     spacing: f32
 ) -> Vec<Vec3> {
-    let origin = center.xz();
-    // Inside a building, keep to the circle inscribed in its footprint (domes are round)
-    let building = world.building_at(origin).map(|b| {
-        let (a, c) = b.bbox();
-        let inscribed = ((a - c).abs() + TILE_SIZE).min_element() / 2.0 - WALL_MARGIN;
-        (b.center(), inscribed.max(origin.distance(b.center())))
-    });
-    let valid = |p: Vec2| {
-        world.same_zone(origin, p)
-            && building.is_none_or(|(building_center, reach)| p.distance(building_center) <= reach)
+    let Some((origin, place)) = world.nearest_walkable(center.xz(), SNAP_DISTANCE, |_| true) else {
+        return Vec::new();
     };
-
     let axes: Vec<Vec2> = (0..6)
         .map(|i| Vec2::from_angle(i as f32 * std::f32::consts::TAU / 6.0) * spacing)
         .collect();
@@ -185,287 +555,17 @@ pub(crate) fn formation_spots(
                 })
                 .collect()
         };
-        for p in candidates.into_iter().filter(|p| valid(*p)) {
-            spots.push(Vec3::new(p.x, center.y, p.y));
-            if spots.len() == count {
-                return spots;
+        for p in candidates {
+            if let Some(here) = world.locate(p)
+                && here.building == place.building
+                && here.terrain.pressurized() == place.terrain.pressurized()
+            {
+                spots.push(Vec3::new(p.x, here.height, p.y));
+                if spots.len() == count {
+                    return spots;
+                }
             }
         }
     }
     spots
-}
-
-/// Graph of the buildings: centers, anchors and the outdoor tiles their accesses open on.
-#[derive(Default)]
-struct BuildingGraph {
-    points: HashMap<IVec2, (Vec2, Terrain)>,
-    edges: HashMap<Node, Vec<Node>>
-}
-impl BuildingGraph {
-    fn point(&mut self, pos: Vec2, terrain: Terrain) -> Node {
-        let key = NavWorld::point_key(pos);
-        let entry = self.points.entry(key).or_insert((pos, terrain));
-        // A point shared with a pressurized building is pressurized
-        if terrain.pressurized() && !entry.1.pressurized() {
-            entry.1 = terrain;
-        }
-        Node::Point(key)
-    }
-
-    fn link(&mut self, a: Node, b: Node) {
-        self.edges.entry(a).or_default().push(b);
-        self.edges.entry(b).or_default().push(a);
-    }
-
-    fn build(world: &NavWorld, bounds: Rect) -> Self {
-        let mut graph = Self::default();
-        for building in world.buildings.values() {
-            if NavWorld::is_path_piece(building) || !bounds.contains(building.center()) {
-                continue;
-            }
-            let entry = building.entry();
-            let pressurized = !entry.anchors_in.is_empty();
-            let center_terrain = match (entry.role.as_deref(), pressurized) {
-                (Some(AIRLOCK_ROLE), _) => Terrain::Airlock,
-                (_, true) => Terrain::Indoor,
-                (_, false) => Terrain::Path
-            };
-            let center = building.center();
-            let center_node = graph.point(center, center_terrain);
-            let (a, b) = building.bbox();
-            let half = Vec2::splat(TILE_SIZE / 2.0);
-            let (min, max) = (a.min(b) - half, a.max(b) + half);
-            for anchor in &entry.anchors_in {
-                let node = graph.point(building.anchor_world(anchor.pos), Terrain::Indoor);
-                graph.link(center_node, node);
-            }
-            for anchor in &entry.anchors_out {
-                // Outdoor accesses are paved (or the outer door of an airlock)
-                let pos = building.anchor_world(anchor.pos);
-                let node = graph.point(pos, Terrain::Path);
-                graph.link(center_node, node);
-
-                // The access opens on the tile in front of the side it is on
-                let normal = if (pos.x - min.x).abs() < 0.2 {
-                    Vec2::NEG_X
-                } else if (pos.x - max.x).abs() < 0.2 {
-                    Vec2::X
-                } else if (pos.y - min.y).abs() < 0.2 {
-                    Vec2::NEG_Y
-                } else {
-                    Vec2::Y
-                };
-                let outside = pos + normal * TILE_SIZE / 2.0;
-                if world.walkable(outside) {
-                    graph.link(node, Node::Tile(NavWorld::tile_key(outside)));
-                }
-            }
-        }
-        graph
-    }
-}
-
-#[derive(PartialEq)]
-struct Open {
-    f: f32,
-    node: Node
-}
-impl Eq for Open {}
-impl PartialOrd for Open {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for Open {
-    fn cmp(&self, other: &Self) -> Ordering {
-        // Min-heap on f
-        other.f.total_cmp(&self.f)
-    }
-}
-
-/// Fastest walkable path from `start` to `goal` (start excluded, goal included).
-pub(crate) fn find_path(
-    world: &NavWorld,
-    speeds: &WalkSpeeds,
-    start: Vec3,
-    goal: Vec3
-) -> Option<Vec<Waypoint>> {
-    let (start2, goal2) = (start.xz(), goal.xz());
-    let bounds = Rect::from_corners(start2, goal2).inflate(SEARCH_MARGIN);
-    let graph = BuildingGraph::build(world, bounds);
-
-    // Start and goal: inside a building, they snap to its center; outdoors, to their tile
-    let endpoint = |pos: Vec2| -> Option<Node> {
-        if let Some(building) = world.building_at(pos) {
-            let key = NavWorld::point_key(building.center());
-            return graph.points.contains_key(&key).then_some(Node::Point(key));
-        }
-        world
-            .walkable(pos)
-            .then(|| Node::Tile(NavWorld::tile_key(pos)))
-    };
-    let (start_node, goal_node) = (endpoint(start2)?, endpoint(goal2)?);
-    let describe = |node: Node| -> (Vec2, Terrain) {
-        match node {
-            Node::Tile(key) => {
-                let center = NavWorld::tile_center(key);
-                (
-                    center,
-                    world.tile_terrain(center).unwrap_or(Terrain::Ground)
-                )
-            }
-            Node::Point(key) => graph.points[&key]
-        }
-    };
-    let (goal_pos, goal_terrain) = describe(goal_node);
-
-    // Same building or tile: walk straight there (e.g. across a dome)
-    if start_node == goal_node {
-        let height = match goal_node {
-            Node::Tile(_) => 0.0,
-            Node::Point(_) => INDOOR_HEIGHT
-        };
-        return Some(vec![Waypoint {
-            position: Vec3::new(goal.x, height, goal.z),
-            speed: goal_terrain.speed(speeds),
-            indoor: goal_terrain.pressurized(),
-            wait: 0.0
-        }]);
-    }
-    // Admissible heuristic: straight line at the fastest speed
-    let fastest = speeds.indoor.max(speeds.path).max(speeds.ground).max(0.01);
-    let heuristic = |pos: Vec2| pos.distance(goal_pos) / fastest;
-
-    // A*
-    let mut open = BinaryHeap::from([Open {
-        f: heuristic(describe(start_node).0),
-        node: start_node
-    }]);
-    let mut came_from: HashMap<Node, Node> = HashMap::new();
-    let mut cost: HashMap<Node, f32> = HashMap::from([(start_node, 0.0)]);
-    let mut expansions = 0;
-    let mut neighbors = Vec::with_capacity(16);
-    while let Some(Open { node, .. }) = open.pop() {
-        if node == goal_node {
-            break;
-        }
-        expansions += 1;
-        if expansions > MAX_EXPANSIONS {
-            return None;
-        }
-
-        neighbors.clear();
-        if let Some(edges) = graph.edges.get(&node) {
-            neighbors.extend_from_slice(edges);
-        }
-        if let Node::Tile(key) = node {
-            let center = NavWorld::tile_center(key);
-            let free = |dx: i32, dz: i32| {
-                let pos = center + Vec2::new(dx as f32, dz as f32) * TILE_SIZE;
-                bounds.contains(pos) && world.walkable(pos)
-            };
-            for dx in -1..=1 {
-                for dz in -1..=1 {
-                    if (dx, dz) == (0, 0) || !free(dx, dz) {
-                        continue;
-                    }
-                    // No corner cutting past an obstacle
-                    if dx != 0 && dz != 0 && !(free(dx, 0) && free(0, dz)) {
-                        continue;
-                    }
-                    neighbors.push(Node::Tile(key + IVec2::new(dx, dz)));
-                }
-            }
-        }
-
-        let (pos, terrain) = describe(node);
-        let node_cost = cost[&node];
-        for &next in &neighbors {
-            let (next_pos, next_terrain) = describe(next);
-            let next_cost =
-                node_cost + pos.distance(next_pos) / step_speed(terrain, next_terrain, speeds);
-            if cost.get(&next).is_some_and(|c| *c <= next_cost) {
-                continue;
-            }
-            cost.insert(next, next_cost);
-            came_from.insert(next, node);
-            open.push(Open {
-                f: next_cost + heuristic(next_pos),
-                node: next
-            });
-        }
-    }
-    if !cost.contains_key(&goal_node) {
-        return None;
-    }
-
-    // Nodes from start to goal
-    let mut nodes = vec![goal_node];
-    while let Some(previous) = came_from.get(nodes.last().unwrap()) {
-        nodes.push(*previous);
-    }
-    nodes.reverse();
-
-    // Positions and terrains, with the exact start and goal positions at both ends
-    let mut points: Vec<(Vec3, Terrain, bool)> = nodes
-        .iter()
-        .map(|node| {
-            let (p, terrain) = describe(*node);
-            let is_tile = matches!(node, Node::Tile(_));
-            let height = if is_tile { 0.0 } else { INDOOR_HEIGHT };
-            (Vec3::new(p.x, height, p.y), terrain, is_tile)
-        })
-        .collect();
-    points[0].0 = start;
-    let last = points.len() - 1;
-    points[last].0 = Vec3::new(goal.x, points[last].0.y, goal.z);
-    let points = smooth(world, &points);
-
-    // Waypoints: speed and environment of the segment leading to each, airlock stops
-    let mut waypoints = Vec::with_capacity(points.len());
-    for i in 1..points.len() {
-        let (from, to) = (points[i - 1], points[i]);
-        let crossing = to.1 == Terrain::Airlock
-            && i + 1 < points.len()
-            && from.1.pressurized() != points[i + 1].1.pressurized();
-        waypoints.push(Waypoint {
-            position: to.0,
-            speed: step_speed(from.1, to.1, speeds),
-            indoor: from.1.pressurized() && to.1.pressurized(),
-            wait: if crossing { speeds.airlock_cycle } else { 0.0 }
-        });
-    }
-    Some(waypoints)
-}
-
-/// Removes outdoor waypoints that a straight line on the same terrain can skip.
-fn smooth(world: &NavWorld, points: &[(Vec3, Terrain, bool)]) -> Vec<(Vec3, Terrain, bool)> {
-    let mut result = vec![points[0]];
-    let mut from = 0;
-    for i in 1..points.len() {
-        let can_skip = i + 1 < points.len()
-            && points[from].2
-            && points[i].2
-            && points[i + 1].2
-            && points[from].1 == points[i].1
-            && points[i].1 == points[i + 1].1
-            && line_on_terrain(
-                world,
-                points[from].0.xz(),
-                points[i + 1].0.xz(),
-                points[i].1
-            );
-        if !can_skip {
-            result.push(points[i]);
-            from = i;
-        }
-    }
-    result
-}
-
-/// Whether the straight line from `a` to `b` stays on walkable tiles of the given terrain.
-fn line_on_terrain(world: &NavWorld, a: Vec2, b: Vec2, terrain: Terrain) -> bool {
-    let steps = (a.distance(b) / (TILE_SIZE * 0.25)).ceil() as usize;
-    (0..=steps)
-        .all(|i| world.tile_terrain(a.lerp(b, i as f32 / steps.max(1) as f32)) == Some(terrain))
 }

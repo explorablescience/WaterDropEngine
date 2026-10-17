@@ -3,6 +3,7 @@ use bevy::prelude::*;
 mod debug;
 mod graph;
 
+pub(crate) use graph::rebuild_nav_grid;
 pub use graph::{CONTROL_ROOM_ROLE, NavBase, NavBuilding, NavGrid, NavNeighbor};
 
 pub struct NavMapPlugin;

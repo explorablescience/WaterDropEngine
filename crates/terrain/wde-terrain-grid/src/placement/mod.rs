@@ -10,6 +10,7 @@ use wde_terrain::prelude::*;
 
 pub use connections::{AnchorLink, BuildingConnections, LinkKind, anchor_links, connected_anchors};
 pub use cutaway::BuildingCutaway;
+pub use queue::PlacementQueue;
 
 /// Who currently uses the left mouse button, so other click interactions (e.g. drag selection)
 /// can stand by.
@@ -47,6 +48,7 @@ mod cutaway;
 mod line_tool;
 mod move_and_delete;
 mod place;
+mod queue;
 mod ui;
 
 pub(crate) struct PlacementPlugin;
@@ -56,6 +58,7 @@ impl Plugin for PlacementPlugin {
         app.insert_resource(manager)
             .init_resource::<BuildingCutaway>()
             .init_resource::<PlacementInputCapture>()
+            .init_resource::<PlacementQueue>()
             .add_systems(Startup, set_parent)
             .add_systems(
                 Update,
@@ -66,6 +69,7 @@ impl Plugin for PlacementPlugin {
                     move_and_delete::handle_move_and_delete_update,
                     line_tool::line_tool_update,
                     update_input_capture,
+                    queue::process_placement_queue,
                     (
                         cutaway::toggle_cutaway,
                         connections::update_connections,

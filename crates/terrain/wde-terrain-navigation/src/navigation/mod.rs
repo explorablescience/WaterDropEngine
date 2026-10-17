@@ -1,20 +1,27 @@
 use std::collections::{HashMap, VecDeque};
 use wde_logger::prelude::*;
 
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use wde_terrain_grid::prelude::*;
 
 use crate::{TerrainNavigator, navgrid::NavGrid};
 
-mod pathfinding;
+pub(crate) mod pathfinding;
+pub(crate) mod walkmap;
 
 pub use pathfinding::AIRLOCK_ROLE;
 use pathfinding::{NavWorld, Waypoint, find_path, formation_spots};
+use walkmap::WalkMap;
 
 /// Turning speed, in radians per second.
 const TURN_SPEED: f32 = 10.0;
 /// Distance at which a waypoint counts as reached.
 const WAYPOINT_REACHED: f32 = 0.05;
+/// Distance to the center of an airlock within which its cycle starts: several colonists cycle
+/// together rather than queueing for the exact center.
+const AIRLOCK_REACHED: f32 = 0.3;
+/// Time without moving after which a blocked walker looks for another path, in seconds.
+const STUCK_REPLAN: f32 = 1.0;
 /// Radius of entities without [`NavAgent`] when spreading a group.
 const DEFAULT_AGENT_RADIUS: f32 = 0.14;
 /// Spacing of group standing spots, in agent diameters.
@@ -74,16 +81,19 @@ pub struct Indoors(pub bool);
 pub struct NavigationPlugin;
 impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<WalkSpeeds>().add_systems(
-            Update,
-            (
-                request_paths,
-                replan_on_network_change,
-                follow_paths,
-                separate_agents
-            )
-                .chain()
-        );
+        app.init_resource::<WalkSpeeds>()
+            .init_resource::<WalkMap>()
+            .add_systems(
+                Update,
+                (
+                    walkmap::rebuild_walk_map.after(crate::navgrid::rebuild_nav_grid),
+                    request_paths,
+                    replan_on_network_change,
+                    follow_paths,
+                    separate_agents
+                )
+                    .chain()
+            );
     }
 }
 
@@ -93,16 +103,31 @@ pub(crate) struct NavPath {
     pub waypoints: VecDeque<Waypoint>,
     pub destination: Vec3,
     /// Remaining stop time at the waypoint just reached (airlock cycle).
-    pub waiting: f32
+    pub waiting: f32,
+    /// Time spent unable to move toward the next waypoint.
+    pub stuck: f32
 }
 
-fn nav_world<'a>(
-    grid: &'a Grid,
-    placed: &'a Query<(Entity, &GridEntity), With<BuildingConnections>>
-) -> NavWorld<'a> {
-    NavWorld {
-        grid,
-        buildings: placed.iter().collect::<HashMap<_, _>>()
+/// Everything the path search reads.
+#[derive(SystemParam)]
+struct NavWorldParam<'w, 's> {
+    grid: Res<'w, Grid>,
+    placed: Query<'w, 's, (Entity, &'static GridEntity), With<BuildingConnections>>,
+    walk: Res<'w, WalkMap>,
+    network: Res<'w, NavGrid>
+}
+impl NavWorldParam<'_, '_> {
+    fn world(&self) -> NavWorld<'_> {
+        NavWorld {
+            grid: &self.grid,
+            buildings: self.placed.iter().collect::<HashMap<_, _>>(),
+            walk: &self.walk,
+            network: &self.network
+        }
+    }
+
+    fn is_changed(&self) -> bool {
+        self.walk.is_changed() || self.network.is_changed()
     }
 }
 
@@ -136,8 +161,7 @@ fn request_paths(
     mut navigator: ResMut<TerrainNavigator>,
     transforms: Query<&Transform>,
     agents: Query<&NavAgent>,
-    grid: Res<Grid>,
-    placed: Query<(Entity, &GridEntity), With<BuildingConnections>>,
+    nav: NavWorldParam,
     speeds: Res<WalkSpeeds>
 ) {
     if navigator.new_entities.is_empty()
@@ -146,7 +170,7 @@ fn request_paths(
     {
         return;
     }
-    let world = nav_world(&grid, &placed);
+    let world = nav.world();
 
     // Groups: spread their destination into one standing spot per entity
     let mut requests: Vec<(Entity, Vec3)> = navigator.new_entities.drain(..).collect();
@@ -177,7 +201,8 @@ fn request_paths(
                 commands.entity(entity).insert(NavPath {
                     waypoints: waypoints.into(),
                     destination,
-                    waiting: 0.0
+                    waiting: 0.0,
+                    stuck: 0.0
                 });
             }
             None => {
@@ -193,16 +218,14 @@ fn request_paths(
 
 /// Replans the moving entities when buildings are placed or removed.
 fn replan_on_network_change(
-    nav_grid: Res<NavGrid>,
+    nav: NavWorldParam,
     mut moving: Query<(&Transform, &mut NavPath)>,
-    grid: Res<Grid>,
-    placed: Query<(Entity, &GridEntity), With<BuildingConnections>>,
     speeds: Res<WalkSpeeds>
 ) {
-    if !nav_grid.is_changed() || moving.is_empty() {
+    if !nav.is_changed() || moving.is_empty() {
         return;
     }
-    let world = nav_world(&grid, &placed);
+    let world = nav.world();
     for (transform, mut path) in &mut moving {
         if path.waiting > 0.0 {
             continue; // Let the airlock cycle finish
@@ -217,13 +240,37 @@ fn replan_on_network_change(
 
 /// Moves entities along their path at the speed of the terrain, stopping at airlocks, and turning
 /// smoothly toward their heading.
+/// Where a step from `from` ends: the full step if it stays walkable, else its slide along the
+/// blocking axis, else `None`. Off the walkable area (e.g. pushed), steps are free so that the
+/// walker gets back on it.
+fn walk_step(world: &NavWorld, from: Vec3, step: Vec3) -> Option<Vec3> {
+    let Some(here) = world.locate(from.xz()) else {
+        return Some(from + step);
+    };
+    [
+        step,
+        step * Vec3::new(1.0, 1.0, 0.0),
+        step * Vec3::new(0.0, 1.0, 1.0)
+    ]
+    .into_iter()
+    .filter(|s| s.xz().length_squared() > 1e-10)
+    .map(|s| from + s)
+    .find(|to| {
+        world
+            .locate(to.xz())
+            .is_some_and(|there| world.can_cross(&here, &there))
+    })
+}
+
 fn follow_paths(
     mut commands: Commands,
     mut moving: Query<(Entity, &mut Transform, &mut NavPath, Option<&Indoors>)>,
+    nav: NavWorldParam,
     speeds: Res<WalkSpeeds>,
     time: Res<Time>
 ) {
     let dt = time.delta_secs();
+    let world = nav.world();
     for (entity, mut transform, mut path, indoors) in &mut moving {
         let mut time_left = dt;
         let mut heading = None;
@@ -245,6 +292,11 @@ fn follow_paths(
             let speed = speeds.base * waypoint.speed;
             let to_target = waypoint.position - transform.translation;
             let distance = to_target.length();
+            if waypoint.wait > 0.0 && distance <= AIRLOCK_REACHED {
+                path.waypoints.pop_front();
+                path.waiting = waypoint.wait;
+                continue;
+            }
             let reach = speed * time_left;
             if distance <= WAYPOINT_REACHED.max(reach) {
                 transform.translation = waypoint.position;
@@ -253,9 +305,24 @@ fn follow_paths(
                 path.waiting = waypoint.wait;
                 continue;
             }
-            transform.translation += to_target / distance * reach;
-            heading = Some(to_target);
+            // Never through walls, even when pushed off the planned line
+            match walk_step(&world, transform.translation, to_target / distance * reach) {
+                Some(next) => {
+                    transform.translation = next;
+                    heading = Some(to_target);
+                    path.stuck = 0.0;
+                }
+                None => path.stuck += time_left
+            }
             time_left = 0.0;
+        }
+        if path.stuck > STUCK_REPLAN {
+            path.stuck = 0.0;
+            if let Some(waypoints) =
+                find_path(&world, &speeds, transform.translation, path.destination)
+            {
+                path.waypoints = waypoints.into();
+            }
         }
 
         if let Some(indoor) = environment
@@ -283,8 +350,7 @@ fn follow_paths(
 /// for walking ones, and walking agents step aside to pass each other. Pushes never cross walls.
 fn separate_agents(
     mut agents: Query<(&NavAgent, &mut Transform, Option<&NavPath>)>,
-    grid: Res<Grid>,
-    placed: Query<(Entity, &GridEntity), With<BuildingConnections>>,
+    nav: NavWorldParam,
     time: Res<Time>
 ) {
     let rate = (time.delta_secs() * SEPARATION_RATE).min(1.0);
@@ -358,14 +424,18 @@ fn separate_agents(
         return;
     }
 
-    let world = nav_world(&grid, &placed);
+    let world = nav.world();
     for ((_, mut transform, _), push) in agents.iter_mut().zip(pushes) {
         if push == Vec2::ZERO {
             continue;
         }
         let from = transform.translation.xz();
         let to = from + push * rate;
-        if world.same_zone(from, to) {
+        // Never pushed through a wall or into an obstacle
+        if let Some(here) = world.locate(from)
+            && let Some(there) = world.locate(to)
+            && world.can_cross(&here, &there)
+        {
             transform.translation.x = to.x;
             transform.translation.z = to.y;
         }

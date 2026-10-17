@@ -793,6 +793,7 @@ def build_airlock():
                 "Hazard_Yellow" if i % 2 == 0 else "Frame_Graphite")
     box("Door_Lamp", (0.04, 0.2, 0.04), (dx - 0.03, 0, 1.12 if not CUT else 0.96), "Light_Cyan", 0.01)
     box("Door_Panel_Ctrl", (0.03, 0.08, 0.12), (dx - 0.01, -0.5, 0.6), "Light_Cyan", 0.008)
+    door_prop("%P%Door", (dx, 0), (0.3, 0.31))
     # Side windows
     for s in (1, -1):
         box("Lock_Window", (0.42, 0.03, 0.18), ((x0 + x1) / 2, s * hw, 0.6), "Glass_Teal", 0.03)
@@ -1929,6 +1930,25 @@ def import_properties(gltf_path):
             if d.users == 0:
                 coll.remove(d)
     return keep
+
+
+def door_prop(name, loc, half):
+    """`%P%Door*` box (center and half extents in Blender XY) where colonists walk through the door
+    geometry. Updates the node if the model already has it."""
+    obj = next((p for p in PROPS if p.name == name), None)
+    if obj is None:
+        bm = bmesh.new()
+        bm.faces.new([bm.verts.new((x, y, 0)) for x, y in ((-1, -1), (1, -1), (1, 1), (-1, 1))])
+        me = bpy.data.meshes.new(name)
+        bm.to_mesh(me)
+        bm.free()
+        mat = bpy.data.materials.get("%P%") or bpy.data.materials.new("%P%")
+        me.materials.append(mat)
+        obj = bpy.data.objects.new(name, me)
+        bpy.context.scene.collection.objects.link(obj)
+        PROPS.append(obj)
+    # Blender (sx, sy) becomes glTF (scale.x, scale.z), read as the half extents
+    obj.location, obj.scale = (loc[0], loc[1], 0.013), (half[0], half[1], 1)
 
 
 def make_props(extent, ins=(), outs=(), interior=None):

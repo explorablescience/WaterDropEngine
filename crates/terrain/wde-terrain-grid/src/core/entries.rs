@@ -72,6 +72,12 @@ pub struct PlacementConfig {
     /// Categories in config order.
     pub categories: Vec<String>
 }
+impl PlacementConfig {
+    /// Whether some entries still wait for their model.
+    pub fn is_loading(&self) -> bool {
+        !self.pending_entries.is_empty()
+    }
+}
 
 pub struct PlacementPlugin;
 impl Plugin for PlacementPlugin {

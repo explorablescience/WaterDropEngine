@@ -10,7 +10,7 @@
 //! ```
 //! Note that the `gltf_asset` handle will be enqueued for spawning once it is loaded. The actual spawning of the model into the world will happen automatically in the background, and you can check for its presence using the asset handle.
 //! The rendering of the loaded model is then managed by the [`wde_pbr`](wde_pbr) crate, which handles the materials and shaders for the meshes.
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use wde_logger::prelude::*;
@@ -30,6 +30,7 @@ pub mod prelude {
     pub use crate::GltfLoader;
     pub use crate::GltfLoaderSettings;
     pub use crate::GltfSpawnQueue;
+    pub use crate::MeshGeometry;
     pub use crate::ModelCondition;
 }
 
@@ -71,6 +72,9 @@ pub struct GltfAsset {
     pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>,
     /// Connection condition of each entry of [`Self::models`] (`None` = always shown).
     pub conditions: Vec<Option<ModelCondition>>,
+    /// Triangles of each entry of [`Self::models`], kept on the CPU (e.g. for navigation): the
+    /// meshes themselves leave the main world once uploaded to the GPU.
+    pub geometry: Vec<Arc<MeshGeometry>>,
     /// The englobing bounding box of the entire model, computed from the bounding boxes of all meshes.
     pub bbox: MeshBbox,
     /// Named properties (e.g. spawn points) extracted from meshes whose name starts with `%P%`.
@@ -104,6 +108,13 @@ impl GltfAsset {
             })
             .map(|(model, _)| model)
     }
+}
+
+/// Triangles of a mesh, in model space (or bone space for meshes moving with a bone).
+#[derive(Debug, Default)]
+pub struct MeshGeometry {
+    pub positions: Vec<Vec3>,
+    pub indices: Vec<u32>
 }
 
 /// Options for loading a glTF model.
@@ -160,6 +171,7 @@ impl AssetLoader for GltfAssetLoader {
         // Add meshes to the asset server
         let mut models = Vec::new();
         let mut conditions = Vec::new();
+        let mut geometry = Vec::new();
         let mut model_bones = Vec::new();
         let mut bbox_min = Vec3::splat(f32::INFINITY);
         let mut bbox_max = Vec3::splat(f32::NEG_INFINITY);
@@ -184,6 +196,13 @@ impl AssetLoader for GltfAssetLoader {
                 materials_handles[*material_id].clone()
             ));
             conditions.push(condition.clone());
+            geometry.push(Arc::new(MeshGeometry {
+                positions: vertices.iter().map(|v| Vec3::from(v.position)).collect(),
+                indices: match indices_data.is_empty() {
+                    true => (0..vertices.len() as u32).collect(),
+                    false => indices_data.clone()
+                }
+            }));
             model_bones.push(*bone);
 
             // Update the overall bounding box of the model, with bone meshes in their rest pose
@@ -220,6 +239,7 @@ impl AssetLoader for GltfAssetLoader {
             path: path.to_string(),
             models,
             conditions,
+            geometry,
             bbox: MeshBbox {
                 min: bbox_min,
                 max: bbox_max

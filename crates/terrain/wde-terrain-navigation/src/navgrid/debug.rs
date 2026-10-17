@@ -2,11 +2,14 @@ use bevy::prelude::*;
 use wde_editor::prelude::{ui::egui, *};
 use wde_gizmos::prelude::*;
 use wde_renderer::prelude::Color;
-use wde_terrain_grid::prelude::LinkKind;
+use wde_terrain_grid::prelude::{GridEntity, LinkKind};
 
 use crate::{
     navgrid::graph::{NavBuilding, NavGrid, fmt_pos},
-    navigation::NavPath
+    navigation::{
+        NavPath,
+        walkmap::{CELL_SIZE, WalkMap, is_airlock, is_pressurized}
+    }
 };
 
 /// Height of the debug graph above the ground.
@@ -16,7 +19,7 @@ pub struct NavMapDebugPlugin;
 impl Plugin for NavMapDebugPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<NavMapDebugSettings>()
-            .add_systems(Update, (debug_ui, show_graph, show_paths));
+            .add_systems(Update, (debug_ui, show_graph, show_paths, show_walk_cells));
     }
 }
 
@@ -24,6 +27,7 @@ impl Plugin for NavMapDebugPlugin {
 struct NavMapDebugSettings {
     show_graph: bool,
     show_paths: bool,
+    show_walk_cells: bool,
     list_network_pieces: bool
 }
 
@@ -46,6 +50,10 @@ fn debug_ui(
                 ui.add(Checkbox::new(
                     &mut settings.show_paths,
                     "Show colonist paths"
+                ));
+                ui.add(Checkbox::new(
+                    &mut settings.show_walk_cells,
+                    "Show walkable cells"
                 ));
                 ui.add(Checkbox::new(
                     &mut settings.list_network_pieces,
@@ -236,6 +244,38 @@ fn show_paths(
         }
         gizmos.cube(
             Transform::from_translation(path.destination + lift).with_scale(Vec3::splat(0.12)),
+            color
+        );
+    }
+}
+
+/// Draws the walkable cells of buildings (cyan: pressurized, orange: airlock, green: outdoor).
+fn show_walk_cells(
+    walk: Res<WalkMap>,
+    buildings: Query<&GridEntity>,
+    mut gizmos: ResMut<Gizmos>,
+    settings: Res<NavMapDebugSettings>
+) {
+    if !settings.show_walk_cells {
+        return;
+    }
+    let half = CELL_SIZE * 0.35;
+    for (key, cell) in &walk.cells {
+        let color = match buildings.get(cell.building) {
+            Ok(b) if is_airlock(b) => Color::LinearRgba(1.0, 0.55, 0.0, 1.0),
+            Ok(b) if is_pressurized(b) => Color::LinearRgba(0.2, 0.8, 1.0, 1.0),
+            _ => Color::GREEN
+        };
+        let c = WalkMap::cell_center(*key);
+        let y = cell.floor + 0.03;
+        gizmos.line(
+            Vec3::new(c.x - half, y, c.y - half),
+            Vec3::new(c.x + half, y, c.y + half),
+            color
+        );
+        gizmos.line(
+            Vec3::new(c.x - half, y, c.y + half),
+            Vec3::new(c.x + half, y, c.y - half),
             color
         );
     }
