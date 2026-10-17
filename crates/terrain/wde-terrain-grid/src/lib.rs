@@ -14,7 +14,8 @@ pub mod prelude {
     pub use super::core::grid::{Grid, GridEntityEvent, GridTilePos};
     pub use super::core::grid_entity::{GridEntity, GridRotation};
     pub use super::placement::{
-        AnchorLink, BuildingConnections, BuildingCutaway, LinkKind, anchor_links, connected_anchors
+        AnchorLink, BuildingConnections, BuildingCutaway, LinkKind, PlacementInputCapture,
+        anchor_links, connected_anchors
     };
 }
 

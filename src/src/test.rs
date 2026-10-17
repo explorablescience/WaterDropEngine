@@ -40,7 +40,7 @@ struct SelectionAreaAssets {
 struct SelectionAreaQuadMarker;
 
 /// Vertical offset applied to the selection-area decal above the terrain hit point, to avoid z-fighting.
-const SELECTION_AREA_Y_OFFSET: f32 = 0.01;
+const SELECTION_AREA_Y_OFFSET: f32 = 0.03;
 
 fn init_scene(
     mut commands: Commands,
@@ -106,7 +106,7 @@ fn init_scene(
         mesh: asset_server.add(PlaneMesh::from("selection-area-quad", 1, Vec3::Y, true)),
         material: asset_server.add(SelectionAreaMaterial {
             label: "selection-area".to_string(),
-            color: WdeColor::from_srgba(0.8, 0.8, 0.4, 0.2),
+            color: WdeColor::from_srgba(0.35, 0.85, 1.0, 0.12),
             ..Default::default()
         })
     });
@@ -174,9 +174,19 @@ fn select_entity(
     >,
     children_query: Query<&Children>,
     mesh_query: Query<(), With<Mesh3d>>,
-    mut quad_transform_query: Query<&mut Transform, With<SelectionAreaQuadMarker>>
+    mut quad_transform_query: Query<&mut Transform, With<SelectionAreaQuadMarker>>,
+    input_capture: Res<PlacementInputCapture>
 ) {
-    if mouse_input.just_pressed(MouseButton::Left) {
+    // Placement tools own the mouse: cancel any drag in progress and stand by
+    if input_capture.tool {
+        *is_selecting_area = None;
+        if let Some(entity) = selection_area_quad.take() {
+            commands.entity(entity).despawn();
+        }
+        return;
+    }
+
+    if mouse_input.just_pressed(MouseButton::Left) && !input_capture.over_ui {
         let start_pos = cursor_pos.pos_or_last();
         *is_selecting_area = Some(start_pos);
 

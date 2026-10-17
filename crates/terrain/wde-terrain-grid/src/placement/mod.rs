@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 
 use bevy::prelude::*;
+use wde_editor::prelude::*;
 
 use crate::{
     core::entries::PlacementConfigEntry, placement::move_and_delete::MoveAndDeleteManager
@@ -9,6 +10,37 @@ use wde_terrain::prelude::*;
 
 pub use connections::{AnchorLink, BuildingConnections, LinkKind, anchor_links, connected_anchors};
 pub use cutaway::BuildingCutaway;
+
+/// Who currently uses the left mouse button, so other click interactions (e.g. drag selection)
+/// can stand by.
+#[derive(Resource, Default, PartialEq, Eq)]
+pub struct PlacementInputCapture {
+    /// A placement tool is active: a building or line being placed, or the move / remove tools.
+    pub tool: bool,
+    /// The pointer is over a UI window.
+    pub over_ui: bool
+}
+impl PlacementInputCapture {
+    pub fn is_captured(&self) -> bool {
+        self.tool || self.over_ui
+    }
+}
+
+fn update_input_capture(
+    manager: Res<TerrainPlacementManager>,
+    ui: Option<Res<UIContext>>,
+    mut capture: ResMut<PlacementInputCapture>
+) {
+    let tool = match manager.mode {
+        TerrainPlacementMode::None => false,
+        TerrainPlacementMode::Place => {
+            manager.place_selected_entry.is_some() || manager.line_network.is_some()
+        }
+        TerrainPlacementMode::Move | TerrainPlacementMode::Remove => true
+    };
+    let over_ui = ui.is_some_and(|ui| ui.0.is_pointer_over_area());
+    capture.set_if_neq(PlacementInputCapture { tool, over_ui });
+}
 
 mod connections;
 mod cutaway;
@@ -23,6 +55,7 @@ impl Plugin for PlacementPlugin {
         let manager = TerrainPlacementManager::new(app.world_mut().commands());
         app.insert_resource(manager)
             .init_resource::<BuildingCutaway>()
+            .init_resource::<PlacementInputCapture>()
             .add_systems(Startup, set_parent)
             .add_systems(
                 Update,
@@ -32,6 +65,7 @@ impl Plugin for PlacementPlugin {
                     move_and_delete::handle_over_material,
                     move_and_delete::handle_move_and_delete_update,
                     line_tool::line_tool_update,
+                    update_input_capture,
                     (
                         cutaway::toggle_cutaway,
                         connections::update_connections,
