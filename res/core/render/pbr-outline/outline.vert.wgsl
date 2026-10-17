@@ -40,13 +40,15 @@ fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32)
     let index = in_indices[vid + push_constants.first_index];
     let vertex = in_vertices[index + push_constants.first_vertex];
 
-    // Build an expanded shell in object space for the outline pass.
-    let outline_scale = 1.0 + max(in_outline_material.thickness.x, 0.0);
-    let scaled_position = vertex.position * outline_scale;
-
+    // Push the surface out along its world normal, proportionally to the view depth so the
+    // outline keeps a constant width on screen (`thickness` is a fraction of the depth).
     let obj_to_world = in_raw_transform[push_constants.transform_id].obj_to_world;
-    let world_pos = obj_to_world * vec4<f32>(scaled_position, 1.0);
-    let view_pos = in_camera.world_to_view * world_pos;
+    let world_pos = obj_to_world * vec4<f32>(vertex.position, 1.0);
+    let normal = vec3<f32>(vertex.normal_x, vertex.normal_y, vertex.normal_z);
+    let world_normal = normalize((obj_to_world * vec4<f32>(normal, 0.0)).xyz);
+    let depth = max(-(in_camera.world_to_view * world_pos).z, 0.0);
+    let offset = world_normal * max(in_outline_material.thickness.x, 0.0) * depth;
+    let view_pos = in_camera.world_to_view * vec4<f32>(world_pos.xyz + offset, 1.0);
 
     return in_camera.view_to_ndc * view_pos;
 }

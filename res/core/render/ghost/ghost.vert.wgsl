@@ -3,6 +3,7 @@ struct VertexOutput {
     @location(0) tex_coord:    vec2<f32>,
     @location(1) normal_world: vec3<f32>,
     @location(2) view_dir:     vec3<f32>,
+    @location(3) world_pos:    vec3<f32>,
 };
 
 // Push constants informations about the current mesh
@@ -95,6 +96,7 @@ fn main(@builtin(vertex_index) vid: u32) -> VertexOutput {
 
     // Set view direction
     out.view_dir = normalize(in_camera.position.xyz - world_pos4.xyz);
+    out.world_pos = world_pos4.xyz;
 
     return out;
 }

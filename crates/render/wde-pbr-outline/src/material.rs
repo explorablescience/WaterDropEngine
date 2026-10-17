@@ -16,6 +16,7 @@ struct OutlineMaterialUniform {
 pub struct OutlineMaterial {
     pub label: String,
     pub color: Color,
+    /// Outline width, as a fraction of the view depth (constant width on screen).
     pub thickness: f32,
     pub uniform_buffer: Option<Handle<Buffer>>
 }
@@ -24,7 +25,7 @@ impl Default for OutlineMaterial {
         Self {
             label: "outline-material".to_string(),
             color: Color::LinearRgba(1.0, 1.0, 1.0, 0.6),
-            thickness: 0.02,
+            thickness: 0.004,
             uniform_buffer: None
         }
     }
