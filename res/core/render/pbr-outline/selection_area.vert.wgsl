@@ -29,15 +29,24 @@ struct ObjectToWorld {
 };
 @group(2) @binding(0) var<storage, read> in_raw_transform: array<ObjectToWorld>;
 
+struct VertexOutput {
+    @builtin(position) clip_position: vec4<f32>,
+    @location(0) uv: vec2<f32>,
+    @location(1) world_pos: vec3<f32>,
+};
+
 @vertex
-fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32) -> @builtin(position) vec4<f32> {
+fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32) -> VertexOutput {
     let index = in_indices[vid + push_constants.first_index];
     let vertex = in_vertices[index + push_constants.first_vertex];
 
-    // Plain flat quad — no vertex-shell expansion like the outline pass needs.
+    // Plain flat quad, no vertex-shell expansion like the outline pass needs.
     let obj_to_world = in_raw_transform[push_constants.transform_id].obj_to_world;
     let world_pos = obj_to_world * vec4<f32>(vertex.position, 1.0);
-    let view_pos = in_camera.world_to_view * world_pos;
 
-    return in_camera.view_to_ndc * view_pos;
+    var out: VertexOutput;
+    out.clip_position = in_camera.view_to_ndc * in_camera.world_to_view * world_pos;
+    out.uv = vec2<f32>(vertex.uv_x, vertex.uv_y);
+    out.world_pos = world_pos.xyz;
+    return out;
 }
