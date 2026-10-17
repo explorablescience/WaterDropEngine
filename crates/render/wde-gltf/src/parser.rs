@@ -339,7 +339,10 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
                 name: format!("{}_primitive_{}", name, i),
                 vertex_indexed: vertex_indexed_accessor,
                 vertex_attributes,
-                material_id: material_index.map(|idx| idx as u32),
+                // Index into `material_datas` (first-use order), not the raw glTF material index
+                material_id: material_index
+                    .and_then(|idx| material_map.get(&idx))
+                    .map(|&idx| idx as u32),
                 translation,
                 rotation,
                 scale
@@ -445,6 +448,7 @@ fn parse_material(
             .to_string(),
         folder_path: folder_path.to_string(),
         base_color: base_color_factor.try_into().unwrap_or([1.0, 1.0, 1.0, 1.0]),
+        alpha_blend: material_json.get("alphaMode").and_then(|v| v.as_str()) == Some("BLEND"),
         metallic: metallic_factor,
         roughness: roughness_factor,
         base_color_tex_url: opt_textures_urls.get("baseColorTexture").cloned(),

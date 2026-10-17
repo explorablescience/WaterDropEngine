@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::prelude::{
-    CastShadow, PbrMaterial, PbrMaterial3d, PbrSsboTransformUuid, PbrUuidRegistry
+    CastShadow, PbrAlphaMode, PbrMaterial, PbrMaterial3d, PbrSsboTransformUuid, PbrUuidRegistry
 };
 
 #[derive(Component)]
@@ -91,6 +91,16 @@ impl std::fmt::Debug for BatchList {
         }
         debug_struct.finish()
     }
+}
+
+/// Whether the batch material is alpha-blended, i.e. drawn by the transparent pass only.
+pub(crate) fn is_batch_blended(
+    materials: &RenderAssets<GpuRenderBinding<PbrMaterial>>,
+    key: &BatchKey
+) -> bool {
+    materials
+        .get(key.material)
+        .is_some_and(|m| m.asset.alpha_mode == PbrAlphaMode::Blend)
 }
 
 fn remove_tracked_entity(batches: &mut BatchList, entity: Entity) -> bool {

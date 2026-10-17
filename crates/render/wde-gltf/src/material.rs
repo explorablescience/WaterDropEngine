@@ -10,6 +10,8 @@ pub struct GltfMaterial {
     pub name: String,
     pub folder_path: String,
     pub base_color: [f32; 4],
+    /// glTF `alphaMode: BLEND`: rendered in the transparent pass, opacity from `base_color[3]`.
+    pub alpha_blend: bool,
     pub base_color_tex_url: Option<String>,
     pub metallic: f32,
     pub roughness: f32,
@@ -93,6 +95,11 @@ impl GltfMaterial {
 
                 normal_t: normal_texture_handle,
                 occlusion_t: occlusion_texture_handle,
+                alpha_mode: if self.alpha_blend {
+                    PbrAlphaMode::Blend
+                } else {
+                    PbrAlphaMode::Opaque
+                },
                 ..Default::default()
             }
         )
@@ -106,6 +113,7 @@ impl Default for GltfMaterial {
             name: "default_material".to_string(),
             folder_path: "".to_string(),
             base_color: [1.0, 1.0, 1.0, 1.0],
+            alpha_blend: false,
             base_color_tex_url: None,
 
             metallic: 0.0,

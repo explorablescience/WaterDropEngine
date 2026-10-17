@@ -61,7 +61,7 @@ mod transform;
 pub use batches::*;
 pub use cast_shadow::*;
 pub use lights::*;
-pub use pbr_material::{PbrMaterial, PbrMaterial3d};
+pub use pbr_material::{PbrAlphaMode, PbrMaterial, PbrMaterial3d};
 pub use subpass::*;
 pub use transform::*;
 

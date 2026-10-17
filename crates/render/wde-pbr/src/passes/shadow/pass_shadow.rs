@@ -9,7 +9,7 @@ use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::{
-    deferred::{BatchList, SsboTransformBinding},
+    deferred::{BatchList, PbrMaterial, SsboTransformBinding, is_batch_blended},
     passes::shadow::{CascadeEnabledFlags, ShadowMapData, ShadowParamsBinding}
 };
 
@@ -181,11 +181,16 @@ fn draw_shadow_cascade<'pass>(
 ) {
     let batches = world.get_resource::<BatchList>().unwrap();
     let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
+    let materials = world
+        .get_resource::<RenderAssets<GpuRenderBinding<PbrMaterial>>>()
+        .unwrap();
 
     let mut current_mesh_id = None;
     let mut current_index_count = 0;
     for batch_key in batches.sorted_batches.iter() {
-        if !batches.shadow_casting_batches.contains(batch_key) {
+        if !batches.shadow_casting_batches.contains(batch_key)
+            || is_batch_blended(materials, batch_key)
+        {
             continue;
         }
         let Some(batch) = batches.batches.get(batch_key) else {

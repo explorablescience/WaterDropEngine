@@ -1,6 +1,6 @@
 use crate::{
     deferred::subpass::{GBufferRenderPipeline, gbuffer_bindgroup::SsboTransformBinding},
-    prelude::{BatchList, PbrMaterial}
+    prelude::{BatchList, PbrMaterial, is_batch_blended}
 };
 use wde_logger::prelude::*;
 
@@ -64,6 +64,9 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
     let mut current_index_count = 0;
     let mut current_material_id = None;
     for batch_key in batches.sorted_batches.iter() {
+        if is_batch_blended(materials, batch_key) {
+            continue;
+        }
         let batch = match batches.batches.get(batch_key) {
             Some(batch) => batch,
             None => continue

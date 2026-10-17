@@ -50,6 +50,16 @@ pub(crate) struct PbrMaterialUniform {
     _padding: [f32; 2]
 }
 
+/// How a [PbrMaterial] is composited.
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+pub enum PbrAlphaMode {
+    /// Written to the G-buffer and lit by the deferred lighting pass.
+    #[default]
+    Opaque,
+    /// Forward-lit and alpha-blended in the transparent pass. Does not cast shadows.
+    Blend
+}
+
 /// Describes a physically based rendering material.
 /// It contains the material properties such as albedo color, metallic and roughness intensity, as well as the textures for these properties. It also contains a uniform buffer that is automatically created and updated with the material data, which can be used in the shader to access the material properties.
 /// The [PbrMaterial3d] component is a wrapper around a handle to a [PbrMaterial] asset, which also adds the [PbrSsboTransformMarker] to the entity, indicating that its transform should be included in the [PbrSsboTransform](crate::prelude::PbrSsboTransform) updates.
@@ -58,7 +68,7 @@ pub struct PbrMaterial {
     pub label: String,
 
     /// The albedo color of the material instance (r, g, b).
-    /// The alpha channel is unused.
+    /// The alpha channel is the opacity when `alpha_mode` is [PbrAlphaMode::Blend], unused otherwise.
     pub albedo: (f32, f32, f32, f32),
     /// The albedo texture of the material instance. If `None`, the material will use the albedo color.
     pub albedo_t: Option<Handle<Texture>>,
@@ -81,6 +91,9 @@ pub struct PbrMaterial {
 
     /// An optional stencil value to set the stencil buffer to when rendering the material.
     pub stencil_value: Option<u32>,
+
+    /// Whether the material is drawn opaque in the G-buffer or alpha-blended in the transparent pass.
+    pub alpha_mode: PbrAlphaMode,
 
     /// The buffer containing the material data. It is automatically created and updated if not set.
     pub uniform_buffer: Option<Handle<Buffer>>,
@@ -105,6 +118,8 @@ impl Default for PbrMaterial {
             occlusion_t: None,
 
             stencil_value: None,
+
+            alpha_mode: PbrAlphaMode::Opaque,
 
             uniform_buffer: None,
             last_uniform: None
