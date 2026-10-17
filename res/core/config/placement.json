@@ -37,7 +37,8 @@
                 "description": "Colony command center, connects tunnels on all sides.",
                 "icon": "core/icons/buildings/control_room.png",
                 "model": "models/placement/control_room/control_room.gltf",
-                "model_cut": "models/placement/control_room/control_room_cut.gltf"
+                "model_cut": "models/placement/control_room/control_room_cut.gltf",
+                "role": "control_room"
             },
             {
                 "label": "Tunnel Straight",

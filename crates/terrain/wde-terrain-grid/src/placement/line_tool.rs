@@ -175,6 +175,7 @@ pub(crate) fn plan_line(
     let mut order: Vec<Vec2> = Vec::new();
     let mut masks: HashMap<IVec2, u8> = HashMap::new();
     let tiles = route(start, end);
+    let endpoints = [tile_key(tiles[0]), tile_key(*tiles.last().unwrap())];
     for pair in tiles.windows(2) {
         link(&mut masks, &mut order, pair[0], pair[1] - pair[0]);
     }
@@ -227,9 +228,12 @@ pub(crate) fn plan_line(
                 });
             }
             None => {
-                // Also link to neighbors with an anchor on the shared edge (doors, existing pieces)
+                // The ends of the line also link to neighbors with an anchor on the shared edge
+                // (doors, building accesses, existing pieces). Not the middle: a line running
+                // alongside a building would get a junction at every tile.
                 let mut mask = mask;
-                for (i, step) in DIRS.iter().enumerate() {
+                let is_end = endpoints.contains(&tile_key(center));
+                for (i, step) in DIRS.iter().enumerate().filter(|_| is_end) {
                     let edge = center + *step / 2.0;
                     if let Some((_, g)) = occupant(center + *step) {
                         let anchors = match uses_in {

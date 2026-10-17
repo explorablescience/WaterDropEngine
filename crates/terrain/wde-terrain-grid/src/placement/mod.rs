@@ -7,7 +7,7 @@ use crate::{
 };
 use wde_terrain::prelude::*;
 
-pub use connections::{BuildingConnections, connected_anchors};
+pub use connections::{AnchorLink, BuildingConnections, LinkKind, anchor_links, connected_anchors};
 pub use cutaway::BuildingCutaway;
 
 mod connections;

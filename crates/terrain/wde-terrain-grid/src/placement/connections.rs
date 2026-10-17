@@ -21,35 +21,81 @@ const ANCHOR_SNAP_DISTANCE: f32 = 0.1;
 #[derive(Component, Default, Clone, PartialEq, Eq, Debug)]
 pub struct BuildingConnections(pub BTreeSet<String>);
 
+/// Network a link goes through.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum LinkKind {
+    /// Pressurized link, between `AnchorIn` anchors.
+    Tunnel,
+    /// Outdoor link, between `AnchorOut` anchors.
+    Path
+}
+
+/// An anchor of a building meeting an anchor of a neighbor.
+#[derive(Clone, Debug)]
+pub struct AnchorLink {
+    pub anchor: String,
+    pub kind: LinkKind,
+    /// Index of the neighbor in the `others` iterator.
+    pub other: usize,
+    pub other_anchor: String,
+    /// World XZ position where the two anchors meet.
+    pub position: Vec2
+}
+
+/// Links between the anchors of `target` and same-kind anchors of the `others`.
+pub fn anchor_links<'a>(
+    target: &GridEntity,
+    others: impl Iterator<Item = &'a GridEntity>
+) -> Vec<AnchorLink> {
+    let entry = target.entry();
+    let reach = |g: &GridEntity| g.entry().extent.max_element() as f32 * TILE_SIZE;
+    let mut links = Vec::new();
+    for (index, other) in others.enumerate() {
+        if target.center().distance(other.center()) > reach(target) + reach(other) {
+            continue;
+        }
+        let pairs: [(LinkKind, &Vec<PlacementAnchor>, &Vec<PlacementAnchor>); 2] = [
+            (
+                LinkKind::Tunnel,
+                &entry.anchors_in,
+                &other.entry().anchors_in
+            ),
+            (
+                LinkKind::Path,
+                &entry.anchors_out,
+                &other.entry().anchors_out
+            )
+        ];
+        for (kind, anchors, other_anchors) in pairs {
+            for anchor in anchors {
+                let pos = target.anchor_world(anchor.pos);
+                if let Some(other_anchor) = other_anchors
+                    .iter()
+                    .find(|o| other.anchor_world(o.pos).distance(pos) <= ANCHOR_SNAP_DISTANCE)
+                {
+                    links.push(AnchorLink {
+                        anchor: anchor.name.clone(),
+                        kind,
+                        other: index,
+                        other_anchor: other_anchor.name.clone(),
+                        position: pos
+                    });
+                }
+            }
+        }
+    }
+    links
+}
+
 /// Anchors of `target` that meet a same-kind anchor of one of the `others`.
 pub fn connected_anchors<'a>(
     target: &GridEntity,
     others: impl Iterator<Item = &'a GridEntity>
 ) -> BTreeSet<String> {
-    let entry = target.entry();
-    let reach = |g: &GridEntity| g.entry().extent.max_element() as f32 * TILE_SIZE;
-    let mut connected = BTreeSet::new();
-    for other in others {
-        if target.center().distance(other.center()) > reach(target) + reach(other) {
-            continue;
-        }
-        let pairs: [(&Vec<PlacementAnchor>, &Vec<PlacementAnchor>); 2] = [
-            (&entry.anchors_in, &other.entry().anchors_in),
-            (&entry.anchors_out, &other.entry().anchors_out)
-        ];
-        for (anchors, other_anchors) in pairs {
-            for anchor in anchors {
-                let pos = target.anchor_world(anchor.pos);
-                if other_anchors
-                    .iter()
-                    .any(|o| other.anchor_world(o.pos).distance(pos) <= ANCHOR_SNAP_DISTANCE)
-                {
-                    connected.insert(anchor.name.clone());
-                }
-            }
-        }
-    }
-    connected
+    anchor_links(target, others)
+        .into_iter()
+        .map(|link| link.anchor)
+        .collect()
 }
 
 /// Recomputes the connections of every placed building when one is placed or removed.

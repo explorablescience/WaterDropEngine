@@ -18,6 +18,8 @@ pub struct PlacementConfigEntry {
     pub description: String,
     /// Network (e.g. `tunnel`, `path`) this piece belongs to, drawn with the line tool.
     pub network: Option<NetworkPiece>,
+    /// Gameplay role, e.g. `control_room` for the building defining a base.
+    pub role: Option<String>,
     /// Menu icon, registered in [UITextures].
     pub icon: Option<Handle<Texture>>,
     pub asset: Handle<GltfAsset>,
@@ -55,6 +57,7 @@ struct PendingEntry {
     category: String,
     description: String,
     network: Option<NetworkPiece>,
+    role: Option<String>,
     icon: Option<Handle<Texture>>,
     asset: Handle<GltfAsset>,
     asset_cut: Option<Handle<GltfAsset>>
@@ -144,6 +147,7 @@ fn read_placement_file(
                 .as_str()
                 .unwrap_or_default()
                 .to_string(),
+            role: entity["role"].as_str().map(str::to_string),
             network: entity["network"].as_str().map(|name| NetworkPiece {
                 name: name.to_string(),
                 junction: entity["piece"].as_str() == Some("junction")
@@ -201,6 +205,7 @@ fn process_pending_entries(
                 category: pending.category,
                 description: pending.description,
                 network: pending.network,
+                role: pending.role,
                 icon: pending.icon,
                 asset: pending.asset,
                 asset_cut: pending.asset_cut,

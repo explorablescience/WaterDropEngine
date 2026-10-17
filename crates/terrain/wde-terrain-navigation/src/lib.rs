@@ -5,6 +5,7 @@ mod navigation;
 
 pub mod prelude {
     pub use super::TerrainNavigator;
+    pub use super::navgrid::{CONTROL_ROOM_ROLE, NavBase, NavBuilding, NavGrid, NavNeighbor};
 }
 
 pub struct TerrainNavigationPlugin;

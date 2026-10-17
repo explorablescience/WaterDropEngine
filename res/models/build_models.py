@@ -1229,6 +1229,7 @@ def door(prefix, face_x, y, w=0.36, h=0.62, z0=0.0):
 # ---------------------------------------------------------------------------------------
 def build_solar_array():
     foundation(2, 2)
+    access_stubs(2, 2, 0.3)
     for sx in (1, -1):
         for sy in (1, -1):
             box("Solar_Pad", (0.4, 0.4, 0.08), (sx, sy, GROUND + 0.04), "Concrete", 0.02)
@@ -1242,6 +1243,7 @@ def build_solar_array():
 
 def build_battery():
     foundation(1, 1)
+    access_stubs(1, 1, 0.22)
     box("Bat_Cabinet", (1.45, 1.05, 0.18), (0, 0, GROUND + 0.09), "Frame_Graphite", 0.02)
     for x in (-0.35, 0.35):
         for y in (-0.24, 0.24):
@@ -1257,6 +1259,7 @@ def build_battery():
 
 def build_water_tank():
     foundation(1, 1)
+    access_stubs(1, 1, 0.22)
     zc, r = 1.2, 0.62
     for k in range(4):
         a = k * pi / 2 + pi / 4
@@ -1273,7 +1276,7 @@ def build_water_tank():
 
 def build_water_extractor():
     foundation(2, 2)
-    side_stub("Access", -2, -1, 0.55)
+    access_stubs(2, 2, 0.3)
     # Drill rig
     box("WEx_Deck", (1.7, 1.7, 0.12), (-0.9, 0.9, GROUND + 0.06), "Hull_Grey", 0.02)
     lattice_tower("WEx_Derrick", (-0.9, 0.9), 1.3, 0.35, 2.6, 4, "Hazard_Yellow")
@@ -1297,7 +1300,7 @@ def build_water_extractor():
 
 def build_oxygen_generator():
     foundation(2, 2)
-    side_stub("Access", -2, 1, 0.55)
+    access_stubs(2, 2, 0.3)
     hy0 = -0.55
     box("O2Gen_Housing", (2.6, 1.6, 0.95), (0, hy0, GROUND + 0.475), "Hull_White", 0.08)
     box("O2Gen_Stripe", (2.62, 1.62, 0.08), (0, hy0, GROUND + 0.72), "Accent_Orange", 0.01)
@@ -1318,6 +1321,7 @@ def build_oxygen_generator():
 
 def build_oxygen_tank():
     foundation(1, 1)
+    access_stubs(1, 1, 0.22)
     box("O2Tank_Frame", (1.5, 0.8, 0.12), (0, 0, GROUND + 0.06), "Frame_Graphite", 0.02)
     for x in (-0.38, 0.38):
         vtank("O2Tank", (x, 0, GROUND + 0.12), 0.32, 1.35, bands=(0.25,))
@@ -1333,6 +1337,25 @@ def pad_stubs(prefix):
         a = k * pi / 2
         with variant(anchor_name("AnchorOut", cos(a) * 3, sin(a) * 3), True):
             rotated(track(lambda: path_stub(prefix, 2.55, 2.98, 0.12)), a)
+
+
+def side_anchors(nx, ny):
+    """Path anchors on every tile line of every side of an nx x ny footprint (Blender XY)."""
+    lines = lambda n: [float(-n + 1 + 2 * i) for i in range(n)]
+    return ([(s * nx, t) for s in (1, -1) for t in lines(ny)] +
+            [(t, s * ny) for s in (1, -1) for t in lines(nx)])
+
+
+def access_stubs(nx, ny, length):
+    """Paved access from each side anchor inward, shown when a path ends on it."""
+    for x, y in side_anchors(nx, ny):
+        # Outward normal of the side the anchor is on
+        normal = Vector((math.copysign(1, x), 0)) if abs(x) == nx else Vector((0, math.copysign(1, y)))
+        inward = -normal
+        with variant(anchor_name("AnchorOut", x, y), True):
+            for o in track(lambda: path_stub("Access", 0.0, length, GROUND + 0.03)):
+                o.data.transform(Matrix.Translation((x - normal.x * 0.02, y - normal.y * 0.02, 0))
+                                 @ Matrix.Rotation(math.atan2(inward.y, inward.x), 4, "Z"))
 
 
 def side_stub(prefix, x, y, length):
@@ -1420,7 +1443,7 @@ def build_drone_hub():
 
 def build_fuel_refinery():
     foundation(2, 2)
-    side_stub("Access", 2, -1, 0.25)
+    access_stubs(2, 2, 0.3)
     for (x, y, r, h) in ((-1.1, 1.0, 0.34, 2.6), (-0.3, 1.2, 0.28, 2.0)):
         vtank("Ref_Column", (x, y, GROUND), r, h, bands=(0.2, 0.5, 0.8))
         ring("Ref_Platform", r + 0.02, r + 0.18, GROUND + h * 0.62, GROUND + h * 0.62 + 0.04, "Frame_Graphite",
@@ -1441,7 +1464,7 @@ def build_fuel_refinery():
 
 def build_stirling_generator():
     foundation(2, 2)
-    side_stub("Access", 2, -1, 0.5)
+    access_stubs(2, 2, 0.3)
     lathe("Stirling_Core", [(0, GROUND), (0.95, GROUND), (0.95, GROUND + 0.3), (0.72, GROUND + 0.36),
                             (0.72, GROUND + 1.7), (0.52, GROUND + 1.95), (0, GROUND + 2.0)], "Hull_White", 40)
     ring("Stirling_Band", 0.94, 0.97, GROUND + 0.22, GROUND + 0.3, "Accent_Orange", segs=40)
@@ -1459,6 +1482,7 @@ def build_stirling_generator():
 
 def build_sensor_tower():
     foundation(1, 1)
+    access_stubs(1, 1, 0.22)
     lattice_tower("Sensor", (0, 0), 1.1, 0.26, 3.0, 5)
     box("Sensor_Platform", (0.55, 0.55, 0.06), (0, 0, GROUND + 3.03), "Frame_Graphite", 0.01)
     dish("Sensor_Dish", (0, 0, GROUND + 3.06), pi / 4, 0.4)
@@ -1470,7 +1494,7 @@ def build_sensor_tower():
 
 def build_concrete_extractor():
     foundation(2, 2)
-    side_stub("Access", -2, -1, 0.5)
+    access_stubs(2, 2, 0.3)
     for i, (x, y, r, s) in enumerate(((-1.15, 1.1, 0.6, 0.5), (-0.55, 1.45, 0.35, 0.6), (-1.45, 0.45, 0.3, 0.6))):
         ico("Mine_Rocks", r, (x, y, GROUND), "Cargo_Rust" if i % 2 else "Concrete", 1, (1, 1, s), 0.25, i)
     box("Mine_Crusher", (1.2, 1.0, 0.95), (0.9, 0.95, GROUND + 0.475), "Hull_White", 0.05)
@@ -1675,29 +1699,29 @@ MODELS = {
     "storage_3x3": dict(rel="placement/storage/storage_3x3", build=build_storage_3x3, tex=2048, ao=0.7,
                         name="StorageYard"),
     "solar_array_2x2": dict(rel="placement/power/solar_array_2x2", build=build_solar_array, tex=1024, ao=0.5,
-                            name="SolarArray", props=P((2, 2))),
+                            name="SolarArray", props=P((2, 2), outs=side_anchors(2, 2))),
     "battery_1x1": dict(rel="placement/power/battery_1x1", build=build_battery, tex=1024, ao=0.4,
-                        name="Battery", props=P((1, 1))),
+                        name="Battery", props=P((1, 1), outs=side_anchors(1, 1))),
     "stirling_generator_2x2": dict(rel="placement/power/stirling_generator_2x2", build=build_stirling_generator,
-                                   tex=1024, ao=0.5, name="StirlingGenerator", props=P((2, 2), outs=[(2, -1)])),
+                                   tex=1024, ao=0.5, name="StirlingGenerator", props=P((2, 2), outs=side_anchors(2, 2))),
     "water_extractor_2x2": dict(rel="placement/water/water_extractor_2x2", build=build_water_extractor, tex=2048,
-                                ao=0.6, name="WaterExtractor", props=P((2, 2), outs=[(-2, -1)])),
+                                ao=0.6, name="WaterExtractor", props=P((2, 2), outs=side_anchors(2, 2))),
     "water_tank_1x1": dict(rel="placement/water/water_tank_1x1", build=build_water_tank, tex=1024, ao=0.5,
-                           name="WaterTank", props=P((1, 1))),
+                           name="WaterTank", props=P((1, 1), outs=side_anchors(1, 1))),
     "oxygen_generator_2x2": dict(rel="placement/oxygen/oxygen_generator_2x2", build=build_oxygen_generator,
-                                 tex=2048, ao=0.6, name="OxygenGenerator", props=P((2, 2), outs=[(-2, 1)])),
+                                 tex=2048, ao=0.6, name="OxygenGenerator", props=P((2, 2), outs=side_anchors(2, 2))),
     "oxygen_tank_1x1": dict(rel="placement/oxygen/oxygen_tank_1x1", build=build_oxygen_tank, tex=1024, ao=0.4,
-                            name="OxygenTank", props=P((1, 1))),
+                            name="OxygenTank", props=P((1, 1), outs=side_anchors(1, 1))),
     "fuel_refinery_2x2": dict(rel="placement/industry/fuel_refinery_2x2", build=build_fuel_refinery, tex=2048,
-                              ao=0.6, name="FuelRefinery", props=P((2, 2), outs=[(2, -1)])),
+                              ao=0.6, name="FuelRefinery", props=P((2, 2), outs=side_anchors(2, 2))),
     "concrete_extractor_2x2": dict(rel="placement/industry/concrete_extractor_2x2", build=build_concrete_extractor,
-                                   tex=2048, ao=0.6, name="ConcreteExtractor", props=P((2, 2), outs=[(-2, -1)])),
+                                   tex=2048, ao=0.6, name="ConcreteExtractor", props=P((2, 2), outs=side_anchors(2, 2))),
     "drone_hub_3x3": dict(rel="placement/logistics/drone_hub_3x3", build=build_drone_hub, tex=2048, ao=0.6,
                           name="DroneHub", props=P((3, 3), outs=[(3, 0), (-3, 0), (0, 3), (0, -3)])),
     "landing_pad_3x3": dict(rel="placement/logistics/landing_pad_3x3", build=build_landing_pad, tex=2048, ao=0.6,
                             name="LandingPad", props=P((3, 3), outs=[(3, 0), (-3, 0), (0, 3), (0, -3)])),
     "sensor_tower_1x1": dict(rel="placement/logistics/sensor_tower_1x1", build=build_sensor_tower, tex=1024,
-                             ao=0.5, name="SensorTower", props=P((1, 1))),
+                             ao=0.5, name="SensorTower", props=P((1, 1), outs=side_anchors(1, 1))),
     # Dome modules
     "living_quarters_2x2": dict(rel="modules/living_quarters/living_quarters_2x2", build=build_living_quarters,
                                 tex=2048, ao=0.5, name="LivingQuarters", props=P((2, 2), ins=[(2, 0)])),

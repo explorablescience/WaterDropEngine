@@ -13,7 +13,9 @@ mod render;
 pub mod prelude {
     pub use super::core::grid::{Grid, GridEntityEvent, GridTilePos};
     pub use super::core::grid_entity::{GridEntity, GridRotation};
-    pub use super::placement::{BuildingConnections, BuildingCutaway, connected_anchors};
+    pub use super::placement::{
+        AnchorLink, BuildingConnections, BuildingCutaway, LinkKind, anchor_links, connected_anchors
+    };
 }
 
 pub struct TerrainGridPlugin;
