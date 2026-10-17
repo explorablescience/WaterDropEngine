@@ -9,12 +9,22 @@ use crate::{TerrainNavigator, navgrid::NavGrid};
 mod pathfinding;
 
 pub use pathfinding::AIRLOCK_ROLE;
-use pathfinding::{NavWorld, Waypoint, find_path};
+use pathfinding::{NavWorld, Waypoint, find_path, formation_spots};
 
 /// Turning speed, in radians per second.
 const TURN_SPEED: f32 = 10.0;
 /// Distance at which a waypoint counts as reached.
 const WAYPOINT_REACHED: f32 = 0.05;
+/// Radius of entities without [`NavAgent`] when spreading a group.
+const DEFAULT_AGENT_RADIUS: f32 = 0.14;
+/// Spacing of group standing spots, in agent diameters.
+const FORMATION_SPACING: f32 = 1.2;
+/// How fast overlapping agents are pushed apart (fraction of the overlap per second).
+const SEPARATION_RATE: f32 = 8.0;
+/// Share of the push taken by a walking agent against a standing one: standing agents make way.
+const WALKER_YIELD: f32 = 0.25;
+/// Sidestep of walking agents, relative to the overlap, so that crossing agents pass each other.
+const SIDESTEP: f32 = 0.6;
 
 /// Walking speeds: a base speed scaled by a factor depending on the terrain walked on. The path
 /// search minimizes the walking time, so colonists prefer paths and tunnels over bare ground.
@@ -43,6 +53,19 @@ impl Default for WalkSpeeds {
     }
 }
 
+/// Body of a walking entity: agents keep `radius` away from each other.
+#[derive(Component, Clone, Copy, Debug)]
+pub struct NavAgent {
+    pub radius: f32
+}
+impl Default for NavAgent {
+    fn default() -> Self {
+        Self {
+            radius: DEFAULT_AGENT_RADIUS
+        }
+    }
+}
+
 /// Whether a walking entity is in a pressurized place. It flips once an airlock cycle is over,
 /// e.g. to swap a colonist between its suit and indoor models.
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
@@ -53,7 +76,13 @@ impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WalkSpeeds>().add_systems(
             Update,
-            (request_paths, replan_on_network_change, follow_paths).chain()
+            (
+                request_paths,
+                replan_on_network_change,
+                follow_paths,
+                separate_agents
+            )
+                .chain()
         );
     }
 }
@@ -77,20 +106,69 @@ fn nav_world<'a>(
     }
 }
 
+/// Matches agents to spots, closest pairs first. Agents left without a spot get `None`.
+fn assign_spots(agents: &[(Entity, Vec3)], spots: &[Vec3]) -> Vec<(Entity, Option<Vec3>)> {
+    let mut pairs: Vec<(f32, usize, usize)> = agents
+        .iter()
+        .enumerate()
+        .flat_map(|(a, (_, pos))| {
+            spots
+                .iter()
+                .enumerate()
+                .map(move |(s, spot)| (pos.xz().distance_squared(spot.xz()), a, s))
+        })
+        .collect();
+    pairs.sort_unstable_by(|x, y| x.0.total_cmp(&y.0));
+    let mut agent_spot = vec![None; agents.len()];
+    let mut taken = vec![false; spots.len()];
+    for (_, a, s) in pairs {
+        if agent_spot[a].is_none() && !taken[s] {
+            agent_spot[a] = Some(spots[s]);
+            taken[s] = true;
+        }
+    }
+    agents.iter().map(|(e, _)| *e).zip(agent_spot).collect()
+}
+
 /// Computes the paths requested through the [`TerrainNavigator`].
 fn request_paths(
     mut commands: Commands,
     mut navigator: ResMut<TerrainNavigator>,
     transforms: Query<&Transform>,
+    agents: Query<&NavAgent>,
     grid: Res<Grid>,
     placed: Query<(Entity, &GridEntity), With<BuildingConnections>>,
     speeds: Res<WalkSpeeds>
 ) {
-    if navigator.new_entities.is_empty() && navigator.removed_entities.is_empty() {
+    if navigator.new_entities.is_empty()
+        && navigator.groups.is_empty()
+        && navigator.removed_entities.is_empty()
+    {
         return;
     }
     let world = nav_world(&grid, &placed);
-    for (entity, destination) in navigator.new_entities.drain(..) {
+
+    // Groups: spread their destination into one standing spot per entity
+    let mut requests: Vec<(Entity, Vec3)> = navigator.new_entities.drain(..).collect();
+    for (entities, destination) in std::mem::take(&mut navigator.groups) {
+        let members: Vec<(Entity, Vec3)> = entities
+            .iter()
+            .filter_map(|e| transforms.get(*e).ok().map(|t| (*e, t.translation)))
+            .collect();
+        let radius = members
+            .iter()
+            .map(|(e, _)| agents.get(*e).map_or(DEFAULT_AGENT_RADIUS, |a| a.radius))
+            .fold(0.0, f32::max);
+        let spacing = 2.0 * radius * FORMATION_SPACING;
+        let spots = formation_spots(&world, destination, members.len(), spacing);
+        requests.extend(
+            assign_spots(&members, &spots)
+                .into_iter()
+                .map(|(entity, spot)| (entity, spot.unwrap_or(destination)))
+        );
+    }
+
+    for (entity, destination) in requests {
         let Ok(transform) = transforms.get(entity) else {
             continue;
         };
@@ -197,6 +275,99 @@ fn follow_paths(
 
         if path.waypoints.is_empty() && path.waiting <= 0.0 {
             commands.entity(entity).remove::<NavPath>();
+        }
+    }
+}
+
+/// Keeps agents from overlapping: overlapping agents are pushed apart, standing ones making way
+/// for walking ones, and walking agents step aside to pass each other. Pushes never cross walls.
+fn separate_agents(
+    mut agents: Query<(&NavAgent, &mut Transform, Option<&NavPath>)>,
+    grid: Res<Grid>,
+    placed: Query<(Entity, &GridEntity), With<BuildingConnections>>,
+    time: Res<Time>
+) {
+    let rate = (time.delta_secs() * SEPARATION_RATE).min(1.0);
+    if rate <= 0.0 {
+        return;
+    }
+
+    // (position, radius, mobility, heading)
+    let bodies: Vec<(Vec2, f32, f32, Option<Vec2>)> = agents
+        .iter()
+        .map(|(agent, transform, path)| {
+            let position = transform.translation.xz();
+            let (mobility, heading) = match path {
+                // Cycling an airlock: stays put
+                Some(path) if path.waiting > 0.0 => (0.0, None),
+                Some(path) => (
+                    WALKER_YIELD,
+                    path.waypoints
+                        .front()
+                        .and_then(|w| (w.position.xz() - position).try_normalize())
+                ),
+                None => (1.0, None)
+            };
+            (position, agent.radius, mobility, heading)
+        })
+        .collect();
+    if bodies.len() < 2 {
+        return;
+    }
+
+    // Spatial hash, cells as wide as the largest agent
+    let cell = 2.0 * bodies.iter().map(|b| b.1).fold(0.0, f32::max).max(0.01);
+    let key = |p: Vec2| (p / cell).floor().as_ivec2();
+    let mut cells: HashMap<IVec2, Vec<usize>> = HashMap::new();
+    for (i, body) in bodies.iter().enumerate() {
+        cells.entry(key(body.0)).or_default().push(i);
+    }
+
+    let mut pushes = vec![Vec2::ZERO; bodies.len()];
+    for (i, &(pi, ri, mi, hi)) in bodies.iter().enumerate() {
+        let k = key(pi);
+        for dx in -1..=1 {
+            for dy in -1..=1 {
+                for &j in cells.get(&(k + IVec2::new(dx, dy))).into_iter().flatten() {
+                    if j <= i {
+                        continue;
+                    }
+                    let (pj, rj, mj, hj) = bodies[j];
+                    let overlap = ri + rj - pi.distance(pj);
+                    if overlap <= 0.0 || mi + mj <= 0.0 {
+                        continue;
+                    }
+                    // Agents on the same point: split them along an arbitrary, stable axis
+                    let normal = (pi - pj)
+                        .try_normalize()
+                        .unwrap_or_else(|| Vec2::from_angle(i as f32 * 2.399));
+                    pushes[i] += normal * overlap * mi / (mi + mj);
+                    pushes[j] -= normal * overlap * mj / (mi + mj);
+                    // Walkers keep to their right
+                    if let Some(h) = hi {
+                        pushes[i] += Vec2::new(-h.y, h.x) * overlap * SIDESTEP;
+                    }
+                    if let Some(h) = hj {
+                        pushes[j] += Vec2::new(-h.y, h.x) * overlap * SIDESTEP;
+                    }
+                }
+            }
+        }
+    }
+    if pushes.iter().all(|p| *p == Vec2::ZERO) {
+        return;
+    }
+
+    let world = nav_world(&grid, &placed);
+    for ((_, mut transform, _), push) in agents.iter_mut().zip(pushes) {
+        if push == Vec2::ZERO {
+            continue;
+        }
+        let from = transform.translation.xz();
+        let to = from + push * rate;
+        if world.same_zone(from, to) {
+            transform.translation.x = to.x;
+            transform.translation.z = to.y;
         }
     }
 }

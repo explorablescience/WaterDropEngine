@@ -33,6 +33,10 @@ const SEARCH_MARGIN: f32 = 40.0;
 const MAX_EXPANSIONS: usize = 50_000;
 /// Height of waypoints inside buildings (tunnel and dome floors).
 const INDOOR_HEIGHT: f32 = 0.16;
+/// Distance kept between standing spots and the walls of a building.
+const WALL_MARGIN: f32 = 0.4;
+/// Rings of candidate spots searched around a group destination.
+const MAX_FORMATION_RINGS: usize = 24;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 enum Node {
@@ -134,6 +138,61 @@ impl NavWorld<'_> {
     fn building_at(&self, pos: Vec2) -> Option<&GridEntity> {
         self.occupant(pos).filter(|b| !Self::is_path_piece(b))
     }
+
+    /// Whether `b` can be reached from `a` without crossing a wall: both in the same building, or
+    /// both on walkable outdoor tiles.
+    pub fn same_zone(&self, a: Vec2, b: Vec2) -> bool {
+        match (self.building_at(a), self.building_at(b)) {
+            (Some(x), Some(y)) => std::ptr::eq(x, y),
+            (None, None) => self.walkable(b),
+            _ => false
+        }
+    }
+}
+
+/// Up to `count` standing spots around `center`, `spacing` apart on a hexagonal pattern, nearest
+/// first. Spots stay in the zone of `center` (its building, or outdoors), away from walls.
+pub(crate) fn formation_spots(
+    world: &NavWorld,
+    center: Vec3,
+    count: usize,
+    spacing: f32
+) -> Vec<Vec3> {
+    let origin = center.xz();
+    // Inside a building, keep to the circle inscribed in its footprint (domes are round)
+    let building = world.building_at(origin).map(|b| {
+        let (a, c) = b.bbox();
+        let inscribed = ((a - c).abs() + TILE_SIZE).min_element() / 2.0 - WALL_MARGIN;
+        (b.center(), inscribed.max(origin.distance(b.center())))
+    });
+    let valid = |p: Vec2| {
+        world.same_zone(origin, p)
+            && building.is_none_or(|(building_center, reach)| p.distance(building_center) <= reach)
+    };
+
+    let axes: Vec<Vec2> = (0..6)
+        .map(|i| Vec2::from_angle(i as f32 * std::f32::consts::TAU / 6.0) * spacing)
+        .collect();
+    let mut spots = Vec::with_capacity(count);
+    for ring in 0..=MAX_FORMATION_RINGS {
+        let candidates: Vec<Vec2> = match ring {
+            0 => vec![origin],
+            _ => (0..6)
+                .flat_map(|side| {
+                    let corner = origin + axes[side] * ring as f32;
+                    let step = axes[(side + 2) % 6];
+                    (0..ring).map(move |i| corner + step * i as f32)
+                })
+                .collect()
+        };
+        for p in candidates.into_iter().filter(|p| valid(*p)) {
+            spots.push(Vec3::new(p.x, center.y, p.y));
+            if spots.len() == count {
+                return spots;
+            }
+        }
+    }
+    spots
 }
 
 /// Graph of the buildings: centers, anchors and the outdoor tiles their accesses open on.

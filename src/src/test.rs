@@ -154,6 +154,7 @@ fn init_scene(
                 EntityMarker,
                 AnimationPlayer::default(),
                 WalkTracker::default(),
+                NavAgent::default(),
                 ChildOf(global_parent)
             ))
             .id();
@@ -498,10 +499,7 @@ fn set_entities_target(
     if selected_entities.is_empty() || !mouse_input.just_pressed(MouseButton::Right) {
         return;
     }
-    for entity in &selected_entities {
-        let target_location = cursor_pos.pos_or_last();
-        navigator.add(entity, target_location);
-    }
+    navigator.add_group(selected_entities, cursor_pos.pos_or_last());
 }
 
 // TEMP: smoke test for wde-gizmos rendering, to be removed.
