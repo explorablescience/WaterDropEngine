@@ -11,7 +11,8 @@
         0,
         1,
         2,
-        3
+        3,
+        4
       ]
     }
   ],
@@ -56,6 +57,10 @@
     {
       "mesh": 3,
       "name": "WaterExtractor"
+    },
+    {
+      "mesh": 4,
+      "name": "%V%AnchorOut+"
     }
   ],
   "materials": [
@@ -350,6 +355,38 @@
           },
           "indices": 43,
           "material": 9
+        }
+      ]
+    },
+    {
+      "name": "%V%AnchorOut+",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 44,
+            "NORMAL": 45,
+            "TEXCOORD_0": 46
+          },
+          "indices": 47,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 48,
+            "NORMAL": 49,
+            "TEXCOORD_0": 50
+          },
+          "indices": 51,
+          "material": 4
+        },
+        {
+          "attributes": {
+            "POSITION": 52,
+            "NORMAL": 53,
+            "TEXCOORD_0": 54
+          },
+          "indices": 55,
+          "material": 3
         }
       ]
     }
@@ -738,6 +775,108 @@
       "componentType": 5123,
       "count": 876,
       "type": "SCALAR"
+    },
+    {
+      "bufferView": 44,
+      "componentType": 5126,
+      "count": 96,
+      "max": [
+        -1.4300000667572021,
+        0.08999999612569809,
+        1.4199999570846558
+      ],
+      "min": [
+        -1.9800000190734863,
+        0.029999999329447746,
+        0.5800000429153442
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 45,
+      "componentType": 5126,
+      "count": 96,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 46,
+      "componentType": 5126,
+      "count": 96,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 47,
+      "componentType": 5123,
+      "count": 324,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 48,
+      "componentType": 5126,
+      "count": 192,
+      "max": [
+        -1.4300000667572021,
+        0.10999999940395355,
+        1.4900000095367432
+      ],
+      "min": [
+        -1.9800000190734863,
+        0.009999997913837433,
+        0.5099999904632568
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 49,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 50,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 51,
+      "componentType": 5123,
+      "count": 648,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 52,
+      "componentType": 5126,
+      "count": 72,
+      "max": [
+        -1.6749999523162842,
+        0.09600000083446503,
+        1.2999999523162842
+      ],
+      "min": [
+        -1.9250000715255737,
+        0.09000000357627869,
+        0.699999988079071
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 53,
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 54,
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 55,
+      "componentType": 5123,
+      "count": 108,
+      "type": "SCALAR"
     }
   ],
   "bufferViews": [
@@ -1004,11 +1143,83 @@
       "byteLength": 1752,
       "byteOffset": 284268,
       "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1152,
+      "byteOffset": 286020,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1152,
+      "byteOffset": 287172,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 768,
+      "byteOffset": 288324,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 648,
+      "byteOffset": 289092,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2304,
+      "byteOffset": 289740,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2304,
+      "byteOffset": 292044,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1536,
+      "byteOffset": 294348,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1296,
+      "byteOffset": 295884,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 864,
+      "byteOffset": 297180,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 864,
+      "byteOffset": 298044,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 576,
+      "byteOffset": 298908,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 216,
+      "byteOffset": 299484,
+      "target": 34963
     }
   ],
   "buffers": [
     {
-      "byteLength": 286020,
+      "byteLength": 299700,
       "uri": "water_extractor_2x2.bin"
     }
   ],

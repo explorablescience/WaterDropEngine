@@ -6,10 +6,10 @@ use wde_renderer::prelude::*;
 use crate::accessor::{parse_attribute_as_f32, parse_indices};
 use crate::error::GltfError;
 use crate::material::GltfMaterial;
-use crate::model::GltfModel;
+use crate::model::{GltfModel, ModelCondition};
 
-/// A dataset representing mesh's data (indices, vertices), material ID.
-type MeshDataSet = (Vec<u32>, Vec<Vertex>, usize);
+/// A dataset representing mesh's data (indices, vertices), material ID and connection condition.
+type MeshDataSet = (Vec<u32>, Vec<Vertex>, usize, Option<ModelCondition>);
 
 /// Result type for form_models function
 type FormedModelsResult =
@@ -149,7 +149,8 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
             meshes_data.push((
                 indices.unwrap_or(Vec::new()),
                 vertices,
-                material_id as usize
+                material_id as usize,
+                primitive.condition.clone()
             ));
             bounding_boxes.push((final_min, final_max));
 

@@ -11,7 +11,8 @@
         0,
         1,
         2,
-        3
+        3,
+        4
       ]
     }
   ],
@@ -56,6 +57,10 @@
     {
       "mesh": 3,
       "name": "ConcreteExtractor"
+    },
+    {
+      "mesh": 4,
+      "name": "%V%AnchorOut+"
     }
   ],
   "materials": [
@@ -297,6 +302,38 @@
             "TEXCOORD_0": 34
           },
           "indices": 35,
+          "material": 7
+        }
+      ]
+    },
+    {
+      "name": "%V%AnchorOut+",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 36,
+            "NORMAL": 37,
+            "TEXCOORD_0": 38
+          },
+          "indices": 39,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 40,
+            "NORMAL": 41,
+            "TEXCOORD_0": 42
+          },
+          "indices": 43,
+          "material": 6
+        },
+        {
+          "attributes": {
+            "POSITION": 44,
+            "NORMAL": 45,
+            "TEXCOORD_0": 46
+          },
+          "indices": 47,
           "material": 7
         }
       ]
@@ -618,6 +655,108 @@
       "componentType": 5123,
       "count": 192,
       "type": "SCALAR"
+    },
+    {
+      "bufferView": 36,
+      "componentType": 5126,
+      "count": 96,
+      "max": [
+        -1.4800000190734863,
+        0.08999999612569809,
+        1.4199999570846558
+      ],
+      "min": [
+        -1.9800000190734863,
+        0.029999999329447746,
+        0.5800000429153442
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 37,
+      "componentType": 5126,
+      "count": 96,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 38,
+      "componentType": 5126,
+      "count": 96,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 39,
+      "componentType": 5123,
+      "count": 324,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 40,
+      "componentType": 5126,
+      "count": 192,
+      "max": [
+        -1.4800000190734863,
+        0.10999999940395355,
+        1.4900000095367432
+      ],
+      "min": [
+        -1.9800000190734863,
+        0.009999997913837433,
+        0.5099999904632568
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 41,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 42,
+      "componentType": 5126,
+      "count": 192,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 43,
+      "componentType": 5123,
+      "count": 648,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 44,
+      "componentType": 5126,
+      "count": 72,
+      "max": [
+        -1.6749999523162842,
+        0.09600000083446503,
+        1.2999999523162842
+      ],
+      "min": [
+        -1.9250000715255737,
+        0.09000000357627869,
+        0.699999988079071
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 45,
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 46,
+      "componentType": 5126,
+      "count": 72,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 47,
+      "componentType": 5123,
+      "count": 108,
+      "type": "SCALAR"
     }
   ],
   "bufferViews": [
@@ -836,11 +975,83 @@
       "byteLength": 384,
       "byteOffset": 82940,
       "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1152,
+      "byteOffset": 83324,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1152,
+      "byteOffset": 84476,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 768,
+      "byteOffset": 85628,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 648,
+      "byteOffset": 86396,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2304,
+      "byteOffset": 87044,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2304,
+      "byteOffset": 89348,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1536,
+      "byteOffset": 91652,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1296,
+      "byteOffset": 93188,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 864,
+      "byteOffset": 94484,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 864,
+      "byteOffset": 95348,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 576,
+      "byteOffset": 96212,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 216,
+      "byteOffset": 96788,
+      "target": 34963
     }
   ],
   "buffers": [
     {
-      "byteLength": 83324,
+      "byteLength": 97004,
       "uri": "concrete_extractor_2x2.bin"
     }
   ],

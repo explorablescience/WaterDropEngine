@@ -52,8 +52,7 @@ fn handle_grid_events(
                 });
                 nav_map.entity_nodes.insert(*entity, new_node_parent_index);
                 for anchor_in in &entry.anchors_in {
-                    let position =
-                        grid_entity.center() + rotate_anchor(*anchor_in, grid_entity.rotation());
+                    let position = grid_entity.anchor_world(anchor_in.pos);
 
                     // Check if anchor_in is close to any existing node, otherwise create a new one
                     let close_node = get_close_node(nav_map, position, 0.1).unwrap_or_else(|| {
@@ -100,16 +99,6 @@ fn handle_grid_events(
             }
         }
     }
-}
-
-/// Rotates a local anchor offset (x maps to world X, y maps to world Z) by the entity's
-/// grid rotation, matching the `Quat::from_rotation_y` convention used when placing entities.
-fn rotate_anchor(anchor: Vec2, rotation: GridRotation) -> Vec2 {
-    let (sin, cos) = rotation.rotation().sin_cos();
-    Vec2::new(
-        anchor.x * cos + anchor.y * sin,
-        anchor.y * cos - anchor.x * sin
-    )
 }
 
 /// Finds the closest alive node to `position` within `max_distance`

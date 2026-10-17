@@ -81,6 +81,35 @@ def material(name):
 # Geometry helpers. Every helper returns a mesh object with an identity transform.
 # ---------------------------------------------------------------------------------------
 PARTS = []
+PROPS = []           # `%P%` objects of the model being built
+VARIANT_GROUP = ""   # "" for always-shown parts, else "<anchor>+" / "<anchor>-"
+
+
+class variant:
+    """Parts built inside are only shown when `anchor` is connected (or not)."""
+
+    def __init__(self, anchor, connected):
+        self.group = f"{anchor}{'+' if connected else '-'}" if anchor else ""
+
+    def __enter__(self):
+        global VARIANT_GROUP
+        self.previous, VARIANT_GROUP = VARIANT_GROUP, self.group
+
+    def __exit__(self, *_):
+        global VARIANT_GROUP
+        VARIANT_GROUP = self.previous
+
+
+def anchor_name(kind, x, y):
+    """Name of the `%P%<kind>*` anchor closest to Blender (x, y), or None."""
+    best = None
+    for p in PROPS:
+        name = p.name[3:]
+        if name.startswith(kind):
+            d = (Vector((x, y)) - p.location.xy).length
+            if best is None or d < best[0]:
+                best = (d, name)
+    return best[1] if best and best[0] < 0.6 else None
 
 
 def to_obj(name, bm, mat, sharp_angle=40.0, flat=False):
@@ -96,6 +125,7 @@ def to_obj(name, bm, mat, sharp_angle=40.0, flat=False):
     else:
         me.shade_smooth()
         me.set_sharp_from_angle(angle=radians(sharp_angle))
+    obj["variant"] = VARIANT_GROUP
     PARTS.append(obj)
     return obj
 
@@ -317,6 +347,33 @@ def tube_roof(prefix, x0, x1, ribs=(), collars=()):
                         xa, xb, "Frame_Graphite")
 
 
+def tube_cap(prefix, x, outward):
+    """Plate closing a tube end at `x` (outward = +1 / -1), with a porthole."""
+    r = T_RI + 0.02
+    tf = math.asin((T_FLOOR - T_ZC) / r)
+    if CUT:
+        tc = math.asin((T_CUT - T_ZC) / r)
+        prof = _arc(r, tf, tc, 8) + _arc(r, pi - tc, pi - tf, 8)
+    else:
+        prof = _arc(r, tf, pi - tf, 28)
+    extrude_profile(f"{prefix}_Cap", prof, x - 0.03, x + 0.03, "Hull_White", sharp_angle=60)
+    win = cyl(f"{prefix}_Porthole", 0.11, 0.0, 0.02, "Window_Dark", (0, 0), 20)
+    rim = ring(f"{prefix}_PortholeRim", 0.1, 0.145, 0.0, 0.03, "Accent_Orange", segs=20)
+    for o in (win, rim):
+        o.data.transform(Matrix.Translation((x + outward * 0.03, 0, 0.5)) @ Matrix.Rotation(outward * pi / 2, 4, "Y"))
+
+
+def path_stub(prefix, x0, x1, z_top=0.08):
+    """Paved access along +X from x0 to x1, matching the path pieces (rotate for other sides)."""
+    box(f"{prefix}_Stub", (x1 - x0, 0.84, 0.06), ((x0 + x1) / 2, 0, z_top - 0.03), "Concrete", 0.01)
+    for s in (1, -1):
+        box(f"{prefix}_StubCurb", (x1 - x0, 0.07, 0.1), ((x0 + x1) / 2, s * 0.455, z_top - 0.03), "Frame_Graphite",
+            0.015)
+    for i in range(3):
+        box(f"{prefix}_StubHazard", (0.05, 0.6, 0.006), (x0 + 0.08 + i * 0.1, 0, z_top + 0.003),
+            "Hazard_Yellow")
+
+
 def door_portal(prefix, x, thickness=0.1):
     """Frame around a wall opening facing X, centered on the tube section."""
     h = T_CUT + 0.06
@@ -531,8 +588,11 @@ def solar_panel(prefix, loc, rot_z, w=1.1, d=0.6):
         xform(p, loc, rot_z)
 
 
-def geodesic_shell(prefix, R, Rz, zcut, door_x, subdiv=3, strut=0.05):
-    """Cutaway geodesic dome band (z in [0, zcut]) with door openings toward ±X/±Y."""
+def geodesic_shell(prefix, R, Rz, zcut, door_x, subdiv=3, strut=0.05, door_anchors=()):
+    """Geodesic dome band (z in [0, zcut]) with door openings toward +X, +Y, -X, -Y.
+
+    Each opening is filled by a patch only shown when its anchor in `door_anchors` is unconnected.
+    """
     bm = bmesh.new()
     bmesh.ops.create_icosphere(bm, subdivisions=subdiv, radius=1.0)
     bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(radians(18), 3, "Z"), verts=bm.verts)
@@ -543,7 +603,8 @@ def geodesic_shell(prefix, R, Rz, zcut, door_x, subdiv=3, strut=0.05):
     if zcut < Rz:
         geom = bm.verts[:] + bm.edges[:] + bm.faces[:]
         bmesh.ops.bisect_plane(bm, geom=geom, plane_co=(0, 0, zcut), plane_no=(0, 0, 1), clear_outer=True)
-    for ang in (0, pi / 2, pi, 3 * pi / 2):
+    patches = []
+    for k, ang in enumerate((0, pi / 2, pi, 3 * pi / 2)):
         d = Vector((cos(ang), sin(ang), 0))
         for side in (1, -1):
             n = Vector((-sin(ang), cos(ang), 0)) * side
@@ -555,9 +616,29 @@ def geodesic_shell(prefix, R, Rz, zcut, door_x, subdiv=3, strut=0.05):
                 if f.calc_center_median().dot(d) > door_x
                 and abs(f.calc_center_median().dot(Vector((-sin(ang), cos(ang), 0)))) < T_HALF_OPEN
                 and f.calc_center_median().z < T_CUT + 0.06]
+        if k < len(door_anchors) and door_anchors[k]:
+            bm.faces.index_update()
+            keep = {f.index for f in kill}
+            patch = bm.copy()
+            patch.faces.index_update()
+            bmesh.ops.delete(patch, geom=[f for f in patch.faces if f.index not in keep], context="FACES")
+            patches.append((door_anchors[k], patch))
         bmesh.ops.delete(bm, geom=kill, context="FACES")
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.004)
+    shell_objects(prefix, bm, strut)
+    for anchor, patch in patches:
+        with variant(anchor, False):
+            # Thinner struts so the patch border hides inside the shell's opening struts
+            bmesh.ops.remove_doubles(patch, verts=patch.verts, dist=0.004)
+            bmesh.ops.dissolve_degenerate(patch, dist=0.004, edges=patch.edges)
+            shell_objects(f"{prefix}_DoorPatch", patch, strut * 0.9, even=False)
 
+
+def shell_objects(prefix, bm, strut, even=True):
+    """Glass panels and wireframe struts of a geodesic surface (consumes `bm`).
+
+    `even` thickness spikes on the sliver triangles of small cut-out patches, so they disable it.
+    """
     glass_bm = bm.copy()
     glass = to_obj(f"{prefix}_Glass", glass_bm, "Glass_Teal", flat=True)
     mod = glass.modifiers.new("solid", "SOLIDIFY")
@@ -568,7 +649,7 @@ def geodesic_shell(prefix, R, Rz, zcut, door_x, subdiv=3, strut=0.05):
     frame = to_obj(f"{prefix}_Struts", bm, "Hull_White", flat=True)
     mod = frame.modifiers.new("wire", "WIREFRAME")
     mod.thickness = strut
-    mod.use_even_offset = True
+    mod.use_even_offset = even
     mod.use_boundary = True
     mod.use_replace = True
     apply_modifiers(frame)
@@ -591,6 +672,9 @@ def apply_modifiers(obj):
 # ---------------------------------------------------------------------------------------
 def build_tunnel_2():
     tube_segment("Tunnel", -1.0, 1.0, ribs=(-0.5, 0.0, 0.5), collars=((1.0, 1), (-1.0, -1)))
+    for sx in (1, -1):
+        with variant(anchor_name("AnchorIn", sx, 0), False):
+            tube_cap("Tunnel", sx * 0.95, sx)
 
 
 def build_tunnel_4():
@@ -613,15 +697,36 @@ def build_tunnel_4():
         lathe("Junction_CornerLight", [(r - 0.01, T_FLOOR + 0.03), (r + 0.014, T_FLOOR + 0.03),
                                        (r + 0.014, T_FLOOR + 0.045), (r - 0.01, T_FLOOR + 0.045)], "Light_Cyan", 12,
               (cx, cy, 0), closed=True, arc=arc)
-        rotated(track(lambda: tube_segment("Arm", 0.9, 1.0, collars=((1.0, 1),), ribs=(), deck=False)), k * pi / 2)
+    for k in range(4):
+        a = k * pi / 2
+        name = anchor_name("AnchorIn", cos(a), sin(a))
+        with variant(name, True):
+            rotated(track(lambda: tube_segment("Arm", 0.9, 1.0, collars=((1.0, 1),), ribs=(), deck=False)), a)
+        with variant(name, False):
+            rotated(track(junction_wall), a)
     if not CUT:
         for k in range(2):
             rotated(track(lambda: tube_roof("Junction", -0.9, 0.9, ribs=(-0.56, 0.56))), k * pi / 2)
 
 
+def junction_wall():
+    """Wall closing an unconnected junction arm (along +X)."""
+    box("Junction_Wall", (0.07, 1.2, T_CUT + 0.05), (0.9, 0, (T_CUT - 0.05) / 2), "Hull_White", 0.01)
+    box("Junction_WallCap", (0.1, 1.2, 0.035), (0.9, 0, T_CUT + 0.0175), "Frame_Graphite", 0.01)
+    box("Junction_WallStripe", (0.085, 1.2, 0.1), (0.9, 0, 0.55), "Accent_Orange")
+    box("Junction_WallLight", (0.085, 0.5, 0.02), (0.9, 0, T_FLOOR + 0.05), "Light_Cyan")
+    if not CUT:
+        tc_o = math.asin((T_CUT - T_ZC) / T_RO)
+        extrude_profile("Junction_WallGlass", _arc(T_RO - 0.02, tc_o, pi - tc_o, 16), 0.89, 0.91, "Glass_Teal")
+        extrude_profile("Junction_WallRib", band_profile(T_RO - 0.03, T_RO + 0.03, tc_o, pi - tc_o, 16), 0.87,
+                        0.93, "Frame_Graphite")
+
+
 def build_airlock():
     # Tunnel side (+X, AnchorIn) -> airlock chamber -> apron toward the path (-X, AnchorOut)
     tube_segment("Tunnel", 0.32, 1.0, ribs=(0.62,), collars=((1.0, 1),))
+    with variant(anchor_name("AnchorIn", 1, 0), False):
+        tube_cap("Tunnel", 0.95, 1)
     x0, x1, hw = -0.5, 0.36, 0.72
     h = 1.0 if CUT else 1.25
     xm = (x0 + x1) / 2
@@ -698,17 +803,30 @@ def path_curbs(prefix, x0, x1, studs=()):
             box(f"{prefix}_Stud", (0.05, 0.072, 0.02), (x, s * 0.455, 0.055), "Accent_Orange", 0.005)
 
 
+def path_end_curb(x, length):
+    box("Path_EndCurb", (0.07, length, 0.2), (x, 0, -0.03), "Frame_Graphite", 0.015)
+    box("Path_EndStud", (0.072, 0.12, 0.02), (x, 0, 0.065), "Accent_Orange", 0.005)
+
+
 def build_path_2():
     path_slabs("Path", -1.0, 1.0, 4)
     path_curbs("Path", -1.0, 1.0, studs=(-0.5, 0.5))
+    for sx in (1, -1):
+        with variant(anchor_name("AnchorOut", sx, 0), False):
+            path_end_curb(sx * 0.965, 0.98)
 
 
 def build_path_4():
     box("Path_Center", (0.84, 0.84, 0.16), (0, 0, -0.04), "Concrete", 0.012)
     ring("Path_Marking", 0.22, 0.26, 0.04, 0.045, "Hazard_Yellow", segs=32)
     for k in range(4):
-        rotated(track(lambda: (path_slabs("Arm", 0.42, 1.0, 1), path_curbs("Arm", 0.49, 1.0, studs=(0.75,)))),
-                k * pi / 2)
+        a = k * pi / 2
+        name = anchor_name("AnchorOut", cos(a), sin(a))
+        with variant(name, True):
+            rotated(track(lambda: (path_slabs("Arm", 0.42, 1.0, 1), path_curbs("Arm", 0.49, 1.0, studs=(0.75,)))),
+                    a)
+        with variant(name, False):
+            rotated(track(lambda: path_end_curb(0.455, 0.84)), a)
     for sx in (1, -1):
         for sy in (1, -1):
             box("Path_Corner", (0.07, 0.07, 0.19), (sx * 0.455, sy * 0.455, -0.035), "Frame_Graphite", 0.015)
@@ -745,13 +863,14 @@ def dome(n, subdiv):
     ring("Dome_BaseRing", R - 0.1, R + 0.08, 0.08, 0.24, "Frame_Graphite", segs=96)
     ring("Dome_EdgeLine", rb + 0.05, rb + 0.12, T_FLOOR, T_FLOOR + 0.012, "Accent_Orange", segs=96)
     strut = 0.04 + 0.005 * n
+    doors = [anchor_name("AnchorIn", cos(k * pi / 2) * n, sin(k * pi / 2) * n) for k in range(4)]
     if CUT:
-        geodesic_shell("Dome", R, Rz, DOME_ZCUT, R * 0.8, subdiv, strut)
+        geodesic_shell("Dome", R, Rz, DOME_ZCUT, R * 0.8, subdiv, strut, doors)
         r_top = R * sqrt(1 - (DOME_ZCUT / Rz) ** 2)
         ring("Dome_TopRing", r_top - 0.08, r_top + 0.08, DOME_ZCUT - 0.05, DOME_ZCUT + 0.05, "Accent_Orange",
              segs=96)
     else:
-        geodesic_shell("Dome", R, Rz, Rz + 1.0, R * 0.8, subdiv, strut)
+        geodesic_shell("Dome", R, Rz, Rz + 1.0, R * 0.8, subdiv, strut, doors)
         a = 0.1 * R
         lathe("Dome_Apex", [(0, Rz - 0.1), (a, Rz - 0.1), (a, Rz - 0.03), (a * 0.65, Rz + 0.06), (0, Rz + 0.08)],
               "Hull_White", 24)
@@ -766,7 +885,8 @@ def dome(n, subdiv):
             tube_segment("Dome_Tunnel", x_in, half, ribs=(), collars=((half, 1), (x_in, -1)))
             box("Dome_Walk", (x_in - edge, 0.84, 0.02), ((x_in + edge) / 2, 0, T_FLOOR + 0.01), "Hull_Grey", 0.005)
 
-        rotated(track(door), k * pi / 2)
+        with variant(doors[k], True):
+            rotated(track(door), k * pi / 2)
         a = k * pi / 2 + pi / 4
         lamp_post("Dome_Lamp", (cos(a) * (rb + 0.12), sin(a) * (rb + 0.12)), 0.6)
 
@@ -851,7 +971,19 @@ def build_control_room():
         def door():
             tube_segment("Ctrl_Tunnel", a - 0.05, 3.0, collars=((3.0, 1),), ribs=(), feet=False)
             door_portal("Ctrl_Door", a + t / 2 + 0.02)
-        rotated(track(door), k * pi / 2)
+
+        def filler():
+            m, z0, z1 = a - t / 2, T_FLOOR - 0.02, T_CUT + 0.06
+            box("Ctrl_DoorFill", (t * 0.96, 2 * T_HALF_OPEN + 0.02, z1 - z0), (m, 0, (z0 + z1) / 2), "Hull_White",
+                0.01)
+            box("Ctrl_DoorFillStripe", (0.012, 2 * T_HALF_OPEN + 0.02, 0.1), (m + t / 2 + 0.004, 0, 0.87),
+                "Accent_Orange")
+
+        name = anchor_name("AnchorIn", cos(k * pi / 2) * 3, sin(k * pi / 2) * 3)
+        with variant(name, True):
+            rotated(track(door), k * pi / 2)
+        with variant(name, False):
+            rotated(track(filler), k * pi / 2)
     # Command centre
     lathe("Ctrl_Holo", [(0, T_FLOOR), (0.5, T_FLOOR), (0.5, 0.2), (0.38, 0.32), (0.55, 0.36), (0.55, 0.4),
                         (0, 0.4)], "Hull_White", 40)
@@ -884,6 +1016,7 @@ def build_storage_3x3():
     half = 2.96
     box("Yard_Slab", (2 * half, 2 * half, 0.28), (0, 0, -0.1), "Concrete", 0.04)
     # Painted bay outlines and lanes
+    gates = [anchor_name("AnchorOut", cos(k * pi / 2) * 3, sin(k * pi / 2) * 3) for k in range(4)]
     for k in range(4):
         def lane():
             box("Yard_Lane", (half - 0.5, 0.84, 0.01), ((half + 0.5) / 2, 0, 0.042), "Hull_Grey")
@@ -892,7 +1025,8 @@ def build_storage_3x3():
             for s in (1, -1):
                 box("Yard_LaneLine", (half - 0.5, 0.04, 0.012), ((half + 0.5) / 2, s * 0.44, 0.046),
                     "Hazard_Yellow")
-        rotated(track(lane), k * pi / 2)
+        with variant(gates[k], True):
+            rotated(track(lane), k * pi / 2)
     box("Yard_Center", (1.0, 1.0, 0.01), (0, 0, 0.042), "Hull_Grey")
     ring("Yard_CenterMark", 0.3, 0.36, 0.04, 0.05, "Hazard_Yellow", segs=32)
     # Fence posts along the perimeter, gaps at the lane entrances
@@ -905,10 +1039,26 @@ def build_storage_3x3():
                     0.008)
                 box("Yard_FenceRail", (x1 - x0, 0.03, 0.03), ((x0 + x1) / 2, half - 0.08, 0.26), "Frame_Graphite",
                     0.008)
+
+
+        def gate():
             for x in (-0.9, 0.9):
                 cyl("Yard_GatePost", 0.06, 0.0, 0.7, "Hull_White", (x, half - 0.08), 12, 0.015)
                 cyl("Yard_GateLight", 0.065, 0.7, 0.76, "Accent_Orange", (x, half - 0.08), 12, 0.015)
+
+        def fence_closed():
+            for x in (-0.35, 0.35):
+                cyl("Yard_FencePost", 0.03, 0.0, 0.5, "Frame_Graphite", (x, half - 0.08), 8, 0.008)
+            box("Yard_FenceRail", (1.9, 0.03, 0.03), (0, half - 0.08, 0.46), "Hazard_Yellow", 0.008)
+            box("Yard_FenceRail", (1.9, 0.03, 0.03), (0, half - 0.08, 0.26), "Frame_Graphite", 0.008)
+
+        # Fence k runs along the +Y side rotated by k * 90 degrees, i.e. the side of gate k + 1
+        side = gates[(k + 1) % 4]
         rotated(track(fence), k * pi / 2)
+        with variant(side, True):
+            rotated(track(gate), k * pi / 2)
+        with variant(side, False):
+            rotated(track(fence_closed), k * pi / 2)
     # Bay (+,+): stacked containers
     container("CtrA", (1.75, 1.2, 0.04), 0.0, "Accent_Orange")
     container("CtrB", (1.75, 2.15, 0.04), 0.0, "Hull_White")
@@ -1123,6 +1273,7 @@ def build_water_tank():
 
 def build_water_extractor():
     foundation(2, 2)
+    side_stub("Access", -2, -1, 0.55)
     # Drill rig
     box("WEx_Deck", (1.7, 1.7, 0.12), (-0.9, 0.9, GROUND + 0.06), "Hull_Grey", 0.02)
     lattice_tower("WEx_Derrick", (-0.9, 0.9), 1.3, 0.35, 2.6, 4, "Hazard_Yellow")
@@ -1146,6 +1297,7 @@ def build_water_extractor():
 
 def build_oxygen_generator():
     foundation(2, 2)
+    side_stub("Access", -2, 1, 0.55)
     hy0 = -0.55
     box("O2Gen_Housing", (2.6, 1.6, 0.95), (0, hy0, GROUND + 0.475), "Hull_White", 0.08)
     box("O2Gen_Stripe", (2.62, 1.62, 0.08), (0, hy0, GROUND + 0.72), "Accent_Orange", 0.01)
@@ -1175,6 +1327,22 @@ def build_oxygen_tank():
     box("O2Tank_Valve", (0.18, 0.12, 0.18), (0, -0.42, GROUND + 0.35), "Accent_Orange", 0.02)
 
 
+def pad_stubs(prefix):
+    """Access paths from the octagonal pad edge to each connected side."""
+    for k in range(4):
+        a = k * pi / 2
+        with variant(anchor_name("AnchorOut", cos(a) * 3, sin(a) * 3), True):
+            rotated(track(lambda: path_stub(prefix, 2.55, 2.98, 0.12)), a)
+
+
+def side_stub(prefix, x, y, length):
+    """Access path toward the AnchorOut at (x, y) on the footprint edge (+/-X sides)."""
+    sx = 1 if x > 0 else -1
+    with variant(anchor_name("AnchorOut", x, y), True):
+        for o in track(lambda: path_stub(prefix, 0.0, length, GROUND + 0.03)):
+            o.data.transform(Matrix.Translation((x - sx * 0.02, y, 0)) @ Matrix.Rotation(0 if sx < 0 else pi, 4, "Z"))
+
+
 def build_landing_pad():
     polygon_prism("Pad_Base", 2.95 / cos(pi / 8), 8, -0.25, 0.08, "Concrete", angle0=pi / 8)
     polygon_prism("Pad_Top", 2.6 / cos(pi / 8), 8, 0.08, 0.1, "Hull_Grey", angle0=pi / 8)
@@ -1192,6 +1360,7 @@ def build_landing_pad():
             box("Pad_Hazard", (0.12, 0.3, 0.012), (cos(a) * 2.35, sin(a) * 2.35, 0.106), "Hazard_Yellow",
                 rot_z=a + 0.0)
             PARTS[-1].data.transform(Matrix.Translation((-sin(a) * (i - 2) * 0.3, cos(a) * (i - 2) * 0.3, 0)))
+    pad_stubs("Pad")
     box("Pad_Pump", (0.4, 0.3, 0.6), (1.75, -1.75, 0.4), "Hull_White", 0.04, rot_z=pi / 4)
     box("Pad_PumpBand", (0.41, 0.31, 0.06), (1.75, -1.75, 0.56), "Accent_Orange", 0.01, rot_z=pi / 4)
     box("Pad_PumpScreen", (0.16, 0.02, 0.12), (1.64, -1.86, 0.5), "Light_Cyan", rot_z=pi / 4)
@@ -1236,6 +1405,7 @@ def build_drone_hub():
     cyl("Hub_Mast", 0.03, 1.32, 2.5, "Frame_Graphite", (0.3, -0.3), 8)
     cyl("Hub_Beacon", 0.06, 2.5, 2.6, "Accent_Orange", (0.3, -0.3), 12, 0.02)
     door("Hub", 0.81, 0.0, 0.4, 0.62, 0.08)
+    pad_stubs("Hub")
     for i, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
         x, y = sx * 1.65, sy * 1.65
         cyl("Hub_Pad", 0.45, 0.08, 0.12, "Hull_Grey", (x, y), 32, 0.01)
@@ -1250,6 +1420,7 @@ def build_drone_hub():
 
 def build_fuel_refinery():
     foundation(2, 2)
+    side_stub("Access", 2, -1, 0.25)
     for (x, y, r, h) in ((-1.1, 1.0, 0.34, 2.6), (-0.3, 1.2, 0.28, 2.0)):
         vtank("Ref_Column", (x, y, GROUND), r, h, bands=(0.2, 0.5, 0.8))
         ring("Ref_Platform", r + 0.02, r + 0.18, GROUND + h * 0.62, GROUND + h * 0.62 + 0.04, "Frame_Graphite",
@@ -1270,6 +1441,7 @@ def build_fuel_refinery():
 
 def build_stirling_generator():
     foundation(2, 2)
+    side_stub("Access", 2, -1, 0.5)
     lathe("Stirling_Core", [(0, GROUND), (0.95, GROUND), (0.95, GROUND + 0.3), (0.72, GROUND + 0.36),
                             (0.72, GROUND + 1.7), (0.52, GROUND + 1.95), (0, GROUND + 2.0)], "Hull_White", 40)
     ring("Stirling_Band", 0.94, 0.97, GROUND + 0.22, GROUND + 0.3, "Accent_Orange", segs=40)
@@ -1298,6 +1470,7 @@ def build_sensor_tower():
 
 def build_concrete_extractor():
     foundation(2, 2)
+    side_stub("Access", -2, -1, 0.5)
     for i, (x, y, r, s) in enumerate(((-1.15, 1.1, 0.6, 0.5), (-0.55, 1.45, 0.35, 0.6), (-1.45, 0.45, 0.3, 0.6))):
         ico("Mine_Rocks", r, (x, y, GROUND), "Cargo_Rust" if i % 2 else "Concrete", 1, (1, 1, s), 0.25, i)
     box("Mine_Crusher", (1.2, 1.0, 0.95), (0.9, 0.95, GROUND + 0.475), "Hull_White", 0.05)
@@ -1633,27 +1806,44 @@ def is_glass(obj):
 
 
 def join_parts(name):
-    """Join opaque parts and glass parts separately (glass is kept out of the AO bake)."""
-    opaque = [o for o in PARTS if not is_glass(o)]
-    glass = [o for o in PARTS if is_glass(o)]
-    return join_objects(name, opaque), (join_objects(name + "_Glass", glass) if glass else None)
+    """Join parts per variant group, opaque and glass separately (glass stays out of the AO bake).
+
+    Returns {group: [opaque object or None, glass object or None]}, group "" being the base.
+    """
+    groups = {}
+    for o in PARTS:
+        groups.setdefault(o.get("variant", ""), ([], []))[1 if is_glass(o) else 0].append(o)
+    joined = {}
+    for group, (opaque, glass) in sorted(groups.items()):
+        node = name if group == "" else f"%V%{group}"
+        joined[group] = [join_objects(node, opaque) if opaque else None,
+                         join_objects(node + "_Glass", glass) if glass else None]
+        for o in joined[group]:
+            if o is not None:
+                o["variant"] = group
+    return joined
 
 
-def merge_glass(obj, glass):
-    """Join the glass back into the model, sharing the opaque UV map name (its UVs are unused)."""
+def merge_glass(opaque, glass, node):
+    """Join the glass back into its group object, sharing the UV map name (its UVs are unused)."""
     if glass is None:
-        return obj
-    glass.data.uv_layers.new(name=obj.data.uv_layers.active.name)
-    name = obj.name
-    obj = join_objects(name, [obj, glass])
-    obj.name = name
+        return opaque
+    if opaque is None:
+        glass.data.uv_layers.new(name="UVMap")
+        glass.name = glass.data.name = node
+        return glass
+    glass.data.uv_layers.new(name=opaque.data.uv_layers.active.name)
+    obj = join_objects(node, [opaque, glass])
+    obj.name = node
     return obj
 
 
-def unwrap(obj):
+def unwrap(objs):
+    """Unwrap all objects into one shared UV atlas."""
     bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
+    for o in objs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = objs[0]
     bpy.ops.object.mode_set(mode="EDIT")
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.uv.smart_project(angle_limit=radians(60), island_margin=0.0, area_weight=0.0, scale_to_bounds=False)
@@ -1661,7 +1851,8 @@ def unwrap(obj):
     bpy.ops.object.mode_set(mode="OBJECT")
 
 
-def bake_ao(obj, props, out_png, size, distance, hidden=()):
+def bake_ao(passes, props, out_png, size, distance):
+    """Bake AO into one image. `passes` = [(objects to bake, objects hidden during that pass)]."""
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 96
@@ -1672,19 +1863,24 @@ def bake_ao(obj, props, out_png, size, distance, hidden=()):
     img = bpy.data.images.new(os.path.basename(out_png), size, size, alpha=False)
     img.colorspace_settings.name = "Non-Color"
     nodes = []
-    for mat in obj.data.materials:
+    mats = {m for objs, _ in passes for o in objs for m in o.data.materials}
+    for mat in mats:
         n = mat.node_tree.nodes.new("ShaderNodeTexImage")
         n.image = img
         mat.node_tree.nodes.active = n
         nodes.append((mat, n))
     bpy.ops.mesh.primitive_plane_add(size=200, location=(0, 0, 0.0))
     ground = bpy.context.active_object
-    for p in [*props, *hidden]:
-        p.hide_render = True
-    bpy.ops.object.select_all(action="DESELECT")
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-    bpy.ops.object.bake(type="AO", margin=6, use_clear=True)
+    for i, (objs, hidden) in enumerate(passes):
+        for p in [*props, *hidden]:
+            p.hide_render = True
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in objs:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = objs[0]
+        bpy.ops.object.bake(type="AO", margin=6, use_clear=(i == 0))
+        for p in [*props, *hidden]:
+            p.hide_render = False
     img.filepath_raw = out_png
     img.file_format = "PNG"
     img.save()
@@ -1692,8 +1888,6 @@ def bake_ao(obj, props, out_png, size, distance, hidden=()):
         mat.node_tree.nodes.remove(n)
     bpy.data.objects.remove(ground, do_unlink=True)
     bpy.data.images.remove(img)
-    for p in [*props, *hidden]:
-        p.hide_render = False
 
 
 def export(gltf_path, ao_png):
@@ -1756,17 +1950,26 @@ def build(key, cut=False, bake=True):
         props = []
     else:
         props = make_props(**props_spec)
+    PROPS[:] = props
     spec["build"]()
-    obj, glass = join_parts(spec["name"])
-    unwrap(obj)
+    groups = join_parts(spec["name"])
+    opaque = {g: o for g, (o, _) in groups.items() if o is not None}
+    glass = [gl for _, gl in groups.values() if gl is not None]
+    unwrap(list(opaque.values()))
     ao_png = base + "_ao.png" if bake else None
     if bake:
-        bake_ao(obj, props, ao_png, tex_size, ao_dist, hidden=[glass] if glass else [])
-    obj = merge_glass(obj, glass)
+        # Alternative parts must not occlude each other: bake the "-" parts in a second pass
+        plus = [o for g, o in opaque.items() if not g.endswith("-")]
+        minus = [o for g, o in opaque.items() if g.endswith("-")]
+        passes = [(plus, glass + minus)] + ([(minus, glass + [o for g, o in opaque.items() if g.endswith("+")])]
+                                           if minus else [])
+        bake_ao(passes, props, ao_png, tex_size, ao_dist)
+    objs = [merge_glass(o, gl, spec["name"] if g == "" else f"%V%{g}") for g, (o, gl) in groups.items()]
     export(gltf_path, ao_png)
-    tris = sum(len(p.vertices) - 2 for p in obj.data.polygons)
-    print(f"[build] {key}{'_cut' if cut else ''}: {len(obj.data.vertices)} verts, ~{tris} tris, "
-          f"{len(obj.data.materials)} materials, props={[p.name for p in props]}")
+    verts = sum(len(o.data.vertices) for o in objs)
+    tris = sum(len(p.vertices) - 2 for o in objs for p in o.data.polygons)
+    print(f"[build] {key}{'_cut' if cut else ''}: {verts} verts, ~{tris} tris, "
+          f"variants={sorted(g for g in groups if g)}, props={[p.name for p in props]}")
     bpy.context.preferences.filepaths.save_version = 0
     bpy.ops.wm.save_as_mainfile(filepath=base + ".blend", compress=True)
 
@@ -1839,7 +2042,8 @@ def render_icon(key):
     lo = Vector((1e9,) * 3)
     hi = Vector((-1e9,) * 3)
     for o in list(bpy.context.scene.objects):
-        if o.name.startswith("%P%"):
+        # Icons show the fully connected variant
+        if o.name.startswith("%P%") or (o.name.startswith("%V%") and "-" in o.name[3:].split(".")[-1]):
             bpy.data.objects.remove(o, do_unlink=True)
             continue
         for c in o.bound_box:

@@ -72,6 +72,12 @@ impl GridEntity {
     pub fn footprint(&self) -> &Vec<GridTilePos> {
         &self.footprint
     }
+    /// Converts a local anchor offset (x maps to world X, y to world Z) to a world XZ position,
+    /// following the `Quat::from_rotation_y` rotation used when placing entities.
+    pub fn anchor_world(&self, local: Vec2) -> Vec2 {
+        let (sin, cos) = self.rotation.rotation().sin_cos();
+        self.center + Vec2::new(local.x * cos + local.y * sin, local.y * cos - local.x * sin)
+    }
     /// Gets a reference to the placement configuration entry that describes this entity.
     pub fn entry(&self) -> &PlacementConfigEntry {
         &self.entry

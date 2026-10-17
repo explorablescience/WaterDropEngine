@@ -134,7 +134,7 @@ pub fn handle_over_material(
             };
 
             // Set its material to outline
-            commands.entity(child).insert((
+            commands.entity(child).try_insert((
                 if manager.mode == TerrainPlacementMode::Move {
                     PbrMaterial3d(move_delete_manager.move_material.clone())
                 } else {
@@ -144,7 +144,7 @@ pub fn handle_over_material(
             ));
             commands
                 .entity(child)
-                .remove::<PbrMaterial3d<PbrMaterial>>();
+                .try_remove::<PbrMaterial3d<PbrMaterial>>();
         }
     }
     move_delete_manager.current_hovered_entity = Some(parent);
@@ -217,11 +217,11 @@ fn reset_hovered_entity(
             if let Ok(old_material) = buildings_hover_query.get(child) {
                 commands
                     .entity(child)
-                    .insert(PbrMaterial3d(old_material.0.clone()));
+                    .try_insert(PbrMaterial3d(old_material.0.clone()));
                 commands
                     .entity(child)
-                    .remove::<PbrMaterial3d<OutlineMaterial>>();
-                commands.entity(child).remove::<MaterialStorer>();
+                    .try_remove::<PbrMaterial3d<OutlineMaterial>>();
+                commands.entity(child).try_remove::<MaterialStorer>();
             }
         }
     }

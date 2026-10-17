@@ -6,7 +6,7 @@ use crate::error::GltfError;
 use crate::material::GltfMaterial;
 use crate::model::{
     AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBuffer, GltfMesh, GltfModel,
-    MeshPrimitive
+    MeshPrimitive, ModelCondition
 };
 use base64::{Engine, engine::general_purpose};
 use serde_json::Value;
@@ -345,7 +345,8 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
                     .map(|&idx| idx as u32),
                 translation,
                 rotation,
-                scale
+                scale,
+                condition: ModelCondition::from_node_name(name)
             };
             mesh_primitives.push(mesh_primitive);
         }

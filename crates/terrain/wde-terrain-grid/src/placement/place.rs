@@ -1,8 +1,10 @@
+use std::collections::BTreeSet;
+
 use wde_terrain::TERRAIN_BUILDINGS_COLLIDER_GROUP;
 
 use crate::{
     core::{entries::PlacementConfigEntry, grid::GridEntityEvent},
-    placement::{TerrainCursorPos, cutaway::BuildingVariant}
+    placement::{TerrainCursorPos, connections::connected_anchors, cutaway::BuildingVariant}
 };
 use bevy::prelude::*;
 use wde_editor::prelude::*;
@@ -283,17 +285,34 @@ fn spawn_new_ghost_entity(
     manager: &mut TerrainPlacementManager
 ) {
     manager.place_selected_entry = Some(entry.clone());
+    manager.ghost_connections = None;
 
-    // Get the model to place
-    let model = match gltf_models.get(&entry.asset) {
-        Some(model) => model,
-        None => return // Model not loaded yet, will try again in the next frame
-    };
+    // Not loaded yet: `place_update` spawns the parts once it is
+    if let Some(model) = gltf_models.get(&entry.asset) {
+        let connected = BTreeSet::new();
+        spawn_ghost_parts(
+            commands,
+            entry,
+            model,
+            asset_server,
+            manager.entity,
+            &connected
+        );
+        manager.ghost_connections = Some(connected);
+    }
+}
 
-    // Add the elements as children of the placement entity
+/// Spawns the ghost meshes of `entry` for the given connected anchors.
+fn spawn_ghost_parts(
+    commands: &mut Commands,
+    entry: &PlacementConfigEntry,
+    model: &GltfAsset,
+    asset_server: &AssetServer,
+    parent: Entity,
+    connected: &BTreeSet<String>
+) {
     let children = model
-        .models
-        .iter()
+        .models_where(|anchor| connected.contains(anchor))
         .map(|(mesh, material)| {
             // Create material
             let ok_material = asset_server.add(GhostMaterial {
@@ -329,7 +348,7 @@ fn spawn_new_ghost_entity(
                 .id()
         })
         .collect::<Vec<Entity>>();
-    commands.entity(manager.entity).add_children(&children);
+    commands.entity(parent).add_children(&children);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -343,7 +362,9 @@ pub fn place_update(
     children_query: Query<&Children>,
     mut material_query: Query<(&Mesh3d, &mut GhostMaterialStorer)>,
     gltf_models: Res<Assets<GltfAsset>>,
-    mut grid_entity_events: MessageWriter<GridEntityEvent>
+    mut grid_entity_events: MessageWriter<GridEntityEvent>,
+    asset_server: Res<AssetServer>,
+    placed: Query<&GridEntity, With<BuildingVariant>>
 ) {
     if manager.place_selected_entry.is_none()
         || (manager.mode != TerrainPlacementMode::Place
@@ -376,9 +397,37 @@ pub fn place_update(
             )
         );
 
-        // Check for placement validity and update ghost material accordingly
+        // Preview the variant matching the neighbors at this position
+        let connected = connected_anchors(&grid_entity, placed.iter());
+        let mut respawned = false;
+        if manager.ghost_connections.as_ref() != Some(&connected) {
+            let entry = manager.place_selected_entry.clone().unwrap();
+            if let Some(model) = gltf_models.get(&entry.asset) {
+                commands.entity(manager.entity).despawn_children();
+                spawn_ghost_parts(
+                    &mut commands,
+                    &entry,
+                    model,
+                    &asset_server,
+                    manager.entity,
+                    &connected
+                );
+                manager.ghost_connections = Some(connected);
+                respawned = true;
+            }
+        }
+
+        // Check for placement validity and update ghost material accordingly. Skipped when the
+        // parts were just respawned: `Children` still lists the old, despawned ones this frame.
         let is_valid = grid.is_area_free(&grid_entity);
-        for child in children_query.get(manager.entity).unwrap().iter() {
+        let ghost_parts = match respawned {
+            true => Vec::new(),
+            false => children_query
+                .get(manager.entity)
+                .map(|c| c.iter().collect::<Vec<_>>())
+                .unwrap_or_default()
+        };
+        for child in ghost_parts {
             if let Ok((_, mut material_storer)) = material_query.get_mut(child) {
                 if material_storer.current_validity == is_valid {
                     continue; // No change in validity, skip
@@ -388,7 +437,9 @@ pub fn place_update(
                 } else {
                     material_storer.nok_material.clone()
                 };
-                commands.entity(child).insert(PbrMaterial3d(new_material));
+                commands
+                    .entity(child)
+                    .try_insert(PbrMaterial3d(new_material));
                 material_storer.current_validity = is_valid;
             }
         }
@@ -459,6 +510,7 @@ pub fn place_update(
 fn reset_placement_tool(commands: &mut Commands, manager: &mut TerrainPlacementManager) {
     manager.place_selected_entry_label = None;
     manager.place_selected_entry = None;
+    manager.ghost_connections = None;
     commands
         .entity(manager.entity)
         .insert(Transform::from_translation(Vec3::MIN));

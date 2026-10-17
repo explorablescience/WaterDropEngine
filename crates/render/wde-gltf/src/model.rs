@@ -64,7 +64,34 @@ pub struct MeshPrimitive {
     /// Node rotation as quaternion [x, y, z, w]
     pub rotation: [f32; 4],
     /// Node scale [x, y, z]
-    pub scale: [f32; 3]
+    pub scale: [f32; 3],
+    /// Connection condition, for nodes named `%V%<anchor>+` / `%V%<anchor>-`
+    pub condition: Option<ModelCondition>
+}
+
+/// Makes a mesh conditional on the connection state of a named anchor (`%P%` property).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ModelCondition {
+    /// Anchor property name, e.g. `AnchorIn.001`
+    pub anchor: String,
+    /// Shown when the anchor is connected (`+`), or when it is not (`-`)
+    pub connected: bool
+}
+impl ModelCondition {
+    /// Parses a `%V%<anchor>+` / `%V%<anchor>-` node name.
+    pub fn from_node_name(name: &str) -> Option<Self> {
+        let rest = name.strip_prefix("%V%")?;
+        // Blender suffixes duplicate names with `.001`, after the +/- marker
+        let rest = match rest.rfind(['+', '-']) {
+            Some(i) => &rest[..=i],
+            None => return None
+        };
+        let (anchor, sign) = rest.split_at(rest.len() - 1);
+        Some(Self {
+            anchor: anchor.to_string(),
+            connected: sign == "+"
+        })
+    }
 }
 
 /// Representation of a glTF accessor for accessing buffer data.

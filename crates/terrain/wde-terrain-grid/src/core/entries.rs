@@ -22,10 +22,19 @@ pub struct PlacementConfigEntry {
     /// Optional cutaway variant (open top), shown when [BuildingCutaway](crate::prelude::BuildingCutaway) is enabled.
     pub asset_cut: Option<Handle<GltfAsset>>,
     pub extent: UVec2,
-    pub anchors_in: Vec<Vec2>,
-    pub anchors_out: Vec<Vec2>,
+    /// Tunnel connection points (`%P%AnchorIn*` properties).
+    pub anchors_in: Vec<PlacementAnchor>,
+    /// Path connection points (`%P%AnchorOut*` properties).
+    pub anchors_out: Vec<PlacementAnchor>,
     /// Position in the config file, so entries keep that order whatever their load order.
     order: usize
+}
+
+/// Named connection point of an entry, in local grid space (x maps to world X, y to world Z).
+#[derive(Clone, Debug, Reflect)]
+pub struct PlacementAnchor {
+    pub name: String,
+    pub pos: Vec2
 }
 
 /// Entry waiting for its model to load (its footprint and anchors come from the glTF).
@@ -160,10 +169,14 @@ fn process_pending_entries(
             let mut anchors_in = Vec::new();
             let mut anchors_out = Vec::new();
             for (anchor_name, (pos, _scale)) in properties.iter() {
+                let anchor = PlacementAnchor {
+                    name: anchor_name.clone(),
+                    pos: Vec2::new(pos.x, pos.z)
+                };
                 if anchor_name.starts_with("AnchorIn") {
-                    anchors_in.push(Vec2::new(pos.x, pos.z));
+                    anchors_in.push(anchor);
                 } else if anchor_name.starts_with("AnchorOut") {
-                    anchors_out.push(Vec2::new(pos.x, pos.z));
+                    anchors_out.push(anchor);
                 }
             }
             processed_labels.push(pending.label.clone());

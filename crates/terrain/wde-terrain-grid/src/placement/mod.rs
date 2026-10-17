@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use bevy::prelude::*;
 
 use crate::{
@@ -5,8 +7,10 @@ use crate::{
 };
 use wde_terrain::prelude::*;
 
+pub use connections::{BuildingConnections, connected_anchors};
 pub use cutaway::BuildingCutaway;
 
+mod connections;
 mod cutaway;
 mod move_and_delete;
 mod place;
@@ -26,7 +30,12 @@ impl Plugin for PlacementPlugin {
                     (place::place_update, place::handle_new_entity_to_place).chain(),
                     move_and_delete::handle_over_material,
                     move_and_delete::handle_move_and_delete_update,
-                    (cutaway::toggle_cutaway, cutaway::sync_building_variants).chain()
+                    (
+                        cutaway::toggle_cutaway,
+                        connections::update_connections,
+                        cutaway::sync_building_variants
+                    )
+                        .chain()
                 )
             );
     }
@@ -58,7 +67,9 @@ pub(crate) struct TerrainPlacementManager {
     pub place_selected_entry: Option<PlacementConfigEntry>,
     pub place_selected_entry_label: Option<String>,
     /// Category tab shown in the build menu.
-    pub place_selected_category: Option<String>
+    pub place_selected_category: Option<String>,
+    /// Connected anchors the ghost parts were spawned for (preview of the placed variant).
+    pub ghost_connections: Option<BTreeSet<String>>
 }
 impl TerrainPlacementManager {
     pub fn new(mut commands: Commands) -> Self {
@@ -73,6 +84,7 @@ impl TerrainPlacementManager {
             place_selected_entry: None,
             place_selected_entry_label: None,
             place_selected_category: None,
+            ghost_connections: None,
             new_entry_to_place: None
         }
     }

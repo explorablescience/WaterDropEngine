@@ -29,6 +29,7 @@ pub mod prelude {
     pub use crate::GltfLoader;
     pub use crate::GltfLoaderSettings;
     pub use crate::GltfSpawnQueue;
+    pub use crate::ModelCondition;
 }
 
 mod accessor;
@@ -39,6 +40,7 @@ mod model;
 mod parser;
 
 pub use error::GltfError;
+pub use model::ModelCondition;
 
 pub struct GltfPlugin;
 impl Plugin for GltfPlugin {
@@ -66,11 +68,31 @@ pub struct GltfAsset {
     /// The list of parsed glTF models.
     /// Each model is represented by a mesh and its associated material.
     pub models: Vec<(Handle<Mesh>, Handle<PbrMaterial>)>,
+    /// Connection condition of each entry of [`Self::models`] (`None` = always shown).
+    pub conditions: Vec<Option<ModelCondition>>,
     /// The englobing bounding box of the entire model, computed from the bounding boxes of all meshes.
     pub bbox: MeshBbox,
     /// Named properties (e.g. spawn points) extracted from meshes whose name starts with `%P%`.
     /// These meshes are not added to [`Self::models`]; only their name, position and scale are kept here.
     pub properties: HashMap<String, (Vec3, Vec3)>
+}
+
+impl GltfAsset {
+    /// Models whose connection condition holds, `connected` telling whether an anchor is connected.
+    pub fn models_where(
+        &self,
+        connected: impl Fn(&str) -> bool
+    ) -> impl Iterator<Item = &(Handle<Mesh>, Handle<PbrMaterial>)> {
+        self.models
+            .iter()
+            .zip(self.conditions.iter())
+            .filter(move |(_, condition): &(_, &Option<ModelCondition>)| {
+                condition
+                    .as_ref()
+                    .is_none_or(|c| connected(&c.anchor) == c.connected)
+            })
+            .map(|(model, _)| model)
+    }
 }
 
 /// Options for loading a glTF model.
@@ -112,9 +134,10 @@ impl AssetLoader for GltfAssetLoader {
 
         // Add meshes to the asset server
         let mut models = Vec::new();
+        let mut conditions = Vec::new();
         let mut bbox_min = Vec3::splat(f32::INFINITY);
         let mut bbox_max = Vec3::splat(f32::NEG_INFINITY);
-        for (i, (indices_data, vertices, material_id)) in raw_meshes.iter().enumerate() {
+        for (i, (indices_data, vertices, material_id, condition)) in raw_meshes.iter().enumerate() {
             let label = format!("gltf_mesh_{}", i);
             let (bb_min, bb_max) = bounding_boxes[i];
             let mesh_asset = Mesh {
@@ -132,6 +155,7 @@ impl AssetLoader for GltfAssetLoader {
                 load_context.add_labeled_asset(label.clone(), mesh_asset),
                 materials_handles[*material_id].clone()
             ));
+            conditions.push(condition.clone());
 
             // Update the overall bounding box of the model
             for j in 0..3 {
@@ -147,6 +171,7 @@ impl AssetLoader for GltfAssetLoader {
         Ok(GltfAsset {
             path: path.to_string(),
             models,
+            conditions,
             bbox: MeshBbox {
                 min: bbox_min,
                 max: bbox_max

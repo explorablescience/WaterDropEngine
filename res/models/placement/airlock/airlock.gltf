@@ -12,7 +12,8 @@
         1,
         2,
         3,
-        4
+        4,
+        5
       ]
     }
   ],
@@ -66,6 +67,10 @@
     {
       "mesh": 4,
       "name": "Airlock"
+    },
+    {
+      "mesh": 5,
+      "name": "%V%AnchorIn-"
     }
   ],
   "materials": [
@@ -233,6 +238,23 @@
         "metallicFactor": 0,
         "roughnessFactor": 0.05000000074505806
       }
+    },
+    {
+      "doubleSided": true,
+      "name": "Window_Dark",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.012000000104308128,
+          0.04500000178813934,
+          0.054999999701976776,
+          1
+        ],
+        "metallicFactor": 0.30000001192092896,
+        "roughnessFactor": 0.07999999821186066
+      },
+      "occlusionTexture": {
+        "index": 0
+      }
     }
   ],
   "meshes": [
@@ -375,6 +397,38 @@
           },
           "indices": 49,
           "material": 9
+        }
+      ]
+    },
+    {
+      "name": "%V%AnchorIn-",
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 50,
+            "NORMAL": 51,
+            "TEXCOORD_0": 52
+          },
+          "indices": 53,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 54,
+            "NORMAL": 55,
+            "TEXCOORD_0": 56
+          },
+          "indices": 57,
+          "material": 10
+        },
+        {
+          "attributes": {
+            "POSITION": 58,
+            "NORMAL": 59,
+            "TEXCOORD_0": 60
+          },
+          "indices": 61,
+          "material": 2
         }
       ]
     }
@@ -809,6 +863,108 @@
       "componentType": 5123,
       "count": 1224,
       "type": "SCALAR"
+    },
+    {
+      "bufferView": 50,
+      "componentType": 5126,
+      "count": 124,
+      "max": [
+        0.9800000190734863,
+        1.0800000429153442,
+        0.5797476172447205
+      ],
+      "min": [
+        0.9200000166893005,
+        0.14000000059604645,
+        -0.5797476172447205
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 51,
+      "componentType": 5126,
+      "count": 124,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 52,
+      "componentType": 5126,
+      "count": 124,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 53,
+      "componentType": 5123,
+      "count": 336,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 54,
+      "componentType": 5126,
+      "count": 90,
+      "max": [
+        1,
+        0.6100000143051147,
+        0.10999999940395355
+      ],
+      "min": [
+        0.9800000190734863,
+        0.38999998569488525,
+        -0.10999999940395355
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 55,
+      "componentType": 5126,
+      "count": 90,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 56,
+      "componentType": 5126,
+      "count": 90,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 57,
+      "componentType": 5123,
+      "count": 240,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 58,
+      "componentType": 5126,
+      "count": 176,
+      "max": [
+        1.0099999904632568,
+        0.6449999809265137,
+        0.14499999582767487
+      ],
+      "min": [
+        0.9800000190734863,
+        0.35500001907348633,
+        -0.14499999582767487
+      ],
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 59,
+      "componentType": 5126,
+      "count": 176,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 60,
+      "componentType": 5126,
+      "count": 176,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 61,
+      "componentType": 5123,
+      "count": 480,
+      "type": "SCALAR"
     }
   ],
   "bufferViews": [
@@ -1111,11 +1267,83 @@
       "byteLength": 2448,
       "byteOffset": 362324,
       "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1488,
+      "byteOffset": 364772,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1488,
+      "byteOffset": 366260,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 992,
+      "byteOffset": 367748,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 672,
+      "byteOffset": 368740,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1080,
+      "byteOffset": 369412,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1080,
+      "byteOffset": 370492,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 720,
+      "byteOffset": 371572,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 480,
+      "byteOffset": 372292,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2112,
+      "byteOffset": 372772,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 2112,
+      "byteOffset": 374884,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 1408,
+      "byteOffset": 376996,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteLength": 960,
+      "byteOffset": 378404,
+      "target": 34963
     }
   ],
   "buffers": [
     {
-      "byteLength": 364772,
+      "byteLength": 379364,
       "uri": "airlock.bin"
     }
   ],
