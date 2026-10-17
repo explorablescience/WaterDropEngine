@@ -21,7 +21,7 @@ pub type GridTilePos = (GridChunkPos, GridLocalPos);
 pub enum GridEntityEvent {
     Placed {
         entity: Entity,
-        grid_entity: GridEntity
+        grid_entity: Box<GridEntity>
     },
     Removed {
         entity: Entity

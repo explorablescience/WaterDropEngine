@@ -5,6 +5,9 @@ use crate::{
 };
 use wde_terrain::prelude::*;
 
+pub use cutaway::BuildingCutaway;
+
+mod cutaway;
 mod move_and_delete;
 mod place;
 mod ui;
@@ -14,6 +17,7 @@ impl Plugin for PlacementPlugin {
     fn build(&self, app: &mut App) {
         let manager = TerrainPlacementManager::new(app.world_mut().commands());
         app.insert_resource(manager)
+            .init_resource::<BuildingCutaway>()
             .add_systems(Startup, set_parent)
             .add_systems(
                 Update,
@@ -21,7 +25,8 @@ impl Plugin for PlacementPlugin {
                     ui::show_ui,
                     (place::place_update, place::handle_new_entity_to_place).chain(),
                     move_and_delete::handle_over_material,
-                    move_and_delete::handle_move_and_delete_update
+                    move_and_delete::handle_move_and_delete_update,
+                    (cutaway::toggle_cutaway, cutaway::sync_building_variants).chain()
                 )
             );
     }
@@ -35,6 +40,7 @@ impl Plugin for PlacementPlugin {
 
 #[derive(Default, Clone, PartialEq, Eq)]
 pub(crate) enum TerrainPlacementMode {
+    /// Placement window closed, no tool active.
     #[default]
     None,
     Place,
@@ -50,7 +56,9 @@ pub(crate) struct TerrainPlacementManager {
     pub new_entry_to_place: Option<PlacementConfigEntry>,
 
     pub place_selected_entry: Option<PlacementConfigEntry>,
-    pub place_selected_entry_label: Option<String>
+    pub place_selected_entry_label: Option<String>,
+    /// Category tab shown in the build menu.
+    pub place_selected_category: Option<String>
 }
 impl TerrainPlacementManager {
     pub fn new(mut commands: Commands) -> Self {
@@ -64,6 +72,7 @@ impl TerrainPlacementManager {
                 .id(),
             place_selected_entry: None,
             place_selected_entry_label: None,
+            place_selected_category: None,
             new_entry_to_place: None
         }
     }

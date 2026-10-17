@@ -1,7 +1,9 @@
 use wde_logger::prelude::*;
 
 use bevy::prelude::*;
+use wde_editor::prelude::*;
 use wde_gltf::prelude::*;
+use wde_renderer::prelude::*;
 use wde_scene::prelude::*;
 
 const PLACEMENT_CONFIG_VERSION: u32 = 1;
@@ -11,18 +13,40 @@ const PLACEMENT_CONFIG_PATH: &str = "core/config/placement.json";
 #[derive(Clone, Debug, Reflect)]
 pub struct PlacementConfigEntry {
     pub label: String,
+    /// Menu category, in the order categories first appear in the config.
+    pub category: String,
+    pub description: String,
+    /// Menu icon, registered in [UITextures].
+    pub icon: Option<Handle<Texture>>,
     pub asset: Handle<GltfAsset>,
+    /// Optional cutaway variant (open top), shown when [BuildingCutaway](crate::prelude::BuildingCutaway) is enabled.
+    pub asset_cut: Option<Handle<GltfAsset>>,
     pub extent: UVec2,
     pub anchors_in: Vec<Vec2>,
-    pub anchors_out: Vec<Vec2>
+    pub anchors_out: Vec<Vec2>,
+    /// Position in the config file, so entries keep that order whatever their load order.
+    order: usize
+}
+
+/// Entry waiting for its model to load (its footprint and anchors come from the glTF).
+struct PendingEntry {
+    order: usize,
+    label: String,
+    category: String,
+    description: String,
+    icon: Option<Handle<Texture>>,
+    asset: Handle<GltfAsset>,
+    asset_cut: Option<Handle<GltfAsset>>
 }
 
 /// Configuration for the placement of entities in the terrain grid.
 #[derive(Resource, Default)]
 pub struct PlacementConfig {
-    pending_entries: Vec<(String, Handle<GltfAsset>)>,
+    pending_entries: Vec<PendingEntry>,
     pub labels: Vec<String>,
-    pub entries: Vec<PlacementConfigEntry>
+    pub entries: Vec<PlacementConfigEntry>,
+    /// Categories in config order.
+    pub categories: Vec<String>
 }
 
 pub struct PlacementPlugin;
@@ -36,7 +60,8 @@ impl Plugin for PlacementPlugin {
 
 fn read_placement_file(
     asset_server: Res<AssetServer>,
-    mut placement_config_struct: ResMut<PlacementConfig>
+    mut placement_config_struct: ResMut<PlacementConfig>,
+    mut ui_textures: Option<ResMut<UITextures>>
 ) {
     // Load placement configuration file
     let placement_config = match serialize::parse_file(PLACEMENT_CONFIG_PATH) {
@@ -63,7 +88,8 @@ fn read_placement_file(
     // Load entities
     let config_entities = placement_config["entities"].as_array();
     let mut entries = Vec::new();
-    for entity in config_entities.unwrap_or(&vec![]) {
+    let mut categories: Vec<String> = Vec::new();
+    for (order, entity) in config_entities.unwrap_or(&vec![]).iter().enumerate() {
         // Parse entity configuration
         let (label, model_path) = match (entity["label"].as_str(), entity["model"].as_str()) {
             (Some(label), Some(model_path)) => (label.to_string(), model_path.to_string()),
@@ -75,9 +101,35 @@ fn read_placement_file(
                 continue;
             }
         };
-        entries.push((label.clone(), asset_server.load(&model_path)));
+        let asset_cut = entity["model_cut"]
+            .as_str()
+            .map(|path| asset_server.load(path.to_string()));
+        let category = entity["category"].as_str().unwrap_or("Other").to_string();
+        if !categories.contains(&category) {
+            categories.push(category.clone());
+        }
+        let icon = entity["icon"].as_str().map(|path| {
+            let icon: Handle<Texture> = asset_server.load(path.to_string());
+            if let Some(ui_textures) = ui_textures.as_mut() {
+                ui_textures.register_texture(icon.clone());
+            }
+            icon
+        });
+        entries.push(PendingEntry {
+            order,
+            label,
+            category,
+            description: entity["description"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string(),
+            icon,
+            asset: asset_server.load(&model_path),
+            asset_cut
+        });
     }
     placement_config_struct.pending_entries = entries;
+    placement_config_struct.categories = categories;
 }
 
 fn process_pending_entries(
@@ -90,8 +142,8 @@ fn process_pending_entries(
     let mut processed_entries = Vec::new();
     let mut processed_labels = Vec::new();
     let mut retry_entries = Vec::new();
-    for (label, asset_handle) in placement_config_struct.pending_entries.drain(..) {
-        if let Some(gltf_asset) = gltf_assets.get(&asset_handle) {
+    for pending in placement_config_struct.pending_entries.drain(..) {
+        if let Some(gltf_asset) = gltf_assets.get(&pending.asset) {
             let properties = &gltf_asset.properties;
             let extent = match properties.get("Footprint") {
                 Some((_pos, scale)) => {
@@ -100,7 +152,7 @@ fn process_pending_entries(
                 None => {
                     error!(
                         "Extent not specified for label '{}', defaulting to (1, 1).",
-                        label
+                        pending.label
                     );
                     UVec2::new(1, 1)
                 }
@@ -114,19 +166,25 @@ fn process_pending_entries(
                     anchors_out.push(Vec2::new(pos.x, pos.z));
                 }
             }
+            processed_labels.push(pending.label.clone());
             processed_entries.push(PlacementConfigEntry {
-                label: label.clone(),
-                asset: asset_handle.clone(),
+                label: pending.label,
+                category: pending.category,
+                description: pending.description,
+                icon: pending.icon,
+                asset: pending.asset,
+                asset_cut: pending.asset_cut,
                 extent,
                 anchors_in,
-                anchors_out
+                anchors_out,
+                order: pending.order
             });
-            processed_labels.push(label);
         } else {
-            retry_entries.push((label, asset_handle));
+            retry_entries.push(pending);
         }
     }
     placement_config_struct.entries.extend(processed_entries);
+    placement_config_struct.entries.sort_by_key(|e| e.order);
     placement_config_struct.labels.extend(processed_labels);
     placement_config_struct.pending_entries = retry_entries;
 }

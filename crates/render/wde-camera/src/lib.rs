@@ -33,7 +33,7 @@ use crate::camera::CameraFeature;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::camera::{ActiveCamera, Camera, CameraBinding};
+    pub use crate::camera::{ActiveCamera, Camera, CameraBinding, CameraRender};
     pub use crate::transform::TransformUniform;
     pub use crate::view::CameraView;
 }

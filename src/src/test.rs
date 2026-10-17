@@ -119,11 +119,7 @@ fn init_scene(
         let parent = commands
             .spawn((
                 Name::new(format!("Human {}", i)),
-                Transform::from_scale(Vec3::splat(2.0)).with_translation(Vec3::new(
-                    i as f32 * 1.0,
-                    0.0,
-                    0.0
-                )),
+                Transform::from_translation(Vec3::new(i as f32 * 1.0, 0.0, 0.0)),
                 PendingHumanCollider(gltf_asset.clone()),
                 EntityMarker,
                 ChildOf(global_parent)

@@ -65,8 +65,10 @@ impl RenderSubPassTerrainGrid {
         mut pass_render: ResMut<RenderSubPassTerrainGrid>
     ) {
         pass_render.mesh = pass_main.mesh.clone();
-        pass_render.render_grid =
-            placement_ui.mode == crate::placement::TerrainPlacementMode::Place;
+        // Only while a building is being placed (its ghost follows the cursor)
+        pass_render.render_grid = placement_ui.mode
+            == crate::placement::TerrainPlacementMode::Place
+            && placement_ui.place_selected_entry.is_some();
     }
 }
 impl RenderSubPass for RenderSubPassTerrainGrid {

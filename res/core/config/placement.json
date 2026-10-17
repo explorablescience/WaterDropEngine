@@ -6,42 +6,167 @@
     "description": "Configuration of the placement of entities in the terrain grid.",
     "data": {
         "version": 1,
-        "entities" : [
+        "entities": [
             {
                 "label": "Dome Small",
-                "model": "models/placement/dome/dome_3x3.gltf"
+                "category": "Habitat",
+                "description": "Pressurized dome with 9 module slots.",
+                "icon": "core/icons/buildings/dome_5x5.png",
+                "model": "models/placement/dome/dome_5x5.gltf",
+                "model_cut": "models/placement/dome/dome_5x5_cut.gltf"
+            },
+            {
+                "label": "Dome Medium",
+                "category": "Habitat",
+                "description": "Pressurized dome with 21 module slots.",
+                "icon": "core/icons/buildings/dome_7x7.png",
+                "model": "models/placement/dome/dome_7x7.gltf",
+                "model_cut": "models/placement/dome/dome_7x7_cut.gltf"
             },
             {
                 "label": "Dome Large",
-                "model": "models/placement/dome/dome_5x5.gltf"
+                "category": "Habitat",
+                "description": "Pressurized dome with 37 module slots.",
+                "icon": "core/icons/buildings/dome_9x9.png",
+                "model": "models/placement/dome/dome_9x9.gltf",
+                "model_cut": "models/placement/dome/dome_9x9_cut.gltf"
+            },
+            {
+                "label": "Control Room",
+                "category": "Habitat",
+                "description": "Colony command center, connects tunnels on all sides.",
+                "icon": "core/icons/buildings/control_room.png",
+                "model": "models/placement/control_room/control_room.gltf",
+                "model_cut": "models/placement/control_room/control_room_cut.gltf"
             },
             {
                 "label": "Tunnel Straight",
-                "model": "models/placement/tunnel/tunnel_2.gltf"
+                "category": "Network",
+                "description": "Pressurized walkway between buildings.",
+                "icon": "core/icons/buildings/tunnel_2.png",
+                "model": "models/placement/tunnel/tunnel_2.gltf",
+                "model_cut": "models/placement/tunnel/tunnel_2_cut.gltf"
             },
             {
                 "label": "Tunnel Intersection",
-                "model": "models/placement/tunnel/tunnel_4.gltf"
+                "category": "Network",
+                "description": "Four-way pressurized junction.",
+                "icon": "core/icons/buildings/tunnel_4.png",
+                "model": "models/placement/tunnel/tunnel_4.gltf",
+                "model_cut": "models/placement/tunnel/tunnel_4_cut.gltf"
             },
             {
                 "label": "Airlock",
-                "model": "models/placement/airlock/airlock.gltf"
+                "category": "Network",
+                "description": "Exit from the tunnel network to the outside paths.",
+                "icon": "core/icons/buildings/airlock.png",
+                "model": "models/placement/airlock/airlock.gltf",
+                "model_cut": "models/placement/airlock/airlock_cut.gltf"
             },
             {
                 "label": "Path Straight",
+                "category": "Network",
+                "description": "Paved outdoor path for rovers and suited colonists.",
+                "icon": "core/icons/buildings/path_2.png",
                 "model": "models/placement/path/path_2.gltf"
             },
             {
                 "label": "Path Intersection",
+                "category": "Network",
+                "description": "Four-way outdoor path crossing.",
+                "icon": "core/icons/buildings/path_4.png",
                 "model": "models/placement/path/path_4.gltf"
             },
             {
+                "label": "Solar Array",
+                "category": "Power",
+                "description": "Tracking solar panels. Produces power during the day.",
+                "icon": "core/icons/buildings/solar_array_2x2.png",
+                "model": "models/placement/power/solar_array_2x2.gltf"
+            },
+            {
+                "label": "Stirling Generator",
+                "category": "Power",
+                "description": "Radioisotope generator. Steady power, day and night.",
+                "icon": "core/icons/buildings/stirling_generator_2x2.png",
+                "model": "models/placement/power/stirling_generator_2x2.gltf"
+            },
+            {
+                "label": "Battery",
+                "category": "Power",
+                "description": "Stores surplus power for the night.",
+                "icon": "core/icons/buildings/battery_1x1.png",
+                "model": "models/placement/power/battery_1x1.gltf"
+            },
+            {
+                "label": "Water Extractor",
+                "category": "Life Support",
+                "description": "Drills and melts subsurface ice.",
+                "icon": "core/icons/buildings/water_extractor_2x2.png",
+                "model": "models/placement/water/water_extractor_2x2.gltf"
+            },
+            {
+                "label": "Water Tank",
+                "category": "Life Support",
+                "description": "Stores water for the colony.",
+                "icon": "core/icons/buildings/water_tank_1x1.png",
+                "model": "models/placement/water/water_tank_1x1.gltf"
+            },
+            {
+                "label": "Oxygen Generator",
+                "category": "Life Support",
+                "description": "Extracts oxygen from the CO2 atmosphere.",
+                "icon": "core/icons/buildings/oxygen_generator_2x2.png",
+                "model": "models/placement/oxygen/oxygen_generator_2x2.gltf"
+            },
+            {
+                "label": "Oxygen Tank",
+                "category": "Life Support",
+                "description": "Stores breathable oxygen.",
+                "icon": "core/icons/buildings/oxygen_tank_1x1.png",
+                "model": "models/placement/oxygen/oxygen_tank_1x1.gltf"
+            },
+            {
+                "label": "Concrete Extractor",
+                "category": "Industry",
+                "description": "Mines and crushes regolith into concrete.",
+                "icon": "core/icons/buildings/concrete_extractor_2x2.png",
+                "model": "models/placement/industry/concrete_extractor_2x2.gltf"
+            },
+            {
+                "label": "Fuel Refinery",
+                "category": "Industry",
+                "description": "Produces rocket fuel from water and CO2.",
+                "icon": "core/icons/buildings/fuel_refinery_2x2.png",
+                "model": "models/placement/industry/fuel_refinery_2x2.gltf"
+            },
+            {
                 "label": "Storage",
+                "category": "Industry",
+                "description": "Open yard for containers, crates and tanks.",
+                "icon": "core/icons/buildings/storage_3x3.png",
                 "model": "models/placement/storage/storage_3x3.gltf"
             },
             {
-                "label": "Control Room",
-                "model": "models/placement/control_room/control_room.gltf"
+                "label": "Landing Pad",
+                "category": "Logistics",
+                "description": "Landing site for supply rockets.",
+                "icon": "core/icons/buildings/landing_pad_3x3.png",
+                "model": "models/placement/logistics/landing_pad_3x3.gltf"
+            },
+            {
+                "label": "Drone Hub",
+                "category": "Logistics",
+                "description": "Base for construction and maintenance drones.",
+                "icon": "core/icons/buildings/drone_hub_3x3.png",
+                "model": "models/placement/logistics/drone_hub_3x3.gltf"
+            },
+            {
+                "label": "Sensor Tower",
+                "category": "Logistics",
+                "description": "Scans the surroundings and relays communications.",
+                "icon": "core/icons/buildings/sensor_tower_1x1.png",
+                "model": "models/placement/logistics/sensor_tower_1x1.gltf"
             }
         ]
     }
