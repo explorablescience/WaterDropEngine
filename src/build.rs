@@ -8,7 +8,7 @@ use fs_extra::dir::CopyOptions;
 
 fn main() -> Result<()> {
     // This tells cargo to rerun this script if something in /res/ changes.
-    println!("cargo:rerun-if-changed=./res/*");
+    println!("cargo:rerun-if-changed=../res");
 
     // Copy the /res/ folder to the output directory.
     let mut copyOptions = CopyOptions::new();
