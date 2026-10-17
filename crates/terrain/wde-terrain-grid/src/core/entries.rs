@@ -16,6 +16,8 @@ pub struct PlacementConfigEntry {
     /// Menu category, in the order categories first appear in the config.
     pub category: String,
     pub description: String,
+    /// Network (e.g. `tunnel`, `path`) this piece belongs to, drawn with the line tool.
+    pub network: Option<NetworkPiece>,
     /// Menu icon, registered in [UITextures].
     pub icon: Option<Handle<Texture>>,
     pub asset: Handle<GltfAsset>,
@@ -28,6 +30,15 @@ pub struct PlacementConfigEntry {
     pub anchors_out: Vec<PlacementAnchor>,
     /// Position in the config file, so entries keep that order whatever their load order.
     order: usize
+}
+
+/// Role of a piece in a network drawn by the line tool.
+#[derive(Clone, Debug, Reflect)]
+pub struct NetworkPiece {
+    /// Network name, shared by its straight and junction pieces.
+    pub name: String,
+    /// Junction (4 connections) or straight piece (2 connections along local X).
+    pub junction: bool
 }
 
 /// Named connection point of an entry, in local grid space (x maps to world X, y to world Z).
@@ -43,6 +54,7 @@ struct PendingEntry {
     label: String,
     category: String,
     description: String,
+    network: Option<NetworkPiece>,
     icon: Option<Handle<Texture>>,
     asset: Handle<GltfAsset>,
     asset_cut: Option<Handle<GltfAsset>>
@@ -132,6 +144,10 @@ fn read_placement_file(
                 .as_str()
                 .unwrap_or_default()
                 .to_string(),
+            network: entity["network"].as_str().map(|name| NetworkPiece {
+                name: name.to_string(),
+                junction: entity["piece"].as_str() == Some("junction")
+            }),
             icon,
             asset: asset_server.load(&model_path),
             asset_cut
@@ -184,6 +200,7 @@ fn process_pending_entries(
                 label: pending.label,
                 category: pending.category,
                 description: pending.description,
+                network: pending.network,
                 icon: pending.icon,
                 asset: pending.asset,
                 asset_cut: pending.asset_cut,

@@ -12,6 +12,7 @@ pub use cutaway::BuildingCutaway;
 
 mod connections;
 mod cutaway;
+mod line_tool;
 mod move_and_delete;
 mod place;
 mod ui;
@@ -30,6 +31,7 @@ impl Plugin for PlacementPlugin {
                     (place::place_update, place::handle_new_entity_to_place).chain(),
                     move_and_delete::handle_over_material,
                     move_and_delete::handle_move_and_delete_update,
+                    line_tool::line_tool_update,
                     (
                         cutaway::toggle_cutaway,
                         connections::update_connections,
@@ -69,7 +71,12 @@ pub(crate) struct TerrainPlacementManager {
     /// Category tab shown in the build menu.
     pub place_selected_category: Option<String>,
     /// Connected anchors the ghost parts were spawned for (preview of the placed variant).
-    pub ghost_connections: Option<BTreeSet<String>>
+    pub ghost_connections: Option<BTreeSet<String>>,
+    /// Network drawn by the line tool, instead of placing a single building.
+    pub line_network: Option<String>,
+    pub line_tool: line_tool::LineToolState,
+    /// Parent of the line tool preview ghosts.
+    pub line_preview_root: Entity
 }
 impl TerrainPlacementManager {
     pub fn new(mut commands: Commands) -> Self {
@@ -85,6 +92,11 @@ impl TerrainPlacementManager {
             place_selected_entry_label: None,
             place_selected_category: None,
             ghost_connections: None,
+            line_network: None,
+            line_tool: Default::default(),
+            line_preview_root: commands
+                .spawn((Name::new("Terrain Line Tool Preview"), Transform::default()))
+                .id(),
             new_entry_to_place: None
         }
     }

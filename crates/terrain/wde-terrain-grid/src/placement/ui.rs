@@ -110,6 +110,7 @@ fn reset_tool(
     manager.place_selected_entry_label = None;
     manager.place_selected_entry = None;
     manager.ghost_connections = None;
+    manager.line_network = None;
     commands
         .entity(manager.entity)
         .insert(Transform::from_translation(Vec3::MIN));

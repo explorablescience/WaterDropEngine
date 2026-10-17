@@ -45,7 +45,9 @@
                 "description": "Pressurized walkway between buildings.",
                 "icon": "core/icons/buildings/tunnel_2.png",
                 "model": "models/placement/tunnel/tunnel_2.gltf",
-                "model_cut": "models/placement/tunnel/tunnel_2_cut.gltf"
+                "model_cut": "models/placement/tunnel/tunnel_2_cut.gltf",
+                "network": "tunnel",
+                "piece": "straight"
             },
             {
                 "label": "Tunnel Intersection",
@@ -53,7 +55,9 @@
                 "description": "Four-way pressurized junction.",
                 "icon": "core/icons/buildings/tunnel_4.png",
                 "model": "models/placement/tunnel/tunnel_4.gltf",
-                "model_cut": "models/placement/tunnel/tunnel_4_cut.gltf"
+                "model_cut": "models/placement/tunnel/tunnel_4_cut.gltf",
+                "network": "tunnel",
+                "piece": "junction"
             },
             {
                 "label": "Airlock",
@@ -68,14 +72,18 @@
                 "category": "Network",
                 "description": "Paved outdoor path for rovers and suited colonists.",
                 "icon": "core/icons/buildings/path_2.png",
-                "model": "models/placement/path/path_2.gltf"
+                "model": "models/placement/path/path_2.gltf",
+                "network": "path",
+                "piece": "straight"
             },
             {
                 "label": "Path Intersection",
                 "category": "Network",
                 "description": "Four-way outdoor path crossing.",
                 "icon": "core/icons/buildings/path_4.png",
-                "model": "models/placement/path/path_4.gltf"
+                "model": "models/placement/path/path_4.gltf",
+                "network": "path",
+                "piece": "junction"
             },
             {
                 "label": "Solar Array",

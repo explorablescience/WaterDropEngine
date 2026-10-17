@@ -53,7 +53,12 @@ pub fn ui_place_entity(
         .clone();
     ui.horizontal_wrapped(|ui| {
         for cat in config.categories.iter() {
-            let count = config.entries.iter().filter(|e| &e.category == cat).count();
+            // One card per building, and one per network (its pieces are drawn, not placed)
+            let count = config
+                .entries
+                .iter()
+                .filter(|e| &e.category == cat && e.network.as_ref().is_none_or(|n| !n.junction))
+                .count();
             let tab = egui::Button::new(format!("{cat}  {count}"))
                 .selected(*cat == category)
                 .min_size(egui::vec2(0.0, 22.0));
@@ -64,6 +69,19 @@ pub fn ui_place_entity(
     });
     ui.add_space(4.0);
 
+    // Networks of this category, drawn with the line tool instead of placed piece by piece
+    let mut networks: Vec<&PlacementConfigEntry> = Vec::new();
+    for entry in config.entries.iter().filter(|e| e.category == category) {
+        if let Some(network) = &entry.network
+            && !network.junction
+            && !networks
+                .iter()
+                .any(|n| n.network.as_ref().map(|n| &n.name) == Some(&network.name))
+        {
+            networks.push(entry);
+        }
+    }
+
     // Building cards
     let old_label = manager.place_selected_entry_label.clone();
     egui::ScrollArea::vertical()
@@ -72,24 +90,53 @@ pub fn ui_place_entity(
         .show(ui, |ui| {
             ui.horizontal_wrapped(|ui| {
                 ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
-                for entry in config.entries.iter().filter(|e| e.category == category) {
-                    let icon = entry
+                let icon_of = |entry: &PlacementConfigEntry| {
+                    entry
                         .icon
                         .as_ref()
                         .zip(ui_textures)
-                        .and_then(|(icon, textures)| textures.get_texture_index(icon.id()));
+                        .and_then(|(icon, textures)| textures.get_texture_index(icon.id()))
+                };
+                for straight in &networks {
+                    let network = straight.network.as_ref().unwrap().name.clone();
+                    let active = manager.line_network.as_ref() == Some(&network);
+                    let label = format!("{}s", capitalize(&network));
+                    let response = building_card(ui, &label, "draw", icon_of(straight), active)
+                        .on_hover_ui(|ui| {
+                            ui.set_max_width(240.0);
+                            ui.strong(&label);
+                            ui.label(format!(
+                                "Drag on the terrain to lay {network}s. Straights, corners and \
+                                 junctions are chosen automatically, and existing {network}s \
+                                 are joined."
+                            ));
+                        });
+                    if response.clicked() {
+                        manager.line_network = (!active).then_some(network);
+                        manager.place_selected_entry_label = None;
+                    }
+                }
+                for entry in config
+                    .entries
+                    .iter()
+                    .filter(|e| e.category == category && e.network.is_none())
+                {
                     let selected = old_label.as_deref() == Some(entry.label.as_str());
-                    let response = building_card(ui, entry, icon, selected)
-                        .on_hover_ui(|ui| building_tooltip(ui, entry));
+                    let badge = format!("{}×{}", entry.extent.x, entry.extent.y);
+                    let response =
+                        building_card(ui, &entry.label, &badge, icon_of(entry), selected)
+                            .on_hover_ui(|ui| building_tooltip(ui, entry));
                     if response.clicked() {
                         manager.place_selected_entry_label =
                             (!selected).then(|| entry.label.clone());
+                        manager.line_network = None;
                     }
                 }
             });
         });
     if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
         manager.place_selected_entry_label = None;
+        manager.line_network = None;
     }
 
     // Selection summary
@@ -115,8 +162,20 @@ pub fn ui_place_entity(
                 .weak()
             );
         }
-        None => {
-            ui.label(egui::RichText::new("Select a building to place.").weak());
+        None => match &manager.line_network {
+            Some(network) => {
+                ui.strong(format!("Drawing {network}s"));
+                ui.label(
+                    egui::RichText::new(
+                        "Drag: draw a line   •   Right click: cancel the line   •   Esc: stop"
+                    )
+                    .small()
+                    .weak()
+                );
+            }
+            None => {
+                ui.label(egui::RichText::new("Select a building to place.").weak());
+            }
         }
     }
 
@@ -137,10 +196,19 @@ pub fn ui_place_entity(
     }
 }
 
-/// Clickable card with the building icon, name and footprint.
+fn capitalize(s: &str) -> String {
+    let mut chars = s.chars();
+    chars
+        .next()
+        .map(|c| c.to_uppercase().chain(chars).collect())
+        .unwrap_or_default()
+}
+
+/// Clickable card with an icon, a name and a small badge (e.g. the footprint).
 fn building_card(
     ui: &mut ui::egui::Ui,
-    entry: &PlacementConfigEntry,
+    label: &str,
+    badge: &str,
     icon: Option<ui::egui::TextureId>,
     selected: bool
 ) -> ui::egui::Response {
@@ -174,7 +242,7 @@ fn building_card(
             );
         }
         None => {
-            let initial = entry.label.chars().next().unwrap_or('?').to_string();
+            let initial = label.chars().next().unwrap_or('?').to_string();
             painter.text(
                 icon_rect.center(),
                 egui::Align2::CENTER_CENTER,
@@ -187,7 +255,7 @@ fn building_card(
 
     // Footprint badge
     let badge = painter.layout_no_wrap(
-        format!("{}×{}", entry.extent.x, entry.extent.y),
+        badge.to_string(),
         egui::FontId::monospace(10.0),
         ui.visuals().weak_text_color()
     );
@@ -204,7 +272,7 @@ fn building_card(
 
     // Name, centered and wrapped on two lines at most
     let mut job = egui::text::LayoutJob::simple(
-        entry.label.clone(),
+        label.to_string(),
         egui::FontId::proportional(12.0),
         visuals.text_color(),
         rect.width() - 8.0
@@ -296,41 +364,47 @@ fn spawn_new_ghost_entity(
             model,
             asset_server,
             manager.entity,
-            &connected
+            &connected,
+            true
         );
         manager.ghost_connections = Some(connected);
     }
 }
 
 /// Spawns the ghost meshes of `entry` for the given connected anchors.
-fn spawn_ghost_parts(
+pub(crate) fn spawn_ghost_parts(
     commands: &mut Commands,
     entry: &PlacementConfigEntry,
     model: &GltfAsset,
     asset_server: &AssetServer,
     parent: Entity,
-    connected: &BTreeSet<String>
+    connected: &BTreeSet<String>,
+    valid: bool
 ) {
     let children = model
         .models_where(|anchor| connected.contains(anchor))
         .map(|(mesh, material)| {
             // Create material
             let ok_material = asset_server.add(GhostMaterial {
-                overlay: Color::LinearRgba(0.8, 0.8, 0.8, 0.1),
-                desaturate: 0.8,
-                rim_power: 3.0,
-                rim_strength: 0.01,
+                overlay: Color::LinearRgba(0.35, 0.85, 1.0, 0.35),
+                desaturate: 0.7,
+                rim_power: 2.5,
+                rim_strength: 1.0,
                 pbr_material: Some(material.clone()),
                 ..Default::default()
             });
             let nok_material = asset_server.add(GhostMaterial {
-                overlay: Color::LinearRgba(1.0, 0.0, 0.0, 0.16),
-                desaturate: 0.6,
-                rim_power: 3.0,
-                rim_strength: 0.01,
+                overlay: Color::LinearRgba(1.0, 0.18, 0.12, 0.42),
+                desaturate: 0.85,
+                rim_power: 2.5,
+                rim_strength: 1.2,
                 pbr_material: Some(material.clone()),
                 ..Default::default()
             });
+            let initial = match valid {
+                true => ok_material.clone(),
+                false => nok_material.clone()
+            };
 
             // Spawn entity
             commands
@@ -338,11 +412,11 @@ fn spawn_ghost_parts(
                     Name::new(format!("Placement Entity - {}", entry.label)),
                     Transform::default(),
                     Mesh3d(mesh.clone()),
-                    PbrMaterial3d(ok_material.clone()),
+                    PbrMaterial3d(initial),
                     GhostMaterialStorer {
                         ok_material,
                         nok_material,
-                        current_validity: true
+                        current_validity: valid
                     }
                 ))
                 .id()
@@ -398,6 +472,7 @@ pub fn place_update(
         );
 
         // Preview the variant matching the neighbors at this position
+        let is_valid = grid.is_area_free(&grid_entity);
         let connected = connected_anchors(&grid_entity, placed.iter());
         let mut respawned = false;
         if manager.ghost_connections.as_ref() != Some(&connected) {
@@ -410,7 +485,8 @@ pub fn place_update(
                     model,
                     &asset_server,
                     manager.entity,
-                    &connected
+                    &connected,
+                    is_valid
                 );
                 manager.ghost_connections = Some(connected);
                 respawned = true;
@@ -419,7 +495,6 @@ pub fn place_update(
 
         // Check for placement validity and update ghost material accordingly. Skipped when the
         // parts were just respawned: `Children` still lists the old, despawned ones this frame.
-        let is_valid = grid.is_area_free(&grid_entity);
         let ghost_parts = match respawned {
             true => Vec::new(),
             false => children_query
@@ -452,59 +527,70 @@ pub fn place_update(
                 manager.place_selected_entry.clone().unwrap()
             );
 
-            // Spawn parent
-            let parent = commands
-                .spawn((
-                    Name::new(
-                        manager
-                            .place_selected_entry_label
-                            .as_ref()
-                            .unwrap()
-                            .to_string()
-                    ),
-                    Transform::from_rotation(Quat::from_rotation_y(local_rot.rotation()))
-                        .with_translation(Vec3::new(
-                            grid_entity.center().x,
-                            0.0,
-                            grid_entity.center().y
-                        )),
-                    grid_entity.clone(),
-                    BuildingVariant::default(),
-                    ChildOf(grid.get_parent().unwrap())
-                ))
-                .id();
-
-            // Spawn collider child
-            let bbox = match gltf_models.get(&manager.place_selected_entry.as_ref().unwrap().asset)
-            {
-                Some(model) => &model.bbox,
-                None => return // Model not loaded yet, should not happen since we check this in the UI code, but just in case
-            };
-            let bbox_extent = bbox.max - bbox.min;
-            let bbox_offset = Vec3::new(
-                bbox.min.x + bbox_extent.x / 2.0,
-                bbox.min.y + bbox_extent.y / 2.0,
-                bbox.min.z + bbox_extent.z / 2.0
+            spawn_building(
+                &mut commands,
+                &grid,
+                &gltf_models,
+                &grid_entity,
+                &mut grid_entity_events
             );
-            commands.spawn((
-                Name::new("Collider"),
-                Transform::from_translation(bbox_offset),
-                Collider::from(
-                    BoxCollider::new(bbox_extent).with_group(TERRAIN_BUILDINGS_COLLIDER_GROUP)
-                ),
-                ChildOf(parent)
-            ));
-
-            // Notify the grid that a new entity has been placed
-            grid_entity_events.write(GridEntityEvent::Placed {
-                entity: parent,
-                grid_entity: Box::new(grid_entity.clone())
-            });
 
             // Reset placement tool
             reset_placement_tool(&mut commands, &mut manager);
         }
     }
+}
+
+/// Spawns a placed building (parent with its collider; meshes follow from its variant) and
+/// notifies the grid. Returns `None` if its model is not loaded yet.
+pub(crate) fn spawn_building(
+    commands: &mut Commands,
+    grid: &Grid,
+    gltf_models: &Assets<GltfAsset>,
+    grid_entity: &GridEntity,
+    grid_entity_events: &mut MessageWriter<GridEntityEvent>
+) -> Option<Entity> {
+    let entry = grid_entity.entry();
+    let bbox = &gltf_models.get(&entry.asset)?.bbox;
+    let parent = commands
+        .spawn((
+            Name::new(entry.label.clone()),
+            Transform::from_rotation(Quat::from_rotation_y(grid_entity.rotation().rotation()))
+                .with_translation(Vec3::new(
+                    grid_entity.center().x,
+                    0.0,
+                    grid_entity.center().y
+                )),
+            grid_entity.clone(),
+            BuildingVariant::default(),
+            ChildOf(grid.get_parent()?)
+        ))
+        .id();
+
+    // Collider from the model bounding box
+    let bbox_extent = bbox.max - bbox.min;
+    commands.spawn((
+        Name::new("Collider"),
+        Transform::from_translation(bbox.min + bbox_extent / 2.0),
+        Collider::from(BoxCollider::new(bbox_extent).with_group(TERRAIN_BUILDINGS_COLLIDER_GROUP)),
+        ChildOf(parent)
+    ));
+
+    grid_entity_events.write(GridEntityEvent::Placed {
+        entity: parent,
+        grid_entity: Box::new(grid_entity.clone())
+    });
+    Some(parent)
+}
+
+/// Despawns a placed building and frees its grid tiles.
+pub(crate) fn remove_building(
+    commands: &mut Commands,
+    entity: Entity,
+    grid_entity_events: &mut MessageWriter<GridEntityEvent>
+) {
+    commands.entity(entity).despawn();
+    grid_entity_events.write(GridEntityEvent::Removed { entity });
 }
 
 fn reset_placement_tool(commands: &mut Commands, manager: &mut TerrainPlacementManager) {

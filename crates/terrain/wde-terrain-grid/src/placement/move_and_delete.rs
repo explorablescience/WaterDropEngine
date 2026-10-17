@@ -10,11 +10,9 @@ use wde_terrain::prelude::*;
 
 use crate::{
     core::{entries::PlacementConfig, grid::GridEntityEvent},
-    placement::{TerrainPlacementManager, TerrainPlacementMode}
+    placement::{TerrainPlacementManager, TerrainPlacementMode},
+    prelude::GridEntity
 };
-
-#[derive(Component)]
-pub(crate) struct MaterialStorer(Handle<PbrMaterial>);
 
 #[derive(Resource)]
 pub(crate) struct MoveAndDeleteManager {
@@ -55,16 +53,11 @@ pub fn handle_over_material(
     ),
     collider_element_query: Query<&ChildOf, With<Collider>>,
     buildings_query: Query<(Entity, &ChildOf, &PbrMaterial3d<PbrMaterial>)>,
-    buildings_hover_query: Query<&MaterialStorer>,
-    children_query: Query<&Children>
+    children_query: Query<&Children>,
+    grid_entities: Query<&GridEntity>
 ) {
     if move_delete_manager.should_reset_on_next_update {
-        reset_hovered_entity(
-            &mut commands,
-            &mut move_delete_manager,
-            buildings_hover_query,
-            children_query
-        );
+        reset_hovered_entity(&mut commands, &mut move_delete_manager, children_query);
         move_delete_manager.should_reset_on_next_update = false;
         return;
     }
@@ -76,12 +69,7 @@ pub fn handle_over_material(
     let (Some(cursor_pos), Ok((camera_transform, camera_view))) =
         (window.cursor_position(), camera_query.single())
     else {
-        reset_hovered_entity(
-            &mut commands,
-            &mut move_delete_manager,
-            buildings_hover_query,
-            children_query
-        );
+        reset_hovered_entity(&mut commands, &mut move_delete_manager, children_query);
         return;
     };
 
@@ -97,12 +85,7 @@ pub fn handle_over_material(
     ) {
         Some((entity, _toi)) => entity,
         None => {
-            reset_hovered_entity(
-                &mut commands,
-                &mut move_delete_manager,
-                buildings_hover_query,
-                children_query
-            );
+            reset_hovered_entity(&mut commands, &mut move_delete_manager, children_query);
             return;
         }
     };
@@ -116,35 +99,30 @@ pub fn handle_over_material(
         return;
     }
 
-    // For the old hovered entity, if it exists, remove the move/destroy material and put back the old one
-    reset_hovered_entity(
-        &mut commands,
-        &mut move_delete_manager,
-        buildings_hover_query,
-        children_query
-    );
+    // Clear the outline of the previously hovered building
+    reset_hovered_entity(&mut commands, &mut move_delete_manager, children_query);
 
-    // Set all children to new material (move or destroy)
+    // Network pieces are only drawn with the line tool, not moved one by one
+    if manager.mode == TerrainPlacementMode::Move
+        && grid_entities
+            .get(parent)
+            .is_ok_and(|g| g.entry().network.is_some())
+    {
+        return;
+    }
+
+    // Outline every mesh of the building (its own material stays, so it remains visible)
+    let outline = match manager.mode {
+        TerrainPlacementMode::Move => move_delete_manager.move_material.clone(),
+        _ => move_delete_manager.destroy_material.clone()
+    };
     if let Ok(children) = children_query.get(parent) {
         for child in children.iter() {
-            // Get its old pbr material
-            let old_material = match buildings_query.get(child) {
-                Ok((_, _, pbr_material)) => pbr_material.0.clone(),
-                Err(_) => continue
-            };
-
-            // Set its material to outline
-            commands.entity(child).try_insert((
-                if manager.mode == TerrainPlacementMode::Move {
-                    PbrMaterial3d(move_delete_manager.move_material.clone())
-                } else {
-                    PbrMaterial3d(move_delete_manager.destroy_material.clone())
-                },
-                MaterialStorer(old_material)
-            ));
-            commands
-                .entity(child)
-                .try_remove::<PbrMaterial3d<PbrMaterial>>();
+            if buildings_query.contains(child) {
+                commands
+                    .entity(child)
+                    .try_insert(PbrMaterial3d(outline.clone()));
+            }
         }
     }
     move_delete_manager.current_hovered_entity = Some(parent);
@@ -156,7 +134,6 @@ pub fn handle_move_and_delete_update(
     mut manager: ResMut<TerrainPlacementManager>,
     mut move_delete_manager: ResMut<MoveAndDeleteManager>,
     mouse_input: Res<ButtonInput<MouseButton>>,
-    buildings_hover_query: Query<&MaterialStorer>,
     children_query: Query<&Children>,
     entity_label_query: Query<&Name>,
     config: Res<PlacementConfig>,
@@ -172,12 +149,7 @@ pub fn handle_move_and_delete_update(
         let hovered_entity = move_delete_manager.current_hovered_entity.unwrap();
 
         // Reset hovered entity
-        reset_hovered_entity(
-            &mut commands,
-            &mut move_delete_manager,
-            buildings_hover_query,
-            children_query
-        );
+        reset_hovered_entity(&mut commands, &mut move_delete_manager, children_query);
 
         // Handle move
         if manager.mode == TerrainPlacementMode::Move {
@@ -207,22 +179,15 @@ pub fn handle_move_and_delete_update(
 fn reset_hovered_entity(
     commands: &mut Commands,
     move_delete_manager: &mut ResMut<MoveAndDeleteManager>,
-    buildings_hover_query: Query<&MaterialStorer>,
     children_query: Query<&Children>
 ) {
     if let Some(hovered_entity) = move_delete_manager.current_hovered_entity
         && let Ok(children) = children_query.get(hovered_entity)
     {
         for child in children.iter() {
-            if let Ok(old_material) = buildings_hover_query.get(child) {
-                commands
-                    .entity(child)
-                    .try_insert(PbrMaterial3d(old_material.0.clone()));
-                commands
-                    .entity(child)
-                    .try_remove::<PbrMaterial3d<OutlineMaterial>>();
-                commands.entity(child).try_remove::<MaterialStorer>();
-            }
+            commands
+                .entity(child)
+                .try_remove::<PbrMaterial3d<OutlineMaterial>>();
         }
     }
     move_delete_manager.current_hovered_entity = None;
