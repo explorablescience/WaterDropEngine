@@ -6,7 +6,7 @@ use bevy::{
     a11y::AccessibilityPlugin,
     app::{PluginGroup, PluginGroupBuilder},
     ecs::{message::Message, system::NonSendMarker},
-    prelude::{Entity, Event, MessageReader, MessageWriter, Query, Res, ResMut, Resource, With},
+    prelude::{Entity, Event, MessageReader, MessageWriter, Query, ResMut, Resource, With},
     utils::default,
     window::{PresentMode, PrimaryWindow, Window, WindowPlugin, WindowResized, WindowTheme},
     winit::{WINIT_WINDOWS, WinitPlugin}
@@ -42,32 +42,39 @@ impl WindowIcon {
 #[derive(Resource, Default)]
 pub(crate) struct PrimaryWindowIcon(pub Option<WindowIcon>);
 
-/// Applies the configured icon (if any) to the primary window.
-/// Must run after the primary window has been created by winit (e.g. in `Startup`).
+/// Applies the configured icon (if any) to the primary window, once winit has created it (which
+/// happens after `Startup`): the icon is consumed when applied.
 ///
 /// `WinitWindows` isn't stored as a regular non-send ECS resource in this bevy version (it lives in
 /// a thread-local instead), so `NonSendMarker` is used to force this system onto the main thread,
 /// which is the only thread the winit windows thread-local is populated on.
 pub(crate) fn apply_window_icon(
-    icon: Res<PrimaryWindowIcon>,
+    mut icon: ResMut<PrimaryWindowIcon>,
     _main_thread: NonSendMarker,
     primary_window: Query<Entity, With<PrimaryWindow>>
 ) {
-    let Some(icon) = &icon.0 else { return };
+    let Some(window_icon) = &icon.0 else { return };
     let Ok(entity) = primary_window.single() else {
         return;
     };
 
-    WINIT_WINDOWS.with_borrow(|winit_windows| {
+    let applied = WINIT_WINDOWS.with_borrow(|winit_windows| {
         let Some(winit_window) = winit_windows.get_window(entity) else {
-            return;
+            return false;
         };
-
-        match winit::window::Icon::from_rgba(icon.rgba.clone(), icon.width, icon.height) {
+        match winit::window::Icon::from_rgba(
+            window_icon.rgba.clone(),
+            window_icon.width,
+            window_icon.height
+        ) {
             Ok(winit_icon) => winit_window.set_window_icon(Some(winit_icon)),
             Err(err) => wde_logger::warn!("Failed to set window icon: {err}")
         }
+        true
     });
+    if applied {
+        icon.0 = None;
+    }
 }
 
 /// An event that is sent when the surface is resized.

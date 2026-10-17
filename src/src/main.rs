@@ -2,7 +2,7 @@
 #![allow(clippy::type_complexity)]
 
 use bevy::prelude::*;
-use wde::prelude::*;
+use wde::{CustomWdePlugins, prelude::*};
 
 use crate::test::TestPlugin;
 
@@ -13,7 +13,12 @@ pub fn main() {
     let mut app = App::new();
 
     // Add default plugins
-    app.add_plugins(WdeDefaultPlugins).add_plugins(TestPlugin);
+    app.add_plugins(WdeDefaultPlugins.set(CustomWdePlugins {
+        window_icon:
+            WindowIcon::from_bytes(include_bytes!("../../res/core/icons/app_icon.png")).ok(),
+        ..Default::default()
+    }))
+    .add_plugins(TestPlugin);
 
     // Run the app
     app.run();

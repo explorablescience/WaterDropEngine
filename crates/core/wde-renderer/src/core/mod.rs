@@ -186,7 +186,7 @@ impl Plugin for RenderCorePlugin {
             resolution: self.window_resolution
         })
         .insert_resource(PrimaryWindowIcon(self.window_icon.clone()))
-        .add_systems(Startup, apply_window_icon)
+        .add_systems(Update, apply_window_icon)
         .add_message::<SurfaceResized>()
         .add_systems(Update, send_surface_resized);
 

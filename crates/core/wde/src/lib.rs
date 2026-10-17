@@ -115,14 +115,41 @@ impl Plugin for CustomBevyPlugins {
     }
 }
 
-/// Custom WaterDropEngine plugins.
-#[derive(Default)]
-struct CustomWdePlugins;
+/// Custom WaterDropEngine plugins. Set it in [`WdeDefaultPlugins`] to configure the window:
+/// ```rust
+/// app.add_plugins(WdeDefaultPlugins.set(CustomWdePlugins {
+///     window_title: "My Game".into(),
+///     ..Default::default()
+/// }));
+/// ```
+pub struct CustomWdePlugins {
+    /// Title shown in the window's title bar.
+    pub window_title: String,
+    /// Initial size (width, height) of the window, in logical pixels.
+    pub window_resolution: (u32, u32),
+    /// Icon shown in the OS taskbar/title bar. See
+    /// [`WindowIcon::from_bytes`](wde_renderer::prelude::WindowIcon::from_bytes).
+    pub window_icon: Option<wde_renderer::prelude::WindowIcon>
+}
+impl Default for CustomWdePlugins {
+    fn default() -> Self {
+        let render = wde_renderer::RenderPlugin::default();
+        Self {
+            window_title: render.window_title,
+            window_resolution: render.window_resolution,
+            window_icon: render.window_icon
+        }
+    }
+}
 impl Plugin for CustomWdePlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((
             wde_logger::LogPlugin::default().auto_level(),
-            wde_renderer::RenderPlugin::default(),
+            wde_renderer::RenderPlugin {
+                window_title: self.window_title.clone(),
+                window_resolution: self.window_resolution,
+                window_icon: self.window_icon.clone()
+            },
             wde_gltf::GltfPlugin,
             wde_animation::AnimationPlugin,
             wde_camera::CameraPlugin,

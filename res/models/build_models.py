@@ -2320,6 +2320,143 @@ def render_icon(key):
     print(f"[icon] {key}")
 
 
+# ---------------------------------------------------------------------------------------
+# Application icon (window / taskbar): a glowing dome on the curve of Mars
+# ---------------------------------------------------------------------------------------
+APP_ICON = os.path.normpath(os.path.join(ROOT, "..", "core", "icons", "app_icon.png"))
+APP_ICON_SIZE = 256
+
+
+def emission_material(name, color, strength):
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nodes = mat.node_tree.nodes
+    nodes.clear()
+    em = nodes.new("ShaderNodeEmission")
+    em.inputs["Color"].default_value = (*color, 1)
+    em.inputs["Strength"].default_value = strength
+    out = nodes.new("ShaderNodeOutputMaterial")
+    mat.node_tree.links.new(em.outputs[0], out.inputs[0])
+    return mat
+
+
+def render_app_icon():
+    reset_scene()
+    bpy.ops.import_scene.gltf(filepath=variant_base("dome_5x5", False) + ".gltf")
+    for o in list(bpy.context.scene.objects):
+        # Fully connected dome, without the property nodes
+        if o.name.startswith("%P%") or (o.name.startswith("%V%") and "-" in o.name[3:].split(".")[-1]):
+            bpy.data.objects.remove(o, do_unlink=True)
+    sc = bpy.context.scene
+    sc.render.engine = "CYCLES"
+    sc.cycles.samples = 96
+    sc.cycles.use_denoising = True
+    sc.render.film_transparent = False
+    sc.render.resolution_x = sc.render.resolution_y = APP_ICON_SIZE * 2
+    sc.view_settings.view_transform = "AgX"
+    sc.view_settings.look = "AgX - Medium High Contrast"
+
+    # Mars: a large sphere whose top carries the dome
+    radius = 22.0
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, location=(0, 0, -radius + 0.02), segments=96, ring_count=48)
+    mars = bpy.context.active_object
+    bpy.ops.object.shade_smooth()
+    mat = bpy.data.materials.new("Mars")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = 0.95
+    noise = nt.nodes.new("ShaderNodeTexNoise")
+    noise.inputs["Scale"].default_value = 0.35
+    noise.inputs["Detail"].default_value = 8
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].color = (0.30, 0.07, 0.025, 1)
+    ramp.color_ramp.elements[1].color = (0.62, 0.22, 0.08, 1)
+    nt.links.new(noise.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], bsdf.inputs["Base Color"])
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.4
+    nt.links.new(noise.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], bsdf.inputs["Normal"])
+    mars.data.materials.append(mat)
+
+    # Night sky with a few stars
+    world = bpy.data.worlds.new("w")
+    sc.world = world
+    world.use_nodes = True
+    world.node_tree.nodes["Background"].inputs[0].default_value = (0.012, 0.014, 0.04, 1)
+    world.node_tree.nodes["Background"].inputs[1].default_value = 1.0
+    star = emission_material("Star", (1.0, 0.95, 0.85), 30)
+    rng = random.Random(7)
+    for _ in range(40):
+        bpy.ops.mesh.primitive_ico_sphere_add(radius=rng.uniform(0.04, 0.1), subdivisions=1,
+                                              location=(rng.uniform(-22, 22), 30, rng.uniform(2, 24)))
+        bpy.context.active_object.data.materials.append(star)
+
+    # Low warm sun grazing the planet, and a warm glow inside the dome
+    sun = bpy.data.objects.new("sun", bpy.data.lights.new("sun", "SUN"))
+    sc.collection.objects.link(sun)
+    sun.rotation_euler = (radians(72), radians(0), radians(-35))
+    sun.data.energy = 4.0
+    sun.data.color = (1.0, 0.82, 0.62)
+    glow = bpy.data.objects.new("glow", bpy.data.lights.new("glow", "POINT"))
+    sc.collection.objects.link(glow)
+    glow.location = (0, 0, 1.4)
+    glow.data.energy = 2500
+    glow.data.color = (1.0, 0.68, 0.32)
+    glow.data.shadow_soft_size = 3.0
+    # Lit greenery on the dome floor, seen through the glass
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=2.6, location=(0, 0, 0.1), segments=32, ring_count=16)
+    garden = bpy.context.active_object
+    garden.scale = (1, 1, 0.35)
+    garden.data.materials.append(emission_material("Garden", (1.0, 0.62, 0.25), 2.5))
+
+    cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
+    sc.collection.objects.link(cam)
+    sc.camera = cam
+    cam.data.lens = 50
+    cam.location = (0, -21.5, 5.0)
+    cam.rotation_euler = (Vector((0, 0, 2.2)) - cam.location).to_track_quat("-Z", "Y").to_euler()
+
+    raw = APP_ICON.replace(".png", "_raw.png")
+    sc.render.filepath = raw
+    bpy.ops.render.render(write_still=True)
+    rounded_square(raw, APP_ICON, APP_ICON_SIZE)
+    os.remove(raw)
+    print(f"[icon] app icon -> {APP_ICON}")
+
+
+def rounded_square(src, dst, size, corner=0.22):
+    """Downsamples a square render 2x into `size` pixels, clipped to an antialiased rounded square."""
+    img = bpy.data.images.load(src)
+    w = img.size[0]
+    px = img.pixels[:]
+    out = [0.0] * (size * size * 4)
+    r = corner * size
+    for y in range(size):
+        for x in range(size):
+            acc = [0.0, 0.0, 0.0, 0.0]
+            for dy in (0, 1):
+                for dx in (0, 1):
+                    i = ((2 * y + dy) * w + 2 * x + dx) * 4
+                    for c in range(4):
+                        acc[c] += px[i + c] / 4
+            # Coverage of the rounded square (1px antialiasing)
+            cx = min(max(x + 0.5, r), size - r)
+            cy = min(max(y + 0.5, r), size - r)
+            d = sqrt((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2)
+            alpha = min(max(r - d + 0.5, 0.0), 1.0)
+            o = (y * size + x) * 4
+            out[o:o + 4] = [acc[0], acc[1], acc[2], alpha]
+    icon = bpy.data.images.new("app_icon", size, size, alpha=True)
+    icon.pixels = out
+    icon.filepath_raw = dst
+    icon.file_format = "PNG"
+    icon.save()
+    bpy.data.images.remove(img)
+    bpy.data.images.remove(icon)
+
+
 def premultiply(path):
     """egui blends textures as premultiplied alpha."""
     img = bpy.data.images.load(path)
@@ -2345,6 +2482,9 @@ if __name__ == "__main__":
         del argv[i:i + 2]
     bake = "--no-bake" not in argv
     icons = "--icons" in argv
+    if "--app-icon" in argv:
+        render_app_icon()
+        sys.exit(0)
     argv = [a for a in argv if not a.startswith("--")]
     keys = argv or list(MODELS)
     if icons:
