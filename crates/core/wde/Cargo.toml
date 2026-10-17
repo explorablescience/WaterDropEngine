@@ -9,6 +9,7 @@ wde-renderer = { path = "../wde-renderer" }
 wde-camera = { path = "../../render/wde-camera" }
 wde-camera-controller = { path = "../../render/wde-camera-controller" }
 wde-gltf = { path = "../../render/wde-gltf" }
+wde-animation = { path = "../../render/wde-animation" }
 wde-physics = { path = "../../wrappers/wde-physics" }
 wde-terrain = { path = "../../terrain/wde-terrain" }
 wde-terrain-grid = { path = "../../terrain/wde-terrain-grid" }

@@ -85,6 +85,7 @@ def material(name):
 PARTS = []
 PROPS = []           # `%P%` objects of the model being built
 VARIANT_GROUP = ""   # "" for always-shown parts, else "<anchor>+" / "<anchor>-"
+BONE_GROUP = ""      # rigged models: bone the parts being built are attached to
 
 
 class variant:
@@ -100,6 +101,21 @@ class variant:
     def __exit__(self, *_):
         global VARIANT_GROUP
         VARIANT_GROUP = self.previous
+
+
+class bone:
+    """Parts built inside move with the rig bone `name`."""
+
+    def __init__(self, name):
+        self.name = name
+
+    def __enter__(self):
+        global BONE_GROUP
+        self.previous, BONE_GROUP = BONE_GROUP, self.name
+
+    def __exit__(self, *_):
+        global BONE_GROUP
+        BONE_GROUP = self.previous
 
 
 def anchor_name(kind, x, y):
@@ -128,6 +144,7 @@ def to_obj(name, bm, mat, sharp_angle=40.0, flat=False):
         me.shade_smooth()
         me.set_sharp_from_angle(angle=radians(sharp_angle))
     obj["variant"] = VARIANT_GROUP
+    obj["bone"] = BONE_GROUP
     PARTS.append(obj)
     return obj
 
@@ -1094,58 +1111,181 @@ def build_storage_3x3():
 HUMAN_SCALE = 2.0  # authored at half size, scaled to the in-game colonist height (~0.63)
 
 
+def arm_transform(s):
+    return Matrix.Translation((0.0, s * 0.058, 0.12)) @ Matrix.Rotation(s * radians(12), 4, "X")
+
+
+def human_rig():
+    """Colonist bones as {name: (parent, pivot)}, parents first. Pivots are the joints, in game units."""
+    rig = {"Body": (None, (0, 0, 0.115)), "Head": ("Body", (0, 0, 0.22))}
+    for s, side in ((1, "L"), (-1, "R")):
+        rig["Thigh" + side] = ("Body", (0, s * 0.022, 0.115))
+        rig["Shin" + side] = ("Thigh" + side, (0, s * 0.022, 0.069))
+        rig["Arm" + side] = ("Body", tuple(arm_transform(s) @ Vector((0, 0, 0.086))))
+    return {b: (parent, Vector(pivot) * HUMAN_SCALE) for b, (parent, pivot) in rig.items()}
+
+
 def build_human(suit=True):
-    """Stylized colonist. Feet at z=0, faces +X, ~0.63 tall.
+    """Stylized colonist, rigged with `human_rig`. Feet at z=0, faces +X, ~0.63 tall.
 
     `suit`: outdoor model with helmet and life-support pack; otherwise the indoor model, head bare.
     """
-    for s in (1, -1):
-        y = s * 0.022
-        lathe("Leg", [(0, 0.025), (0.017, 0.025), (0.019, 0.07), (0.021, 0.12), (0, 0.12)], "Hull_White", 12,
-              (0.0, y, 0))
-        box("Boot", (0.05, 0.03, 0.028), (0.006, y, 0.014), "Frame_Graphite", 0.008)
-        box("BootToe", (0.012, 0.031, 0.012), (0.03, y, 0.008), "Accent_Orange", 0.004)
-        ring("KneePad", 0.0, 0.025, 0.064, 0.074, "Accent_Orange", (0.002, y), 12)
-    lathe("Torso", [(0, 0.105), (0.038, 0.105), (0.044, 0.13), (0.045, 0.19), (0.04, 0.215), (0.025, 0.225),
-                    (0, 0.225)], "Hull_White", 16, (0, 0, 0))
-    PARTS[-1].data.transform(Matrix.Diagonal((0.9, 1.1, 1.0, 1.0)))
-    ring("Belt", 0.0, 0.05, 0.115, 0.13, "Frame_Graphite", segs=16)
-    PARTS[-1].data.transform(Matrix.Diagonal((0.9, 1.1, 1.0, 1.0)))
-    box("ChestPanel", (0.012, 0.04, 0.03), (0.04, 0.0, 0.165), "Frame_Graphite", 0.004)
-    box("ChestLight", (0.004, 0.012, 0.008), (0.047, -0.008, 0.17), "Light_Cyan")
-    box("ChestLight2", (0.004, 0.012, 0.008), (0.047, 0.01, 0.17), "Accent_Orange")
-    if suit:
-        box("Pack", (0.035, 0.07, 0.09), (-0.05, 0, 0.17), "Hull_Grey", 0.01)
-        box("PackCap", (0.037, 0.072, 0.015), (-0.05, 0, 0.21), "Accent_Orange", 0.005)
-    for s in (1, -1):
-        y = s * 0.058
-        arm = lathe("Arm", [(0, 0.0), (0.013, 0.004), (0.015, 0.05), (0.012, 0.085), (0, 0.09)], "Hull_White", 10)
-        arm.data.transform(Matrix.Rotation(s * radians(12), 4, "X"))
-        arm.data.transform(Matrix.Translation((0.0, y, 0.12)))
-        ico("Shoulder", 0.02, (0.0, y * 0.95, 0.205), "Accent_Orange", 1, (1, 1, 0.9), 0.0, 0, flat=False)
-        ico("Glove", 0.014, (0.0, y + s * 0.009, 0.118), "Frame_Graphite" if suit else "Skin", 1, (1, 1, 1.1),
-            0.0, 0, flat=False)
-    if not suit:
-        ring("Collar", 0.012, 0.03, 0.215, 0.228, "Accent_Orange", segs=16)
-        cyl("Neck", 0.014, 0.215, 0.24, "Skin", (0, 0), 10)
-        ico("Head", 0.04, (0.002, 0, 0.262), "Skin", 2, (0.95, 0.9, 1.05), 0.0, 0, flat=False)
-        ico("Hair", 0.042, (-0.008, 0, 0.274), "Hair", 2, (1.0, 0.98, 0.8), 0.0, 0, flat=False)
+    with bone("Body"):
+        lathe("Torso", [(0, 0.105), (0.038, 0.105), (0.044, 0.13), (0.045, 0.19), (0.04, 0.215), (0.025, 0.225),
+                        (0, 0.225)], "Hull_White", 16, (0, 0, 0))
+        PARTS[-1].data.transform(Matrix.Diagonal((0.9, 1.1, 1.0, 1.0)))
+        ring("Belt", 0.0, 0.05, 0.115, 0.13, "Frame_Graphite", segs=16)
+        PARTS[-1].data.transform(Matrix.Diagonal((0.9, 1.1, 1.0, 1.0)))
+        box("ChestPanel", (0.012, 0.04, 0.03), (0.04, 0.0, 0.165), "Frame_Graphite", 0.004)
+        box("ChestLight", (0.004, 0.012, 0.008), (0.047, -0.008, 0.17), "Light_Cyan")
+        box("ChestLight2", (0.004, 0.012, 0.008), (0.047, 0.01, 0.17), "Accent_Orange")
+        if suit:
+            box("Pack", (0.035, 0.07, 0.09), (-0.05, 0, 0.17), "Hull_Grey", 0.01)
+            box("PackCap", (0.037, 0.072, 0.015), (-0.05, 0, 0.21), "Accent_Orange", 0.005)
+            ring("Collar", 0.02, 0.034, 0.215, 0.232, "Frame_Graphite", segs=16)
+        else:
+            ring("Collar", 0.012, 0.03, 0.215, 0.228, "Accent_Orange", segs=16)
         for s in (1, -1):
-            ico("Eye", 0.0055, (0.037, s * 0.014, 0.262), "Hair", 1, flat=False)
-        for p in PARTS:
-            p.data.transform(Matrix.Scale(HUMAN_SCALE, 4))
-        return
-    ring("Collar", 0.02, 0.034, 0.215, 0.232, "Frame_Graphite", segs=16)
-    ico("Helmet", 0.05, (0.0, 0, 0.263), "Hull_White", 2, (1, 1, 1), 0.0, 0, flat=False)
-    ico("Visor", 0.04, (0.026, 0, 0.266), "Visor_Gold", 2, (0.7, 1.05, 0.72), 0.0, 0, flat=False)
-    cyl("HelmetLamp", 0.008, 0.0, 0.016, "Light_Cyan", (0, 0), 8)
-    lampo = PARTS[-1]
-    lampo.data.transform(Matrix.Rotation(radians(90), 4, "Y"))
-    lampo.data.transform(Matrix.Translation((0.03, 0.035, 0.295)))
-    cyl("Antenna", 0.002, 0.29, 0.335, "Frame_Graphite", (-0.02, -0.03), 6)
-    ico("AntennaTip", 0.005, (-0.02, -0.03, 0.337), "Accent_Orange", 1, flat=False)
+            ico("Shoulder", 0.02, (0.0, s * 0.058 * 0.95, 0.205), "Accent_Orange", 1, (1, 1, 0.9), 0.0, 0,
+                flat=False)
+    for s, side in ((1, "L"), (-1, "R")):
+        y = s * 0.022
+        # Thigh and shin overlap under the knee pad, so the knee can bend without a gap
+        with bone("Thigh" + side):
+            lathe("Thigh", [(0, 0.066), (0.019, 0.066), (0.021, 0.12), (0, 0.12)], "Hull_White", 12, (0.0, y, 0))
+        with bone("Shin" + side):
+            lathe("Shin", [(0, 0.025), (0.017, 0.025), (0.019, 0.071), (0, 0.071)], "Hull_White", 12, (0.0, y, 0))
+            box("Boot", (0.05, 0.03, 0.028), (0.006, y, 0.014), "Frame_Graphite", 0.008)
+            box("BootToe", (0.012, 0.031, 0.012), (0.03, y, 0.008), "Accent_Orange", 0.004)
+            ring("KneePad", 0.0, 0.025, 0.064, 0.074, "Accent_Orange", (0.002, y), 12)
+        with bone("Arm" + side):
+            arm = lathe("Arm", [(0, 0.0), (0.013, 0.004), (0.015, 0.05), (0.012, 0.085), (0, 0.09)], "Hull_White",
+                        10)
+            arm.data.transform(arm_transform(s))
+            ico("Glove", 0.014, (0.0, s * 0.058 + s * 0.009, 0.118), "Frame_Graphite" if suit else "Skin", 1,
+                (1, 1, 1.1), 0.0, 0, flat=False)
+    with bone("Head"):
+        if suit:
+            ico("Helmet", 0.05, (0.0, 0, 0.263), "Hull_White", 2, (1, 1, 1), 0.0, 0, flat=False)
+            ico("Visor", 0.04, (0.026, 0, 0.266), "Visor_Gold", 2, (0.7, 1.05, 0.72), 0.0, 0, flat=False)
+            lamp = cyl("HelmetLamp", 0.008, 0.0, 0.016, "Light_Cyan", (0, 0), 8)
+            lamp.data.transform(Matrix.Rotation(radians(90), 4, "Y"))
+            lamp.data.transform(Matrix.Translation((0.03, 0.035, 0.295)))
+            cyl("Antenna", 0.002, 0.29, 0.335, "Frame_Graphite", (-0.02, -0.03), 6)
+            ico("AntennaTip", 0.005, (-0.02, -0.03, 0.337), "Accent_Orange", 1, flat=False)
+        else:
+            cyl("Neck", 0.014, 0.215, 0.24, "Skin", (0, 0), 10)
+            ico("Head", 0.04, (0.002, 0, 0.262), "Skin", 2, (0.95, 0.9, 1.05), 0.0, 0, flat=False)
+            ico("Hair", 0.042, (-0.008, 0, 0.274), "Hair", 2, (1.0, 0.98, 0.8), 0.0, 0, flat=False)
+            for s in (1, -1):
+                ico("Eye", 0.0055, (0.037, s * 0.014, 0.262), "Hair", 1, flat=False)
     for p in PARTS:
         p.data.transform(Matrix.Scale(HUMAN_SCALE, 4))
+
+
+# Walk cycle, tuned for the colonist proportions
+WALK_FRAMES = 18     # full cycle (two steps), at 24 fps
+WALK_THIGH = radians(34)
+WALK_KNEE = radians(55)
+WALK_ARM = radians(26)
+WALK_LEAN = radians(5)
+WALK_TWIST = radians(5)
+
+
+def human_walk(rig):
+    leg = rig["Body"][1].z  # hip to sole
+
+    def pose(phase):
+        w = TAU * phase
+        swing = {"L": sin(w), "R": -sin(w)}  # forward swing of each thigh, in [-1, 1]
+        knee = {"L": cos(w), "R": -cos(w)}    # > 0 while the leg swings forward
+        # The hips drop as the legs spread, keeping the feet on the ground
+        drop = leg * (1 - cos(WALK_THIGH * sin(w)))
+        p = {"Body": ((0, 0, -drop), (0, WALK_LEAN, -WALK_TWIST * swing["L"])),
+             "Head": ((0, 0, 0), (0, -WALK_LEAN * 0.7, WALK_TWIST * swing["L"] * 0.8))}
+        for side in "LR":
+            # Blender: a positive Y rotation swings a limb backward
+            p["Thigh" + side] = ((0, 0, 0), (0, -WALK_THIGH * swing[side] - WALK_LEAN, 0))
+            p["Shin" + side] = ((0, 0, 0), (0, radians(4) + WALK_KNEE * max(0.0, knee[side]) ** 2, 0))
+            p["Arm" + side] = ((0, 0, 0), (0, WALK_ARM * swing[side] - WALK_LEAN * 0.5, 0))
+        return p
+
+    # Ground covered by the stance foot over a step, at the authored cadence
+    step = 2 * leg * sin(WALK_THIGH)
+    return "Walk", WALK_FRAMES, pose, {"ground_speed": round(step / (WALK_FRAMES / 2 / FPS), 4)}
+
+
+def human_idle(rig):
+    def pose(phase):
+        w = TAU * phase
+        breath = 0.5 - 0.5 * cos(2 * w)
+        p = {"Body": ((0, 0, 0.003 * breath), (0, 0, 0)),
+             "Head": ((0, 0, 0), (0, radians(3) * sin(2 * w), radians(14) * sin(w) ** 3))}
+        for s, side in ((1, "L"), (-1, "R")):
+            p["Arm" + side] = ((0, 0, 0), (s * radians(2.5) * breath, radians(2) * sin(w + s), 0))
+        return p
+
+    return "Idle", 96, pose, {}
+
+
+# ---------------------------------------------------------------------------------------
+# Rigs and animation clips
+# ---------------------------------------------------------------------------------------
+FPS = 24
+
+
+def join_bones(rig):
+    """Join parts per rig bone into `%B%<bone>` objects, origin at the bone pivot, parented as in the rig."""
+    untagged = [o.name for o in PARTS if o.get("bone") not in rig]
+    assert not untagged, f"parts without rig bone: {untagged}"
+    parts = {name: [o for o in PARTS if o.get("bone") == name] for name in rig}
+    bones = {}
+    for name, (parent, pivot) in rig.items():
+        obj = join_objects(f"%B%{name}", parts[name])
+        obj.data.transform(Matrix.Translation(-pivot))
+        if parent is None:
+            obj.location = pivot
+        else:
+            obj.parent = bones[parent]
+            obj.location = pivot - rig[parent][1]
+        bones[name] = obj
+    bpy.context.view_layer.update()
+    return bones
+
+
+def key_clips(bones, clips):
+    """Keys each looping clip as one action (a slot per bone) on muted NLA tracks, exported as glTF animations.
+
+    A clip is (name, frames, pose, extras), `pose(phase)` giving {bone: (location offset, euler)}.
+    Returns {clip name: extras}.
+    """
+    bpy.context.scene.render.fps = FPS
+    extras = {}
+    for name, frames, pose, clip_extras in clips:
+        extras[name] = clip_extras
+        action = bpy.data.actions.new(name)
+        rest = {b: o.location.copy() for b, o in bones.items()}
+        for o in bones.values():
+            o.animation_data_create()
+            o.animation_data.action = action
+        for f in range(frames + 1):
+            p = pose(f / frames)
+            for b, o in bones.items():
+                offset, euler = p.get(b, ((0, 0, 0), (0, 0, 0)))
+                o.location = rest[b] + Vector(offset)
+                o.rotation_euler = euler
+                o.keyframe_insert("location", frame=f + 1)
+                o.keyframe_insert("rotation_euler", frame=f + 1)
+        for b, o in bones.items():
+            track = o.animation_data.nla_tracks.new()
+            track.name = name
+            track.mute = True
+            strip = track.strips.new(name, 1, action)
+            strip.action_slot = o.animation_data.action_slot
+            o.animation_data.action = None
+            o.location = rest[b]
+            o.rotation_euler = (0, 0, 0)
+    return extras
 
 
 # ---------------------------------------------------------------------------------------
@@ -1757,9 +1897,10 @@ MODELS = {
     "grocery_1x1": dict(rel="modules/grocery/grocery_1x1", build=build_grocery, tex=1024, ao=0.4, name="Grocery",
                         props=P((1, 1), ins=[(1, 0)])),
     # Entities
-    "human": dict(rel="entities/human/human", build=build_human, tex=512, ao=0.08, name="Astronaut", props=False),
+    "human": dict(rel="entities/human/human", build=build_human, tex=512, ao=0.08, name="Astronaut", props=False,
+                  rig=human_rig, clips=(human_walk, human_idle)),
     "human_indoor": dict(rel="entities/human/human_indoor", build=lambda: build_human(suit=False), tex=512,
-                         ao=0.08, name="Colonist", props=False),
+                         ao=0.08, name="Colonist", props=False, rig=human_rig, clips=(human_walk, human_idle)),
     "rocket": dict(rel="entities/rocket/rocket", build=build_rocket, tex=1024, ao=0.6, name="Rocket", props=False),
 }
 
@@ -1933,18 +2074,25 @@ def bake_ao(passes, props, out_png, size, distance):
     bpy.data.images.remove(img)
 
 
-def export(gltf_path, ao_png):
+def export(gltf_path, ao_png, clip_extras=None):
+    """`clip_extras`: {clip name: extras} of the animation clips to export, None for a static model."""
     props = set(bpy.ops.export_scene.gltf.get_rna_type().properties.keys())
     kwargs = dict(
         filepath=gltf_path, export_format="GLTF_SEPARATE", use_selection=False, export_apply=True,
         export_yup=True, export_texcoord=True, export_normals=True, export_tangents=False,
         export_materials="EXPORT", export_cameras=False, export_lights=False, export_extras=False,
-        export_animations=False, export_skins=False, export_morph=False, export_image_format="NONE",
-        export_vertex_color="NONE",
+        export_animations=clip_extras is not None, export_skins=False, export_morph=False,
+        export_image_format="NONE", export_vertex_color="NONE",
+        # One glTF animation per action, with a channel per bone; times start at 0
+        export_animation_mode="ACTIONS", export_merge_animation="ACTION", export_anim_slide_to_zero=True,
+        export_force_sampling=True, export_optimize_animation_size=False,
     )
     bpy.ops.export_scene.gltf(**{k: v for k, v in kwargs.items() if k in props})
     with open(gltf_path) as f:
         g = json.load(f)
+    for anim in g.get("animations", []):
+        if (clip_extras or {}).get(anim["name"]):
+            anim["extras"] = clip_extras[anim["name"]]
     if ao_png:
         g["samplers"] = [{"magFilter": 9729, "minFilter": 9729, "wrapS": 33071, "wrapT": 33071}]
         g["images"] = [{"name": "ao", "uri": os.path.basename(ao_png)}]
@@ -1963,13 +2111,20 @@ def export(gltf_path, ao_png):
 
 
 def validate(g, path):
+    """Only `%B%` bone nodes may lack a mesh or have children (bones only)."""
     assert len(g["buffers"]) == 1, f"{path}: expected a single buffer"
     assert "scene" in g
-    for idx in g["scenes"][g["scene"]]["nodes"]:
+    reached = list(g["scenes"][g["scene"]]["nodes"])
+    for idx in reached:
         node = g["nodes"][idx]
-        assert "mesh" in node, f"{path}: node {node.get('name')} has no mesh"
-        assert "children" not in node, f"{path}: node {node.get('name')} has children"
-    assert len(g["scenes"][g["scene"]]["nodes"]) == len(g["nodes"])
+        name = node.get("name", "")
+        is_bone = name.startswith("%B%")
+        assert "mesh" in node or is_bone, f"{path}: node {name} has no mesh"
+        for child in node.get("children", []):
+            assert is_bone and g["nodes"][child].get("name", "").startswith("%B%"), \
+                f"{path}: node {name} has non-bone children"
+            reached.append(child)
+    assert len(reached) == len(g["nodes"])
 
 
 def variant_base(key, cut):
@@ -1995,9 +2150,14 @@ def build(key, cut=False, bake=True):
         props = make_props(**props_spec)
     PROPS[:] = props
     spec["build"]()
-    groups = join_parts(spec["name"])
-    opaque = {g: o for g, (o, _) in groups.items() if o is not None}
-    glass = [gl for _, gl in groups.values() if gl is not None]
+    rig = spec["rig"]() if "rig" in spec else None
+    if rig:
+        bones = join_bones(rig)
+        groups, opaque, glass = {}, dict(bones), []
+    else:
+        groups = join_parts(spec["name"])
+        opaque = {g: o for g, (o, _) in groups.items() if o is not None}
+        glass = [gl for _, gl in groups.values() if gl is not None]
     unwrap(list(opaque.values()))
     ao_png = base + "_ao.png" if bake else None
     if bake:
@@ -2007,8 +2167,12 @@ def build(key, cut=False, bake=True):
         passes = [(plus, glass + minus)] + ([(minus, glass + [o for g, o in opaque.items() if g.endswith("+")])]
                                            if minus else [])
         bake_ao(passes, props, ao_png, tex_size, ao_dist)
-    objs = [merge_glass(o, gl, spec["name"] if g == "" else f"%V%{g}") for g, (o, gl) in groups.items()]
-    export(gltf_path, ao_png)
+    if rig:
+        objs = list(bones.values())
+        export(gltf_path, ao_png, key_clips(bones, [clip(rig) for clip in spec["clips"]]))
+    else:
+        objs = [merge_glass(o, gl, spec["name"] if g == "" else f"%V%{g}") for g, (o, gl) in groups.items()]
+        export(gltf_path, ao_png)
     verts = sum(len(o.data.vertices) for o in objs)
     tris = sum(len(p.vertices) - 2 for o in objs for p in o.data.polygons)
     print(f"[build] {key}{'_cut' if cut else ''}: {verts} verts, ~{tris} tris, "

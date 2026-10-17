@@ -19,6 +19,7 @@ use bevy::{
     asset::{AssetLoader, LoadContext, io::Reader},
     prelude::*
 };
+use wde_animation::prelude::*;
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 
@@ -40,7 +41,7 @@ mod model;
 mod parser;
 
 pub use error::GltfError;
-pub use model::ModelCondition;
+pub use model::{GltfBone, ModelCondition};
 
 pub struct GltfPlugin;
 impl Plugin for GltfPlugin {
@@ -74,10 +75,20 @@ pub struct GltfAsset {
     pub bbox: MeshBbox,
     /// Named properties (e.g. spawn points) extracted from meshes whose name starts with `%P%`.
     /// These meshes are not added to [`Self::models`]; only their name, position and scale are kept here.
-    pub properties: HashMap<String, (Vec3, Vec3)>
+    pub properties: HashMap<String, (Vec3, Vec3)>,
+    /// Bones of a rigged model (nodes named `%B%<bone>`), parents first.
+    pub bones: Vec<GltfBone>,
+    /// Bone each entry of [`Self::models`] moves with (its vertices are then relative to the bone).
+    pub model_bones: Vec<Option<usize>>,
+    /// Animation clips of the bones, by name.
+    pub animations: HashMap<String, Handle<AnimationClip>>
 }
 
 impl GltfAsset {
+    pub fn animation(&self, name: &str) -> Option<&Handle<AnimationClip>> {
+        self.animations.get(name)
+    }
+
     /// Models whose connection condition holds, `connected` telling whether an anchor is connected.
     pub fn models_where(
         &self,
@@ -132,12 +143,29 @@ impl AssetLoader for GltfAssetLoader {
             .map(|material| material.to_pbr(load_context))
             .collect();
 
+        // Model space transform of each bone in its rest pose
+        let mut bone_matrices: Vec<Mat4> = Vec::with_capacity(model.bones.len());
+        for bone in &model.bones {
+            let local = Mat4::from_scale_rotation_translation(
+                bone.rest.scale,
+                bone.rest.rotation,
+                bone.rest.translation
+            );
+            bone_matrices.push(match bone.parent {
+                Some(parent) => bone_matrices[parent] * local,
+                None => local
+            });
+        }
+
         // Add meshes to the asset server
         let mut models = Vec::new();
         let mut conditions = Vec::new();
+        let mut model_bones = Vec::new();
         let mut bbox_min = Vec3::splat(f32::INFINITY);
         let mut bbox_max = Vec3::splat(f32::NEG_INFINITY);
-        for (i, (indices_data, vertices, material_id, condition)) in raw_meshes.iter().enumerate() {
+        for (i, (indices_data, vertices, material_id, condition, bone)) in
+            raw_meshes.iter().enumerate()
+        {
             let label = format!("gltf_mesh_{}", i);
             let (bb_min, bb_max) = bounding_boxes[i];
             let mesh_asset = Mesh {
@@ -156,17 +184,37 @@ impl AssetLoader for GltfAssetLoader {
                 materials_handles[*material_id].clone()
             ));
             conditions.push(condition.clone());
+            model_bones.push(*bone);
 
-            // Update the overall bounding box of the model
-            for j in 0..3 {
-                if bb_min[j] < bbox_min[j] {
-                    bbox_min[j] = bb_min[j];
-                }
-                if bb_max[j] > bbox_max[j] {
-                    bbox_max[j] = bb_max[j];
-                }
+            // Update the overall bounding box of the model, with bone meshes in their rest pose
+            let corners = match bone {
+                Some(bone) => (0..8)
+                    .map(|c| {
+                        let corner = Vec3::select(
+                            bevy::math::BVec3::new(c & 1 != 0, c & 2 != 0, c & 4 != 0),
+                            bb_max,
+                            bb_min
+                        );
+                        bone_matrices[*bone].transform_point3(corner)
+                    })
+                    .collect(),
+                None => vec![bb_min, bb_max]
+            };
+            for corner in corners {
+                bbox_min = bbox_min.min(corner);
+                bbox_max = bbox_max.max(corner);
             }
         }
+
+        let animations = model
+            .animations
+            .into_iter()
+            .map(|clip| {
+                let name = clip.name.clone();
+                let handle = load_context.add_labeled_asset(format!("animation_{name}"), clip);
+                (name, handle)
+            })
+            .collect();
 
         Ok(GltfAsset {
             path: path.to_string(),
@@ -176,7 +224,10 @@ impl AssetLoader for GltfAssetLoader {
                 min: bbox_min,
                 max: bbox_max
             },
-            properties: model.properties
+            properties: model.properties,
+            bones: model.bones,
+            model_bones,
+            animations
         })
     }
 
@@ -203,7 +254,26 @@ impl GltfLoader {
         parent: Entity
     ) -> Option<()> {
         let gltf_asset = gltf_assets.get(gltf_asset)?;
+
+        // Bones, animated by the `AnimationPlayer` of an ancestor
+        let mut bones: Vec<Entity> = Vec::with_capacity(gltf_asset.bones.len());
+        for bone in &gltf_asset.bones {
+            let bone_entity = commands
+                .spawn((
+                    Name::new(format!("Bone {}", bone.name)),
+                    bone.rest,
+                    AnimationBone {
+                        name: bone.name.clone(),
+                        rest: bone.rest
+                    },
+                    ChildOf(bone.parent.map_or(parent, |p| bones[p]))
+                ))
+                .id();
+            bones.push(bone_entity);
+        }
+
         for (i, (mesh_handle, material_handle)) in gltf_asset.models.iter().enumerate() {
+            let mesh_parent = gltf_asset.model_bones[i].map_or(parent, |bone| bones[bone]);
             commands.spawn((
                 Name::new(format!(
                     "Mesh Entity {} for GLTF Model {}",
@@ -212,7 +282,7 @@ impl GltfLoader {
                 Transform::default(),
                 Mesh3d(mesh_handle.clone()),
                 PbrMaterial3d(material_handle.clone()),
-                ChildOf(parent)
+                ChildOf(mesh_parent)
             ));
         }
         Some(())

@@ -18,30 +18,19 @@ impl Plugin for SsboTransformPlugin {
 pub struct PbrSsboTransform;
 impl PbrSsboTransform {
     pub const TRANSFORM_IDX: u32 = 0;
-    pub const TRANSFORM_STAGING_IDX: u32 = 1;
 }
 impl RenderData for PbrSsboTransform {
     type Params = ();
 
     fn describe(_params: &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
-        builder
-            .add_buffer(
-                Self::TRANSFORM_IDX,
-                Buffer {
-                    label: "pbr-ssbo-transform-gpu".to_string(),
-                    size: std::mem::size_of::<TransformUniform>() * SSBO_TRANSFORM_MAX_ENTITY,
-                    usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
-                    content: None
-                }
-            )
-            .add_buffer(
-                Self::TRANSFORM_STAGING_IDX,
-                Buffer {
-                    label: "pbr-ssbo-transform-staging".to_string(),
-                    size: std::mem::size_of::<TransformUniform>() * SSBO_TRANSFORM_MAX_ENTITY,
-                    usage: BufferUsage::COPY_SRC | BufferUsage::COPY_DST,
-                    content: None
-                }
-            );
+        builder.add_buffer(
+            Self::TRANSFORM_IDX,
+            Buffer {
+                label: "pbr-ssbo-transform-gpu".to_string(),
+                size: std::mem::size_of::<TransformUniform>() * SSBO_TRANSFORM_MAX_ENTITY,
+                usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
+                content: None
+            }
+        );
     }
 }

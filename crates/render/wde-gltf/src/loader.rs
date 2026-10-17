@@ -8,8 +8,15 @@ use crate::error::GltfError;
 use crate::material::GltfMaterial;
 use crate::model::{GltfModel, ModelCondition};
 
-/// A dataset representing mesh's data (indices, vertices), material ID and connection condition.
-type MeshDataSet = (Vec<u32>, Vec<Vertex>, usize, Option<ModelCondition>);
+/// A dataset representing mesh's data (indices, vertices), material ID, connection condition and
+/// bone.
+type MeshDataSet = (
+    Vec<u32>,
+    Vec<Vertex>,
+    usize,
+    Option<ModelCondition>,
+    Option<usize>
+);
 
 /// Result type for form_models function
 type FormedModelsResult =
@@ -150,7 +157,8 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                 indices.unwrap_or(Vec::new()),
                 vertices,
                 material_id as usize,
-                primitive.condition.clone()
+                primitive.condition.clone(),
+                primitive.bone
             ));
             bounding_boxes.push((final_min, final_max));
 

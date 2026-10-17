@@ -4,6 +4,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use wde_animation::AnimationClip;
 
 use crate::material::GltfMaterial;
 
@@ -17,7 +18,21 @@ pub struct GltfModel {
     pub materials: Vec<GltfMaterial>,
     /// Named properties (e.g. spawn points) extracted from meshes prefixed with `%P%`,
     /// mapping the property name to its `(position, scale)`.
-    pub properties: HashMap<String, (Vec3, Vec3)>
+    pub properties: HashMap<String, (Vec3, Vec3)>,
+    /// Bones of a rigged model, parents first.
+    pub bones: Vec<GltfBone>,
+    /// Node animations of the bones.
+    pub animations: Vec<AnimationClip>
+}
+
+/// Rigid part of a rigged model, from a node named `%B%<bone>`.
+#[derive(Debug, Clone)]
+pub struct GltfBone {
+    pub name: String,
+    /// Index of the parent bone, `None` for a root bone.
+    pub parent: Option<usize>,
+    /// Local transform, relative to the parent bone or to the model.
+    pub rest: Transform
 }
 
 /// Representation of a glTF buffer with its raw data and bufferView slices.
@@ -66,7 +81,9 @@ pub struct MeshPrimitive {
     /// Node scale [x, y, z]
     pub scale: [f32; 3],
     /// Connection condition, for nodes named `%V%<anchor>+` / `%V%<anchor>-`
-    pub condition: Option<ModelCondition>
+    pub condition: Option<ModelCondition>,
+    /// Bone the primitive moves with: its vertices are then left relative to the bone
+    pub bone: Option<usize>
 }
 
 /// Makes a mesh conditional on the connection state of a named anchor (`%P%` property).

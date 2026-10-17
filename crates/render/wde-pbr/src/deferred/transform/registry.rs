@@ -1,3 +1,4 @@
+use bytemuck::Zeroable;
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -80,12 +81,18 @@ impl MainWorldEntityUuidMap {
     }
 }
 
+/// Changed transforms closer than this (in IDs) are uploaded in the same write, unchanged ones
+/// in between included: each `write_buffer` call costs a staging buffer allocation.
+const MAX_UPLOAD_GAP: u32 = 64;
+
 /// Resource to track the mapping between render entities and their transform IDs in the SSBO.
 #[derive(Resource, Default, Clone)]
 pub struct PbrUuidRegistry {
     pub uuid_to_transform: HashMap<Uuid, u32>, // (uuid, transform_id in the SSBO)
     pub available_transform_ids: Vec<u32>,     // List of available transform IDs in the SSBO
-    pub next_transform_id: u32                 // Next available transform ID in the SSBO
+    pub next_transform_id: u32,                // Next available transform ID in the SSBO
+    /// CPU copy of the SSBO transforms, to upload the changed ones in a few large writes.
+    transforms: Vec<TransformUniform>
 }
 impl PbrUuidRegistry {
     /// Get the transform ID for a given UUID, adding it to the registry if it doesn't exist.
@@ -148,37 +155,51 @@ fn update_registry(
         return;
     }
 
-    // Update transform IDs for changed entities
-    let (ssbo_staging, ssbo_gpu) = match (
-        ssbo.iter().next().and_then(|(_, d)| {
-            buffers.get(&d.get_buffer(PbrSsboTransform::TRANSFORM_STAGING_IDX)?)
-        }),
-        ssbo.iter()
-            .next()
-            .and_then(|(_, d)| buffers.get(&d.get_buffer(PbrSsboTransform::TRANSFORM_IDX)?))
-    ) {
-        (Some(staging), Some(gpu)) => (&staging.buffer, &gpu.buffer),
-        _ => {
-            for (entity, _, _) in changed_transforms.iter().chain(changeds_to_retry.iter()) {
-                commands
-                    .entity(entity)
-                    .insert(ChangedTransformToRetryMarker);
-            }
-            return;
+    let Some(ssbo_gpu) = ssbo
+        .iter()
+        .next()
+        .and_then(|(_, d)| buffers.get(&d.get_buffer(PbrSsboTransform::TRANSFORM_IDX)?))
+        .map(|gpu| &gpu.buffer)
+    else {
+        for (entity, _, _) in changed_transforms.iter() {
+            commands
+                .entity(entity)
+                .insert(ChangedTransformToRetryMarker);
         }
+        return;
     };
-    let render_instance = render_instance.0.read().unwrap();
-    for (entity, uuid, transform) in changed_transforms.iter().chain(changeds_to_retry.iter()) {
+    let mut changed_ids = Vec::new();
+    for (_, uuid, transform) in changed_transforms.iter().chain(changeds_to_retry.iter()) {
         let transform_id = registry.get_or_add(uuid.0);
-        let offset = (transform_id as usize) * std::mem::size_of::<TransformUniform>();
-        ssbo_staging.write(
+        let index = transform_id as usize;
+        if registry.transforms.len() <= index {
+            registry
+                .transforms
+                .resize(index + 1, TransformUniform::zeroed());
+        }
+        registry.transforms[index] = TransformUniform::new(transform);
+        changed_ids.push(transform_id);
+    }
+    changed_ids.sort_unstable();
+    changed_ids.dedup();
+
+    let render_instance = render_instance.0.read().unwrap();
+    let mut ids = changed_ids.iter().copied().peekable();
+    while let Some(first) = ids.next() {
+        let mut last = first;
+        while let Some(next) = ids.next_if(|&id| id - last <= MAX_UPLOAD_GAP) {
+            last = next;
+        }
+        let range = first as usize..=last as usize;
+        ssbo_gpu.write(
             &render_instance,
-            bytemuck::cast_slice(&[TransformUniform::new(transform)]),
-            offset
+            bytemuck::cast_slice(&registry.transforms[range]),
+            first as usize * std::mem::size_of::<TransformUniform>()
         );
+    }
+    for (entity, _, _) in changeds_to_retry.iter() {
         commands
             .entity(entity)
             .remove::<ChangedTransformToRetryMarker>();
     }
-    ssbo_gpu.copy_from_buffer(&render_instance, ssbo_staging);
 }

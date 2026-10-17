@@ -13,6 +13,7 @@
 //!    - [`wde_camera`](wde_camera): A plugin for managing cameras and viewports.
 //!    - [`wde_camera_controller`](wde_camera_controller): A plugin for controlling cameras with various input methods.
 //!    - [`wde_gltf`](wde_gltf): A plugin for loading and rendering glTF 3D models.
+//!    - [`wde_animation`](wde_animation): A plugin for animating rigid parts of models (e.g. colonist walk cycles).
 //!    - [`wde_gizmos`](wde_gizmos): A plugin for rendering debug gizmos and visualizations.
 //! - Core:
 //!    - [`wde_renderer`](wde_renderer): A plugin for rendering 3D graphics using the `wgpu` graphics API.
@@ -123,6 +124,7 @@ impl Plugin for CustomWdePlugins {
             wde_logger::LogPlugin::default().auto_level(),
             wde_renderer::RenderPlugin::default(),
             wde_gltf::GltfPlugin,
+            wde_animation::AnimationPlugin,
             wde_camera::CameraPlugin,
             wde_camera_controller::CameraControllerPlugin,
             wde_physics::PhysicsPlugin,
@@ -163,6 +165,7 @@ pub mod prelude {
     pub use crate::WdeDefaultPlugins;
 
     // Core modules
+    pub use wde_animation::prelude::*;
     pub use wde_camera::prelude::*;
     pub use wde_camera_controller::prelude::*;
     pub use wde_gltf::prelude::*;
@@ -187,6 +190,7 @@ pub mod prelude {
 }
 
 // Re-export the modules for external use
+pub use wde_animation;
 pub use wde_camera;
 pub use wde_camera_controller;
 pub use wde_gltf;

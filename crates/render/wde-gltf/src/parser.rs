@@ -1,12 +1,14 @@
-use bevy::math::Vec3;
+use bevy::prelude::{Quat, Transform, Vec3};
 use std::collections::HashMap;
+use wde_animation::{AnimationClip, Interpolation, Keyframes};
 use wde_logger::prelude::*;
 
+use crate::accessor::parse_attribute_as_f32;
 use crate::error::GltfError;
 use crate::material::GltfMaterial;
 use crate::model::{
-    AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBuffer, GltfMesh, GltfModel,
-    MeshPrimitive, ModelCondition
+    AccessorData, BufferSliceData, GltfAccessorComponentType, GltfBone, GltfBuffer, GltfMesh,
+    GltfModel, MeshPrimitive, ModelCondition
 };
 use base64::{Engine, engine::general_purpose};
 use serde_json::Value;
@@ -14,6 +16,9 @@ use serde_json::Value;
 /// Prefix marking a glTF mesh as a named property (e.g. a spawn point) rather than a
 /// renderable mesh. Its position and scale are recorded but it is otherwise skipped.
 const PROPERTY_MESH_PREFIX: &str = "%P%";
+/// Prefix marking a node as a bone of a rigged model: its mesh stays in the bone's space, and
+/// animations move it at runtime. Only bones may have children, which must be bones too.
+const BONE_NODE_PREFIX: &str = "%B%";
 
 /// Parse a glTF 2.0 JSON file from `res/` and build an in-memory `GltfModel`.
 pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
@@ -125,30 +130,37 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
         .ok_or(GltfError::MissingField("scenes.nodes".to_string()))?;
     trace!("Processing {} nodes", nodes_list.len());
 
-    // Handle each nodes
+    // Handle each node, depth first so that parent bones come before their children
     let mut mesh_primitives: Vec<MeshPrimitive> = Vec::new();
     let mut properties: HashMap<String, (Vec3, Vec3)> = HashMap::new();
     let mut material_datas: Vec<GltfMaterial> = Vec::new();
     let mut material_map: HashMap<i64, usize> = HashMap::new();
-    for node in nodes_list {
-        // Retrieve node data
-        let node_idx = node
-            .as_i64()
-            .ok_or(GltfError::JsonError("Invalid node index".to_string()))?;
-        let node = &json["nodes"][node_idx as usize];
+    let mut bones: Vec<GltfBone> = Vec::new();
+    let mut node_bones: HashMap<usize, usize> = HashMap::new();
+    let mut stack: Vec<(usize, Option<usize>)> = nodes_list
+        .iter()
+        .rev()
+        .map(|node| {
+            node.as_u64()
+                .map(|idx| (idx as usize, None))
+                .ok_or(GltfError::JsonError("Invalid node index".to_string()))
+        })
+        .collect::<Result<_, _>>()?;
+    while let Some((node_idx, parent_bone)) = stack.pop() {
+        let node = &json["nodes"][node_idx];
 
         // Handle meshes in the node
-        let mesh_index = node["mesh"]
-            .as_i64()
-            .ok_or(GltfError::MissingField("node.mesh".to_string()))?;
-        let mesh = &json["meshes"][mesh_index as usize];
+        let mesh = node
+            .get("mesh")
+            .and_then(|v| v.as_i64())
+            .map(|mesh_index| &json["meshes"][mesh_index as usize]);
         // Prefer the node's (object's) name over the mesh data-block's name: the `%P%`
         // prefix is set by renaming the object in Blender, which does not rename the
         // underlying mesh data if it is not unique to that node.
         let name = node
             .get("name")
             .and_then(|v| v.as_str())
-            .or_else(|| mesh.get("name").and_then(|v| v.as_str()))
+            .or_else(|| mesh.and_then(|m| m.get("name")).and_then(|v| v.as_str()))
             .unwrap_or("unnamed_mesh");
 
         // Extract node transform
@@ -188,6 +200,49 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
                 ]
             })
             .unwrap_or([1.0, 1.0, 1.0]);
+
+        let children = node.get("children").and_then(|v| v.as_array());
+        let bone = match name.strip_prefix(BONE_NODE_PREFIX) {
+            Some(bone_name) => {
+                let bone = bones.len();
+                bones.push(GltfBone {
+                    name: bone_name.to_string(),
+                    parent: parent_bone,
+                    rest: Transform {
+                        translation: Vec3::from(translation),
+                        rotation: Quat::from_array(rotation),
+                        scale: Vec3::from(scale)
+                    }
+                });
+                node_bones.insert(node_idx, bone);
+                for child in children.into_iter().flatten().rev() {
+                    if let Some(child) = child.as_u64() {
+                        stack.push((child as usize, Some(bone)));
+                    }
+                }
+                Some(bone)
+            }
+            None => {
+                if children.is_some_and(|c| !c.is_empty()) {
+                    warn!(
+                        "Ignoring the children of node '{}' in '{}': only bone nodes ('{}') may have children.",
+                        name, path, BONE_NODE_PREFIX
+                    );
+                }
+                None
+            }
+        };
+        let Some(mesh) = mesh else {
+            match bone {
+                Some(_) => continue, // Pivot without geometry
+                None => return Err(GltfError::MissingField("node.mesh".to_string()))
+            }
+        };
+        // Bone meshes stay in the bone's space
+        let (translation, rotation, scale) = match bone {
+            Some(_) => ([0.0; 3], [0.0, 0.0, 0.0, 1.0], [1.0; 3]),
+            None => (translation, rotation, scale)
+        };
 
         // Meshes prefixed with "%P%" are not real renderable meshes: they mark a named
         // property (e.g. a spawn point) and only their position/scale are kept.
@@ -346,7 +401,8 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
                 translation,
                 rotation,
                 scale,
-                condition: ModelCondition::from_node_name(name)
+                condition: ModelCondition::from_node_name(name),
+                bone
             };
             mesh_primitives.push(mesh_primitive);
         }
@@ -365,6 +421,8 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
         }
     }
 
+    let animations = parse_animations(&json, accessors, &buffer, &node_bones, &bones)?;
+
     // GltfModel construction
     Ok(GltfModel {
         filename,
@@ -374,8 +432,160 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
             primitives: mesh_primitives
         }],
         materials: material_datas,
-        properties
+        properties,
+        bones,
+        animations
     })
+}
+
+/// Parse the accessor JSON description.
+fn parse_accessor(accessor: &Value) -> Result<AccessorData, GltfError> {
+    let field = |name: &str| GltfError::MissingField(format!("accessor.{name}"));
+    let component_type_value = accessor["componentType"]
+        .as_i64()
+        .ok_or(field("componentType"))?;
+    let bounds = |key: &str| {
+        accessor.get(key).and_then(|v| v.as_array()).map(|arr| {
+            arr.iter()
+                .filter_map(|val| val.as_f64().map(|f| f as f32))
+                .collect()
+        })
+    };
+    Ok(AccessorData {
+        buffer_view_index: accessor["bufferView"].as_i64().ok_or(field("bufferView"))?,
+        byte_offset: accessor
+            .get("byteOffset")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(0) as usize,
+        component_type: GltfAccessorComponentType::from_i64(component_type_value)
+            .ok_or(GltfError::UnsupportedComponentType(component_type_value))?,
+        count: accessor["count"].as_i64().ok_or(field("count"))? as usize,
+        accessor_type: accessor["type"].as_str().ok_or(field("type"))?.to_string(),
+        min: bounds("min"),
+        max: bounds("max")
+    })
+}
+
+/// Parse the glTF animations into clips, keeping the channels that target bones.
+fn parse_animations(
+    json: &Value,
+    accessors: &[Value],
+    buffer: &GltfBuffer,
+    node_bones: &HashMap<usize, usize>,
+    bones: &[GltfBone]
+) -> Result<Vec<AnimationClip>, GltfError> {
+    let animations = json.get("animations").and_then(|v| v.as_array());
+    let mut clips = Vec::new();
+    for (i, animation) in animations.into_iter().flatten().enumerate() {
+        let mut clip = AnimationClip {
+            name: animation
+                .get("name")
+                .and_then(|v| v.as_str())
+                .map_or_else(|| format!("animation_{i}"), str::to_string),
+            ground_speed: animation
+                .pointer("/extras/ground_speed")
+                .and_then(|v| v.as_f64())
+                .map(|v| v as f32),
+            ..Default::default()
+        };
+        let samplers = animation["samplers"]
+            .as_array()
+            .ok_or(GltfError::MissingField("animation.samplers".to_string()))?;
+        let channels = animation["channels"]
+            .as_array()
+            .ok_or(GltfError::MissingField("animation.channels".to_string()))?;
+        for channel in channels {
+            let target = &channel["target"];
+            let path = target["path"].as_str().unwrap_or_default();
+            let width = match path {
+                "translation" | "scale" => 3,
+                "rotation" => 4,
+                _ => {
+                    warn!(
+                        "Ignoring unsupported '{}' channel of animation '{}'.",
+                        path, clip.name
+                    );
+                    continue;
+                }
+            };
+            let Some(&bone) = target["node"]
+                .as_u64()
+                .and_then(|node| node_bones.get(&(node as usize)))
+            else {
+                warn!(
+                    "Ignoring a channel of animation '{}' on a node which is not a bone.",
+                    clip.name
+                );
+                continue;
+            };
+            let sampler = channel["sampler"]
+                .as_u64()
+                .and_then(|s| samplers.get(s as usize))
+                .ok_or(GltfError::MissingField(
+                    "animation.channel.sampler".to_string()
+                ))?;
+            let read = |key: &str| -> Result<Vec<f32>, GltfError> {
+                let accessor = sampler[key]
+                    .as_u64()
+                    .and_then(|a| accessors.get(a as usize))
+                    .ok_or(GltfError::MissingField(format!("animation.sampler.{key}")))?;
+                parse_attribute_as_f32(&parse_accessor(accessor)?, buffer)
+            };
+            let times = read("input")?;
+            let mut values = read("output")?;
+            let interpolation = match sampler.get("interpolation").and_then(|v| v.as_str()) {
+                Some("STEP") => Interpolation::Step,
+                Some("CUBICSPLINE") => {
+                    // Keep the value of each (in-tangent, value, out-tangent) triplet
+                    warn!(
+                        "Animation '{}' uses cubic splines, approximated linearly.",
+                        clip.name
+                    );
+                    values = values
+                        .chunks_exact(width * 3)
+                        .flat_map(|key| key[width..width * 2].to_vec())
+                        .collect();
+                    Interpolation::Linear
+                }
+                _ => Interpolation::Linear
+            };
+            if let Some(&last) = times.last() {
+                clip.duration = clip.duration.max(last);
+            }
+
+            let track = clip.tracks.entry(bones[bone].name.clone()).or_default();
+            let vec3s = |values: &[f32]| values.chunks_exact(3).map(Vec3::from_slice).collect();
+            match path {
+                "translation" => {
+                    track.translation = Some(Keyframes {
+                        times,
+                        values: vec3s(&values),
+                        interpolation
+                    })
+                }
+                "rotation" => {
+                    track.rotation = Some(Keyframes {
+                        times,
+                        values: values
+                            .chunks_exact(4)
+                            .map(|q| Quat::from_slice(q).normalize())
+                            .collect(),
+                        interpolation
+                    })
+                }
+                _ => {
+                    track.scale = Some(Keyframes {
+                        times,
+                        values: vec3s(&values),
+                        interpolation
+                    })
+                }
+            }
+        }
+        trace!("Loaded animation '{}' ({:.2}s).", clip.name, clip.duration);
+        clips.push(clip);
+    }
+    Ok(clips)
 }
 
 /// Parse material data from the glTF JSON

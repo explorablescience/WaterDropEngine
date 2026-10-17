@@ -11,6 +11,7 @@ impl Plugin for TestPlugin {
                 select_entity,
                 set_entities_target,
                 swap_colonist_model,
+                animate_colonists,
                 outline_new_meshes,
                 draw_gizmo_smoke_test
             )
@@ -151,6 +152,8 @@ fn init_scene(
                 Transform::from_translation(Vec3::new(i as f32 * 1.0, 0.0, 0.0)),
                 PendingHumanCollider(gltf_asset.clone()),
                 EntityMarker,
+                AnimationPlayer::default(),
+                WalkTracker::default(),
                 ChildOf(global_parent)
             ))
             .id();
@@ -375,11 +378,7 @@ fn set_entity_outline(
     entity: Entity,
     outline_material: Option<&Handle<OutlineMaterial>>
 ) {
-    let Ok(children) = children_query.get(entity) else {
-        return;
-    };
-
-    for &child in children {
+    for child in children_query.iter_descendants(entity) {
         if !mesh_query.contains(child) {
             continue;
         }
@@ -404,12 +403,12 @@ fn swap_colonist_model(
     mut commands: Commands,
     models: Res<ColonistModels>,
     changed: Query<(Entity, &Indoors, Option<&Children>), Changed<Indoors>>,
-    meshes: Query<(), With<Mesh3d>>,
+    model_parts: Query<(), Or<(With<Mesh3d>, With<AnimationBone>)>>,
     mut gltf_spawn_queue: ResMut<GltfSpawnQueue>
 ) {
     for (entity, indoors, children) in &changed {
         for child in children.into_iter().flatten() {
-            if meshes.contains(*child) {
+            if model_parts.contains(*child) {
                 commands.entity(*child).despawn();
             }
         }
@@ -421,15 +420,68 @@ fn swap_colonist_model(
     }
 }
 
+/// Smoothed walking speed of a colonist, measured from its movement.
+#[derive(Component, Default)]
+struct WalkTracker {
+    last_position: Option<Vec3>,
+    speed: f32
+}
+
+/// Speed under which a colonist counts as standing still.
+const WALK_MIN_SPEED: f32 = 0.05;
+/// Playback speed range of the walk cycle: beyond it, feet slide rather than the legs blur.
+const WALK_PLAYBACK_RANGE: (f32, f32) = (0.5, 2.2);
+
+/// Plays the walk cycle at the colonist's speed while it moves, idles otherwise.
+fn animate_colonists(
+    models: Res<ColonistModels>,
+    gltf_assets: Res<Assets<GltfAsset>>,
+    clips: Res<Assets<AnimationClip>>,
+    mut colonists: Query<(&Transform, &mut WalkTracker, &mut AnimationPlayer)>,
+    time: Res<Time>
+) {
+    // Both colonist models share the same rig: their clips are interchangeable
+    let Some(model) = gltf_assets.get(&models.suit) else {
+        return;
+    };
+    let (Some(walk), Some(idle)) = (model.animation("Walk"), model.animation("Idle")) else {
+        return;
+    };
+    let stride_speed = clips.get(walk).and_then(|c| c.ground_speed).unwrap_or(1.0);
+    let dt = time.delta_secs();
+    if dt <= 0.0 {
+        return;
+    }
+
+    for (transform, mut tracker, mut player) in &mut colonists {
+        let position = transform.translation;
+        let moved = tracker
+            .last_position
+            .map_or(0.0, |last| (position - last).xz().length());
+        tracker.last_position = Some(position);
+        tracker.speed += (moved / dt - tracker.speed) * (dt * 12.0).min(1.0);
+
+        if tracker.speed > WALK_MIN_SPEED {
+            let (min, max) = WALK_PLAYBACK_RANGE;
+            player
+                .crossfade(walk.clone(), 0.2)
+                .set_speed((tracker.speed / stride_speed).clamp(min, max));
+        } else {
+            player.crossfade(idle.clone(), 0.3).set_speed(1.0);
+        }
+    }
+}
+
 /// Keeps the selection outline on meshes spawned under a selected entity (e.g. model swaps).
 fn outline_new_meshes(
     mut commands: Commands,
     outline_material: Res<SelectionOutlineMaterial>,
-    new_meshes: Query<(Entity, &ChildOf), Added<Mesh3d>>,
+    new_meshes: Query<Entity, Added<Mesh3d>>,
+    parents: Query<&ChildOf>,
     selected: Query<(), With<EntitySelectedMarker>>
 ) {
-    for (mesh, child_of) in &new_meshes {
-        if selected.contains(child_of.parent()) {
+    for mesh in &new_meshes {
+        if parents.iter_ancestors(mesh).any(|e| selected.contains(e)) {
             commands
                 .entity(mesh)
                 .insert(PbrMaterial3d(outline_material.selected.clone()));
