@@ -446,7 +446,7 @@ fn set_entity_outline(
 fn swap_colonist_model(
     mut commands: Commands,
     models: Res<ColonistModels>,
-    changed: Query<(Entity, &Indoors, Option<&Children>), Changed<Indoors>>,
+    changed: Query<(Entity, &Indoors, Option<&Children>), (Changed<Indoors>, With<EntityMarker>)>,
     model_parts: Query<(), Or<(With<Mesh3d>, With<AnimationBone>)>>,
     mut gltf_spawn_queue: ResMut<GltfSpawnQueue>
 ) {
