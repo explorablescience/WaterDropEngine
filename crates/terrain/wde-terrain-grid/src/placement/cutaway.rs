@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
+use wde_logger::prelude::*;
 
 use bevy::{asset::LoadState, prelude::*};
 use wde_gltf::prelude::*;
-use wde_logger::prelude::*;
 use wde_pbr::prelude::*;
 use wde_renderer::prelude::*;
 

@@ -1,6 +1,7 @@
 //! Extracts recorded gizmo lines from the main world and uploads them to the GPU each frame.
-use bevy::prelude::*;
 use wde_logger::prelude::*;
+
+use bevy::prelude::*;
 use wde_renderer::prelude::{Color, *};
 
 use crate::{

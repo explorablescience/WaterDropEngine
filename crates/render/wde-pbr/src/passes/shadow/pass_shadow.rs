@@ -1,3 +1,5 @@
+use wde_logger::prelude::*;
+
 use bevy::{
     ecs::system::{
         SystemParamItem,
@@ -5,7 +7,6 @@ use bevy::{
     },
     prelude::*
 };
-use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::{

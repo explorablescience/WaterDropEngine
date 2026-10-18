@@ -1,8 +1,8 @@
 use std::collections::HashSet;
+use wde_logger::prelude::*;
 
 use bevy::prelude::*;
 use wde_gltf::prelude::*;
-use wde_logger::prelude::*;
 use wde_terrain::prelude::Terrain;
 
 use crate::{
