@@ -19,11 +19,25 @@ pub(crate) struct BoneOf(Entity);
 struct PlayingClip {
     clip: Handle<AnimationClip>,
     time: f32,
-    speed: f32
+    speed: f32,
+    /// Loops, or stops on its last pose.
+    repeat: bool,
+    finished: bool
+}
+impl PlayingClip {
+    fn new(clip: Handle<AnimationClip>, speed: f32, repeat: bool) -> Self {
+        Self {
+            clip,
+            time: 0.0,
+            speed,
+            repeat,
+            finished: false
+        }
+    }
 }
 
-/// Plays looping clips on the [`AnimationBone`]s below its entity, blending smoothly from one
-/// clip to the next.
+/// Plays clips (looping, or once) on the [`AnimationBone`]s below its entity, blending smoothly
+/// from one clip to the next.
 #[derive(Component, Clone, Debug, Default)]
 pub struct AnimationPlayer {
     active: Option<PlayingClip>,
@@ -35,13 +49,24 @@ pub struct AnimationPlayer {
 impl AnimationPlayer {
     /// Plays `clip` right away, from its start.
     pub fn play(&mut self, clip: Handle<AnimationClip>) -> &mut Self {
-        self.active = Some(PlayingClip {
-            clip,
-            time: 0.0,
-            speed: 1.0
-        });
+        self.active = Some(PlayingClip::new(clip, 1.0, true));
         self.previous = None;
         self
+    }
+
+    /// Blends to `clip` over `fade` seconds and plays it once, from its start (even if it is
+    /// already playing), holding its last pose. See [`Self::is_finished`].
+    pub fn play_once(&mut self, clip: Handle<AnimationClip>, fade: f32) -> &mut Self {
+        self.previous = self.active.take();
+        self.active = Some(PlayingClip::new(clip, 1.0, false));
+        self.fade = 0.0;
+        self.fade_duration = fade;
+        self
+    }
+
+    /// Whether the clip played once is over.
+    pub fn is_finished(&self) -> bool {
+        self.active.as_ref().is_some_and(|a| a.finished)
     }
 
     /// Blends from the current clip to `clip` over `duration` seconds. Keeps playing if `clip`
@@ -52,11 +77,7 @@ impl AnimationPlayer {
         }
         let speed = self.active.as_ref().map_or(1.0, |a| a.speed);
         self.previous = self.active.take();
-        self.active = Some(PlayingClip {
-            clip,
-            time: 0.0,
-            speed
-        });
+        self.active = Some(PlayingClip::new(clip, speed, true));
         self.fade = 0.0;
         self.fade_duration = duration;
         self
@@ -116,10 +137,14 @@ pub(crate) fn advance_players(
             .flatten()
         {
             let duration = clips.get(&playing.clip).map_or(0.0, |c| c.duration);
-            playing.time = match duration > 0.0 {
-                true => (playing.time + dt * playing.speed).rem_euclid(duration),
-                false => 0.0
-            };
+            if duration <= 0.0 {
+                playing.time = 0.0;
+            } else if playing.repeat {
+                playing.time = (playing.time + dt * playing.speed).rem_euclid(duration);
+            } else {
+                playing.time = (playing.time + dt * playing.speed).min(duration);
+                playing.finished = playing.time >= duration;
+            }
         }
         if player.previous.is_some() {
             player.fade += dt;

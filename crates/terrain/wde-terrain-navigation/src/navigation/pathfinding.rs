@@ -383,16 +383,18 @@ struct PathPoint {
     wait: f32
 }
 
-/// Path from `start` to `goal`, through walkable places only. An unreachable goal is moved to
-/// the nearest walkable place.
+/// Path from `start` to `goal`, through walkable places only (`outdoors_only`: never through
+/// pressurized places). An unreachable goal is moved to the nearest walkable place.
 pub(crate) fn find_path(
     world: &NavWorld,
     speeds: &WalkSpeeds,
     start: Vec3,
-    goal: Vec3
+    goal: Vec3,
+    outdoors_only: bool
 ) -> Option<Vec<Waypoint>> {
-    let (start, start_location) = world.nearest_walkable(start.xz(), SNAP_DISTANCE, |_| true)?;
-    let (goal, goal_location) = world.nearest_walkable(goal.xz(), SNAP_DISTANCE, |_| true)?;
+    let allowed = |l: &Location| !outdoors_only || !l.terrain.pressurized();
+    let (start, start_location) = world.nearest_walkable(start.xz(), SNAP_DISTANCE, allowed)?;
+    let (goal, goal_location) = world.nearest_walkable(goal.xz(), SNAP_DISTANCE, allowed)?;
     let (start_node, goal_node) = (world.node_at(start), world.node_at(goal));
     let bounds = Rect::from_corners(start, goal).inflate(SEARCH_MARGIN);
 
@@ -424,6 +426,7 @@ pub(crate) fn find_path(
         let position = NavWorld::node_position(node);
         neighbors.clear();
         world.neighbors(node, &location, &mut neighbors);
+        neighbors.retain(|(_, l)| allowed(l));
         let node_cost = cost[&node];
         for &(next, next_location) in &neighbors {
             let next_position = NavWorld::node_position(next);

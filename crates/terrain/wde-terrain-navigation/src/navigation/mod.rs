@@ -63,12 +63,18 @@ impl Default for WalkSpeeds {
 /// Body of a walking entity: agents keep `radius` away from each other.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct NavAgent {
-    pub radius: f32
+    pub radius: f32,
+    /// Walking speed relative to [`WalkSpeeds`].
+    pub speed: f32,
+    /// Never walks through pressurized places (e.g. wild creatures).
+    pub outdoors_only: bool
 }
 impl Default for NavAgent {
     fn default() -> Self {
         Self {
-            radius: DEFAULT_AGENT_RADIUS
+            radius: DEFAULT_AGENT_RADIUS,
+            speed: 1.0,
+            outdoors_only: false
         }
     }
 }
@@ -198,7 +204,14 @@ fn request_paths(
         let Ok(transform) = transforms.get(entity) else {
             continue;
         };
-        match find_path(&world, &speeds, transform.translation, destination) {
+        let outdoors_only = agents.get(entity).is_ok_and(|a| a.outdoors_only);
+        match find_path(
+            &world,
+            &speeds,
+            transform.translation,
+            destination,
+            outdoors_only
+        ) {
             Some(waypoints) => {
                 commands.entity(entity).insert(NavPath {
                     waypoints: waypoints.into(),
@@ -221,20 +234,26 @@ fn request_paths(
 /// Replans the moving entities when buildings are placed or removed.
 fn replan_on_network_change(
     nav: NavWorldParam,
-    mut moving: Query<(&Transform, &mut NavPath)>,
+    mut moving: Query<(&Transform, &mut NavPath, Option<&NavAgent>)>,
     speeds: Res<WalkSpeeds>
 ) {
     if !nav.is_changed() || moving.is_empty() {
         return;
     }
     let world = nav.world();
-    for (transform, mut path) in &mut moving {
+    for (transform, mut path, agent) in &mut moving {
         if path.waiting > 0.0 {
             continue; // Let the airlock cycle finish
         }
         // Keep the current path when the destination became unreachable
-        if let Some(waypoints) = find_path(&world, &speeds, transform.translation, path.destination)
-        {
+        let outdoors_only = agent.is_some_and(|a| a.outdoors_only);
+        if let Some(waypoints) = find_path(
+            &world,
+            &speeds,
+            transform.translation,
+            path.destination,
+            outdoors_only
+        ) {
             path.waypoints = waypoints.into();
         }
     }
@@ -264,16 +283,25 @@ fn walk_step(world: &NavWorld, from: Vec3, step: Vec3) -> Option<Vec3> {
     })
 }
 
+/// Entity walking along a path.
+type Walker<'a> = (
+    Entity,
+    &'a mut Transform,
+    &'a mut NavPath,
+    Option<&'a Indoors>,
+    Option<&'a NavAgent>
+);
+
 fn follow_paths(
     mut commands: Commands,
-    mut moving: Query<(Entity, &mut Transform, &mut NavPath, Option<&Indoors>)>,
+    mut moving: Query<Walker>,
     nav: NavWorldParam,
     speeds: Res<WalkSpeeds>,
     time: Res<Time>
 ) {
     let dt = time.delta_secs();
     let world = nav.world();
-    for (entity, mut transform, mut path, indoors) in &mut moving {
+    for (entity, mut transform, mut path, indoors, agent) in &mut moving {
         let mut time_left = dt;
         let mut heading = None;
         let mut environment = indoors.map(|i| i.0);
@@ -291,7 +319,7 @@ fn follow_paths(
             // Helmet on or off for the segment ahead (after any airlock cycle)
             environment = Some(waypoint.indoor);
 
-            let speed = speeds.base * waypoint.speed;
+            let speed = speeds.base * waypoint.speed * agent.map_or(1.0, |a| a.speed);
             let to_target = waypoint.position - transform.translation;
             let distance = to_target.length();
             if waypoint.wait > 0.0 && distance <= AIRLOCK_REACHED {
@@ -326,9 +354,13 @@ fn follow_paths(
         }
         if path.stuck > STUCK_REPLAN {
             path.stuck = 0.0;
-            if let Some(waypoints) =
-                find_path(&world, &speeds, transform.translation, path.destination)
-            {
+            if let Some(waypoints) = find_path(
+                &world,
+                &speeds,
+                transform.translation,
+                path.destination,
+                agent.is_some_and(|a| a.outdoors_only)
+            ) {
                 path.waypoints = waypoints.into();
             }
         }
