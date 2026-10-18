@@ -21,7 +21,14 @@ impl Plugin for TerrainRenderPlugin {
         app.add_plugins((BuffersPlugin, TerrainPassesPlugin, TerrainExtractorPlugin));
 
         // Extract dirty tiles from Terrain → TerrainRenderer each frame.
-        app.add_systems(Update, TerrainRenderer::extract_dirty);
+        app.add_systems(
+            Update,
+            (
+                TerrainRenderer::extract_dirty,
+                TerrainRenderer::update_draw_list
+            )
+                .chain()
+        );
 
         // Register the single-instance bind group types (created on demand).
         app.add_plugins((

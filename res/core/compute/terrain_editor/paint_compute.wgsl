@@ -23,20 +23,23 @@ struct Command {
 }
 @group(0) @binding(0) var<storage, read> in_commands: array<Command>;
 
-@group(1) @binding(0) var in_heightmap: texture_storage_2d_array<r8unorm,    read_write>;
+// Chunk maps: the chunk samples with a one-texel border (shared with the neighbors), heights normalized
+@group(1) @binding(0) var in_heightmap: texture_storage_2d_array<r32float,   read_write>;
 @group(1) @binding(1) var in_splatmap:  texture_storage_2d_array<rgba8unorm, read_write>;
 
-// Each thread owns one pixel and iterates over all commands.
-// Dispatch: (tile_subdiv * tile_subdiv / 64) workgroups per tile — constant regardless
-// of command count, avoiding the O(N_commands * N_pixels) over-dispatch of the old scheme.
+// Height change of a full-strength raise / lower step, in normalized height
+const HEIGHT_STEP: f32 = 0.0015;
+
+// Each thread owns one texel (border included, so that it stays equal to the neighbor's samples)
+// and iterates over all commands. Dispatch: (map_size² / 64) workgroups per tile.
 @compute @workgroup_size(64)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let tile_subdiv = u32(in_tile_info.tile_subdivisions);
+    let map_size    = textureDimensions(in_heightmap).x;
     let layer       = i32(in_tile_info.tile_layer);
     let pixel_index = global_id.x;
-    let idx         = vec2<u32>(pixel_index % tile_subdiv, pixel_index / tile_subdiv);
+    let idx         = vec2<u32>(pixel_index % map_size, pixel_index / map_size);
 
-    if idx.x >= tile_subdiv || idx.y >= tile_subdiv {
+    if idx.y >= map_size {
         return;
     }
 
@@ -65,12 +68,12 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             // Raise: add a small delta to the heightmap.
             let h = textureLoad(in_heightmap, vec2<i32>(idx), layer).r;
             textureStore(in_heightmap, vec2<i32>(idx), layer,
-                vec4<f32>(h + effect * 0.01, 0.0, 0.0, 1.0));
+                vec4<f32>(h + effect * HEIGHT_STEP, 0.0, 0.0, 1.0));
         } else if cmd.brush_type == 3.0 {
             // Lower: subtract a small delta from the heightmap.
             let h = textureLoad(in_heightmap, vec2<i32>(idx), layer).r;
             textureStore(in_heightmap, vec2<i32>(idx), layer,
-                vec4<f32>(h - effect * 0.01, 0.0, 0.0, 1.0));
+                vec4<f32>(h - effect * HEIGHT_STEP, 0.0, 0.0, 1.0));
         } else if cmd.brush_type == 4.0 {
             // Smooth: blend toward a 3x3 box-average of neighbors.
             let h   = textureLoad(in_heightmap, vec2<i32>(idx), layer).r;
@@ -92,12 +95,13 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 }
 
+// World position of a texel: texel 1 is the chunk's first sample, on its edge
 fn get_world_pos(idx: vec2<u32>) -> vec2<f32> {
     let s = in_tile_info.tile_subdivisions;
     let t = in_tile_info.tile_size;
     let p = in_tile_info.tile_idx;
     return vec2<f32>(
-        p.x * t.x - t.x * 0.5 + f32(idx.x) * (t.x / s),
-        p.y * t.y - t.y * 0.5 + f32(idx.y) * (t.y / s)
+        p.x * t.x - t.x * 0.5 + (f32(idx.x) - 1.0) * (t.x / s),
+        p.y * t.y - t.y * 0.5 + (f32(idx.y) - 1.0) * (t.y / s)
     );
 }

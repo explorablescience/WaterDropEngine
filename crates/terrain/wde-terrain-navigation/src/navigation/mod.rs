@@ -114,7 +114,8 @@ struct NavWorldParam<'w, 's> {
     grid: Res<'w, Grid>,
     placed: Query<'w, 's, (Entity, &'static GridEntity), With<BuildingConnections>>,
     walk: Res<'w, WalkMap>,
-    network: Res<'w, NavGrid>
+    network: Res<'w, NavGrid>,
+    terrain: Query<'w, 's, &'static wde_terrain::prelude::Terrain>
 }
 impl NavWorldParam<'_, '_> {
     fn world(&self) -> NavWorld<'_> {
@@ -122,7 +123,8 @@ impl NavWorldParam<'_, '_> {
             grid: &self.grid,
             buildings: self.placed.iter().collect::<HashMap<_, _>>(),
             walk: &self.walk,
-            network: &self.network
+            network: &self.network,
+            terrain: self.terrain.single().ok()
         }
     }
 
@@ -307,7 +309,13 @@ fn follow_paths(
             }
             // Never through walls, even when pushed off the planned line
             match walk_step(&world, transform.translation, to_target / distance * reach) {
-                Some(next) => {
+                Some(mut next) => {
+                    // Outdoors, on the ground (straight segments may cross bumps)
+                    if let Some(here) = world.locate(next.xz())
+                        && here.building.is_none()
+                    {
+                        next.y = here.height;
+                    }
                     transform.translation = next;
                     heading = Some(to_target);
                     path.stuck = 0.0;

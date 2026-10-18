@@ -1,9 +1,12 @@
 use std::collections::BTreeSet;
 
-use wde_terrain::TERRAIN_BUILDINGS_COLLIDER_GROUP;
+use wde_terrain::{TERRAIN_BUILDINGS_COLLIDER_GROUP, prelude::Terrain};
 
 use crate::{
-    core::{entries::PlacementConfigEntry, grid::GridEntityEvent},
+    core::{
+        entries::PlacementConfigEntry,
+        grid::{GridEntityEvent, TILE_SIZE}
+    },
     placement::{
         TerrainCursorPos,
         connections::connected_anchors,
@@ -444,7 +447,8 @@ pub fn place_update(
     mut grid_entity_events: MessageWriter<GridEntityEvent>,
     asset_server: Res<AssetServer>,
     placed: Query<&GridEntity, With<BuildingVariant>>,
-    modules: Query<&GridEntity, With<InteriorModule>>
+    modules: Query<&GridEntity, With<InteriorModule>>,
+    terrain: Query<&Terrain>
 ) {
     if manager.place_selected_entry.is_none()
         || (manager.mode != TerrainPlacementMode::Place
@@ -490,7 +494,10 @@ pub fn place_update(
         // Preview the variant matching the neighbors at this position
         let is_valid = match is_module {
             true => host.is_some(),
-            false => grid.is_area_free(&grid_entity)
+            false => {
+                grid.is_area_free(&grid_entity)
+                    && on_flat_ground(terrain.single().ok(), &grid_entity)
+            }
         };
         let connected = match is_module {
             true => BTreeSet::new(),
@@ -575,6 +582,32 @@ pub fn place_update(
             reset_placement_tool(&mut commands, &mut manager);
         }
     }
+}
+
+/// Height difference from 0 tolerated under a building: buildings stand on the flat colony
+/// plains, at height 0.
+const BUILDABLE_HEIGHT_TOLERANCE: f32 = 0.3;
+
+/// Whether the ground under a footprint is flat buildable ground (the plains at height 0).
+pub(crate) fn on_flat_ground(terrain: Option<&Terrain>, grid_entity: &GridEntity) -> bool {
+    let Some(terrain) = terrain else {
+        return true;
+    };
+    let offsets = [
+        (0.0, 0.0),
+        (-1.0, -1.0),
+        (1.0, -1.0),
+        (1.0, 1.0),
+        (-1.0, 1.0)
+    ];
+    grid_entity.footprint().iter().all(|tile| {
+        let center = Grid::get_tile_world_pos(*tile);
+        offsets.iter().all(|(x, z)| {
+            terrain
+                .height_at(center + Vec2::new(*x, *z) * TILE_SIZE * 0.5)
+                .is_some_and(|h| h.abs() <= BUILDABLE_HEIGHT_TOLERANCE)
+        })
+    })
 }
 
 /// Spawns a placed building (parent with its collider; meshes follow from its variant) and

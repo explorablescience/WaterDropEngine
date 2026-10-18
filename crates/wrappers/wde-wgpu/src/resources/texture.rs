@@ -119,7 +119,8 @@ impl Texture {
         sample_count: u32,
         layer_count: u32,
         mip_level_count: u32,
-        filterable: bool
+        filterable: bool,
+        tiling: bool
     ) -> Self {
         event!(LogLevel::TRACE, "Creating wgpu texture {}.", label);
 
@@ -173,11 +174,15 @@ impl Texture {
             usage: None
         });
 
-        // Create sampler
+        // Create sampler: tiling textures repeat, and are filtered anisotropically when mipmapped
+        let address_mode = match tiling {
+            true => wgpu::AddressMode::Repeat,
+            false => wgpu::AddressMode::ClampToEdge
+        };
         let sampler = instance.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some(format!("{}-texture-sampler", label).as_str()),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_u: address_mode,
+            address_mode_v: address_mode,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
@@ -189,7 +194,7 @@ impl Texture {
             lod_min_clamp: 0.0,
             lod_max_clamp: mip_level_count as f32,
             compare: None,
-            anisotropy_clamp: 1,
+            anisotropy_clamp: if tiling && mip_level_count > 1 { 16 } else { 1 },
             border_color: None
         });
 

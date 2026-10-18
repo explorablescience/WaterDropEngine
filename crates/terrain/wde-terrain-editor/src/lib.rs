@@ -34,7 +34,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn((
             Name::new("Terrain"),
             Transform::default(),
-            Terrain::load("tests/terrain"),
+            Terrain::load(DEFAULT_TERRAIN_PATH),
             TerrainRenderer::new(&asset_server),
             TerrainPhysics::default()
         ))
@@ -54,8 +54,8 @@ struct SaveManager {
 }
 
 /// Handle all tile readbacks from the GPU:
-/// - Always update physics when a heightmap arrives.
-/// - When in save mode, also write the tile to disk.
+/// - Always update physics and the CPU heights when a heightmap arrives.
+/// - When in save mode, also write the tile to disk (without its border, as loaded).
 fn handle_extracted_tiles(
     mut terrain: Query<&mut Terrain>,
     mut save_manager: ResMut<SaveManager>,
@@ -74,42 +74,31 @@ fn handle_extracted_tiles(
             data
         } = message;
 
-        // Always feed heightmaps back into the physics system.
         if *map_type == 0 {
             terrain.dirty_physics.push((*pos, 0, 0, data.clone()));
+            terrain.set_chunk_heights(*pos, data);
         }
 
         // Optionally save to disk.
         if save_manager.saving {
             let cur_dir = std::env::current_dir().unwrap();
             let full_path = format!("{}/res/{}", cur_dir.display(), terrain.path);
-            match map_type {
-                0 => {
-                    let path = format!("{}/heightmap_{}_{}.png", full_path, pos.x, pos.y);
-                    if let Err(e) = save_png_from_channels(
-                        &path,
-                        data,
-                        1,
-                        (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)
-                    ) {
-                        error!("Failed to save heightmap ({}, {}): {}", pos.x, pos.y, e);
-                    }
-                }
-                1 => {
-                    let path = format!(
+            let result = match map_type {
+                0 => save_heightmap(
+                    &format!("{}/heightmap_{}_{}.png", full_path, pos.x, pos.y),
+                    data
+                ),
+                1 => save_splatmap(
+                    &format!(
                         "{}/splatmap_{}_{}-{}.png",
                         full_path, pos.x, pos.y, splat_map_index
-                    );
-                    if let Err(e) = save_png_from_channels(
-                        &path,
-                        data,
-                        4,
-                        (CHUNK_RENDER_SUBDIVISIONS, CHUNK_RENDER_SUBDIVISIONS)
-                    ) {
-                        error!("Failed to save splatmap ({}, {}): {}", pos.x, pos.y, e);
-                    }
-                }
+                    ),
+                    data
+                ),
                 _ => continue
+            };
+            if let Err(e) = result {
+                error!("Failed to save terrain tile ({}, {}): {}", pos.x, pos.y, e);
             }
             save_manager
                 .tiles_to_save
@@ -123,28 +112,46 @@ fn handle_extracted_tiles(
     }
 }
 
-fn save_png_from_channels(
+/// Saves the chunk samples of a GPU heightmap as a 16-bit grayscale PNG.
+fn save_heightmap(path: &str, map: &[u8]) -> Result<(), String> {
+    let data: Vec<u8> = chunk_samples(map)
+        .iter()
+        .flat_map(|h| ((h.clamp(0.0, 1.0) * u16::MAX as f32).round() as u16).to_be_bytes())
+        .collect();
+    write_png(
+        path,
+        &data,
+        png::ColorType::Grayscale,
+        png::BitDepth::Sixteen
+    )
+}
+
+/// Saves the chunk samples of a GPU splat map as an RGBA PNG.
+fn save_splatmap(path: &str, map: &[u8]) -> Result<(), String> {
+    let size = CHUNK_MAP_SIZE as usize;
+    let data: Vec<u8> = (1..size - 1)
+        .flat_map(|z| (1..size - 1).map(move |x| (z * size + x) * 4))
+        .flat_map(|i| map[i..i + 4].to_vec())
+        .collect();
+    write_png(path, &data, png::ColorType::Rgba, png::BitDepth::Eight)
+}
+
+fn write_png(
     path: &str,
     data: &[u8],
-    channels: usize,
-    dimensions: (u32, u32)
+    color: png::ColorType,
+    depth: png::BitDepth
 ) -> Result<(), String> {
-    let rgba_data: Vec<u8> = match channels {
-        1 => data.iter().flat_map(|&v| [v, v, v, 255]).collect(),
-        4 => data.to_vec(),
-        _ => return Err("Unsupported number of channels".to_string())
-    };
-
     let file =
         std::fs::File::create(path).map_err(|e| format!("Failed to create file {path}: {e}"))?;
-    let w = std::io::BufWriter::new(file);
-    let mut encoder = png::Encoder::new(w, dimensions.0, dimensions.1);
-    encoder.set_color(png::ColorType::Rgba);
-    encoder.set_depth(png::BitDepth::Eight);
+    let mut encoder =
+        png::Encoder::new(std::io::BufWriter::new(file), CHUNK_SAMPLES, CHUNK_SAMPLES);
+    encoder.set_color(color);
+    encoder.set_depth(depth);
     let mut writer = encoder
         .write_header()
         .map_err(|e| format!("Failed to write PNG header: {e}"))?;
     writer
-        .write_image_data(&rgba_data)
+        .write_image_data(data)
         .map_err(|e| format!("Failed to write PNG data: {e}"))
 }

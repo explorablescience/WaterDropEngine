@@ -9,6 +9,8 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 
+use crate::render::dependencies::terrain_buffer::TERRAIN_MATERIAL_COUNT;
+
 pub(crate) struct TerrainMaterialsPlugin;
 impl Plugin for TerrainMaterialsPlugin {
     fn build(&self, app: &mut App) {
@@ -23,12 +25,18 @@ impl Plugin for TerrainMaterialsPlugin {
     }
 }
 
-const TEX_SIZE: (u32, u32) = (2048, 2048);
-const MATERIALS: [&str; 4] = [
-    "coral_gravel",
-    "gravelly_sand",
-    "rocky_trail",
-    "sandy_gravel"
+const TEX_SIZE: (u32, u32) = (1024, 1024);
+/// Materials in splat map order (`splatmap_x_z-0.png` RGBA, then `-1.png` RGBA), from
+/// `res/core/models/terrain/` (see `SOURCES.md` there).
+const MATERIALS: [&str; TERRAIN_MATERIAL_COUNT] = [
+    "mars_dust",
+    "mars_regolith",
+    "mars_pebbles",
+    "mars_gravel",
+    "mars_sediment",
+    "mars_cliff",
+    "mars_basalt",
+    "mars_compacted"
 ];
 const TEX_TYPES: [&str; 5] = [
     "albedo",
@@ -109,6 +117,7 @@ impl RenderData for TerrainMaterials {
                     usages,
                     layer_count: materials.albedo_textures.len() as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
+                    tiling: true,
                     ..Default::default()
                 }
             )
@@ -121,6 +130,7 @@ impl RenderData for TerrainMaterials {
                     usages,
                     layer_count: materials.normal_textures.len() as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
+                    tiling: true,
                     ..Default::default()
                 }
             )
@@ -133,6 +143,7 @@ impl RenderData for TerrainMaterials {
                     usages,
                     layer_count: materials.roughness_textures.len() as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
+                    tiling: true,
                     ..Default::default()
                 }
             )
@@ -145,6 +156,7 @@ impl RenderData for TerrainMaterials {
                     usages,
                     layer_count: materials.ao_textures.len() as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
+                    tiling: true,
                     ..Default::default()
                 }
             )
@@ -157,6 +169,7 @@ impl RenderData for TerrainMaterials {
                     usages,
                     layer_count: materials.displacement_textures.len() as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
+                    tiling: true,
                     ..Default::default()
                 }
             );

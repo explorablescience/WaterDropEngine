@@ -101,7 +101,7 @@ pub fn initiate_tile_readbacks(
         };
         let texture_handle = match map_type {
             0 => gpu.heightmap_array.as_ref(),
-            1 => gpu.splatmap_array.as_ref(),
+            1 => gpu.splatmap_arrays.get(splat_index as usize),
             _ => continue
         };
         let Some(tex_h) = texture_handle else {

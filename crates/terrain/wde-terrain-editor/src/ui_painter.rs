@@ -2,7 +2,7 @@ use wde_logger::prelude::*;
 
 use bevy::prelude::*;
 use wde_editor::prelude::*;
-use wde_terrain::prelude::*;
+use wde_terrain::{prelude::*, render::dependencies::terrain_buffer::TERRAIN_MATERIAL_COUNT};
 
 use crate::{
     SaveManager,
@@ -81,19 +81,18 @@ fn ui_terrain_settings(
         .default_pos([40.0, 400.0])
         .open(ui_menu.clicked_mut("Terrain/Settings"))
         .show(&ctx.0, |ui| {
-            ui.heading("Tiling (UV repetitions per tile)");
-            for i in 0..4 {
+            ui.heading("Tiling (world size of one texture repeat)");
+            for i in 0..TERRAIN_MATERIAL_COUNT {
                 ui.add(
-                    Slider::new(&mut settings.tiling_scales[i], 1.0..=20.0)
-                        .text(format!("Layer {i}"))
+                    Slider::new(&mut settings.tiling[i], 0.5..=20.0).text(format!("Material {i}"))
                 );
             }
             ui.separator();
-            ui.heading("Displacement (metres)");
-            for i in 0..4 {
+            ui.heading("Height blending (relief over the neighbors)");
+            for i in 0..TERRAIN_MATERIAL_COUNT {
                 ui.add(
-                    Slider::new(&mut settings.displacement_scales[i], 0.0..=0.5)
-                        .text(format!("Layer {i}"))
+                    Slider::new(&mut settings.height_blend[i], 0.0..=2.0)
+                        .text(format!("Material {i}"))
                 );
             }
         });

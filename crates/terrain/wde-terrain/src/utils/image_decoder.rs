@@ -1,24 +1,59 @@
 use std::{fs::File, io::BufReader};
 
-/// Utility function to decode a PNG image from the specified path, convert it to the target number of channels (1 for heightmap, 4 for splatmap), resize it to the target size if necessary, and return the raw pixel data as a byte vector. The function handles different PNG color types and applies the appropriate transformations to ensure the output data is in the expected format for terrain rendering.
-///
-/// # Arguments
-/// * `path` - The file path to the PNG image to be decoded.
-/// * `target_channels` - The desired number of channels in the output data (1 for heightmap, 4 for splatmap).
-/// * `target_size` - The desired dimensions of the output image (width, height). If the source image has different dimensions, it will be resized using nearest neighbor scaling.
-///
-/// # Returns
-/// A `Result` containing the raw pixel data as a byte vector if successful, or an error message as a string if the decoding or processing fails.
-pub fn decode_png_as_channels(
-    path: &str,
-    target_channels: usize,
-    target_size: (u32, u32)
-) -> Result<Vec<u8>, String> {
+/// Decoded image: values of each channel normalized to [0, 1], row-major.
+pub struct DecodedImage {
+    pub width: u32,
+    pub height: u32,
+    pub channels: usize,
+    pub data: Vec<f32>
+}
+
+impl DecodedImage {
+    pub fn get(&self, x: u32, y: u32, channel: usize) -> f32 {
+        let channel = channel.min(self.channels - 1);
+        self.data[(y as usize * self.width as usize + x as usize) * self.channels + channel]
+    }
+
+    /// Channel `channel` bilinearly resampled to `size` x `size` samples, corners aligned (the
+    /// first and last samples stay on the image edges).
+    pub fn resample(&self, channel: usize, size: u32) -> Vec<f32> {
+        if self.width == size && self.height == size {
+            let channel = channel.min(self.channels - 1);
+            return self
+                .data
+                .iter()
+                .skip(channel)
+                .step_by(self.channels)
+                .copied()
+                .collect();
+        }
+        let scale = |n: u32| (n.max(2) - 1) as f32 / (size - 1) as f32;
+        let (sx, sy) = (scale(self.width), scale(self.height));
+        let mut out = Vec::with_capacity((size * size) as usize);
+        for y in 0..size {
+            let fy = y as f32 * sy;
+            let (y0, ty) = ((fy.floor() as u32).min(self.height - 1), fy.fract());
+            let y1 = (y0 + 1).min(self.height - 1);
+            for x in 0..size {
+                let fx = x as f32 * sx;
+                let (x0, tx) = ((fx.floor() as u32).min(self.width - 1), fx.fract());
+                let x1 = (x0 + 1).min(self.width - 1);
+                let top = self.get(x0, y0, channel) * (1.0 - tx) + self.get(x1, y0, channel) * tx;
+                let bottom =
+                    self.get(x0, y1, channel) * (1.0 - tx) + self.get(x1, y1, channel) * tx;
+                out.push(top * (1.0 - ty) + bottom * ty);
+            }
+        }
+        out
+    }
+}
+
+/// Decodes a PNG (grayscale or color, 8 or 16 bits per channel) into normalized values.
+pub fn decode_png(path: &str) -> Result<DecodedImage, String> {
     let mut decoder = png::Decoder::new(BufReader::new(
         File::open(path).map_err(|e| format!("failed to open {path}: {e}"))?
     ));
-    decoder.set_transformations(png::Transformations::EXPAND | png::Transformations::STRIP_16);
-
+    decoder.set_transformations(png::Transformations::EXPAND);
     let mut reader = decoder
         .read_info()
         .map_err(|e| format!("failed to read PNG header for {path}: {e}"))?;
@@ -32,89 +67,24 @@ pub fn decode_png_as_channels(
         .next_frame(&mut raw)
         .map_err(|e| format!("failed to decode PNG frame for {path}: {e}"))?;
     let raw = &raw[..info.buffer_size()];
-    let src_size = (info.width, info.height);
-
-    let channels_converted = match target_channels {
-        1 => match info.color_type {
-            png::ColorType::Grayscale => Ok(raw.to_vec()),
-            png::ColorType::GrayscaleAlpha => Ok(raw.chunks_exact(2).map(|px| px[0]).collect()),
-            png::ColorType::Rgb => Ok(raw.chunks_exact(3).map(|px| px[0]).collect()),
-            png::ColorType::Rgba => Ok(raw.chunks_exact(4).map(|px| px[0]).collect()),
-            other => Err(format!(
-                "unsupported PNG color type for heightmap {path}: {other:?}"
-            ))
-        },
-        4 => match info.color_type {
-            png::ColorType::Rgba => Ok(raw.to_vec()),
-            png::ColorType::Rgb => {
-                let mut out = Vec::with_capacity((raw.len() / 3) * 4);
-                for px in raw.chunks_exact(3) {
-                    out.extend_from_slice(&[px[0], px[1], px[2], 255]);
-                }
-                Ok(out)
-            }
-            png::ColorType::Grayscale => {
-                let mut out = Vec::with_capacity(raw.len() * 4);
-                for &v in raw {
-                    out.extend_from_slice(&[v, v, v, 255]);
-                }
-                Ok(out)
-            }
-            png::ColorType::GrayscaleAlpha => {
-                let mut out = Vec::with_capacity((raw.len() / 2) * 4);
-                for px in raw.chunks_exact(2) {
-                    out.extend_from_slice(&[px[0], px[0], px[0], px[1]]);
-                }
-                Ok(out)
-            }
-            other => Err(format!(
-                "unsupported PNG color type for splatmap {path}: {other:?}"
-            ))
-        },
-        _ => Err(format!(
-            "unsupported target channel count: {target_channels}"
-        ))
-    }?;
-
-    Ok(resize_nearest_u8(
-        &channels_converted,
-        src_size,
-        target_size,
-        target_channels
-    ))
-}
-
-/// Resizes the input image data using nearest neighbor scaling to the specified target size. The function takes into account the number of channels in the image data to ensure that the output is correctly formatted for use in terrain rendering.
-///
-/// # Arguments
-/// * `data` - The raw pixel data of the source image as a byte slice.
-/// * `src_size` - The dimensions of the source image (width, height).
-/// * `dst_size` - The desired dimensions of the output image (width, height).
-/// * `channels` - The number of channels in the image data (e.g., 1 for heightmap, 4 for splatmap).
-///
-/// # Returns
-/// A vector of bytes containing the resized image data, formatted according to the specified number of channels
-fn resize_nearest_u8(
-    data: &[u8],
-    src_size: (u32, u32),
-    dst_size: (u32, u32),
-    channels: usize
-) -> Vec<u8> {
-    let (src_w, src_h) = src_size;
-    let (dst_w, dst_h) = dst_size;
-    if src_w == dst_w && src_h == dst_h {
-        return data.to_vec();
-    }
-
-    let mut out = vec![0u8; (dst_w as usize) * (dst_h as usize) * channels];
-    for y in 0..dst_h {
-        let sy = (y * src_h / dst_h) as usize;
-        for x in 0..dst_w {
-            let sx = (x * src_w / dst_w) as usize;
-            let src_idx = (sy * src_w as usize + sx) * channels;
-            let dst_idx = (y as usize * dst_w as usize + x as usize) * channels;
-            out[dst_idx..dst_idx + channels].copy_from_slice(&data[src_idx..src_idx + channels]);
-        }
-    }
-    out
+    let channels = match info.color_type {
+        png::ColorType::Grayscale => 1,
+        png::ColorType::GrayscaleAlpha => 2,
+        png::ColorType::Rgb => 3,
+        png::ColorType::Rgba => 4,
+        other => return Err(format!("unsupported PNG color type for {path}: {other:?}"))
+    };
+    let data = match info.bit_depth {
+        png::BitDepth::Sixteen => raw
+            .chunks_exact(2)
+            .map(|b| u16::from_be_bytes([b[0], b[1]]) as f32 / u16::MAX as f32)
+            .collect(),
+        _ => raw.iter().map(|&b| b as f32 / u8::MAX as f32).collect()
+    };
+    Ok(DecodedImage {
+        width: info.width,
+        height: info.height,
+        channels,
+        data
+    })
 }

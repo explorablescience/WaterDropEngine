@@ -41,6 +41,9 @@ pub struct Texture {
     pub mip_level_count: u32,
     /// Whether the texture should be filterable when sampled. Defaults to true.
     pub filterable: bool,
+    /// Whether sampling repeats the texture (UVs wrap around), with anisotropic filtering when
+    /// mipmapped. Defaults to false (UVs clamped to the edges).
+    pub tiling: bool,
 
     /// Raw pixel data for the texture, in the format specified by `format`. Defaults to empty.
     pub data: Vec<u8>
@@ -56,6 +59,7 @@ impl Default for Texture {
             layer_count: 1,
             mip_level_count: 1,
             filterable: true,
+            tiling: false,
             data: Vec::new()
         }
     }
@@ -91,7 +95,8 @@ impl RenderAsset for GpuTexture {
             asset.sample_count,
             asset.layer_count,
             asset.mip_level_count,
-            asset.filterable
+            asset.filterable,
+            asset.tiling
         );
 
         // Copy the texture data
@@ -186,6 +191,7 @@ impl AssetLoader for TextureLoader {
             layer_count: 1,
             mip_level_count: 1,
             filterable: true,
+            tiling: false,
             data
         })
     }

@@ -24,15 +24,15 @@ impl SubRenderPassTerrainGround {
         mut render_terrain_extractor: ResMut<TerrainExtractor>,
         mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>
     ) {
-        let (heightmap_array, splatmap_array, pos_to_layer, dirty, chunk_count) = {
+        let (heightmap_array, splatmap_arrays, pos_to_layer, dirty, draw_list) = {
             let mut query = main_world.query::<&TerrainRenderer>();
             if let Ok(renderer) = query.single(&main_world) {
                 (
                     renderer.heightmap_array.clone(),
-                    renderer.splatmap_array.clone(),
+                    renderer.splatmap_arrays.clone(),
                     renderer.pos_to_layer.clone(),
                     renderer.dirty.clone(),
-                    renderer.pos_to_layer.len() as u32
+                    renderer.draw_list.clone()
                 )
             } else {
                 return;
@@ -45,10 +45,10 @@ impl SubRenderPassTerrainGround {
             &mut main_terrain_extractor,
             &mut render_terrain_extractor,
             heightmap_array,
-            splatmap_array,
+            splatmap_arrays,
             pos_to_layer,
             dirty,
-            chunk_count,
+            draw_list,
             &mut gpu_terrain_renderer
         );
     }
@@ -78,12 +78,7 @@ impl RenderSubPass for SubRenderPassTerrainGround {
             chunk_array_bg
         ): &SystemParamItem<Self::Params>
     ) -> RenderSubPassDesc {
-        let mesh = match meshes.get(terrain_mesh.deferred_mesh.as_ref().unwrap().id()) {
-            Some(m) => m,
-            None => return RenderSubPassDesc::default()
-        };
-
-        if !terrain_renderer.ready {
+        if !terrain_renderer.ready || terrain_mesh.lod_meshes.is_empty() {
             return RenderSubPassDesc::default();
         }
 
@@ -93,17 +88,8 @@ impl RenderSubPass for SubRenderPassTerrainGround {
             .and_then(|h| chunk_array_bg.get(h))
             .map(|bg| bg.bind_group.clone());
 
-        // One instanced draw call for all chunks.
-        let instance_count = terrain_renderer.chunk_count;
-        let batch = DrawCommandsBatch {
-            bind_group: None,
-            index_range: 0..mesh.index_count,
-            instance_range: 0..instance_count
-        };
-
-        RenderSubPassDesc(vec![
+        let mut commands = vec![
             SubPassCommand::Pipeline(Some(pipeline.iter().next().map(|(_, p)| p.0)).flatten()),
-            SubPassCommand::Mesh(terrain_mesh.deferred_mesh.as_ref().map(|m| m.id())),
             SubPassCommand::BindGroup(0, camera.iter().next().map(|(_, c)| c.bind_group.clone())),
             SubPassCommand::BindGroup(
                 1,
@@ -120,8 +106,25 @@ impl RenderSubPass for SubRenderPassTerrainGround {
                     .map(|(_, b)| b.bind_group.clone())
             ),
             SubPassCommand::BindGroup(3, render_bind_group),
-            SubPassCommand::DrawBatches(vec![batch]),
-        ])
+        ];
+
+        // One instanced draw call per level of detail
+        for (lod, range) in terrain_renderer.draw_list.lod_ranges.iter().enumerate() {
+            let handle = &terrain_mesh.lod_meshes[lod];
+            let Some(mesh) = meshes.get(handle.id()) else {
+                continue;
+            };
+            if range.is_empty() {
+                continue;
+            }
+            commands.push(SubPassCommand::Mesh(Some(handle.id())));
+            commands.push(SubPassCommand::DrawBatches(vec![DrawCommandsBatch {
+                bind_group: None,
+                index_range: 0..mesh.index_count,
+                instance_range: range.clone()
+            }]));
+        }
+        RenderSubPassDesc(commands)
     }
 
     fn label() -> &'static str {

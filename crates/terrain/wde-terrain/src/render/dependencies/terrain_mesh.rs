@@ -1,45 +1,47 @@
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::manager::{CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE};
+use crate::{
+    manager::{CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE},
+    render::renderer::TERRAIN_LOD_COUNT
+};
 
+/// Flat chunk grids, one per level of detail, displaced by the heightmaps in the vertex shader.
 #[derive(Resource, Default)]
 pub struct TerrainRenderPassMesh {
-    pub deferred_mesh: Option<Handle<Mesh>>
+    pub lod_meshes: Vec<Handle<Mesh>>
 }
 impl TerrainRenderPassMesh {
-    // Creates the rendering mesh.
+    // Creates the rendering meshes.
     pub fn init(assets_server: Res<AssetServer>, mut render_pass: ResMut<TerrainRenderPassMesh>) {
-        let mut mesh = PlaneMesh::from("terrain_tile", CHUNK_RENDER_SUBDIVISIONS, Vec3::Y, false);
-
-        // Scale the plane to cover the entire terrain tile size
-        for vertex in &mut mesh.vertices {
-            vertex.position[0] *= CHUNK_SIZE;
-            vertex.position[2] *= CHUNK_SIZE;
-        }
-
-        // Fix the UVs to cover the entire texture
-        for vertex in &mut mesh.vertices {
-            vertex.uv[0] = vertex.position[0] / CHUNK_SIZE + 0.5; // Map from [-TILE_SIZE/2, TILE_SIZE/2] to [0, 1]
-            vertex.uv[1] = vertex.position[2] / CHUNK_SIZE + 0.5; // Map from [-TILE_SIZE/2, TILE_SIZE/2] to [0, 1]
-        }
-
-        render_pass.deferred_mesh = Some(assets_server.add(mesh));
+        render_pass.lod_meshes = (0..TERRAIN_LOD_COUNT)
+            .map(|lod| {
+                let subdivisions = CHUNK_RENDER_SUBDIVISIONS >> lod;
+                let mut mesh = PlaneMesh::from(
+                    &format!("terrain_tile_lod{lod}"),
+                    subdivisions,
+                    Vec3::Y,
+                    false
+                );
+                // Cover the chunk, UVs in [0, 1] landing on the heightmap samples
+                for vertex in &mut mesh.vertices {
+                    vertex.position[0] *= CHUNK_SIZE;
+                    vertex.position[2] *= CHUNK_SIZE;
+                    vertex.uv[0] = vertex.position[0] / CHUNK_SIZE + 0.5;
+                    vertex.uv[1] = vertex.position[2] / CHUNK_SIZE + 0.5;
+                }
+                assets_server.add(mesh)
+            })
+            .collect();
     }
 
-    // Extracts the mesh handle to the render world.
+    // Extracts the mesh handles to the render world.
     pub fn extract_terrain_mesh(
         mesh_cpu: ExtractWorld<Res<TerrainRenderPassMesh>>,
         mut mesh: ResMut<TerrainRenderPassMesh>
     ) {
-        // Check if the mesh is already extracted
-        if mesh.deferred_mesh.is_some() {
-            return;
-        }
-
-        // Extract the mesh handle to the render world
-        if let Some(ref mesh_cpu) = mesh_cpu.deferred_mesh {
-            mesh.deferred_mesh = Some(mesh_cpu.clone());
+        if mesh.lod_meshes.is_empty() && !mesh_cpu.lod_meshes.is_empty() {
+            mesh.lod_meshes = mesh_cpu.lod_meshes.clone();
         }
     }
 }

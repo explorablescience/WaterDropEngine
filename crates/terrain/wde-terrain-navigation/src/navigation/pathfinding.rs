@@ -16,6 +16,7 @@ use std::{
 };
 
 use bevy::prelude::*;
+use wde_terrain::prelude::Terrain as TerrainMap;
 use wde_terrain_grid::{core::grid::TILE_SIZE, prelude::*};
 
 use crate::{
@@ -41,6 +42,10 @@ const LINE_STEP: f32 = CELL_SIZE * 0.5;
 const LINE_HALF_WIDTH: f32 = 0.08;
 /// Rings of candidate spots searched around a group destination.
 const MAX_FORMATION_RINGS: usize = 24;
+/// Steepest outdoor ground walked on (height change per unit of distance, about 42°).
+const MAX_WALK_SLOPE: f32 = 0.9;
+/// Distance over which the ground slope is measured.
+const SLOPE_PROBE: f32 = 0.5;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 enum Node {
@@ -108,7 +113,9 @@ pub(crate) struct NavWorld<'a> {
     pub grid: &'a Grid,
     pub buildings: HashMap<Entity, &'a GridEntity>,
     pub walk: &'a WalkMap,
-    pub network: &'a NavGrid
+    pub network: &'a NavGrid,
+    /// Outdoor ground heights; flat at 0 without terrain.
+    pub terrain: Option<&'a TerrainMap>
 }
 
 impl NavWorld<'_> {
@@ -132,18 +139,37 @@ impl NavWorld<'_> {
         self.occupant(pos).is_none_or(|(_, b)| is_path_piece(b))
     }
 
+    /// Outdoor ground height at `pos`, `None` beyond the terrain or where too steep to walk.
+    fn ground(&self, pos: Vec2) -> Option<f32> {
+        let Some(terrain) = self.terrain else {
+            return Some(0.0);
+        };
+        let height = terrain.height_at(pos)?;
+        let steep = [Vec2::X, Vec2::Y].into_iter().any(|axis| {
+            let probe = axis * SLOPE_PROBE;
+            match (
+                terrain.height_at(pos + probe),
+                terrain.height_at(pos - probe)
+            ) {
+                (Some(a), Some(b)) => (a - b).abs() > MAX_WALK_SLOPE * 2.0 * SLOPE_PROBE,
+                _ => true
+            }
+        });
+        (!steep).then_some(height)
+    }
+
     /// Walkable place at `pos`, `None` if blocked.
     pub fn locate(&self, pos: Vec2) -> Option<Location> {
         match self.occupant(pos) {
             None => Some(Location {
                 building: None,
                 terrain: Terrain::Ground,
-                height: 0.0
+                height: self.ground(pos)?
             }),
             Some((_, b)) if is_path_piece(b) => Some(Location {
                 building: None,
                 terrain: Terrain::Path,
-                height: 0.0
+                height: self.ground(pos)?
             }),
             Some((entity, b)) => {
                 let cell = self.walk.cells.get(&WalkMap::cell_key(pos))?;

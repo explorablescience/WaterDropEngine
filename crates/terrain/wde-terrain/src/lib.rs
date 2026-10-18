@@ -7,7 +7,7 @@
 //! ```
 //! fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
 //!     commands.spawn((
-//!         Terrain::load("tests/terrain"),
+//!         Terrain::load(DEFAULT_TERRAIN_PATH),
 //!         TerrainRenderer::new(&asset_server),
 //!         TerrainPhysics::default()
 //!     ));
@@ -35,14 +35,19 @@ pub(crate) mod utils;
 pub mod prelude {
     pub use crate::manager::*;
     pub use crate::physics::terrain_physics::TerrainPhysics;
-    pub use crate::render::dependencies::terrain_buffer::TerrainRenderSettings;
+    pub use crate::render::dependencies::terrain_buffer::{
+        TERRAIN_MATERIAL_COUNT, TerrainRenderSettings
+    };
     pub use crate::render::extractor::*;
+    pub use crate::render::renderer::TERRAIN_LOD_COUNT;
     pub use crate::render::renderer::TerrainRenderer;
     pub use crate::render::renderer_gpu::{
         TerrainChunkArrayBg, TerrainComputeArrayBg, TerrainRendererGPU
     };
     pub use crate::utils::cursor_pos::TerrainCursorPos;
-    pub use crate::{TERRAIN_BUILDINGS_COLLIDER_GROUP, TERRAIN_COLLIDER_GROUP};
+    pub use crate::{
+        TERRAIN_BUILDINGS_COLLIDER_GROUP, TERRAIN_COLLIDER_GROUP, TERRAIN_MODULES_COLLIDER_GROUP
+    };
 }
 
 pub struct TerrainPlugin;

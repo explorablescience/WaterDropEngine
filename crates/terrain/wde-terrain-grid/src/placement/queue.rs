@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 use wde_gltf::prelude::*;
 use wde_logger::prelude::*;
+use wde_terrain::prelude::Terrain;
 
 use crate::{
     core::{
@@ -12,7 +13,7 @@ use crate::{
     placement::{
         cutaway::BuildingVariant,
         modules::{InteriorModule, module_host, spawn_module},
-        place::spawn_building
+        place::{on_flat_ground, spawn_building}
     },
     prelude::{Grid, GridEntity, GridRotation}
 };
@@ -46,6 +47,7 @@ pub(crate) fn process_placement_queue(
     gltf_models: Res<Assets<GltfAsset>>,
     buildings: Query<&GridEntity, With<BuildingVariant>>,
     modules: Query<&GridEntity, With<InteriorModule>>,
+    terrain: Query<&Terrain>,
     time: Res<Time>,
     mut grid_entity_events: MessageWriter<GridEntityEvent>
 ) {
@@ -58,6 +60,7 @@ pub(crate) fn process_placement_queue(
         &config,
         &grid,
         &gltf_models,
+        terrain.single().ok(),
         &mut grid_entity_events
     );
 
@@ -98,6 +101,7 @@ fn place_buildings(
     config: &PlacementConfig,
     grid: &Grid,
     gltf_models: &Assets<GltfAsset>,
+    terrain: Option<&Terrain>,
     grid_entity_events: &mut MessageWriter<GridEntityEvent>
 ) {
     if queue.pending.is_empty() {
@@ -130,6 +134,14 @@ fn place_buildings(
         if !free {
             warn!(
                 "Cannot place '{}' at {}: its tiles are taken.",
+                grid_entity.entry().label,
+                grid_entity.center()
+            );
+            continue;
+        }
+        if !on_flat_ground(terrain, &grid_entity) {
+            warn!(
+                "Cannot place '{}' at {}: the ground is not flat buildable ground.",
                 grid_entity.entry().label,
                 grid_entity.center()
             );

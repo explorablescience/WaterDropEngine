@@ -10,6 +10,7 @@ use std::collections::{BTreeSet, HashMap};
 use bevy::prelude::*;
 use wde_editor::prelude::*;
 use wde_gltf::prelude::*;
+use wde_terrain::prelude::Terrain;
 
 use crate::{
     core::{
@@ -20,7 +21,7 @@ use crate::{
         TerrainCursorPos, TerrainPlacementManager, TerrainPlacementMode,
         connections::connected_anchors,
         cutaway::BuildingVariant,
-        place::{remove_building, spawn_building, spawn_ghost_parts}
+        place::{on_flat_ground, remove_building, spawn_building, spawn_ghost_parts}
     },
     prelude::{Grid, GridEntity, GridRotation}
 };
@@ -293,6 +294,7 @@ pub(crate) fn line_tool_update(
     gltf_models: Res<Assets<GltfAsset>>,
     asset_server: Res<AssetServer>,
     buildings: Query<(Entity, &GridEntity), With<BuildingVariant>>,
+    terrain: Query<&Terrain>,
     mut grid_entity_events: MessageWriter<GridEntityEvent>
 ) {
     let network = match (&manager.mode, &manager.line_network) {
@@ -320,7 +322,10 @@ pub(crate) fn line_tool_update(
 
     // Plan from the drag start, or show a single piece under the cursor
     let start = manager.line_tool.start.unwrap_or(cursor_tile);
-    let plan = plan_line(start, cursor_tile, &network, &config, &grid, &buildings);
+    let mut plan = plan_line(start, cursor_tile, &network, &config, &grid, &buildings);
+    for piece in plan.iter_mut() {
+        piece.blocked |= !on_flat_ground(terrain.single().ok(), &piece.grid_entity);
+    }
     let valid = plan.iter().all(|p| !p.blocked);
 
     if mouse_input.just_released(MouseButton::Left) && manager.line_tool.start.is_some() {

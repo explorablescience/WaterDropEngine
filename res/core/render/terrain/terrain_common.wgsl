@@ -1,36 +1,24 @@
-const MAX_SPLAT_LAYERS: u32 = 4u;
-
+// Must match `TerrainDescription` in wde-terrain/src/render/dependencies/terrain_buffer.rs
 struct TerrainDescription {
-    tile_size: vec3<f32>,
-    tile_subdivisions: f32,
-    displacement_scales: vec4<f32>,
-    tiling_scales: vec4<f32>,
+    tile_size:         vec3<f32>,            // (chunk size, height range, chunk size)
+    tile_subdivisions: f32,                  // quads per chunk side at full detail
+    min_height:        f32,                  // world height of a heightmap value of 0
+    map_size:          f32,                  // texels per side of a chunk map (samples + border)
+    _padding:          vec2<f32>,
+    tiling:            array<vec4<f32>, 2>,  // world size of one texture repeat, per material
+    height_blend:      array<vec4<f32>, 2>,  // relief-based blend sharpness, per material
 }
 
-fn splat_weight(weights: vec4<f32>, layer: u32) -> f32 {
-    if layer == 0u {
-        return weights.x;
-    }
-    if layer == 1u {
-        return weights.y;
-    }
-    if layer == 2u {
-        return weights.z;
-    }
-    return 1.0 - weights.w;
+// Must match `TerrainTileDescription`
+struct TerrainTile {
+    pos:           vec2<f32>,
+    lod:           f32,
+    tile_layer:    u32,
+    neighbor_lods: vec4<f32>,  // -X, +X, -Z, +Z
 }
 
-fn terrain_layer_count(texture_layer_count: u32) -> u32 {
-    return min(texture_layer_count, MAX_SPLAT_LAYERS);
-}
+const TERRAIN_MATERIALS: u32 = 8u;
 
-
-fn get_terrain_uv(
-    tex_coord: vec2<f32>,
-    tile_pos: vec2<f32>,
-    terrain: TerrainDescription,
-    layer: u32
-) -> vec2<f32> {
-    let tiling_scale = terrain.tiling_scales[layer];
-    return fract(tex_coord * tiling_scale + tile_pos * terrain.tile_size.xz * tiling_scale);
+fn material_value(values: array<vec4<f32>, 2>, material: u32) -> f32 {
+    return values[material / 4u][material % 4u];
 }

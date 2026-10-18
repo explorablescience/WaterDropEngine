@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use wde_renderer::prelude::*;
 use wde_terrain::prelude::ChunkPos;
 
-use wde_terrain::prelude::CHUNK_HEIGHT;
+use wde_terrain::prelude::{CHUNK_HEIGHT, TERRAIN_MIN_HEIGHT};
 
 use crate::{paint::brush::PaintMode, processor::ExtractedPaintCommands};
 
@@ -131,7 +131,7 @@ fn update_commands_buffer(
                 PaintMode::Smooth => 4.0,
                 PaintMode::Flatten => 5.0
             },
-            target_height: command.world_position.y / CHUNK_HEIGHT,
+            target_height: (command.world_position.y - TERRAIN_MIN_HEIGHT) / CHUNK_HEIGHT,
             _padding: [0.0; 2]
         })
         .collect();

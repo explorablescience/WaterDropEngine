@@ -3,7 +3,8 @@ use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_renderer::{prelude::*, wgpu_utils::CommandBuffer};
 use wde_terrain::prelude::{
-    CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE, TerrainComputeArrayBg, TerrainRendererGPU
+    CHUNK_MAP_SIZE, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE, TerrainComputeArrayBg,
+    TerrainRendererGPU
 };
 
 use crate::processor::{
@@ -24,9 +25,9 @@ pub struct TileInfo {
     pub _pad: u32
 }
 
-/// One workgroup handles 64 pixels; the shader loops over all commands per pixel.
-/// This is constant regardless of how many commands are queued.
-const WORKGROUPS_PER_TILE: u32 = CHUNK_RENDER_SUBDIVISIONS * CHUNK_RENDER_SUBDIVISIONS / 64;
+/// One workgroup handles 64 texels of a chunk map (border included); the shader loops over all
+/// commands per texel. This is constant regardless of how many commands are queued.
+const WORKGROUPS_PER_TILE: u32 = (CHUNK_MAP_SIZE * CHUNK_MAP_SIZE).div_ceil(64);
 
 pub fn apply_paint_compute(
     render_instance: Res<RenderInstance>,

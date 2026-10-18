@@ -2,23 +2,32 @@ use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::{
-    manager::{CHUNK_HEIGHT, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE},
+    manager::{
+        CHUNK_HEIGHT, CHUNK_MAP_SIZE, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE, SPLAT_MAP_COUNT,
+        SPLAT_MAPS, TERRAIN_MIN_HEIGHT
+    },
     render::renderer_gpu::TerrainRendererGPU
 };
 
-const MAX_TERRAIN_TILES: usize = 1000;
+const MAX_TERRAIN_TILES: usize = 1024;
+/// Number of terrain materials.
+pub const TERRAIN_MATERIAL_COUNT: usize = (SPLAT_MAPS * SPLAT_MAP_COUNT) as usize;
 
 /// Runtime-editable terrain rendering parameters synced to the render world each frame.
 #[derive(Resource, ExtractResource, Clone, Debug)]
 pub struct TerrainRenderSettings {
-    pub displacement_scales: [f32; 4],
-    pub tiling_scales: [f32; 4]
+    /// World size covered by one repeat of each material's textures.
+    pub tiling: [f32; TERRAIN_MATERIAL_COUNT],
+    /// How much each material's relief (displacement map) pushes it over the others where they
+    /// blend: 0 gives smooth fades, higher values crisp, natural transitions.
+    pub height_blend: [f32; TERRAIN_MATERIAL_COUNT]
 }
 impl Default for TerrainRenderSettings {
     fn default() -> Self {
         Self {
-            displacement_scales: [0.0, 0.16, 0.07, 0.0],
-            tiling_scales: [1.0, 9.5, 8.5, 1.0]
+            //      dust regolith pebbles gravel sediment cliff basalt compacted
+            tiling: [10.0, 12.0, 5.0, 5.0, 12.0, 14.0, 12.0, 6.0],
+            height_blend: [0.6, 0.5, 0.8, 0.9, 0.7, 1.0, 1.0, 0.4]
         }
     }
 }
@@ -28,16 +37,25 @@ impl Default for TerrainRenderSettings {
 pub struct TerrainDescription {
     pub tile_size: [f32; 3],
     pub tile_subdivisions: f32,
-    pub displacement_scales: [f32; 4],
-    pub tiling_scales: [f32; 4]
+    pub min_height: f32,
+    pub map_size: f32,
+    pub _padding: [f32; 2],
+    pub tiling: [[f32; 4]; SPLAT_MAPS as usize],
+    pub height_blend: [[f32; 4]; SPLAT_MAPS as usize]
 }
-impl Default for TerrainDescription {
-    fn default() -> Self {
+impl TerrainDescription {
+    fn new(settings: &TerrainRenderSettings) -> Self {
+        let pack = |values: &[f32; TERRAIN_MATERIAL_COUNT]| {
+            std::array::from_fn(|k| std::array::from_fn(|c| values[k * 4 + c]))
+        };
         Self {
             tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
             tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
-            displacement_scales: TerrainRenderSettings::default().displacement_scales,
-            tiling_scales: TerrainRenderSettings::default().tiling_scales
+            min_height: TERRAIN_MIN_HEIGHT,
+            map_size: CHUNK_MAP_SIZE as f32,
+            _padding: [0.0; 2],
+            tiling: pack(&settings.tiling),
+            height_blend: pack(&settings.height_blend)
         }
     }
 }
@@ -45,11 +63,15 @@ impl Default for TerrainDescription {
 /// Per-tile GPU descriptor.
 /// `tile_layer` maps this draw-call instance to its layer in the texture arrays.
 #[repr(C)]
-#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Clone, Copy, Debug, Default, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct TerrainTileDescription {
     pub pos: [f32; 2],
+    /// Level of detail of the mesh drawing this tile.
     pub lod: f32,
-    pub tile_layer: u32
+    pub tile_layer: u32,
+    /// Level of detail of the -X, +X, -Z and +Z neighbors: edges facing a coarser neighbor
+    /// follow its edge, so that no crack opens between them.
+    pub neighbor_lods: [f32; 4]
 }
 
 #[derive(Asset, Clone, Debug, Default, TypePath)]
@@ -69,7 +91,12 @@ impl RenderData for TerrainBuffer {
                     label: "terrain-description-buffer".to_string(),
                     size: std::mem::size_of::<TerrainDescription>(),
                     usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                    content: Some(bytemuck::cast_slice(&[TerrainDescription::default()]).into())
+                    content: Some(
+                        bytemuck::cast_slice(&[TerrainDescription::new(
+                            &TerrainRenderSettings::default()
+                        )])
+                        .into()
+                    )
                 }
             )
             .add_buffer(
@@ -124,27 +151,21 @@ pub(crate) fn update_terrain_description_buffer(
     let render_instance = render_instance.0.read().unwrap();
     buf.buffer.write(
         &render_instance,
-        bytemuck::cast_slice(&[TerrainDescription {
-            tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
-            tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
-            displacement_scales: settings.displacement_scales,
-            tiling_scales: settings.tiling_scales
-        }]),
+        bytemuck::cast_slice(&[TerrainDescription::new(&settings)]),
         0
     );
 }
 
+/// Uploads the chunks drawn this frame (see [`crate::render::renderer::TerrainDrawList`]).
 pub(crate) fn update_terrain_tiles_buffer(
     render_instance: Res<RenderInstance>,
     terrain_buffer: ResRenderData<TerrainBuffer>,
     buffers: Res<RenderAssets<GpuBuffer>>,
-    terrain: Res<TerrainRendererGPU>,
-    mut is_set: Local<bool>
+    terrain: Res<TerrainRendererGPU>
 ) {
-    if *is_set || !terrain.ready {
+    if !terrain.ready || terrain.draw_list.tiles.is_empty() {
         return;
     }
-
     let terrain_buffer = match terrain_buffer.iter().next() {
         Some((_, b)) => b,
         None => return
@@ -157,24 +178,9 @@ pub(crate) fn update_terrain_tiles_buffer(
         Some(b) => b,
         None => return
     };
-
-    // Build sorted slice: layer index is the draw instance index.
-    let mut tiles: Vec<(&crate::manager::ChunkPos, &u32)> = terrain.pos_to_layer.iter().collect();
-    tiles.sort_by_key(|&(_, layer)| *layer);
-
-    let data: Vec<TerrainTileDescription> = tiles
-        .iter()
-        .map(|&(pos, layer)| TerrainTileDescription {
-            pos: [pos.x as f32, pos.y as f32],
-            lod: 1.0,
-            tile_layer: *layer
-        })
-        .collect();
-
+    let tiles = &terrain.draw_list.tiles[..terrain.draw_list.tiles.len().min(MAX_TERRAIN_TILES)];
     let render_instance = render_instance.0.read().unwrap();
     tile_buffer
         .buffer
-        .write(&render_instance, bytemuck::cast_slice(&data), 0);
-
-    *is_set = true;
+        .write(&render_instance, bytemuck::cast_slice(tiles), 0);
 }
