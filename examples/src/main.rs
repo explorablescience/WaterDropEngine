@@ -9,6 +9,7 @@ use wde::prelude::*;
 // mod display_texture;
 // mod pbr_batches;
 // mod ray_casting;
+mod ui;
 
 #[allow(unused)]
 enum Example {
@@ -26,6 +27,9 @@ pub fn main() {
     // Add default plugins
     info!("Adding default plugins.");
     app.add_plugins(WdeDefaultPlugins);
+
+    info!("Starting UI example.");
+    app.add_plugins(ui::UiDemoPlugin);
 
     // Start the selected example
     // match SELECTED_EXAMPLE {

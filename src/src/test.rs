@@ -19,7 +19,7 @@ impl Plugin for TestPlugin {
 }
 
 #[derive(Component)]
-struct EntityMarker;
+pub(crate) struct EntityMarker;
 
 /// Tracks the human entity's glTF asset handle until it has finished loading,
 /// so its collider can be sized from the loaded bounding box.
@@ -233,7 +233,7 @@ fn add_human_collider(
 }
 
 #[derive(Component)]
-struct EntitySelectedMarker;
+pub(crate) struct EntitySelectedMarker;
 
 /// Drag state of the selection: where the press started, on screen and on the terrain.
 #[derive(Default)]
@@ -273,11 +273,12 @@ fn select_entity(
     mut commands: Commands,
     mut drag: Local<SelectionDrag>,
     mut hovered: Local<Option<Entity>>,
-    (mouse_input, keys, cursor_pos, input_capture): (
+    (mouse_input, keys, cursor_pos, input_capture, ui_pointer): (
         Res<ButtonInput<MouseButton>>,
         Res<ButtonInput<KeyCode>>,
         Res<TerrainCursorPos>,
-        Res<PlacementInputCapture>
+        Res<PlacementInputCapture>,
+        Res<UiPointer>
     ),
     (window, camera, physics, colliders): (
         Single<&Window, With<PrimaryWindow>>,
@@ -299,11 +300,12 @@ fn select_entity(
         };
 
     // Hover: light outline on the colonist under the cursor (selected ones keep theirs)
-    let under_cursor = match input_capture.is_captured() || drag.decal.is_some() {
-        true => None,
-        false => colonist_under_cursor(&window, &camera, &physics, &colliders)
-            .filter(|e| colonists.contains(*e))
-    };
+    let under_cursor =
+        match input_capture.is_captured() || ui_pointer.over_ui || drag.decal.is_some() {
+            true => None,
+            false => colonist_under_cursor(&window, &camera, &physics, &colliders)
+                .filter(|e| colonists.contains(*e))
+        };
     if *hovered != under_cursor {
         if let Some(previous) = *hovered
             && !selected_entities.contains(previous)
@@ -330,7 +332,8 @@ fn select_entity(
     let Some(cursor_screen) = window.cursor_position() else {
         return;
     };
-    if mouse_input.just_pressed(MouseButton::Left) && !input_capture.over_ui {
+    if mouse_input.just_pressed(MouseButton::Left) && !input_capture.over_ui && !ui_pointer.over_ui
+    {
         drag.press = Some((cursor_screen, cursor_pos.pos_or_last()));
         return;
     }
@@ -466,13 +469,13 @@ fn swap_colonist_model(
 
 /// Smoothed walking speed of a colonist, measured from its movement.
 #[derive(Component, Default)]
-struct WalkTracker {
+pub(crate) struct WalkTracker {
     last_position: Option<Vec3>,
-    speed: f32
+    pub(crate) speed: f32
 }
 
 /// Speed under which a colonist counts as standing still.
-const WALK_MIN_SPEED: f32 = 0.05;
+pub(crate) const WALK_MIN_SPEED: f32 = 0.05;
 /// Playback speed range of the walk cycle: beyond it, feet slide rather than the legs blur.
 const WALK_PLAYBACK_RANGE: (f32, f32) = (0.5, 2.2);
 

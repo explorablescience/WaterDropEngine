@@ -15,6 +15,7 @@
 //!    - [`wde_gltf`](wde_gltf): A plugin for loading and rendering glTF 3D models.
 //!    - [`wde_animation`](wde_animation): A plugin for animating rigid parts of models (e.g. colonist walk cycles).
 //!    - [`wde_gizmos`](wde_gizmos): A plugin for rendering debug gizmos and visualizations.
+//!    - [`wde_ui`](wde_ui): A plugin for laying out and drawing game UI with taffy.
 //! - Core:
 //!    - [`wde_renderer`](wde_renderer): A plugin for rendering 3D graphics using the `wgpu` graphics API.
 //!    - [`wde_scene`](wde_scene): A plugin for managing scenes, entities, and components.
@@ -164,6 +165,8 @@ impl Plugin for CustomWdePlugins {
 
         #[cfg(feature = "gizmos")]
         app.add_plugins(wde_gizmos::GizmosPlugin);
+        #[cfg(feature = "ui")]
+        app.add_plugins(wde_ui::UiPlugin);
         #[cfg(feature = "pbr")]
         app.add_plugins(wde_pbr::PbrPlugin);
         #[cfg(feature = "editor")]
@@ -214,6 +217,8 @@ pub mod prelude {
     pub use wde_gizmos::prelude::*;
     #[cfg(feature = "pbr")]
     pub use wde_pbr::prelude::*;
+    #[cfg(feature = "ui")]
+    pub use wde_ui::prelude::*;
 }
 
 // Re-export the modules for external use
@@ -237,3 +242,5 @@ pub use wde_editor;
 pub use wde_gizmos;
 #[cfg(feature = "pbr")]
 pub use wde_pbr;
+#[cfg(feature = "ui")]
+pub use wde_ui;

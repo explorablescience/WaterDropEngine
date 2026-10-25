@@ -290,4 +290,13 @@ impl<'a> RenderPassInstance<'a> {
     pub fn into_inner(self) -> wgpu::RenderPass<'a> {
         self.render_pass
     }
+
+    /// Mutable access to the inner `wgpu::RenderPass`, e.g. for third-party renderers. As they may
+    /// change any state, the pipeline and buffers must be set again before the next draw.
+    pub fn raw_mut(&mut self) -> &mut wgpu::RenderPass<'a> {
+        self.pipeline_set = false;
+        self.vertex_buffer_set = false;
+        self.index_buffer_set = false;
+        &mut self.render_pass
+    }
 }

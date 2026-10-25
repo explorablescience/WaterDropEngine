@@ -4,9 +4,10 @@
 use bevy::prelude::*;
 use wde::{CustomWdePlugins, prelude::*};
 
-use crate::test::TestPlugin;
+use crate::{test::TestPlugin, test_2::ColonistInfoPlugin};
 
 mod test;
+mod test_2;
 
 pub fn main() {
     // Create the app
@@ -18,7 +19,7 @@ pub fn main() {
             WindowIcon::from_bytes(include_bytes!("../../res/core/icons/app_icon.png")).ok(),
         ..Default::default()
     }))
-    .add_plugins(TestPlugin);
+    .add_plugins((TestPlugin, ColonistInfoPlugin));
 
     // Run the app
     app.run();
