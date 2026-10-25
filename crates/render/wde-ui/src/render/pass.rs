@@ -4,7 +4,7 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 
-use crate::render::{data::UiQuadsBinding, extract::UiDrawCount, pipeline::UiRenderPipeline};
+use crate::render::{data::UiQuadsBinding, image::UiDrawBatches, pipeline::UiRenderPipeline};
 
 /// Draws the UI on the swapchain, after the scene is resolved and before egui.
 pub struct UiRenderPass;
@@ -44,10 +44,8 @@ impl RenderSubPass for SubRenderPassUi {
 }
 
 fn draw_quads<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
-    let draw_count = world.get_resource::<UiDrawCount>().unwrap();
-    if draw_count.0 == 0 {
-        return;
+    for (bind_group, quads) in &world.resource::<UiDrawBatches>().0 {
+        render_pass.set_bind_group(1, bind_group);
+        let _ = render_pass.draw(0..6, quads.clone());
     }
-
-    let _ = render_pass.draw(0..6, 0..draw_count.0);
 }

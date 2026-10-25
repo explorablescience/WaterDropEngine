@@ -19,6 +19,8 @@ struct VertexOutput {
     @location(3) @interpolate(flat) border_color: vec4<f32>,
     @location(4) @interpolate(flat) border: vec4<f32>,
     @location(5) @interpolate(flat) radius: f32,
+    @location(6) @interpolate(flat) textured: f32,
+    @location(7) uv: vec2<f32>,
 };
 
 @vertex
@@ -40,5 +42,7 @@ fn main(@builtin(vertex_index) vid: u32, @builtin(instance_index) iid: u32) -> V
     out.border_color = quad.border_color;
     out.border = quad.border;
     out.radius = quad.radius.x;
+    out.textured = quad.radius.y;
+    out.uv = uv;
     return out;
 }

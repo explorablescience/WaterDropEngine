@@ -11,12 +11,15 @@ mod render;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use super::core::entries::InteriorArea;
+    pub use super::core::entries::{
+        InteriorArea, NetworkPiece, PlacementConfig, PlacementConfigEntry
+    };
     pub use super::core::grid::{Grid, GridEntityEvent, GridTilePos};
     pub use super::core::grid_entity::{GridEntity, GridRotation};
     pub use super::placement::{
         AnchorLink, BuildingConnections, BuildingCutaway, InteriorModule, LinkKind,
-        PlacementInputCapture, PlacementQueue, anchor_links, connected_anchors
+        PlacementCommand, PlacementInputCapture, PlacementQueue, PlacementTool, anchor_links,
+        connected_anchors
     };
 }
 

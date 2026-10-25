@@ -8,6 +8,7 @@ use crate::{
 };
 use wde_terrain::prelude::*;
 
+pub use commands::{PlacementCommand, PlacementTool};
 pub use connections::{AnchorLink, BuildingConnections, LinkKind, anchor_links, connected_anchors};
 pub use cutaway::BuildingCutaway;
 pub use modules::InteriorModule;
@@ -44,6 +45,7 @@ fn update_input_capture(
     capture.set_if_neq(PlacementInputCapture { tool, over_ui });
 }
 
+mod commands;
 mod connections;
 mod cutaway;
 mod line_tool;
@@ -61,12 +63,19 @@ impl Plugin for PlacementPlugin {
             .init_resource::<BuildingCutaway>()
             .init_resource::<PlacementInputCapture>()
             .init_resource::<PlacementQueue>()
+            .init_resource::<PlacementTool>()
+            .add_message::<PlacementCommand>()
             .add_systems(Startup, set_parent)
             .add_systems(
                 Update,
                 (
-                    ui::show_ui,
-                    (place::place_update, place::handle_new_entity_to_place).chain(),
+                    (
+                        ui::show_ui,
+                        commands::apply_placement_commands,
+                        (place::place_update, place::handle_new_entity_to_place).chain(),
+                        commands::update_placement_tool
+                    )
+                        .chain(),
                     move_and_delete::handle_over_material,
                     move_and_delete::handle_move_and_delete_update,
                     line_tool::line_tool_update,

@@ -64,7 +64,7 @@ crates/
     wde-pbr/            # Deferred PBR renderer (GBuffer, lighting)
     wde-pbr-outline/    # Stencil-based object outline effect
     wde-gizmos/         # Debug gizmo rendering
-    wde-ui/             # Game UI: taffy-laid-out UiNode entities, drawn as SDF rounded rects (feature `ui`)
+    wde-ui/             # Game UI: taffy-laid-out UiNode entities with rounded rects, images and glyphon text (feature `ui`)
   terrain/
     wde-terrain/        # Terrain tiles with heightmaps and splat maps, physics integration
     wde-terrain-editor/ # GPU compute-based terrain painting tools

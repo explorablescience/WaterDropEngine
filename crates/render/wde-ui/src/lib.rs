@@ -35,7 +35,8 @@ use crate::{
     layout::{UiLayoutTree, compute_layout, sync_layout_tree},
     render::{
         data::{UiQuadData, UiQuadsBinding},
-        extract::{UiDrawCount, UiDrawList, build_draw_list, update_ui_buffer},
+        extract::{UiDrawList, build_draw_list, update_ui_buffer},
+        image::{UiDrawBatches, UiImageBindGroups, UiImageLayout},
         pass::SubRenderPassUi,
         pipeline::UiRenderPipeline,
         text::{SubRenderPassUiText, UiTextRenderer, build_text_draws, prepare_text}
@@ -55,7 +56,9 @@ pub use render::pass::UiRenderPass;
 #[doc(hidden)]
 pub mod prelude {
     pub use crate::interaction::{UiClick, UiInteraction, UiPointer};
-    pub use crate::node::{ComputedUiNode, UiBackground, UiBorderColor, UiCornerRadius, UiNode};
+    pub use crate::node::{
+        ComputedUiNode, UiBackground, UiBorderColor, UiCornerRadius, UiImage, UiNode
+    };
     pub use crate::style::*;
     pub use crate::text::UiText;
     pub use crate::{UiPlugin, UiSystems};
@@ -97,7 +100,9 @@ impl Plugin for UiPlugin {
         render_app
             .insert_resource(fonts)
             .init_resource::<UiDrawList>()
-            .init_resource::<UiDrawCount>()
+            .init_resource::<UiDrawBatches>()
+            .init_resource::<UiImageBindGroups>()
+            .init_resource::<UiImageLayout>()
             .add_systems(
                 Render,
                 (update_ui_buffer, prepare_text).in_set(RenderSet::Prepare)

@@ -15,7 +15,7 @@ pub(crate) struct UiQuad {
     pub border_color: [f32; 4],
     /// Left, top, right, bottom.
     pub border: [f32; 4],
-    /// Corner radius in x, the rest is padding.
+    /// Corner radius in x, 1 in y if the quad samples its image, the rest is padding.
     pub radius: [f32; 4]
 }
 

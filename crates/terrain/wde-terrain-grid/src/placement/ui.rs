@@ -39,17 +39,20 @@ pub fn show_ui(
     gltf_models: Res<Assets<GltfAsset>>,
     mut move_and_delete_manager: ResMut<MoveAndDeleteManager>,
     mut cutaway: ResMut<BuildingCutaway>,
-    ui_textures: Option<Res<UITextures>>
+    ui_textures: Option<Res<UITextures>>,
+    mut was_open: Local<bool>
 ) {
-    // Tools are only active while the window is open, starting in build mode
+    // Closing the window drops its tool. While closed, a game UI may drive the tools
+    // (`PlacementCommand`).
     let open = ui_menu.clicked_mut("Terrain/Placement");
     if !*open {
-        if manager.mode != TerrainPlacementMode::None {
+        if std::mem::take(&mut *was_open) && manager.mode != TerrainPlacementMode::None {
             manager.mode = TerrainPlacementMode::None;
             reset_tool(&mut commands, &mut manager, &mut move_and_delete_manager);
         }
         return;
     }
+    *was_open = true;
     if manager.mode == TerrainPlacementMode::None {
         manager.mode = TerrainPlacementMode::Place;
     }
@@ -102,7 +105,7 @@ pub fn show_ui(
         });
 }
 
-fn reset_tool(
+pub(crate) fn reset_tool(
     commands: &mut Commands,
     manager: &mut TerrainPlacementManager,
     move_and_delete_manager: &mut MoveAndDeleteManager

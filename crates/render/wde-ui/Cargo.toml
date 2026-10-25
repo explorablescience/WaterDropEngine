@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-renderer = { path = "../../core/wde-renderer" }
+wde-wgpu = { path = "../../wrappers/wde-wgpu" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 taffy = "0.15"
