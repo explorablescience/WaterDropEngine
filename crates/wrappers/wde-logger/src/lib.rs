@@ -80,6 +80,7 @@ const DEFAULT_FILTER: &str = concat!(
     "naga=warn,",
     "egui_wgpu=error,",
     "winit=warn,",
+    "cosmic_text=info,",
     "calloop=debug,",
     "notify_debouncer_full=debug,",
     "notify::inotify=debug,",
