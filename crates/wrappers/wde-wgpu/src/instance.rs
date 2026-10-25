@@ -109,6 +109,35 @@ pub struct RenderInstanceData<'a> {
     pub surface_config: Option<SurfaceConfiguration>
 }
 
+/// Opens the device without `VK_EXT_external_memory_dma_buf`, which wgpu enables when available
+/// but never uses, and which Nsight Graphics does not support. `None` if not on Vulkan.
+fn open_vulkan_device(
+    adapter: &wgpu::Adapter,
+    desc: &wgpu::DeviceDescriptor
+) -> Option<Result<(Device, wgpu::Queue), wgpu::RequestDeviceError>> {
+    let hal_device = {
+        let hal_adapter = unsafe { adapter.as_hal::<wgpu::hal::api::Vulkan>() }?;
+        unsafe {
+            hal_adapter.open_with_callback(
+                desc.required_features,
+                &desc.memory_hints,
+                Some(Box::new(|args| {
+                    args.extensions
+                        .retain(|ext| *ext != c"VK_EXT_external_memory_dma_buf")
+                }))
+            )
+        }
+    };
+    let hal_device = match hal_device {
+        Ok(device) => device,
+        Err(e) => {
+            warn!("Failed to open the Vulkan device directly ({e}), falling back to wgpu.");
+            return None;
+        }
+    };
+    Some(unsafe { adapter.create_device_from_hal(hal_device, desc) })
+}
+
 /// Create a new GPU instance (device + queue) and optionally bind to a window surface.
 ///
 /// `primary_window` must expose a native handle; on Bevy it is provided via
@@ -216,17 +245,19 @@ pub async fn create_instance(
 
     // Create device instance and queue
     trace!(label, "Requesting device.");
-    let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor {
-            label: Some(label),
-            required_features,
-            required_limits,
-            memory_hints: wgpu::MemoryHints::Performance,
-            experimental_features: wgpu::ExperimentalFeatures::disabled(),
-            trace: wgpu::Trace::Off
-        })
-        .await
-        .unwrap_or_else(|e| panic!("Failed to create wgpu device: {:?}", e));
+    let device_desc = wgpu::DeviceDescriptor {
+        label: Some(label),
+        required_features,
+        required_limits,
+        memory_hints: wgpu::MemoryHints::Performance,
+        experimental_features: wgpu::ExperimentalFeatures::disabled(),
+        trace: wgpu::Trace::Off
+    };
+    let (device, queue) = match open_vulkan_device(&adapter, &device_desc) {
+        Some(device) => device,
+        None => adapter.request_device(&device_desc).await
+    }
+    .unwrap_or_else(|e| panic!("Failed to create wgpu device: {:?}", e));
 
     // Log device infos
     debug!("Configured wgpu adapter limits: {:#?}", device.limits());
