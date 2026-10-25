@@ -169,6 +169,8 @@ pub async fn create_instance(
     if cfg!(feature = "gpu-debug") {
         flags |= wgpu::InstanceFlags::GPU_BASED_VALIDATION
     }
+    // Allows e.g. `WGPU_VALIDATION=0` under Nsight, whose layers trip the validation layer.
+    let flags = flags.with_env();
 
     // Create wgpu instance
     debug!(label, "Creating wgpu instance.");
