@@ -1,8 +1,8 @@
 //! Bind groups of the [`UiImage`](crate::node::UiImage) textures, and the draw calls using them.
 use std::ops::Range;
+use wde_logger::prelude::*;
 
 use bevy::{platform::collections::HashMap, prelude::*};
-use wde_logger::prelude::*;
 use wde_renderer::prelude::*;
 use wde_wgpu::{
     bind_group::{BindGroup, BindGroupBuilder, BindGroupLayout, WgpuBindGroupLayout},
