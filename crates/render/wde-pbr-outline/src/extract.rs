@@ -35,4 +35,8 @@ pub(crate) fn extract_outline_instances(
                 material: material.0.id()
             }
         ));
+    // Grouped by material, each group being outlined with its own stencil value
+    extracted
+        .0
+        .sort_unstable_by_key(|instance| instance.material);
 }

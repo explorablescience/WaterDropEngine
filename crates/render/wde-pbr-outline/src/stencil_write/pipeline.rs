@@ -65,13 +65,6 @@ impl RenderAsset for StencilWriteRenderPipeline {
                         },
                         format: None
                     },
-                    render_targets: Some(vec![
-                        // Same order as the PbrDeferredTextures
-                        PbrTextureFormat::DEPTH,  // Depth
-                        PbrTextureFormat::ALBEDO, // Albedo
-                        PbrTextureFormat::NORMAL, // Normal
-                        PbrTextureFormat::AO,     // AO
-                    ]),
                     cull_mode: None,
                     color_write: ColorWrites::empty(),
                     push_constants: vec![PushConstantDescriptor {
