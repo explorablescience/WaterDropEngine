@@ -1,6 +1,6 @@
 //! Components describing UI nodes: their layout style and how they are drawn.
 use bevy::prelude::*;
-use wde_renderer::prelude::{Color, Texture};
+use wde_renderer::prelude::{WdeColor, Texture};
 
 use crate::style::UiStyle;
 
@@ -33,11 +33,11 @@ impl ComputedUiNode {
 /// Fill color of a [`UiNode`]. Nodes without one (nor a [`UiImage`]) are invisible, and let the
 /// pointer through.
 #[derive(Component, Clone, Copy, Debug)]
-pub struct UiBackground(pub Color);
+pub struct UiBackground(pub WdeColor);
 
 /// Color of the border, whose widths are set by [`UiStyle::border`].
 #[derive(Component, Clone, Copy, Debug)]
-pub struct UiBorderColor(pub Color);
+pub struct UiBorderColor(pub WdeColor);
 
 /// Radius of the node corners, in logical pixels.
 #[derive(Component, Clone, Copy, Default, Debug)]
@@ -49,16 +49,16 @@ pub struct UiCornerRadius(pub f32);
 pub struct UiImage {
     pub texture: Handle<Texture>,
     /// Multiplies the image colors.
-    pub tint: Color
+    pub tint: WdeColor
 }
 impl UiImage {
     pub fn new(texture: Handle<Texture>) -> Self {
         Self {
             texture,
-            tint: Color::WHITE
+            tint: WdeColor::WHITE
         }
     }
-    pub fn with_tint(self, tint: Color) -> Self {
+    pub fn with_tint(self, tint: WdeColor) -> Self {
         Self { tint, ..self }
     }
 }

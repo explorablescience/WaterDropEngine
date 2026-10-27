@@ -5,8 +5,8 @@ use wde_camera::prelude::*;
 use wde_pbr::prelude::*;
 use wde_pbr_outline::prelude::*;
 use wde_physics::prelude::*;
-use wde_renderer::prelude::Color;
-use wde_terrain::{TERRAIN_MODULES_COLLIDER_GROUP, prelude::*};
+use wde_renderer::prelude::WdeColor;
+use wde_terrain::{MODULES_COLLIDER_GROUP, prelude::*};
 
 use crate::{
     core::{entries::PlacementConfig, grid::GridEntityEvent},
@@ -27,12 +27,12 @@ impl MoveAndDeleteManager {
         Self {
             move_material: asset_server.add(OutlineMaterial {
                 label: "Terrain Placement Move".to_string(),
-                color: Color::WHITE,
+                color: WdeColor::WHITE,
                 ..Default::default()
             }),
             destroy_material: asset_server.add(OutlineMaterial {
                 label: "Terrain Placement Destroy".to_string(),
-                color: Color::RED,
+                color: WdeColor::RED,
                 ..Default::default()
             }),
             current_hovered_entity: None,
@@ -82,12 +82,12 @@ pub fn handle_over_material(
     let hit = phworld
         .cast_ray(
             &ray,
-            &RayCastConfig::with_filter(TERRAIN_MODULES_COLLIDER_GROUP)
+            &RayCastConfig::with_filter(MODULES_COLLIDER_GROUP)
         )
         .or_else(|| {
             phworld.cast_ray(
                 &ray,
-                &RayCastConfig::with_filter(TERRAIN_BUILDINGS_COLLIDER_GROUP)
+                &RayCastConfig::with_filter(BUILDINGS_COLLIDER_GROUP)
             )
         });
     let entity = match hit {

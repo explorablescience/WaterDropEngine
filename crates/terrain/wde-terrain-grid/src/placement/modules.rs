@@ -7,7 +7,7 @@ use wde_gltf::prelude::*;
 use wde_pbr::prelude::*;
 use wde_physics::prelude::*;
 use wde_renderer::prelude::*;
-use wde_terrain::TERRAIN_MODULES_COLLIDER_GROUP;
+use wde_terrain::MODULES_COLLIDER_GROUP;
 
 use crate::{
     core::grid::{GridTilePos, TILE_SIZE},
@@ -95,7 +95,7 @@ pub(crate) fn spawn_module(
     commands.spawn((
         Name::new("Collider"),
         Transform::from_translation(model.bbox.min + extent / 2.0),
-        Collider::from(BoxCollider::new(extent).with_group(TERRAIN_MODULES_COLLIDER_GROUP)),
+        Collider::from(BoxCollider::new(extent).with_group(MODULES_COLLIDER_GROUP)),
         ChildOf(module)
     ));
     model.spawn_lights(commands, module);

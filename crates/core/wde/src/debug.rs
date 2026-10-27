@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use wde_editor::prelude::*;
 use wde_gizmos::prelude::*;
 use wde_physics::prelude::*;
-use wde_renderer::prelude::Color;
+use wde_renderer::prelude::WdeColor;
 
 /// Toggles for physics debug visualizations, editable from the "Engine/Physics" editor panel.
 #[derive(Resource, Default, Reflect)]
@@ -63,7 +63,7 @@ fn draw_collider_gizmos(
             && let Some(half_extents) = collider.box_half_extents()
         {
             let cube_transform = Transform::from_translation(origin).with_scale(half_extents * 2.0);
-            gizmos.cube(cube_transform, Color::from_srgba(0.0, 1.0, 0.0, 1.0));
+            gizmos.cube(cube_transform, WdeColor::from_srgba(0.0, 1.0, 0.0, 1.0));
         }
         if settings.show_heightfields
             && let Some(lines) = collider.heightfield_wireframe()
@@ -72,7 +72,7 @@ fn draw_collider_gizmos(
                 gizmos.line(
                     origin + start,
                     origin + end,
-                    Color::from_srgba(0.2, 0.6, 1.0, 1.0)
+                    WdeColor::from_srgba(0.2, 0.6, 1.0, 1.0)
                 );
             }
         }

@@ -1,5 +1,5 @@
 use wde_pbr::deferred::PbrMaterial;
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
@@ -19,7 +19,7 @@ struct GhostMaterialUniform {
 
 #[derive(Asset, Clone, TypePath)]
 pub struct GhostMaterial {
-    pub overlay: Color,
+    pub overlay: WdeColor,
     pub desaturate: f32,
     pub rim_power: f32,
     pub rim_strength: f32,
@@ -30,7 +30,7 @@ pub struct GhostMaterial {
 impl Default for GhostMaterial {
     fn default() -> Self {
         Self {
-            overlay: Color::WHITE,
+            overlay: WdeColor::WHITE,
             desaturate: 0.5,
             rim_power: 5.0,
             rim_strength: 0.1,

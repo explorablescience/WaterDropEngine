@@ -3,7 +3,7 @@ use wde_camera::prelude::*;
 use wde_physics::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::TERRAIN_COLLIDER_GROUP;
+use crate::HEIGHTMAP_COLLIDER_GROUP;
 
 /// Resource to store the world position of the cursor on the terrain.
 /// This is updated every frame by casting a ray from the camera through the cursor position and checking for intersections with the terrain colliders.
@@ -34,7 +34,7 @@ impl TerrainCursorPos {
 
         // Cast the ray
         if let Some((_entity, toi)) =
-            phworld.cast_ray(&ray, &RayCastConfig::with_filter(TERRAIN_COLLIDER_GROUP))
+            phworld.cast_ray(&ray, &RayCastConfig::with_filter(HEIGHTMAP_COLLIDER_GROUP))
         {
             let hit_point = ray.point_at(toi);
             terrain_cursor_pos.pos = Some(hit_point);

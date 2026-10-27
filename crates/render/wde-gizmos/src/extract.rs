@@ -2,7 +2,7 @@
 use wde_logger::prelude::*;
 
 use bevy::prelude::*;
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 use crate::{
     Gizmos,
@@ -11,7 +11,7 @@ use crate::{
 
 /// Lines recorded on [`Gizmos`] this frame, extracted from the main world.
 #[derive(Resource, Default)]
-pub(crate) struct ExtractedGizmoLines(pub Vec<(Vec3, Vec3, Color)>);
+pub(crate) struct ExtractedGizmoLines(pub Vec<(Vec3, Vec3, WdeColor)>);
 
 /// Number of vertices to draw this frame, updated when the gizmo lines vertex buffer is filled.
 #[derive(Resource, Default)]
@@ -19,7 +19,7 @@ pub(crate) struct GizmoDrawCount(pub u32);
 
 /// Quads recorded on [`Gizmos`] this frame, extracted from the main world.
 #[derive(Resource, Default)]
-pub(crate) struct ExtractedGizmoQuads(pub Vec<([Vec3; 4], Color)>);
+pub(crate) struct ExtractedGizmoQuads(pub Vec<([Vec3; 4], WdeColor)>);
 
 /// Number of vertices to draw this frame, updated when the gizmo quads vertex buffer is filled.
 #[derive(Resource, Default)]

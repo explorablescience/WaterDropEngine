@@ -2,7 +2,7 @@
 use wde_logger::prelude::*;
 
 use bevy::{prelude::*, window::PrimaryWindow};
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 use crate::{
     node::{ComputedUiNode, UiBackground, UiBorderColor, UiCornerRadius, UiImage},
@@ -54,12 +54,12 @@ pub(crate) fn build_draw_list(
         let size = node.size * scale;
         let color = match image {
             Some(image) => image.tint,
-            None => background.map_or(Color::TRANSPARENT, |b| b.0)
+            None => background.map_or(WdeColor::TRANSPARENT, |b| b.0)
         };
         draw_list.quads.push(UiQuad {
             rect: [position.x, position.y, size.x, size.y],
             color: linear(color),
-            border_color: linear(border_color.map_or(Color::TRANSPARENT, |b| b.0)),
+            border_color: linear(border_color.map_or(WdeColor::TRANSPARENT, |b| b.0)),
             border: (node.border * scale).to_array(),
             radius: [
                 radius.map_or(0.0, |r| r.0) * scale,
@@ -72,7 +72,7 @@ pub(crate) fn build_draw_list(
     }
 }
 
-fn linear(color: Color) -> [f32; 4] {
+fn linear(color: WdeColor) -> [f32; 4] {
     let c = color.to_linear_rgba();
     [c.r(), c.g(), c.b(), c.a()]
 }

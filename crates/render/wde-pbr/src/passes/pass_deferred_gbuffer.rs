@@ -1,4 +1,4 @@
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 use bevy::{ecs::system::SystemParamItem, prelude::*};
 
@@ -40,7 +40,7 @@ impl RenderPass for RenderPassDeferredGBuffer {
                             .unwrap()
                             .id()
                     ),
-                    load: LoadOp::Clear(Color::BLACK),
+                    load: LoadOp::Clear(WdeColor::BLACK),
                     ..default()
                 },
                 RenderPassDescColorAttachment {
@@ -53,7 +53,7 @@ impl RenderPass for RenderPassDeferredGBuffer {
                             .unwrap()
                             .id()
                     ),
-                    load: LoadOp::Clear(Color::BLACK),
+                    load: LoadOp::Clear(WdeColor::BLACK),
                     ..default()
                 },
                 RenderPassDescColorAttachment {
@@ -66,7 +66,7 @@ impl RenderPass for RenderPassDeferredGBuffer {
                             .unwrap()
                             .id()
                     ),
-                    load: LoadOp::Clear(Color::BLACK),
+                    load: LoadOp::Clear(WdeColor::BLACK),
                     ..default()
                 },
                 RenderPassDescColorAttachment {
@@ -79,7 +79,7 @@ impl RenderPass for RenderPassDeferredGBuffer {
                             .unwrap()
                             .id()
                     ),
-                    load: LoadOp::Clear(Color::WHITE),
+                    load: LoadOp::Clear(WdeColor::WHITE),
                     ..default()
                 },
             ])

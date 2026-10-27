@@ -6,7 +6,7 @@ use bevy::{ecs::system::SystemParamItem, prelude::*, window::PrimaryWindow};
 use glyphon::{
     Buffer, Cache, Resolution, SwashCache, TextArea, TextAtlas, TextBounds, TextRenderer, Viewport
 };
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 use crate::{
     layout::UiLayoutTree,
@@ -22,7 +22,7 @@ pub(crate) struct UiTextDraw {
     /// Top-left corner of the text.
     pub position: Vec2,
     pub clip: Rect,
-    pub color: Color,
+    pub color: WdeColor,
     pub scale: f32
 }
 

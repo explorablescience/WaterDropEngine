@@ -3,7 +3,7 @@ use std::sync::{Arc, Mutex};
 
 use bevy::prelude::*;
 use glyphon::{Attrs, Buffer, Family, FontSystem, Metrics, Shaping, Weight};
-use wde_renderer::prelude::Color;
+use wde_renderer::prelude::WdeColor;
 
 use crate::node::UiNode;
 
@@ -17,7 +17,7 @@ pub struct UiText {
     pub text: String,
     /// In logical pixels.
     pub font_size: f32,
-    pub color: Color,
+    pub color: WdeColor,
     pub bold: bool
 }
 impl UiText {
@@ -25,14 +25,14 @@ impl UiText {
         Self {
             text: text.into(),
             font_size: 16.0,
-            color: Color::WHITE,
+            color: WdeColor::WHITE,
             bold: false
         }
     }
     pub fn with_size(self, font_size: f32) -> Self {
         Self { font_size, ..self }
     }
-    pub fn with_color(self, color: Color) -> Self {
+    pub fn with_color(self, color: WdeColor) -> Self {
         Self { color, ..self }
     }
     pub fn bold(self) -> Self {

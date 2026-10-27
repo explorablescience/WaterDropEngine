@@ -5,7 +5,7 @@
 //! - The minimap places markers with absolute positioning.
 //! - The first toolbar button toggles the colonists panel, the others log their click.
 use bevy::prelude::*;
-use wde::prelude::{Color as WdeColor, *};
+use wde::prelude::{WdeColor as WdeColor, *};
 
 pub struct UiDemoPlugin;
 impl Plugin for UiDemoPlugin {

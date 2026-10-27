@@ -69,6 +69,17 @@ impl PhysicsWorld {
         }
         None
     }
+
+    /// Membership groups of the collider attached to the entity, if any.
+    pub fn collider_group(&self, entity: Entity) -> Option<Group> {
+        let handle = self.entity_to_collider.get(&entity)?;
+        self.rapier
+            .collider_set
+            .read()
+            .unwrap()
+            .get(*handle)
+            .map(|collider| collider.collision_groups().memberships)
+    }
 }
 
 /// System to handle changes in colliders, including additions, removals, and updates.

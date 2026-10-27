@@ -6,51 +6,51 @@ use bevy::reflect::Reflect;
 use wde_wgpu::passes::WgpuColor;
 
 #[derive(Clone, Copy, Debug, PartialEq, Reflect)]
-pub enum Color {
+pub enum WdeColor {
     /// Linear RGBA color expressed in normalized `[0.0, 1.0]` space.
     LinearRgba(f32, f32, f32, f32),
     /// sRGB RGBA color expressed in normalized `[0.0, 1.0]` space.
     Srgba(f32, f32, f32, f32)
 }
-impl Color {
+impl WdeColor {
     // Default colors
-    pub const BLACK: Color = Color::LinearRgba(0.0, 0.0, 0.0, 1.0);
-    pub const WHITE: Color = Color::LinearRgba(1.0, 1.0, 1.0, 1.0);
-    pub const RED: Color = Color::LinearRgba(1.0, 0.0, 0.0, 1.0);
-    pub const GREEN: Color = Color::LinearRgba(0.0, 1.0, 0.0, 1.0);
-    pub const BLUE: Color = Color::LinearRgba(0.0, 0.0, 1.0, 1.0);
-    pub const TRANSPARENT: Color = Color::LinearRgba(0.0, 0.0, 0.0, 0.0);
+    pub const BLACK: WdeColor = WdeColor::LinearRgba(0.0, 0.0, 0.0, 1.0);
+    pub const WHITE: WdeColor = WdeColor::LinearRgba(1.0, 1.0, 1.0, 1.0);
+    pub const RED: WdeColor = WdeColor::LinearRgba(1.0, 0.0, 0.0, 1.0);
+    pub const GREEN: WdeColor = WdeColor::LinearRgba(0.0, 1.0, 0.0, 1.0);
+    pub const BLUE: WdeColor = WdeColor::LinearRgba(0.0, 0.0, 1.0, 1.0);
+    pub const TRANSPARENT: WdeColor = WdeColor::LinearRgba(0.0, 0.0, 0.0, 0.0);
 
     /// Create a linear RGBA color.
     pub fn from_linear_rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
-        Color::LinearRgba(r, g, b, a)
+        WdeColor::LinearRgba(r, g, b, a)
     }
     /// Create an sRGB RGBA color.
     pub fn from_srgba(r: f32, g: f32, b: f32, a: f32) -> Self {
-        Color::Srgba(r, g, b, a)
+        WdeColor::Srgba(r, g, b, a)
     }
 
     /// Convert the color to linear RGBA (gamma ≈ 2.2).
     pub fn to_linear_rgba(&self) -> Self {
         match self {
-            Color::LinearRgba(_, _, _, _) => *self,
-            Color::Srgba(r, g, b, a) => {
+            WdeColor::LinearRgba(_, _, _, _) => *self,
+            WdeColor::Srgba(r, g, b, a) => {
                 let r = r.powf(2.2);
                 let g = g.powf(2.2);
                 let b = b.powf(2.2);
-                Color::LinearRgba(r, g, b, *a)
+                WdeColor::LinearRgba(r, g, b, *a)
             }
         }
     }
     /// Convert the color to sRGB RGBA (inverse gamma ≈ 2.2).
     pub fn to_srgba(&self) -> Self {
         match self {
-            Color::Srgba(_, _, _, _) => *self,
-            Color::LinearRgba(r, g, b, a) => {
+            WdeColor::Srgba(_, _, _, _) => *self,
+            WdeColor::LinearRgba(r, g, b, a) => {
                 let r = r.powf(1.0 / 2.2);
                 let g = g.powf(1.0 / 2.2);
                 let b = b.powf(1.0 / 2.2);
-                Color::Srgba(r, g, b, *a)
+                WdeColor::Srgba(r, g, b, *a)
             }
         }
     }
@@ -58,42 +58,42 @@ impl Color {
     /// Get the red component without converting color space.
     pub fn r(&self) -> f32 {
         match self {
-            Color::LinearRgba(r, _, _, _) => *r,
-            Color::Srgba(r, _, _, _) => *r
+            WdeColor::LinearRgba(r, _, _, _) => *r,
+            WdeColor::Srgba(r, _, _, _) => *r
         }
     }
     /// Get the green component without converting color space.
     pub fn g(&self) -> f32 {
         match self {
-            Color::LinearRgba(_, g, _, _) => *g,
-            Color::Srgba(_, g, _, _) => *g
+            WdeColor::LinearRgba(_, g, _, _) => *g,
+            WdeColor::Srgba(_, g, _, _) => *g
         }
     }
     /// Get the blue component without converting color space.
     pub fn b(&self) -> f32 {
         match self {
-            Color::LinearRgba(_, _, b, _) => *b,
-            Color::Srgba(_, _, b, _) => *b
+            WdeColor::LinearRgba(_, _, b, _) => *b,
+            WdeColor::Srgba(_, _, b, _) => *b
         }
     }
     /// Get the alpha component without converting color space.
     pub fn a(&self) -> f32 {
         match self {
-            Color::LinearRgba(_, _, _, a) => *a,
-            Color::Srgba(_, _, _, a) => *a
+            WdeColor::LinearRgba(_, _, _, a) => *a,
+            WdeColor::Srgba(_, _, _, a) => *a
         }
     }
 }
-impl From<Color> for WgpuColor {
-    fn from(value: Color) -> Self {
+impl From<WdeColor> for WgpuColor {
+    fn from(value: WdeColor) -> Self {
         match value {
-            Color::LinearRgba(r, g, b, a) => WgpuColor {
+            WdeColor::LinearRgba(r, g, b, a) => WgpuColor {
                 r: r.into(),
                 g: g.into(),
                 b: b.into(),
                 a: a.into()
             },
-            Color::Srgba(r, g, b, a) => {
+            WdeColor::Srgba(r, g, b, a) => {
                 let r = r.powf(2.2);
                 let g = g.powf(2.2);
                 let b = b.powf(2.2);

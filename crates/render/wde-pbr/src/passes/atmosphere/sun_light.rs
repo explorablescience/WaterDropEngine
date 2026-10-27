@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use wde_renderer::prelude::Color;
+use wde_renderer::prelude::WdeColor;
 
 use crate::prelude::*;
 
@@ -63,7 +63,7 @@ fn update_sun_light(
         // DirectionalLight.direction is the ray travel direction (sun → scene),
         // which is the opposite of the toward-sun vector.
         light.direction = -sun_dir;
-        light.color = Color::from_srgba(sun_color.x, sun_color.y, sun_color.z, 1.0);
+        light.color = WdeColor::from_srgba(sun_color.x, sun_color.y, sun_color.z, 1.0);
         light.intensity = (atmosphere.sun_intensity * sun_visible).max(0.0);
     }
 }

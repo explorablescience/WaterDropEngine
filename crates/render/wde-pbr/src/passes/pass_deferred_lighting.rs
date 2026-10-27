@@ -6,7 +6,7 @@ use bevy::{
     prelude::*
 };
 use wde_camera::prelude::*;
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 use crate::{passes::shadow::ShadowSamplingBinding, prelude::*};
 
@@ -79,7 +79,7 @@ impl RenderPass for RenderPassDeferredLighting {
                     .iter()
                     .next()
                     .map(|(_, t)| t.get_texture(RenderTexture::BINDING).unwrap().id()),
-                load: LoadOp::Clear(Color::BLACK),
+                load: LoadOp::Clear(WdeColor::BLACK),
                 ..Default::default()
             }]),
             ..Default::default()

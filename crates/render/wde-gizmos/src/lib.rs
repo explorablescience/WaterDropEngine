@@ -6,7 +6,7 @@
 //! pass, then the [`Gizmos`] resource is cleared so it can be recorded again for the next frame.
 use bevy::prelude::*;
 use wde_pbr::prelude::*;
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 use crate::{
     data::{GizmoLineData, GizmoLinesBinding, GizmoQuadData, GizmoQuadsBinding},
@@ -30,21 +30,21 @@ pub mod prelude {
 
 #[derive(Resource, Default)]
 pub struct Gizmos {
-    lines: Vec<(Vec3, Vec3, Color)>,
-    quads: Vec<([Vec3; 4], Color)>
+    lines: Vec<(Vec3, Vec3, WdeColor)>,
+    quads: Vec<([Vec3; 4], WdeColor)>
 }
 impl Gizmos {
-    pub fn line(&mut self, start: Vec3, end: Vec3, color: Color) {
+    pub fn line(&mut self, start: Vec3, end: Vec3, color: WdeColor) {
         self.lines.push((start, end, color));
     }
 
     /// Records a filled quad from 4 world-space corners, in order (either winding), with the
     /// given color. Use a color with alpha < 1.0 for a translucent quad.
-    pub fn quad(&mut self, corners: [Vec3; 4], color: Color) {
+    pub fn quad(&mut self, corners: [Vec3; 4], color: WdeColor) {
         self.quads.push((corners, color));
     }
 
-    pub fn cube(&mut self, transform: Transform, color: Color) {
+    pub fn cube(&mut self, transform: Transform, color: WdeColor) {
         let half_size = Vec3::splat(0.5);
         let vertices = [
             Vec3::new(-half_size.x, -half_size.y, -half_size.z),
@@ -80,12 +80,12 @@ impl Gizmos {
     }
 
     /// Takes the recorded lines, leaving this resource empty for the next frame.
-    fn take_lines(&mut self) -> Vec<(Vec3, Vec3, Color)> {
+    fn take_lines(&mut self) -> Vec<(Vec3, Vec3, WdeColor)> {
         std::mem::take(&mut self.lines)
     }
 
     /// Takes the recorded quads, leaving this resource empty for the next frame.
-    fn take_quads(&mut self) -> Vec<([Vec3; 4], Color)> {
+    fn take_quads(&mut self) -> Vec<([Vec3; 4], WdeColor)> {
         std::mem::take(&mut self.quads)
     }
 }

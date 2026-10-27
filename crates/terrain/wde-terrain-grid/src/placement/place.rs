@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use wde_terrain::{TERRAIN_BUILDINGS_COLLIDER_GROUP, prelude::Terrain};
+use wde_terrain::{BUILDINGS_COLLIDER_GROUP, prelude::Terrain};
 
 use crate::{
     core::{
@@ -19,7 +19,7 @@ use wde_editor::prelude::*;
 use wde_gltf::prelude::*;
 use wde_pbr::prelude::*;
 use wde_physics::prelude::*;
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 use crate::{
     core::entries::PlacementConfig,
@@ -394,7 +394,7 @@ pub(crate) fn spawn_ghost_parts(
         .map(|(mesh, material)| {
             // Create material
             let ok_material = asset_server.add(GhostMaterial {
-                overlay: Color::LinearRgba(0.35, 0.85, 1.0, 0.35),
+                overlay: WdeColor::LinearRgba(0.35, 0.85, 1.0, 0.35),
                 desaturate: 0.7,
                 rim_power: 2.5,
                 rim_strength: 1.0,
@@ -402,7 +402,7 @@ pub(crate) fn spawn_ghost_parts(
                 ..Default::default()
             });
             let nok_material = asset_server.add(GhostMaterial {
-                overlay: Color::LinearRgba(1.0, 0.18, 0.12, 0.42),
+                overlay: WdeColor::LinearRgba(1.0, 0.18, 0.12, 0.42),
                 desaturate: 0.85,
                 rim_power: 2.5,
                 rim_strength: 1.2,
@@ -642,7 +642,7 @@ pub(crate) fn spawn_building(
     commands.spawn((
         Name::new("Collider"),
         Transform::from_translation(bbox.min + bbox_extent / 2.0),
-        Collider::from(BoxCollider::new(bbox_extent).with_group(TERRAIN_BUILDINGS_COLLIDER_GROUP)),
+        Collider::from(BoxCollider::new(bbox_extent).with_group(BUILDINGS_COLLIDER_GROUP)),
         ChildOf(parent)
     ));
     model.spawn_lights(commands, parent);

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use wde_physics::prelude::*;
 
 use crate::{
-    TERRAIN_COLLIDER_GROUP,
+    HEIGHTMAP_COLLIDER_GROUP,
     manager::{CHUNK_HEIGHT, CHUNK_SIZE, ChunkPos, TERRAIN_MIN_HEIGHT, Terrain, chunk_samples}
 };
 
@@ -51,7 +51,7 @@ impl TerrainPhysics {
                     chunk_samples(&data),
                     [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE]
                 )
-                .with_group(TERRAIN_COLLIDER_GROUP)
+                .with_group(HEIGHTMAP_COLLIDER_GROUP)
             );
 
             if let Some(&entity) = physics.pos_to_entity.get(&tile_pos) {

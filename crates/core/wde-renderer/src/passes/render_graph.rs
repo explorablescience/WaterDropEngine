@@ -24,7 +24,7 @@ pub struct RenderPassDescColorAttachment {
     /// The texture to render to.
     pub texture: Option<AssetId<Texture>>,
     /// How to load the texture at the start of the pass (default: Load).
-    pub load: LoadOp<crate::prelude::Color>,
+    pub load: LoadOp<crate::prelude::WdeColor>,
     /// How to store the texture at the end of the pass (default: Store).
     pub store: StoreOp,
     /// Optional resolve target for multisampled textures. If set, the multisampled texture will be resolved into this texture at the end of the pass.

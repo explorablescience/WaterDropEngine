@@ -119,7 +119,7 @@ pub(crate) fn link_bones(
 ) {
     for bone in &bones {
         if let Some(player) = parents.iter_ancestors(bone).find(|e| players.contains(*e)) {
-            commands.entity(bone).insert(BoneOf(player));
+            commands.entity(bone).try_insert(BoneOf(player));
         }
     }
 }

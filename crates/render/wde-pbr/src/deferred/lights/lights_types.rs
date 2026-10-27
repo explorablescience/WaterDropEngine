@@ -1,4 +1,4 @@
-use wde_renderer::prelude::Color;
+use wde_renderer::prelude::WdeColor;
 
 use bevy::prelude::*;
 
@@ -14,7 +14,7 @@ pub struct DirectionalLight {
     pub direction: Vec3,
 
     /// Light color (RGB).
-    pub color: Color,
+    pub color: WdeColor,
     /// Light intensity/brightness (in lumens, physical-based).
     pub intensity: f32
 }
@@ -22,7 +22,7 @@ impl Default for DirectionalLight {
     fn default() -> Self {
         Self {
             direction: Vec3::new(0.0, -1.0, 0.0),
-            color: Color::from_srgba(1.0, 1.0, 1.0, 1.0),
+            color: WdeColor::from_srgba(1.0, 1.0, 1.0, 1.0),
             intensity: DEFAULT_INTENSITY * INTENSITY_MULTIPLIER
         }
     }
@@ -36,7 +36,7 @@ pub struct PointLight {
     pub position: Vec3,
 
     /// Light color (RGB).
-    pub color: Color,
+    pub color: WdeColor,
     /// Light intensity/brightness (in lumens, physical-based).
     pub intensity: f32,
     /// Maximum range of light influence (in world units).
@@ -46,7 +46,7 @@ impl Default for PointLight {
     fn default() -> Self {
         Self {
             position: Vec3::new(0.0, 0.0, 0.0),
-            color: Color::from_srgba(1.0, 1.0, 1.0, 1.0),
+            color: WdeColor::from_srgba(1.0, 1.0, 1.0, 1.0),
             intensity: DEFAULT_INTENSITY * INTENSITY_MULTIPLIER,
             range: 100.0
         }
@@ -63,7 +63,7 @@ pub struct SpotLight {
     pub direction: Vec3,
 
     /// Light color (RGB).
-    pub color: Color,
+    pub color: WdeColor,
     /// Light intensity/brightness (in lumens, physical-based).
     pub intensity: f32,
     /// Maximum range of light influence (in world units).
@@ -79,7 +79,7 @@ impl Default for SpotLight {
         Self {
             position: Vec3::new(0.0, 0.0, 0.0),
             direction: Vec3::new(0.0, -1.0, 0.0),
-            color: Color::from_srgba(1.0, 1.0, 1.0, 1.0),
+            color: WdeColor::from_srgba(1.0, 1.0, 1.0, 1.0),
             intensity: DEFAULT_INTENSITY * INTENSITY_MULTIPLIER,
             range: 50.0,
             inner_cone: std::f32::consts::PI / 12.0, // 15 degrees

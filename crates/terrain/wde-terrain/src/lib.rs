@@ -21,10 +21,12 @@ use crate::{
     physics::TerrainPhysicsPlugin, render::TerrainRenderPlugin, utils::TerrainUtilsPlugin
 };
 
-pub const TERRAIN_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_1;
-pub const TERRAIN_BUILDINGS_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_2;
-/// Modules placed inside buildings, picked before the building around them.
-pub const TERRAIN_MODULES_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_4;
+/// The terrain heightmap.
+pub const HEIGHTMAP_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_1;
+/// The buildings placed on the terrain.
+pub const BUILDINGS_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_2;
+/// Modules placed inside buildings.
+pub const MODULES_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_3;
 
 pub(crate) mod manager;
 pub(crate) mod physics;
@@ -46,7 +48,7 @@ pub mod prelude {
     };
     pub use crate::utils::cursor_pos::TerrainCursorPos;
     pub use crate::{
-        TERRAIN_BUILDINGS_COLLIDER_GROUP, TERRAIN_COLLIDER_GROUP, TERRAIN_MODULES_COLLIDER_GROUP
+        BUILDINGS_COLLIDER_GROUP, HEIGHTMAP_COLLIDER_GROUP, MODULES_COLLIDER_GROUP
     };
 }
 

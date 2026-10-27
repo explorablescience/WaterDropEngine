@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use wde_editor::prelude::{ui::egui, *};
 use wde_gizmos::prelude::*;
-use wde_renderer::prelude::Color;
+use wde_renderer::prelude::WdeColor;
 use wde_terrain_grid::prelude::{GridEntity, LinkKind};
 
 use crate::{
@@ -200,9 +200,9 @@ fn show_graph(nav: Res<NavGrid>, mut gizmos: ResMut<Gizmos>, settings: Res<NavMa
     let at = |p: Vec2| Vec3::new(p.x, GRAPH_HEIGHT, p.y);
     for (entity, building) in &nav.buildings {
         let color = match building.base.map(|b| nav.bases[b].is_valid()) {
-            Some(true) => Color::GREEN,
-            Some(false) => Color::LinearRgba(1.0, 0.55, 0.0, 1.0),
-            None => Color::RED
+            Some(true) => WdeColor::GREEN,
+            Some(false) => WdeColor::LinearRgba(1.0, 0.55, 0.0, 1.0),
+            None => WdeColor::RED
         };
         let size = if building.is_control_room { 0.45 } else { 0.18 };
         gizmos.cube(
@@ -215,8 +215,8 @@ fn show_graph(nav: Res<NavGrid>, mut gizmos: ResMut<Gizmos>, settings: Res<NavMa
                 continue;
             }
             let color = match neighbor.kind {
-                LinkKind::Tunnel => Color::LinearRgba(0.2, 0.8, 1.0, 1.0),
-                LinkKind::Path => Color::LinearRgba(1.0, 0.8, 0.1, 1.0)
+                LinkKind::Tunnel => WdeColor::LinearRgba(0.2, 0.8, 1.0, 1.0),
+                LinkKind::Path => WdeColor::LinearRgba(1.0, 0.8, 0.1, 1.0)
             };
             let other = &nav.buildings[&neighbor.entity];
             gizmos.line(at(building.center), at(neighbor.position), color);
@@ -235,7 +235,7 @@ fn show_paths(
         return;
     }
     let lift = Vec3::Y * 0.05;
-    let color = Color::LinearRgba(1.0, 0.3, 0.9, 1.0);
+    let color = WdeColor::LinearRgba(1.0, 0.3, 0.9, 1.0);
     for (transform, path) in &moving {
         let mut from = transform.translation;
         for waypoint in &path.waypoints {
@@ -262,9 +262,9 @@ fn show_walk_cells(
     let half = CELL_SIZE * 0.35;
     for (key, cell) in &walk.cells {
         let color = match buildings.get(cell.building) {
-            Ok(b) if is_airlock(b) => Color::LinearRgba(1.0, 0.55, 0.0, 1.0),
-            Ok(b) if is_pressurized(b) => Color::LinearRgba(0.2, 0.8, 1.0, 1.0),
-            _ => Color::GREEN
+            Ok(b) if is_airlock(b) => WdeColor::LinearRgba(1.0, 0.55, 0.0, 1.0),
+            Ok(b) if is_pressurized(b) => WdeColor::LinearRgba(0.2, 0.8, 1.0, 1.0),
+            _ => WdeColor::GREEN
         };
         let c = WalkMap::cell_center(*key);
         let y = cell.floor + 0.03;

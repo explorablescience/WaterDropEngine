@@ -100,7 +100,7 @@ impl GltfAsset {
     /// Spawns the lights of the model under `parent`, following its transform.
     pub fn spawn_lights(&self, commands: &mut Commands, parent: Entity) {
         for light in &self.lights {
-            let color = wde_renderer::prelude::Color::LinearRgba(
+            let color = wde_renderer::prelude::WdeColor::LinearRgba(
                 light.color.x,
                 light.color.y,
                 light.color.z,

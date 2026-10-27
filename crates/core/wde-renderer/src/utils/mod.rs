@@ -19,7 +19,7 @@ mod color;
 mod post_process_mesh;
 pub(crate) mod ssbo_mesh;
 
-pub use color::Color;
+pub use color::WdeColor;
 pub use post_process_mesh::PostProcessingMesh;
 pub use ssbo_mesh::{SsboMesh, SsboMeshBinding};
 

@@ -2,7 +2,7 @@ use bevy::{
     ecs::system::{SystemParamItem, lifetimeless::SRes},
     prelude::*
 };
-use wde_renderer::prelude::{Color, *};
+use wde_renderer::prelude::{WdeColor, *};
 
 #[repr(C)]
 #[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -15,14 +15,14 @@ struct SelectionAreaMaterialUniform {
 #[derive(Asset, TypePath, Clone)]
 pub struct SelectionAreaMaterial {
     pub label: String,
-    pub color: Color,
+    pub color: WdeColor,
     pub uniform_buffer: Option<Handle<Buffer>>
 }
 impl Default for SelectionAreaMaterial {
     fn default() -> Self {
         Self {
             label: "selection-area-material".to_string(),
-            color: Color::LinearRgba(1.0, 0.85, 0.0, 0.25),
+            color: WdeColor::LinearRgba(1.0, 0.85, 0.0, 0.25),
             uniform_buffer: None
         }
     }
