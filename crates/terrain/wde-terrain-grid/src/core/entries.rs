@@ -79,8 +79,10 @@ struct PendingEntry {
 }
 
 /// Configuration for the placement of entities in the terrain grid.
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 pub struct PlacementConfig {
+    #[reflect(ignore)]
     pending_entries: Vec<PendingEntry>,
     pub labels: Vec<String>,
     pub entries: Vec<PlacementConfigEntry>,
@@ -98,6 +100,7 @@ pub struct PlacementPlugin;
 impl Plugin for PlacementPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PlacementConfig>()
+            .register_type::<PlacementConfig>()
             .add_systems(Startup, read_placement_file)
             .add_systems(Update, process_pending_entries);
     }

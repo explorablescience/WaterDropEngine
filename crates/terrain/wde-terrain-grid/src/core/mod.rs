@@ -14,6 +14,7 @@ pub(crate) struct CorePlugin;
 impl Plugin for CorePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Grid>()
+            .register_type::<crate::core::grid_entity::GridEntity>()
             .add_message::<GridEntityEvent>()
             .add_plugins(PlacementPlugin)
             .add_systems(Startup, set_parent)

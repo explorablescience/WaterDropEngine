@@ -25,7 +25,8 @@ pub enum PlacementCommand {
 }
 
 /// The active placement tool, for game UIs to highlight it.
-#[derive(Resource, Default, Clone, PartialEq, Eq, Debug)]
+#[derive(Resource, Default, Clone, PartialEq, Eq, Debug, Reflect)]
+#[reflect(Resource)]
 pub enum PlacementTool {
     #[default]
     None,

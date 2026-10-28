@@ -64,9 +64,7 @@ pub mod prelude {
         TerrainChunkArrayBg, TerrainComputeArrayBg, TerrainRendererGPU
     };
     pub use crate::utils::cursor_pos::TerrainCursorPos;
-    pub use crate::{
-        BUILDINGS_COLLIDER_GROUP, HEIGHTMAP_COLLIDER_GROUP, MODULES_COLLIDER_GROUP
-    };
+    pub use crate::{BUILDINGS_COLLIDER_GROUP, HEIGHTMAP_COLLIDER_GROUP, MODULES_COLLIDER_GROUP};
 }
 
 pub struct TerrainPlugin;
@@ -76,6 +74,10 @@ impl Plugin for TerrainPlugin {
             TerrainRenderPlugin,
             TerrainPhysicsPlugin,
             TerrainUtilsPlugin
-        ));
+        ))
+        .register_type::<prelude::Terrain>()
+        .register_type::<prelude::TerrainRenderer>()
+        .register_type::<prelude::TerrainPhysics>()
+        .register_type::<prelude::TerrainCursorPos>();
     }
 }

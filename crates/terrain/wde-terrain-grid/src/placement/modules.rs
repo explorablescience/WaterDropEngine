@@ -16,7 +16,8 @@ use crate::{
 };
 
 /// Module placed inside the interior of the `host` building.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[reflect(Component)]
 pub struct InteriorModule {
     pub host: Entity
 }

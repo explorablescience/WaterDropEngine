@@ -34,7 +34,8 @@ const SIDESTEP: f32 = 0.6;
 
 /// Walking speeds: a base speed scaled by a factor depending on the terrain walked on. The path
 /// search minimizes the walking time, so colonists prefer paths and tunnels over bare ground.
-#[derive(Resource, Clone, Debug)]
+#[derive(Resource, Clone, Debug, Reflect)]
+#[reflect(Resource)]
 pub struct WalkSpeeds {
     /// Speed for a factor of 1, in world units per second (about two colonist heights).
     pub base: f32,
@@ -60,7 +61,8 @@ impl Default for WalkSpeeds {
 }
 
 /// Body of a walking entity: agents keep `radius` away from each other.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[reflect(Component)]
 pub struct NavAgent {
     pub radius: f32,
     /// Walking speed relative to [`WalkSpeeds`].
@@ -80,7 +82,8 @@ impl Default for NavAgent {
 
 /// Whether a walking entity is in a pressurized place. It flips once an airlock cycle is over,
 /// e.g. to swap a colonist between its suit and indoor models.
-#[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Component, Clone, Copy, PartialEq, Eq, Debug, Reflect)]
+#[reflect(Component)]
 pub struct Indoors(pub bool);
 
 pub struct NavigationPlugin;
@@ -88,6 +91,10 @@ impl Plugin for NavigationPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<WalkSpeeds>()
             .init_resource::<WalkMap>()
+            .register_type::<WalkSpeeds>()
+            .register_type::<NavAgent>()
+            .register_type::<Indoors>()
+            .register_type::<NavPath>()
             .add_systems(
                 Update,
                 (
@@ -103,8 +110,10 @@ impl Plugin for NavigationPlugin {
 }
 
 /// Path followed by a moving entity.
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub(crate) struct NavPath {
+    #[reflect(ignore)]
     pub waypoints: VecDeque<Waypoint>,
     pub destination: Vec3,
     /// Remaining stop time at the waypoint just reached (airlock cycle).

@@ -19,11 +19,12 @@ use crate::{
 const ANCHOR_SNAP_DISTANCE: f32 = 0.1;
 
 /// Names of the anchors of a placed building that are connected to a neighbor.
-#[derive(Component, Default, Clone, PartialEq, Eq, Debug)]
+#[derive(Component, Default, Clone, PartialEq, Eq, Debug, Reflect)]
+#[reflect(Component)]
 pub struct BuildingConnections(pub BTreeSet<String>);
 
 /// Network a link goes through.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Reflect)]
 pub enum LinkKind {
     /// Pressurized link, between `AnchorIn` anchors.
     Tunnel,
@@ -100,7 +101,7 @@ pub fn connected_anchors<'a>(
 }
 
 /// Link from an anchor of a placed building to the anchor of a neighbor.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 pub struct BuildingLink {
     pub entity: Entity,
     pub kind: LinkKind,
@@ -114,7 +115,8 @@ pub struct BuildingLink {
 
 /// Links between all placed buildings, and the groups of buildings linked together. Rebuilt in
 /// [`BuildingGraphSet`] when a building is placed or removed.
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Default, Debug, Reflect)]
+#[reflect(Resource)]
 pub struct BuildingGraph {
     links: HashMap<Entity, Vec<BuildingLink>>,
     groups: Vec<Vec<Entity>>,

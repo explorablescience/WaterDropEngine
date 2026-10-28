@@ -8,7 +8,8 @@ use crate::HEIGHTMAP_COLLIDER_GROUP;
 /// Resource to store the world position of the cursor on the terrain.
 /// This is updated every frame by casting a ray from the camera through the cursor position and checking for intersections with the terrain colliders.
 /// It is available both in the main and render world.
-#[derive(Resource, Default, Clone, ExtractResource)]
+#[derive(Resource, Default, Clone, ExtractResource, Reflect)]
+#[reflect(Resource)]
 pub struct TerrainCursorPos {
     pos: Option<Vec3>,
     last_non_none_pos: Vec3

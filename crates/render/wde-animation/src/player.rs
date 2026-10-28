@@ -3,7 +3,8 @@ use bevy::prelude::*;
 use crate::clip::AnimationClip;
 
 /// Rigid part of an animated model, posed by the [`AnimationPlayer`] of its closest ancestor.
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, Reflect)]
+#[reflect(Component)]
 pub struct AnimationBone {
     pub name: String,
     /// Local transform when no clip animates the bone.
@@ -11,11 +12,12 @@ pub struct AnimationBone {
 }
 
 /// Player animating a bone.
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub(crate) struct BoneOf(Entity);
 
 /// A clip being played.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Reflect)]
 struct PlayingClip {
     clip: Handle<AnimationClip>,
     time: f32,
@@ -38,12 +40,16 @@ impl PlayingClip {
 
 /// Plays clips (looping, or once) on the [`AnimationBone`]s below its entity, blending smoothly
 /// from one clip to the next.
-#[derive(Component, Clone, Debug, Default)]
+#[derive(Component, Clone, Debug, Default, Reflect)]
+#[reflect(Component)]
 pub struct AnimationPlayer {
     active: Option<PlayingClip>,
     /// Previous clip, fading out.
+    #[reflect(ignore)]
     previous: Option<PlayingClip>,
+    #[reflect(ignore)]
     fade: f32,
+    #[reflect(ignore)]
     fade_duration: f32
 }
 impl AnimationPlayer {

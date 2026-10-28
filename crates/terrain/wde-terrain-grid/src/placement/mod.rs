@@ -19,7 +19,8 @@ pub use queue::PlacementQueue;
 
 /// Who currently uses the left mouse button, so other click interactions (e.g. drag selection)
 /// can stand by.
-#[derive(Resource, Default, PartialEq, Eq)]
+#[derive(Resource, Default, PartialEq, Eq, Reflect)]
+#[reflect(Resource)]
 pub struct PlacementInputCapture {
     /// A placement tool is active: a building or line being placed, or the move / remove tools.
     pub tool: bool,
@@ -68,6 +69,14 @@ impl Plugin for PlacementPlugin {
             .init_resource::<PlacementInputCapture>()
             .init_resource::<PlacementQueue>()
             .init_resource::<PlacementTool>()
+            .register_type::<BuildingCutaway>()
+            .register_type::<BuildingGraph>()
+            .register_type::<PlacementInputCapture>()
+            .register_type::<PlacementTool>()
+            .register_type::<BuildingConnections>()
+            .register_type::<InteriorModule>()
+            .register_type::<cutaway::BuildingVariant>()
+            .register_type::<cutaway::BuildingMesh>()
             .add_message::<PlacementCommand>()
             .add_systems(Startup, set_parent)
             .add_systems(

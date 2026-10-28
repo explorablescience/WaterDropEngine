@@ -19,6 +19,8 @@ pub struct PaintManagerPlugin;
 impl Plugin for PaintManagerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PaintManager>()
+            .register_type::<PaintManager>()
+            .register_type::<PaintBrush>()
             .add_systems(PreUpdate, flush_commands)
             .add_systems(Update, add_paint_command.chain());
     }
@@ -27,7 +29,8 @@ impl Plugin for PaintManagerPlugin {
 /// Resource that manages the painting commands and state of the painting process
 /// It is used to store the current painting commands and the state of the painting process (active, painting, etc.)
 /// When the commands are ready to be applied, they are moved to the to_extract field and the commands list is cleared
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 pub struct PaintManager {
     // True if active (allowing painting), false if not
     pub active: bool,
@@ -38,13 +41,17 @@ pub struct PaintManager {
     pub last_paint_position: Option<Vec3>,
 
     // True if should apply all painting commands on next iteration
+    #[reflect(ignore)]
     pub should_flush: bool,
     // List of painting commands
+    #[reflect(ignore)]
     pub commands: Option<Vec<PaintCommand>>,
     // List of chunks ids that should be updated on next iteration
+    #[reflect(ignore)]
     pub commands_chunks: Option<HashSet<IVec2>>,
 
     // List of commands and chunks that will be extracted on next extraction
+    #[reflect(ignore)]
     pub to_extract: Option<(Vec<PaintCommand>, HashSet<IVec2>)>
 }
 impl PaintManager {

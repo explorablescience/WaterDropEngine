@@ -13,16 +13,19 @@ const CUTAWAY_TOGGLE_KEY: KeyCode = KeyCode::KeyV;
 
 /// When enabled, placed buildings show their cutaway model (open top) instead of the full one.
 /// Entries without a cutaway model keep showing the full one.
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 pub struct BuildingCutaway(pub bool);
 
 /// Variant currently spawned under a placed building: whether it is the cutaway model, and the
 /// connected anchors its parts were chosen for. `None` until its meshes are spawned.
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
 pub(crate) struct BuildingVariant(Option<(bool, BTreeSet<String>)>);
 
 /// Mesh child of a placed building, respawned when the variant changes.
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub(crate) struct BuildingMesh;
 
 pub(crate) fn toggle_cutaway(

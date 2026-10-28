@@ -25,11 +25,13 @@ pub struct NavDebugPlugin;
 impl Plugin for NavDebugPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<NavDebugSettings>()
+            .register_type::<NavDebugSettings>()
             .add_systems(Update, (debug_ui, show_graph, show_paths, show_walk_cells));
     }
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 struct NavDebugSettings {
     show_graph: bool,
     show_paths: bool,

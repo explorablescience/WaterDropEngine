@@ -36,15 +36,19 @@ pub struct AnimationSystems;
 pub struct AnimationPlugin;
 impl Plugin for AnimationPlugin {
     fn build(&self, app: &mut App) {
-        app.init_asset::<AnimationClip>().add_systems(
-            Update,
-            (
-                player::link_bones,
-                player::advance_players,
-                player::pose_bones
-            )
-                .chain()
-                .in_set(AnimationSystems)
-        );
+        app.init_asset::<AnimationClip>()
+            .register_type::<AnimationPlayer>()
+            .register_type::<AnimationBone>()
+            .register_type::<player::BoneOf>()
+            .add_systems(
+                Update,
+                (
+                    player::link_bones,
+                    player::advance_players,
+                    player::pose_bones
+                )
+                    .chain()
+                    .in_set(AnimationSystems)
+            );
     }
 }
