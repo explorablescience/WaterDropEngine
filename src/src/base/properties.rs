@@ -10,14 +10,15 @@ const BUILDINGS_CONFIG_VERSION: u32 = 1;
 const BUILDINGS_CONFIG_PATH: &str = "core/config/buildings.json";
 
 /// Gameplay properties of a building or module, read from the buildings configuration.
-#[derive(Clone, Default, Debug)]
+#[derive(Clone, Default, Debug, Reflect)]
 pub struct BuildingProperties {
     pub electricity_production: f32,
     pub electricity_consumption: f32
 }
 
 /// Properties of each building, by placement label.
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 pub struct BuildingsConfig(pub HashMap<String, BuildingProperties>);
 
 pub(super) fn read_buildings_file(mut config: ResMut<BuildingsConfig>) {

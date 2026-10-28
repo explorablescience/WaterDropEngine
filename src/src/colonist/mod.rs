@@ -9,11 +9,12 @@ use bevy::prelude::*;
 pub const ENTITIES_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_4;
 
 /// A marker that indicates a colonist entity
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub struct ColonistMarker;
 
 /// A message to spawn a colonist in the world.
-#[derive(Message, Clone)]
+#[derive(Message, Clone, Reflect)]
 pub struct MSpawnColonist {
     pub name: String,
     pub position: Vec3,
@@ -24,6 +25,8 @@ impl Plugin for ColonistPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_message::<MSpawnColonist>()
+            .register_type::<ColonistMarker>()
+            .register_type::<MSpawnColonist>()
             .add_plugins((animate::AnimateColonistPlugin, spawn::SpawnColonistPlugin));
     }
 }

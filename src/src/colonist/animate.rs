@@ -12,12 +12,14 @@ const WALK_PLAYBACK_RANGE: (f32, f32) = (0.5, 2.2);
 pub struct AnimateColonistPlugin;
 impl Plugin for AnimateColonistPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, animate_colonists);
+        app.register_type::<WalkTracker>()
+            .add_systems(Update, animate_colonists);
     }
 }
 
 /// Smoothed walking speed of a colonist, measured from its movement.
-#[derive(Component, Default)]
+#[derive(Component, Default, Reflect)]
+#[reflect(Component)]
 pub struct WalkTracker {
     last_position: Option<Vec3>,
     pub speed: f32

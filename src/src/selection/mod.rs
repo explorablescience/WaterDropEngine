@@ -6,7 +6,7 @@ use wde::prelude::*;
 use bevy::prelude::*;
 
 /// Describes the type of entity that is currently selected or hovered over.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
 pub enum EntitySelectionType {
     Building(Entity),
     Module(Entity),
@@ -23,14 +23,16 @@ impl EntitySelectionType {
 }
 
 /// Describes the current selection state of the game, including hovered and selected entities.
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 pub struct SelectionState {
     pub hovered: Option<EntitySelectionType>,
     pub selected: Vec<EntitySelectionType>
 }
 
 /// Describes the materials used for outlining selected and hovered entities.
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 pub struct SelectionOutlineMaterial {
     hovered: Handle<OutlineMaterial>,
     selected: Handle<OutlineMaterial>
@@ -54,6 +56,9 @@ impl Plugin for SelectionPlugin {
         app
             .init_resource::<SelectionState>()
             .init_resource::<SelectionOutlineMaterial>()
+            .register_type::<EntitySelectionType>()
+            .register_type::<SelectionState>()
+            .register_type::<SelectionOutlineMaterial>()
             .add_plugins((select::SelectPlugin, drag::DragPlugin))
             .add_systems(Startup, init_outline_materials);
     }

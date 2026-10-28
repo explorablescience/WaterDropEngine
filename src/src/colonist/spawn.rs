@@ -4,18 +4,21 @@ use wde::prelude::*;
 use crate::colonist::{ColonistMarker, ENTITIES_COLLIDER_GROUP, MSpawnColonist, animate::WalkTracker};
 
 /// The parent entity for all colonists
-#[derive(Resource)]
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
 struct ColonistParent(pub Entity);
 
 /// The models for colonists
-#[derive(Resource)]
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
 pub struct ColonistModels {
     pub suit: Handle<GltfAsset>,
     pub indoor: Handle<GltfAsset>,
 }
 
 /// The queue of colonists to spawn
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 struct ColonistSpawnQueue(Vec<MSpawnColonist>);
 
 
@@ -25,6 +28,9 @@ impl Plugin for SpawnColonistPlugin {
         app
             .add_message::<MSpawnColonist>()
             .init_resource::<ColonistSpawnQueue>()
+            .register_type::<ColonistParent>()
+            .register_type::<ColonistModels>()
+            .register_type::<ColonistSpawnQueue>()
             .add_systems(Startup, init)
             .add_systems(Update, (spawn_colonists_to_queue, spawn_colonists, swap_colonist_model));
     }

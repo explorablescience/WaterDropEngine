@@ -14,11 +14,16 @@ impl Plugin for DragPlugin {
     fn build(&self, app: &mut App) {
         app
             .init_resource::<SelectionDrag>()
+            .register_type::<SelectionDrag>()
+            .register_type::<DragRelease>()
+            .register_type::<SelectionAreaAssets>()
+            .register_type::<SelectionAreaDecal>()
             .add_systems(Startup, init_selection_area);
     }
 }
 
 /// How the left button was released this frame.
+#[derive(Reflect)]
 pub enum DragRelease {
     Click,
     /// Colonists inside the dragged area.
@@ -26,7 +31,8 @@ pub enum DragRelease {
 }
 
 /// Drag state of the selection: where the press started, on screen and on the terrain.
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Reflect)]
+#[reflect(Resource)]
 pub struct SelectionDrag {
     press: Option<(Vec2, Vec3)>,
     decal: Option<Entity>,
@@ -34,13 +40,15 @@ pub struct SelectionDrag {
 }
 
 /// The mesh and translucent material of the drag-selection ground decal.
-#[derive(Resource)]
+#[derive(Resource, Reflect)]
+#[reflect(Resource)]
 pub(super) struct SelectionAreaAssets {
     mesh: Handle<Mesh>,
     material: Handle<SelectionAreaMaterial>
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub(super) struct SelectionAreaDecal;
 
 fn init_selection_area(mut commands: Commands, asset_server: Res<AssetServer>) {

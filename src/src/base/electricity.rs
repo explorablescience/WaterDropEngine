@@ -3,15 +3,18 @@ use bevy::prelude::*;
 use crate::base::{Base, BaseMembers};
 
 /// Electricity produced by a building or module working in a base.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[reflect(Component)]
 pub struct ElectricityProducer(pub f32);
 
 /// Electricity consumed by a building or module working in a base.
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Copy, Debug, Reflect)]
+#[reflect(Component)]
 pub struct ElectricityConsumer(pub f32);
 
 /// Electricity balance of a [`Base`], summed over its members.
-#[derive(Component, Default, PartialEq, Debug)]
+#[derive(Component, Default, PartialEq, Debug, Reflect)]
+#[reflect(Component)]
 pub struct BaseElectricity {
     pub production: f32,
     pub consumption: f32

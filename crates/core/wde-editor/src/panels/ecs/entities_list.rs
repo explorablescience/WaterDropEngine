@@ -13,7 +13,9 @@ struct Row {
 }
 
 pub fn draw_entities_panel(world: &mut World) {
-    let mut panel_open = world.resource::<UIMenu>().is_clicked("Engine/Entities");
+    let mut panel_open = *world
+        .resource_mut::<UIMenu>()
+        .clicked_mut("Engine/Entities");
     if !panel_open {
         return;
     }
