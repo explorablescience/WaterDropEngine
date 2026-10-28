@@ -1,0 +1,34 @@
+{
+    "version": 1.0,
+    "type": "res/config",
+    "path": "core/config/buildings.json",
+    "label": "Buildings Configuration",
+    "description": "Gameplay properties of buildings and modules, matched by their placement label.",
+    "data": {
+        "version": 1,
+        "buildings": [
+            { "label": "Control Room", "consumes": { "electricity": 5 } },
+            { "label": "Dome Small", "consumes": { "electricity": 2 } },
+            { "label": "Dome Medium", "consumes": { "electricity": 4 } },
+            { "label": "Dome Large", "consumes": { "electricity": 6 } },
+            { "label": "Airlock", "consumes": { "electricity": 1 } },
+
+            { "label": "Living Quarters", "consumes": { "electricity": 3 } },
+            { "label": "Residence", "consumes": { "electricity": 1 } },
+            { "label": "Hydroponic Farm", "consumes": { "electricity": 6 } },
+            { "label": "Research Lab", "consumes": { "electricity": 8 } },
+            { "label": "Diner", "consumes": { "electricity": 2 } },
+            { "label": "Infirmary", "consumes": { "electricity": 3 } },
+            { "label": "Grocery", "consumes": { "electricity": 2 } },
+
+            { "label": "Solar Array", "produces": { "electricity": 15 } },
+            { "label": "Stirling Generator", "produces": { "electricity": 40 } },
+            { "label": "Water Extractor", "consumes": { "electricity": 6 } },
+            { "label": "Oxygen Generator", "consumes": { "electricity": 8 } },
+            { "label": "Concrete Extractor", "consumes": { "electricity": 10 } },
+            { "label": "Fuel Refinery", "consumes": { "electricity": 12 } },
+            { "label": "Drone Hub", "consumes": { "electricity": 5 } },
+            { "label": "Sensor Tower", "consumes": { "electricity": 2 } }
+        ]
+    }
+}

@@ -1,4 +1,15 @@
-//! Terrain editor plugin for WaterDropEngine.
+//! Terrain editor for WaterDropEngine.
+//!
+//! Spawns the default terrain (see `wde-terrain`) with a paint brush, and edits it on the GPU:
+//! the brush turns mouse strokes on the terrain into paint commands, run by a compute pass on the
+//! chunk maps. Painting modes edit the splat maps (paint, erase), the others the heightmaps (raise,
+//! lower, smooth, flatten). Edited chunks are read back to update the terrain heights and
+//! colliders.
+//!
+//! The editor windows are in the `Terrain` menu:
+//! - `Terrain/Paint`: brush mode, radius, strength and color.
+//! - `Terrain/Settings`: tiling and height blending of the ground materials.
+//! - `Terrain/Save`: writes the edited maps back to the PNG files of the terrain in `res/`.
 use wde_logger::prelude::*;
 
 use bevy::prelude::*;

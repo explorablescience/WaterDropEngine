@@ -4,12 +4,11 @@ use wde_logger::prelude::*;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use wde_terrain_grid::prelude::*;
 
-use crate::{TerrainNavigator, navgrid::NavGrid};
+use crate::TerrainNavigator;
 
 pub(crate) mod pathfinding;
 pub(crate) mod walkmap;
 
-pub use pathfinding::AIRLOCK_ROLE;
 use pathfinding::{NavWorld, Waypoint, find_path, formation_spots};
 use walkmap::WalkMap;
 
@@ -92,7 +91,7 @@ impl Plugin for NavigationPlugin {
             .add_systems(
                 Update,
                 (
-                    walkmap::rebuild_walk_map.after(crate::navgrid::rebuild_nav_grid),
+                    walkmap::rebuild_walk_map.after(BuildingGraphSet),
                     request_paths,
                     replan_on_network_change,
                     follow_paths,
@@ -120,7 +119,7 @@ struct NavWorldParam<'w, 's> {
     grid: Res<'w, Grid>,
     placed: Query<'w, 's, (Entity, &'static GridEntity), With<BuildingConnections>>,
     walk: Res<'w, WalkMap>,
-    network: Res<'w, NavGrid>,
+    network: Res<'w, BuildingGraph>,
     terrain: Query<'w, 's, &'static wde_terrain::prelude::Terrain>
 }
 impl NavWorldParam<'_, '_> {

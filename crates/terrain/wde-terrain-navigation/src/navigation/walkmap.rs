@@ -16,8 +16,6 @@ use bevy::prelude::*;
 use wde_gltf::prelude::*;
 use wde_terrain_grid::{core::grid::TILE_SIZE, prelude::*};
 
-use crate::navigation::pathfinding::AIRLOCK_ROLE;
-
 /// Side of a walk cell: tiles are split in 8 x 8 cells.
 pub(crate) const CELL_SIZE: f32 = TILE_SIZE / 8.0;
 /// Highest floor walked on (foundations, raised floors).
@@ -248,8 +246,9 @@ pub(crate) fn is_pressurized(building: &GridEntity) -> bool {
     !building.entry().anchors_in.is_empty()
 }
 
+/// Whether a building links the outdoors to the tunnels: pressurized, with path anchors too.
 pub(crate) fn is_airlock(building: &GridEntity) -> bool {
-    building.entry().role.as_deref() == Some(AIRLOCK_ROLE)
+    is_pressurized(building) && !building.entry().anchors_out.is_empty()
 }
 
 /// Rebuilds the [`WalkMap`] when buildings or modules are placed, removed or reconnected.

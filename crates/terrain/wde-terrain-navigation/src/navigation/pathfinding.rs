@@ -19,16 +19,10 @@ use bevy::prelude::*;
 use wde_terrain::prelude::Terrain as TerrainMap;
 use wde_terrain_grid::{core::grid::TILE_SIZE, prelude::*};
 
-use crate::{
-    navgrid::NavGrid,
-    navigation::{
-        WalkSpeeds,
-        walkmap::{CELL_SIZE, WalkMap, is_airlock, is_path_piece, is_pressurized}
-    }
+use crate::navigation::{
+    WalkSpeeds,
+    walkmap::{CELL_SIZE, WalkMap, is_airlock, is_path_piece, is_pressurized}
 };
-
-/// Placement role of the buildings linking the outdoors to the tunnel network.
-pub const AIRLOCK_ROLE: &str = "airlock";
 
 /// Margin around the start and goal within which outdoor tiles are searched.
 const SEARCH_MARGIN: f32 = 40.0;
@@ -113,7 +107,7 @@ pub(crate) struct NavWorld<'a> {
     pub grid: &'a Grid,
     pub buildings: HashMap<Entity, &'a GridEntity>,
     pub walk: &'a WalkMap,
-    pub network: &'a NavGrid,
+    pub network: &'a BuildingGraph,
     /// Outdoor ground heights; flat at 0 without terrain.
     pub terrain: Option<&'a TerrainMap>
 }
@@ -195,12 +189,7 @@ impl NavWorld<'_> {
         match (a.terrain.pressurized(), b.terrain.pressurized()) {
             (false, false) => true,
             (true, true) => match (a.building, b.building) {
-                (Some(x), Some(y)) => self.network.buildings.get(&x).is_some_and(|building| {
-                    building
-                        .neighbors
-                        .iter()
-                        .any(|n| n.entity == y && n.kind == LinkKind::Tunnel)
-                }),
+                (Some(x), Some(y)) => self.network.are_linked(x, y, LinkKind::Tunnel),
                 _ => false
             },
             _ => a.terrain == Terrain::Airlock || b.terrain == Terrain::Airlock

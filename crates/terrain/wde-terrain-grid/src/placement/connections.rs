@@ -2,9 +2,10 @@
 //!
 //! Two buildings are connected through an anchor when one of their anchors of the same kind
 //! (`AnchorIn` for tunnels, `AnchorOut` for paths) meet at the same world position. Models use
-//! it to show variant parts, e.g. a dome door is only open when a tunnel is plugged into it.
+//! it to show variant parts, e.g. a dome door is only open when a tunnel is plugged into it, and
+//! the [`BuildingGraph`] gathers every link to find the groups of linked buildings.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap, VecDeque};
 
 use bevy::prelude::*;
 
@@ -98,27 +99,145 @@ pub fn connected_anchors<'a>(
         .collect()
 }
 
-/// Recomputes the connections of every placed building when one is placed or removed.
+/// Link from an anchor of a placed building to the anchor of a neighbor.
+#[derive(Clone, Debug)]
+pub struct BuildingLink {
+    pub entity: Entity,
+    pub kind: LinkKind,
+    /// Anchor of this building.
+    pub anchor: String,
+    /// Anchor of the neighbor.
+    pub neighbor_anchor: String,
+    /// World XZ position where the two anchors meet.
+    pub position: Vec2
+}
+
+/// Links between all placed buildings, and the groups of buildings linked together. Rebuilt in
+/// [`BuildingGraphSet`] when a building is placed or removed.
+#[derive(Resource, Default, Debug)]
+pub struct BuildingGraph {
+    links: HashMap<Entity, Vec<BuildingLink>>,
+    groups: Vec<Vec<Entity>>,
+    group_of: HashMap<Entity, usize>
+}
+impl BuildingGraph {
+    /// Builds the groups from the links of every placed building, in entity order.
+    fn new(links: HashMap<Entity, Vec<BuildingLink>>) -> Self {
+        let mut entities: Vec<Entity> = links.keys().copied().collect();
+        entities.sort();
+        let mut groups = Vec::new();
+        let mut group_of = HashMap::new();
+        for start in entities {
+            if group_of.contains_key(&start) {
+                continue;
+            }
+            let index = groups.len();
+            let mut group = Vec::new();
+            let mut queue = VecDeque::from([start]);
+            group_of.insert(start, index);
+            while let Some(entity) = queue.pop_front() {
+                group.push(entity);
+                for link in &links[&entity] {
+                    if group_of.insert(link.entity, index).is_none() {
+                        queue.push_back(link.entity);
+                    }
+                }
+            }
+            groups.push(group);
+        }
+        Self {
+            links,
+            groups,
+            group_of
+        }
+    }
+
+    /// Every placed building.
+    pub fn buildings(&self) -> impl Iterator<Item = Entity> + '_ {
+        self.links.keys().copied()
+    }
+
+    /// Links of a placed building, empty if it is not placed.
+    pub fn links(&self, entity: Entity) -> &[BuildingLink] {
+        self.links.get(&entity).map_or(&[], Vec::as_slice)
+    }
+
+    /// Whether `a` and `b` are directly linked through `kind` anchors.
+    pub fn are_linked(&self, a: Entity, b: Entity, kind: LinkKind) -> bool {
+        self.links(a)
+            .iter()
+            .any(|link| link.entity == b && link.kind == kind)
+    }
+
+    /// Groups of buildings linked together, directly or through others.
+    pub fn groups(&self) -> &[Vec<Entity>] {
+        &self.groups
+    }
+
+    /// Group of a placed building, itself included.
+    pub fn group_of(&self, entity: Entity) -> Option<&[Entity]> {
+        self.group_of
+            .get(&entity)
+            .map(|index| self.groups[*index].as_slice())
+    }
+}
+
+/// Updates [`BuildingConnections`] and the [`BuildingGraph`].
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct BuildingGraphSet;
+
+/// Recomputes the links of every placed building when one is placed or removed.
 pub(crate) fn update_connections(
     mut commands: Commands,
     added: Query<(), Added<BuildingVariant>>,
     mut removed: RemovedComponents<BuildingVariant>,
-    buildings: Query<(Entity, &GridEntity, Option<&BuildingConnections>), With<BuildingVariant>>
+    buildings: Query<(Entity, &GridEntity, Option<&BuildingConnections>), With<BuildingVariant>>,
+    mut graph: ResMut<BuildingGraph>
 ) {
     if added.is_empty() && removed.read().count() == 0 {
         return;
     }
-    let all: Vec<(Entity, &GridEntity)> = buildings.iter().map(|(e, g, _)| (e, g)).collect();
-    for (entity, grid_entity, current) in &buildings {
+    let mut all: Vec<(Entity, &GridEntity)> = buildings.iter().map(|(e, g, _)| (e, g)).collect();
+    all.sort_by_key(|(e, _)| *e);
+
+    let mut links = HashMap::new();
+    for (i, (entity, grid_entity)) in all.iter().enumerate() {
         let others = all
             .iter()
-            .filter(|(other, _)| *other != entity)
-            .map(|(_, g)| *g);
-        let connected = connected_anchors(grid_entity, others);
+            .enumerate()
+            .filter(|(j, _)| *j != i)
+            .map(|(_, (_, g))| *g);
+        let building_links: Vec<BuildingLink> = anchor_links(grid_entity, others)
+            .into_iter()
+            .map(|link| {
+                // `link.other` indexes the others, i.e. skips this building
+                let other = if link.other < i {
+                    link.other
+                } else {
+                    link.other + 1
+                };
+                BuildingLink {
+                    entity: all[other].0,
+                    kind: link.kind,
+                    anchor: link.anchor,
+                    neighbor_anchor: link.other_anchor,
+                    position: link.position
+                }
+            })
+            .collect();
+        links.insert(*entity, building_links);
+    }
+
+    for (entity, _, current) in &buildings {
+        let connected: BTreeSet<String> = links[&entity]
+            .iter()
+            .map(|link| link.anchor.clone())
+            .collect();
         if current.map(|c| &c.0) != Some(&connected) {
             commands
                 .entity(entity)
                 .insert(BuildingConnections(connected));
         }
     }
+    *graph = BuildingGraph::new(links);
 }

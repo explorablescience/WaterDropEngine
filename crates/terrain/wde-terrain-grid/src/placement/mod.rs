@@ -9,7 +9,10 @@ use crate::{
 use wde_terrain::prelude::*;
 
 pub use commands::{PlacementCommand, PlacementTool};
-pub use connections::{AnchorLink, BuildingConnections, LinkKind, anchor_links, connected_anchors};
+pub use connections::{
+    AnchorLink, BuildingConnections, BuildingGraph, BuildingGraphSet, BuildingLink, LinkKind,
+    anchor_links, connected_anchors
+};
 pub use cutaway::BuildingCutaway;
 pub use modules::InteriorModule;
 pub use queue::PlacementQueue;
@@ -61,6 +64,7 @@ impl Plugin for PlacementPlugin {
         let manager = TerrainPlacementManager::new(app.world_mut().commands());
         app.insert_resource(manager)
             .init_resource::<BuildingCutaway>()
+            .init_resource::<BuildingGraph>()
             .init_resource::<PlacementInputCapture>()
             .init_resource::<PlacementQueue>()
             .init_resource::<PlacementTool>()
@@ -84,7 +88,7 @@ impl Plugin for PlacementPlugin {
                     modules::remove_orphan_modules,
                     (
                         cutaway::toggle_cutaway,
-                        connections::update_connections,
+                        connections::update_connections.in_set(BuildingGraphSet),
                         cutaway::sync_building_variants
                     )
                         .chain()

@@ -4,6 +4,7 @@
 use bevy::prelude::*;
 use wde::{CustomWdePlugins, prelude::*};
 
+mod base;
 mod demo;
 mod selection;
 mod colonist;
@@ -18,7 +19,12 @@ pub fn main() {
             WindowIcon::from_bytes(include_bytes!("../../res/core/icons/app_icon.png")).ok(),
         ..Default::default()
     }))
-    .add_plugins((demo::DemoPlugin, selection::SelectionPlugin, colonist::ColonistPlugin));
+    .add_plugins((
+        base::BasePlugin,
+        demo::DemoPlugin,
+        selection::SelectionPlugin,
+        colonist::ColonistPlugin
+    ));
 
     // Run the app
     app.run();
