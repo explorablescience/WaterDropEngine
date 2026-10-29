@@ -23,6 +23,16 @@
 //! ));
 //! ```
 //!
+//! # Roles
+//! Several cameras can coexist, e.g. a game one and an editor one. Each role is held by a single
+//! camera, and moved with the [`SetCameraRole`](crate::roles::SetCameraRole) command (or from the
+//! `Camera/Cameras` editor window):
+//! - [`ActiveCamera`](crate::camera::ActiveCamera): rendered on screen, and used for picking.
+//! - [`CullingCamera`](crate::roles::CullingCamera): the view visibility is computed from.
+//! - [`ControlledCamera`](crate::roles::ControlledCamera): moved by the camera controllers.
+//!
+//! Roles no camera holds are given to the `ActiveCamera`.
+//!
 //! The camera uniform will then be automatically updated each frame with the active camera's transform and view parameters.
 //! To consumes the camera uniform in a shader, you can use the [`CameraRender`](crate::camera::CameraRender) render binding.
 //! It is accessible by the resource `Res<RenderAssets<GpuRenderBinding<CameraRender>>>` in render systems, or `SBindings<CameraRender>` in shader code.
@@ -34,6 +44,8 @@ use crate::camera::CameraFeature;
 #[doc(hidden)]
 pub mod prelude {
     pub use crate::camera::{ActiveCamera, Camera, CameraBinding, CameraRender};
+    pub use crate::frustum::{Aabb, Frustum, FrustumTest};
+    pub use crate::roles::{CameraRole, ControlledCamera, CullingCamera, SetCameraRole};
     pub use crate::transform::TransformUniform;
     pub use crate::view::CameraView;
 }
@@ -41,13 +53,18 @@ pub mod prelude {
 mod camera;
 #[cfg(debug_assertions)]
 mod editor;
+mod frustum;
+mod roles;
 mod transform;
 mod view;
 
 pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(CameraFeature);
+        app.add_plugins(CameraFeature)
+            .register_type::<roles::CullingCamera>()
+            .register_type::<roles::ControlledCamera>()
+            .add_systems(First, roles::assign_default_roles);
 
         #[cfg(debug_assertions)]
         app.add_plugins(editor::CameraPropertiesEditor);

@@ -12,7 +12,7 @@ use wde_renderer::prelude::*;
 
 use crate::{
     deferred::subpass::gbuffer_bindgroup::SsboTransformBinding,
-    prelude::{BatchList, LightsData, PbrMaterial, is_batch_blended}
+    prelude::{BatchList, CAMERA_VIEW, LightsData, PbrMaterial, is_batch_blended}
 };
 
 /// Camera and lighting data in a single group, keeping the pipeline within 4 bind groups.
@@ -153,6 +153,10 @@ fn draw_transparent<'pass>(world: &'pass World, render_pass: &mut RenderPassInst
         ) else {
             continue;
         };
+        let instances = batch.views[CAMERA_VIEW].clone();
+        if instances.is_empty() {
+            continue;
+        }
         render_pass.set_push_constants(
             ShaderStages::VERTEX,
             bytemuck::bytes_of(&PushConstants {
@@ -161,11 +165,7 @@ fn draw_transparent<'pass>(world: &'pass World, render_pass: &mut RenderPassInst
             })
         );
         render_pass.set_bind_group(3, &material.bind_group);
-        if let Err(e) = render_pass.draw(
-            0..mesh.index_count,
-            batch.instances_offset
-                ..(batch.instances_offset + batch.transform_ssbo_ids.len() as u32)
-        ) {
+        if let Err(e) = render_pass.draw(0..mesh.index_count, instances) {
             error!("Failed to draw transparent batch: {:?}.", e);
         }
     }

@@ -1,6 +1,6 @@
 use crate::{
     deferred::subpass::{GBufferRenderPipeline, gbuffer_bindgroup::SsboTransformBinding},
-    prelude::{BatchList, PbrMaterial, is_batch_blended}
+    prelude::{BatchList, CAMERA_VIEW, PbrMaterial, is_batch_blended}
 };
 use wde_logger::prelude::*;
 
@@ -67,9 +67,9 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
         if is_batch_blended(materials, batch_key) {
             continue;
         }
-        let batch = match batches.batches.get(batch_key) {
-            Some(batch) => batch,
-            None => continue
+        let instances = match batches.batches.get(batch_key) {
+            Some(batch) if !batch.views[CAMERA_VIEW].is_empty() => batch.views[CAMERA_VIEW].clone(),
+            _ => continue
         };
         // Set the mesh
         if current_mesh_id != Some(batch_key.mesh) {
@@ -111,11 +111,7 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
         }
 
         // Draw the mesh
-        if let Err(e) = render_pass.draw(
-            0..current_index_count,
-            batch.instances_offset
-                ..(batch.instances_offset + batch.transform_ssbo_ids.len() as u32)
-        ) {
+        if let Err(e) = render_pass.draw(0..current_index_count, instances) {
             error!("Failed to draw: {:?}.", e);
         }
     }

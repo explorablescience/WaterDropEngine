@@ -10,7 +10,7 @@ use bevy::{
 use wde_renderer::prelude::*;
 
 use crate::{
-    deferred::{BatchList, PbrMaterial, SsboTransformBinding, is_batch_blended},
+    deferred::{BatchList, PbrMaterial, SsboTransformBinding, is_batch_blended, shadow_view},
     passes::shadow::{CascadeEnabledFlags, ShadowMapData, ShadowParamsBinding}
 };
 
@@ -189,13 +189,14 @@ fn draw_shadow_cascade<'pass>(
     let mut current_mesh_id = None;
     let mut current_index_count = 0;
     for batch_key in batches.sorted_batches.iter() {
-        if !batches.shadow_casting_batches.contains(batch_key)
-            || is_batch_blended(materials, batch_key)
-        {
+        if is_batch_blended(materials, batch_key) {
             continue;
         }
-        let Some(batch) = batches.batches.get(batch_key) else {
-            continue;
+        let instances = match batches.batches.get(batch_key) {
+            Some(batch) if !batch.views[shadow_view(cascade_idx)].is_empty() => {
+                batch.views[shadow_view(cascade_idx)].clone()
+            }
+            _ => continue
         };
         if current_mesh_id != Some(batch_key.mesh) {
             let Some(mesh) = meshes.get(batch_key.mesh) else {
@@ -212,11 +213,7 @@ fn draw_shadow_cascade<'pass>(
                 }])
             );
         }
-        if let Err(e) = render_pass.draw(
-            0..current_index_count,
-            batch.instances_offset
-                ..(batch.instances_offset + batch.transform_ssbo_ids.len() as u32)
-        ) {
+        if let Err(e) = render_pass.draw(0..current_index_count, instances) {
             error!("Shadow draw failed: {:?}.", e);
         }
     }

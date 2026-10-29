@@ -49,7 +49,7 @@ pub fn handle_over_material(
     (phworld, window, camera_query): (
         Res<PhysicsWorld>,
         Single<&Window, With<PrimaryWindow>>,
-        Query<(&GlobalTransform, &CameraView), With<Camera>>
+        Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>
     ),
     collider_element_query: Query<&ChildOf, With<Collider>>,
     buildings_query: Query<(Entity, &ChildOf, &PbrMaterial3d<PbrMaterial>)>,

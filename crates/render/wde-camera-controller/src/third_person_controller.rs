@@ -87,7 +87,7 @@ impl Default for ThirdPersonController {
 
 // Update the camera controller
 fn update(
-    mut camera_query: Query<(&mut Transform, &mut ThirdPersonController), With<CameraView>>,
+    mut camera_query: Query<(&mut Transform, &mut ThirdPersonController), With<ControlledCamera>>,
     time: Res<Time>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mouse_button_input: Res<ButtonInput<MouseButton>>,

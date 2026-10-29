@@ -39,6 +39,10 @@ impl Plugin for SpawnColonistPlugin {
                     spawn_colonists,
                     swap_colonist_model
                 )
+            )
+            .add_systems(
+                PostUpdate,
+                update_colonist_bounds.after(TransformSystems::Propagate)
             );
     }
 }
@@ -103,6 +107,7 @@ fn spawn_colonists(
                 ChildOf(colonist_parent.0)
             ))
             .id();
+        commands.entity(colonist).insert(CullGroupMember(colonist));
 
         // The model is spawned by `swap_colonist_model`, as `Indoors` is just added
 
@@ -140,5 +145,28 @@ fn swap_colonist_model(
             &models.suit
         };
         GltfLoader::spawn(&mut gltf_spawn_queue, model.clone(), entity);
+    }
+}
+
+/// Horizontal margin of the colonist cull bounds, as a fraction of the model height: the rest pose
+/// bounds do not hold the limbs swinging while walking.
+const COLONIST_CULL_MARGIN: f32 = 0.25;
+/// Moves the cull bounds of the colonists with them
+fn update_colonist_bounds(
+    models: Res<ColonistModels>,
+    gltf_assets: Res<Assets<GltfAsset>>,
+    mut colonists: Query<
+        (&GlobalTransform, &mut CullGroup),
+        (With<ColonistMarker>, Changed<GlobalTransform>)
+    >
+) {
+    let Some(suit) = gltf_assets.get(&models.suit) else {
+        return;
+    };
+    let height = suit.bbox.max.y - suit.bbox.min.y;
+    let bounds = Aabb::new(suit.bbox.min, suit.bbox.max)
+        .grow(Vec3::new(1.0, 0.0, 1.0) * height * COLONIST_CULL_MARGIN);
+    for (transform, mut group) in &mut colonists {
+        group.0 = bounds.transformed(transform);
     }
 }

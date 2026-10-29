@@ -74,7 +74,7 @@ impl Default for FreeCameraController {
 
 // Update the camera controller
 fn update(
-    mut camera_query: Query<(&mut Transform, &mut FreeCameraController), With<CameraView>>,
+    mut camera_query: Query<(&mut Transform, &mut FreeCameraController), With<ControlledCamera>>,
     time: Res<Time>,
     mut windows: Query<&mut Window>,
     (keyboard_input, mouse_button_input): (

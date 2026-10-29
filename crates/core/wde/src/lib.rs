@@ -172,7 +172,7 @@ impl Plugin for CustomWdePlugins {
         #[cfg(feature = "editor")]
         app.add_plugins(wde_editor::EditorPlugin);
         #[cfg(all(feature = "gizmos", feature = "editor"))]
-        app.add_plugins(debug::PhysicsDebugPlugin);
+        app.add_plugins((debug::PhysicsDebugPlugin, debug::CameraDebugPlugin));
 
         // Always add the scene plugin last
         app.add_plugins(wde_scene::ScenePlugin);
@@ -210,7 +210,7 @@ pub mod prelude {
 
     // Optional feature modules
     #[cfg(all(feature = "gizmos", feature = "editor"))]
-    pub use crate::debug::PhysicsDebugSettings;
+    pub use crate::debug::{CameraDebugSettings, PhysicsDebugSettings};
     #[cfg(feature = "editor")]
     pub use wde_editor::prelude::*;
     #[cfg(feature = "gizmos")]

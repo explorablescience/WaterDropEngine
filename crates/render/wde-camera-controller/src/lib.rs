@@ -5,7 +5,7 @@
 //!  - [`FreeCameraController`](free_camera_controller::FreeCameraController) for first-person navigation.
 //!  - [`ThirdPersonController`](third_person_controller::ThirdPersonController) for third-person perspectives.
 //!
-//! To use the camera controllers, simply add the corresponding controller component to your camera entity.
+//! To use the camera controllers, simply add the corresponding controller component to your camera entity. Only the [`ControlledCamera`](wde_camera::prelude::ControlledCamera) is moved.
 //! For example, to use the [`ThirdPersonController`](third_person_controller::ThirdPersonController), you can spawn a camera entity like this:
 //!
 //! ```rust

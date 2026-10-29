@@ -25,6 +25,12 @@ impl CameraView {
         window_size.x / window_size.y
     }
 
+    /// World to NDC matrix of this view from a camera at `transform`.
+    pub fn world_to_ndc(&self, transform: &GlobalTransform, aspect_ratio: f32) -> Mat4 {
+        Mat4::perspective_rh(self.fov.to_radians(), aspect_ratio, self.znear, self.zfar)
+            * TransformUniform::transform_world_to_obj(transform)
+    }
+
     /// Convert a 2D ndc position to a 3D world direction.
     pub fn ndc_to_world(
         &self,
@@ -32,9 +38,7 @@ impl CameraView {
         transform: &GlobalTransform,
         aspect_ratio: f32
     ) -> Vec3 {
-        let proj = Mat4::perspective_rh(self.fov.to_radians(), aspect_ratio, self.znear, self.zfar);
-        let view = TransformUniform::transform_world_to_obj(transform);
-        let inv_vp = (proj * view).inverse();
+        let inv_vp = self.world_to_ndc(transform, aspect_ratio).inverse();
 
         let ndc_near = Vec4::new(ndc_pos.x, ndc_pos.y, -1.0, 1.0);
         let ndc_far = Vec4::new(ndc_pos.x, ndc_pos.y, 1.0, 1.0);

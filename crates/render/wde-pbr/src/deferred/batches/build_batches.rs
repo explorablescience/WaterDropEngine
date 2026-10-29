@@ -1,23 +1,17 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::HashMap, ops::Range};
 
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::prelude::{
-    CastShadow, PbrAlphaMode, PbrMaterial, PbrMaterial3d, PbrSsboTransformUuid, PbrUuidRegistry
+    CULL_VIEW_COUNT, PbrAlphaMode, PbrMaterial, PbrMaterial3d, PbrSsboTransformUuid,
+    PbrUuidRegistry
 };
 
 #[derive(Component)]
 pub struct ExtractedPbrInstance {
-    mesh_id: AssetId<Mesh>,
+    pub(crate) mesh_id: AssetId<Mesh>,
     material_id: AssetId<PbrMaterial>
-}
-
-#[derive(Clone, Copy)]
-pub(crate) struct TrackedBatchEntity {
-    pub(crate) key: BatchKey,
-    transform_id: u32,
-    pub(crate) main_entity: Entity
 }
 
 #[derive(Component)]
@@ -57,20 +51,20 @@ pub(crate) struct BatchKey {
     pub(crate) mesh: AssetId<Mesh>,
     pub(crate) material: AssetId<PbrMaterial>
 }
-// Batch of entities that share the same mesh and material, represented by their transform IDs in the SSBO.
+// Batch of entities that share the same mesh and material.
 pub(crate) struct Batch {
     pub _key: BatchKey,
-    pub transform_ssbo_ids: Vec<u32>, // Offset in the SSBO "transform" buffer of the first transform of this batch
-    pub instances_offset: u32 // Offset in the SSBO "instance to transform" buffer of the first entity of this batch
+    /// Render entity and SSBO transform ID of each instance.
+    pub instances: Vec<(Entity, u32)>,
+    /// Instances visible in each culling view, as a range of the "instance to transform" buffer.
+    pub views: [Range<u32>; CULL_VIEW_COUNT]
 }
-// Resource to store the batches of entities for rendering. The key is the combination of mesh and material, and the value is the batch of transform IDs for entities that share that mesh and material.
+// Resource to store the batches of entities for rendering. The key is the combination of mesh and material, and the value is the batch of entities that share that mesh and material.
 #[derive(Resource, Default)]
 pub(crate) struct BatchList {
     pub batches: HashMap<BatchKey, Batch>,
     pub sorted_batches: Vec<BatchKey>, // List of batch keys sorted first by material and then by mesh
-    pub(crate) tracked_entities: HashMap<Entity, TrackedBatchEntity>,
-    pub shadow_casting_batches: HashSet<BatchKey>, // Subset of sorted_batches whose entities have CastShadow
-    pub dirty: bool // Did anything change? If true, rebuild ssbo batches
+    pub(crate) tracked_entities: HashMap<Entity, BatchKey>
 }
 impl std::fmt::Debug for BatchList {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -83,8 +77,8 @@ impl std::fmt::Debug for BatchList {
                         batch_key.mesh, batch_key.material
                     ),
                     &format!(
-                        "Batch {{ transform_ssbo_ids: {:?}, instances_offset: {} }}",
-                        batch.transform_ssbo_ids, batch.instances_offset
+                        "Batch {{ instances: {:?}, views: {:?} }}",
+                        batch.instances, batch.views
                     )
                 );
             }
@@ -104,24 +98,22 @@ pub(crate) fn is_batch_blended(
 }
 
 fn remove_tracked_entity(batches: &mut BatchList, entity: Entity) -> bool {
-    let Some(tracked) = batches.tracked_entities.remove(&entity) else {
+    let Some(key) = batches.tracked_entities.remove(&entity) else {
         return false;
     };
 
     let mut removed_any = false;
     let mut remove_batch_key = false;
-    if let Some(batch) = batches.batches.get_mut(&tracked.key) {
-        let len_before = batch.transform_ssbo_ids.len();
-        batch
-            .transform_ssbo_ids
-            .retain(|id| *id != tracked.transform_id);
-        removed_any = batch.transform_ssbo_ids.len() != len_before;
-        remove_batch_key = batch.transform_ssbo_ids.is_empty();
+    if let Some(batch) = batches.batches.get_mut(&key) {
+        let len_before = batch.instances.len();
+        batch.instances.retain(|(e, _)| *e != entity);
+        removed_any = batch.instances.len() != len_before;
+        remove_batch_key = batch.instances.is_empty();
     }
 
     if remove_batch_key {
-        batches.batches.remove(&tracked.key);
-        batches.sorted_batches.retain(|key| *key != tracked.key);
+        batches.batches.remove(&key);
+        batches.sorted_batches.retain(|k| *k != key);
     }
 
     removed_any
@@ -133,21 +125,11 @@ pub(crate) fn build_batches(
     mut removed_extracted_instances: RemovedComponents<ExtractedPbrInstance>,
     mut removed_transform_uuid: RemovedComponents<PbrSsboTransformUuid>,
     extracted_instances: Query<
-        (
-            Entity,
-            MainEntity,
-            &PbrSsboTransformUuid,
-            &ExtractedPbrInstance
-        ),
+        (Entity, &PbrSsboTransformUuid, &ExtractedPbrInstance),
         Changed<ExtractedPbrInstance>
     >,
     extracted_instances_to_retry: Query<
-        (
-            Entity,
-            MainEntity,
-            &PbrSsboTransformUuid,
-            &ExtractedPbrInstance
-        ),
+        (Entity, &PbrSsboTransformUuid, &ExtractedPbrInstance),
         With<ExtractedPbrInstanceToRetryMarker>
     >,
     transform_registry: Res<PbrUuidRegistry>
@@ -162,7 +144,7 @@ pub(crate) fn build_batches(
     }
 
     // Add new or changed instances to the batches, and remove the retry marker if it exists
-    for (entity, main_entity, transform_uuid, instance) in extracted_instances
+    for (entity, transform_uuid, instance) in extracted_instances
         .into_iter()
         .chain(extracted_instances_to_retry)
     {
@@ -187,19 +169,12 @@ pub(crate) fn build_batches(
             .entry(key)
             .or_insert_with(|| Batch {
                 _key: key,
-                transform_ssbo_ids: Vec::new(),
-                instances_offset: 0
+                instances: Vec::new(),
+                views: Default::default()
             })
-            .transform_ssbo_ids
-            .push(transform_id);
-        batches.tracked_entities.insert(
-            entity,
-            TrackedBatchEntity {
-                key,
-                transform_id,
-                main_entity
-            }
-        );
+            .instances
+            .push((entity, transform_id));
+        batches.tracked_entities.insert(entity, key);
         if !batches.sorted_batches.contains(&key) {
             batches.sorted_batches.push(key);
         }
@@ -208,7 +183,6 @@ pub(crate) fn build_batches(
             .remove::<ExtractedPbrInstanceToRetryMarker>();
         changed = true;
     }
-    batches.dirty |= changed;
 
     // Sort batches first by material and then by mesh
     if changed {
@@ -218,26 +192,6 @@ pub(crate) fn build_batches(
                 .then_with(|| a.mesh.cmp(&b.mesh))
         });
     }
-}
-
-/// Rebuilds `BatchList::shadow_casting_batches` every frame from render-world entities.
-pub(crate) fn update_shadow_casting_batches(
-    mut batches: ResMut<BatchList>,
-    cast_shadow_query: Query<MainEntity, With<CastShadow>>
-) {
-    let shadow_main_entities: HashSet<Entity> = cast_shadow_query.iter().collect();
-    let new_shadow_batches: HashSet<BatchKey> = batches
-        .tracked_entities
-        .iter()
-        .filter_map(|(_, tracked)| {
-            if shadow_main_entities.contains(&tracked.main_entity) {
-                Some(tracked.key)
-            } else {
-                None
-            }
-        })
-        .collect();
-    batches.shadow_casting_batches = new_shadow_batches;
 }
 
 pub(crate) struct BatchesPlugin;

@@ -32,7 +32,7 @@ fn update_selected(
     ),
     (window, camera, physics): (
         Single<&Window, With<PrimaryWindow>>,
-        Query<(&GlobalTransform, &CameraView), With<Camera>>,
+        Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>,
         Res<PhysicsWorld>
     ),
     (collider_parent_query, children_query, mesh_query, existing_query): (
@@ -123,7 +123,7 @@ fn update_selected(
 /// Entity under the cursor. Colonists first, then modules as they are inside other buildings.
 fn hovered_entity(
     window: &Window,
-    camera: &Query<(&GlobalTransform, &CameraView), With<Camera>>,
+    camera: &Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>,
     physics: &PhysicsWorld,
     collider_parent_query: &Query<&ChildOf, With<Collider>>
 ) -> Option<EntitySelectionType> {

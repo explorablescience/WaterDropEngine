@@ -13,7 +13,7 @@ impl Plugin for CameraPropertiesEditor {
 
 fn edit_controller_params(
     ctx: Res<UIContext>,
-    mut camera_query: Query<&mut ThirdPersonController, With<ActiveCamera>>,
+    mut camera_query: Query<&mut ThirdPersonController, With<ControlledCamera>>,
     mut ui_menu: ResMut<UIMenu>
 ) {
     if let Ok(mut controller) = camera_query.single_mut() {

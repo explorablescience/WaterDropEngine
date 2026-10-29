@@ -18,7 +18,7 @@ impl TerrainCursorPos {
     pub(crate) fn update(
         phworld: Res<PhysicsWorld>,
         window: Single<&Window, With<PrimaryWindow>>,
-        camera_query: Query<(&GlobalTransform, &CameraView), With<Camera>>,
+        camera_query: Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>,
         mut terrain_cursor_pos: ResMut<TerrainCursorPos>
     ) {
         // Get cursor position and camera data

@@ -1,3 +1,4 @@
+mod culling;
 mod debug;
 mod electricity;
 mod properties;
@@ -11,10 +12,11 @@ pub use electricity::*;
 pub use properties::*;
 
 /// Identifies a base. It lives as long as the control room is present, and dies with it.
-/// The members of a base can be found through the [`InBase`] relationship.
+/// The members of a base can be found through the [`InBase`] relationship, and are culled
+/// together within its bounds.
 #[derive(Component, Debug, Reflect)]
 #[reflect(Component)]
-#[require(BaseElectricity)]
+#[require(BaseElectricity, CullGroup)]
 pub struct Base {
     pub name: String,
     pub control_room: Entity
@@ -54,6 +56,10 @@ impl Plugin for BasePlugin {
                     electricity::update_electricity
                 )
                     .chain()
+            )
+            .add_systems(
+                PostUpdate,
+                culling::update_base_bounds.after(TransformSystems::Propagate)
             );
     }
 }

@@ -11,6 +11,7 @@
 //! - It extracts every entity with a `Transform` and [`PbrModel`](crate::prelude::PbrModel) (which have a vector of [`Mesh`](wde_renderer::prelude::Mesh) and [`PbrMaterial`](crate::pbr_material::PbrMaterial) elements) from the main world to the render world, and stores them in the `PbrModelRegistry` resource. Each model element is assigned a unique UUID, as well as a transform ID that corresponds to its entry in the GPU [SsboTransform](crate::SsboTransform) buffer.
 //! - When a transform or a model is added or changed in the main world, the corresponding transform is marked as dirty, and the [SsboTransform](crate::SsboTransform) buffer is updated with the new transform data at the next frame.
 //! - Then, for each frame, a `Batches` resource is created from the extracted entities, sorted by their material handle to minimize render pipeline changes. Each `Batch` points to the corresponding mesh and material handles, as well as an instance index. It then uses another buffer to store pointers from the entity instance indices to their transform IDs in the [SsboTransform](crate::SsboTransform) buffer (see `ModelUuidToTransformUuidRender`).
+//! - The instances of each batch are then frustum culled against the camera and each shadow cascade (see the [`culling`] module), and the visible ones are written to their view region of the instance to transform buffer.
 //! - Finally, the render pass iterates over the batches and renders them, writing to the G-buffer [`DeferredTextures`](crate::DeferredTextures) and the depth texture.
 //! - It then resolves the G-buffer textures to `DeferredTexturesResolved` for use in the lighting pass, which doesn't use MSAA.
 //!
@@ -53,6 +54,7 @@ use wde_renderer::prelude::*;
 
 mod batches;
 mod cast_shadow;
+pub mod culling;
 mod lights;
 mod pbr_material;
 mod subpass;
@@ -60,6 +62,7 @@ mod transform;
 
 pub use batches::*;
 pub use cast_shadow::*;
+pub use culling::*;
 pub use lights::*;
 pub use pbr_material::{PbrAlphaMode, PbrMaterial, PbrMaterial3d};
 pub use subpass::*;
@@ -67,8 +70,8 @@ pub use transform::*;
 
 use crate::{
     deferred::{
-        batches::DeferredDependenciesPlugin, lights::LightsPlugin, subpass::PbrRenderPlugin,
-        transform::PbrTransformPlugin
+        batches::DeferredDependenciesPlugin, culling::CullingPlugin, lights::LightsPlugin,
+        subpass::PbrRenderPlugin, transform::PbrTransformPlugin
     },
     passes::{RenderPassDeferredLighting, SubRenderPassLightingPbr}
 };
@@ -83,6 +86,7 @@ impl Plugin for DeferredPlugin {
             PbrRenderPlugin,
             PbrTransformPlugin,
             CastShadowPlugin,
+            CullingPlugin,
             RenderBindingRegisterPlugin::<PbrMaterial>::default()
         ));
 

@@ -8,9 +8,10 @@ use bevy::prelude::*;
 /// Collider group for colonists and other entities that can interact with the terrain.
 pub const ENTITIES_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_4;
 
-/// A marker that indicates a colonist entity
+/// A marker that indicates a colonist entity. Each colonist is culled as a single group.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
+#[require(CullGroup)]
 pub struct ColonistMarker;
 
 /// A message to spawn a colonist in the world.

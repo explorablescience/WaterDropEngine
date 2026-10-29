@@ -129,11 +129,11 @@ impl TerrainRenderer {
         }
     }
 
-    /// Chooses the chunks to draw, outside of the camera frustum excluded, and their level of
-    /// detail from their distance to the camera.
+    /// Chooses the chunks to draw, outside of the [`CullingCamera`] frustum excluded, and their
+    /// level of detail from their distance to it.
     pub fn update_draw_list(
         mut renderer: Query<&mut TerrainRenderer>,
-        camera: Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>,
+        camera: Query<(&GlobalTransform, &CameraView), With<CullingCamera>>,
         window: Query<&Window, With<PrimaryWindow>>
     ) {
         let (Ok(mut renderer), Ok((camera_transform, view))) =
@@ -144,8 +144,7 @@ impl TerrainRenderer {
         let aspect = window
             .single()
             .map_or(1.0, |w| w.width() / w.height().max(1.0));
-        let view_proj = Mat4::perspective_rh(view.fov.to_radians(), aspect, view.znear, view.zfar)
-            * camera_transform.to_matrix().inverse();
+        let frustum = Frustum::from_view_proj(view.world_to_ndc(camera_transform, aspect));
         let eye = camera_transform.translation();
 
         let renderer = renderer.as_mut();
@@ -167,21 +166,10 @@ impl TerrainRenderer {
                 return false;
             };
             let center = pos.as_vec2() * CHUNK_SIZE;
-            let corners = (0..8).map(|c| {
-                let x = center.x + if c & 1 == 0 { -half } else { half };
-                let z = center.y + if c & 2 == 0 { -half } else { half };
-                let y = if c & 4 == 0 { lo } else { hi };
-                view_proj * Vec4::new(x, y, z, 1.0)
-            });
-            // Outside when every corner is beyond the same frustum plane
-            let corners: Vec<Vec4> = corners.collect();
-            let outside = |test: &dyn Fn(&Vec4) -> bool| corners.iter().all(test);
-            !(outside(&|p| p.x < -p.w)
-                || outside(&|p| p.x > p.w)
-                || outside(&|p| p.y < -p.w)
-                || outside(&|p| p.y > p.w)
-                || outside(&|p| p.z < 0.0)
-                || outside(&|p| p.z > p.w))
+            frustum.intersects(&Aabb::new(
+                Vec3::new(center.x - half, lo, center.y - half),
+                Vec3::new(center.x + half, hi, center.y + half)
+            ))
         };
 
         let lods: HashMap<ChunkPos, u32> = renderer

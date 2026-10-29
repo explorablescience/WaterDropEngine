@@ -7,7 +7,8 @@ use bevy::prelude::*;
 use crate::base::{Base, InBase};
 
 /// Spawns a [`Base`] for each group of linked buildings with a single control room, and puts its
-/// buildings and their modules [`InBase`]. Other groups have no base: their buildings do not work.
+/// buildings and their modules [`InBase`] (and in its cull group). Other groups have no base:
+/// their buildings do not work.
 pub(super) fn update_bases(
     mut commands: Commands,
     graph: Res<BuildingGraph>,
@@ -73,10 +74,14 @@ pub(super) fn update_bases(
         }
         match base {
             Some(base) => {
-                commands.entity(entity).insert(InBase(base));
+                commands
+                    .entity(entity)
+                    .insert((InBase(base), CullGroupMember(base)));
             }
             None => {
-                commands.entity(entity).try_remove::<InBase>();
+                commands
+                    .entity(entity)
+                    .try_remove::<(InBase, CullGroupMember)>();
             }
         }
     }
