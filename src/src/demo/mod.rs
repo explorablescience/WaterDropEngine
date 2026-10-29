@@ -1,5 +1,5 @@
-use wde::prelude::*;
 use bevy::prelude::*;
+use wde::prelude::*;
 
 mod demo_base;
 mod demo_colonist;
@@ -7,7 +7,14 @@ mod demo_colonist;
 pub struct DemoPlugin;
 impl Plugin for DemoPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_initial_camera, demo_base::spawn_demo_base, demo_colonist::spawn_demo_colonists));
+        app.add_systems(
+            Startup,
+            (
+                spawn_initial_camera,
+                demo_base::spawn_demo_base,
+                demo_colonist::spawn_demo_colonists
+            )
+        );
     }
 }
 

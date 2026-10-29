@@ -176,6 +176,15 @@ impl UIMenu {
         }
         self.clicked.get_mut(path).unwrap()
     }
+    /// Returns a mutable reference to the clicked state of the menu item at the given path
+    /// If the item does not exist, it is created as a leaf item and its clicked state is initialized to true.
+    pub fn clicked_mut_default_open(&mut self, path: &str) -> &mut bool {
+        if !self.clicked.contains_key(path) {
+            self.push(path);
+            self.clicked.insert(path.to_string(), true);
+        }
+        self.clicked.get_mut(path).unwrap()
+    }
 
     /// Draw the menu using egui
     fn draw(&mut self, ui: &mut egui::Ui, style: Option<egui::Style>) {

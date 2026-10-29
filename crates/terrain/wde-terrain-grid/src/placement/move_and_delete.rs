@@ -80,16 +80,8 @@ pub fn handle_over_material(
 
     // Cast the ray: modules first, as they are inside other buildings
     let hit = phworld
-        .cast_ray(
-            &ray,
-            &RayCastConfig::with_filter(MODULES_COLLIDER_GROUP)
-        )
-        .or_else(|| {
-            phworld.cast_ray(
-                &ray,
-                &RayCastConfig::with_filter(BUILDINGS_COLLIDER_GROUP)
-            )
-        });
+        .cast_ray(&ray, &RayCastConfig::with_filter(MODULES_COLLIDER_GROUP))
+        .or_else(|| phworld.cast_ray(&ray, &RayCastConfig::with_filter(BUILDINGS_COLLIDER_GROUP)));
     let entity = match hit {
         Some((entity, _toi)) => entity,
         None => {

@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use wde::prelude::*;
 
-use crate::colonist::{ColonistMarker, ENTITIES_COLLIDER_GROUP, MSpawnColonist, animate::WalkTracker};
+use crate::colonist::{
+    ColonistMarker, ENTITIES_COLLIDER_GROUP, MSpawnColonist, animate::WalkTracker
+};
 
 /// The parent entity for all colonists
 #[derive(Resource, Reflect)]
@@ -13,7 +15,7 @@ struct ColonistParent(pub Entity);
 #[reflect(Resource)]
 pub struct ColonistModels {
     pub suit: Handle<GltfAsset>,
-    pub indoor: Handle<GltfAsset>,
+    pub indoor: Handle<GltfAsset>
 }
 
 /// The queue of colonists to spawn
@@ -21,18 +23,23 @@ pub struct ColonistModels {
 #[reflect(Resource)]
 struct ColonistSpawnQueue(Vec<MSpawnColonist>);
 
-
 pub struct SpawnColonistPlugin;
 impl Plugin for SpawnColonistPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_message::<MSpawnColonist>()
+        app.add_message::<MSpawnColonist>()
             .init_resource::<ColonistSpawnQueue>()
             .register_type::<ColonistParent>()
             .register_type::<ColonistModels>()
             .register_type::<ColonistSpawnQueue>()
             .add_systems(Startup, init)
-            .add_systems(Update, (spawn_colonists_to_queue, spawn_colonists, swap_colonist_model));
+            .add_systems(
+                Update,
+                (
+                    spawn_colonists_to_queue,
+                    spawn_colonists,
+                    swap_colonist_model
+                )
+            );
     }
 }
 
@@ -53,7 +60,7 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
 /// Read the colonist spawn messages and add them to the spawn queue
 fn spawn_colonists_to_queue(
     mut messages: MessageReader<MSpawnColonist>,
-    mut queue: ResMut<ColonistSpawnQueue>,
+    mut queue: ResMut<ColonistSpawnQueue>
 ) {
     for message in messages.read() {
         queue.0.push(message.clone());
@@ -68,7 +75,7 @@ fn spawn_colonists(
     colonist_parent: Res<ColonistParent>,
     colonist_models: Res<ColonistModels>,
     gltf_assets: Res<Assets<GltfAsset>>,
-    mut colonist_spawn_queue: ResMut<ColonistSpawnQueue>,
+    mut colonist_spawn_queue: ResMut<ColonistSpawnQueue>
 ) {
     // Get the bbox from one colonist model
     let Some(suit) = gltf_assets.get(&colonist_models.suit) else {
@@ -84,16 +91,18 @@ fn spawn_colonists(
         let is_indoor = message.position.y > 0.0;
 
         // Spawn the colonist entity
-        let colonist = commands.spawn((
-            Name::new(message.name.clone()),
-            Transform::from_translation(message.position),
-            Indoors(is_indoor),
-            AnimationPlayer::default(),
-            NavAgent::default(),
-            ColonistMarker,
-            WalkTracker::default(),
-            ChildOf(colonist_parent.0),
-        )).id();
+        let colonist = commands
+            .spawn((
+                Name::new(message.name.clone()),
+                Transform::from_translation(message.position),
+                Indoors(is_indoor),
+                AnimationPlayer::default(),
+                NavAgent::default(),
+                ColonistMarker,
+                WalkTracker::default(),
+                ChildOf(colonist_parent.0)
+            ))
+            .id();
 
         // The model is spawned by `swap_colonist_model`, as `Indoors` is just added
 
@@ -104,10 +113,12 @@ fn spawn_colonists(
             Collider::from(BoxCollider::new(pick_extent).with_group(ENTITIES_COLLIDER_GROUP)),
             ChildOf(colonist)
         ));
-        debug!("Spawned colonist: {} at {:?}", message.name, message.position);
+        debug!(
+            "Spawned colonist: {} at {:?}",
+            message.name, message.position
+        );
     }
 }
-
 
 /// Swaps colonists between their suit and indoor models
 fn swap_colonist_model(
@@ -123,7 +134,11 @@ fn swap_colonist_model(
                 commands.entity(*child).despawn();
             }
         }
-        let model = if indoors.0 { &models.indoor } else { &models.suit };
+        let model = if indoors.0 {
+            &models.indoor
+        } else {
+            &models.suit
+        };
         GltfLoader::spawn(&mut gltf_spawn_queue, model.clone(), entity);
     }
 }

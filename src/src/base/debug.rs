@@ -7,11 +7,11 @@ use crate::base::{Base, BaseElectricity, BaseMembers, InBase};
 pub struct BaseDebugPlugin;
 impl Plugin for BaseDebugPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, debug_ui);
+        app.add_systems(Update, debug_base_ui);
     }
 }
 
-fn debug_ui(
+fn debug_base_ui(
     ctx: Res<UIContext>,
     mut ui_menu: ResMut<UIMenu>,
     graph: Res<BuildingGraph>,
@@ -58,8 +58,8 @@ fn debug_ui(
                     .map(|m| buildings.iter_many(m.iter()).collect())
                     .unwrap_or_default();
                 egui::CollapsingHeader::new(format!(
-                    "Base #{}: control room at {}, {} members",
-                    index + 1,
+                    "{}: control room at {}, {} members",
+                    base.name,
                     fmt_pos(room.center()),
                     members.len()
                 ))

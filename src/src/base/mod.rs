@@ -7,8 +7,8 @@ use wde::prelude::*;
 
 use bevy::prelude::*;
 
-pub use electricity::BaseElectricity;
-pub use properties::BuildingsConfig;
+pub use electricity::*;
+pub use properties::*;
 
 /// Identifies a base. It lives as long as the control room is present, and dies with it.
 /// The members of a base can be found through the [`InBase`] relationship.
@@ -16,6 +16,7 @@ pub use properties::BuildingsConfig;
 #[reflect(Component)]
 #[require(BaseElectricity)]
 pub struct Base {
+    pub name: String,
     pub control_room: Entity
 }
 

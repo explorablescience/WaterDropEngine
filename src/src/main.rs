@@ -5,9 +5,9 @@ use bevy::prelude::*;
 use wde::{CustomWdePlugins, prelude::*};
 
 mod base;
+mod colonist;
 mod demo;
 mod selection;
-mod colonist;
 
 pub fn main() {
     // Create the app

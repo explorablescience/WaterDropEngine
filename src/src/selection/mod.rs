@@ -1,3 +1,4 @@
+mod debug;
 mod drag;
 mod select;
 
@@ -10,14 +11,14 @@ use bevy::prelude::*;
 pub enum EntitySelectionType {
     Building(Entity),
     Module(Entity),
-    Entity(Entity),
+    Entity(Entity)
 }
 impl EntitySelectionType {
     pub fn entity(&self) -> Entity {
         match self {
             EntitySelectionType::Building(entity) => *entity,
             EntitySelectionType::Module(entity) => *entity,
-            EntitySelectionType::Entity(entity) => *entity,
+            EntitySelectionType::Entity(entity) => *entity
         }
     }
 }
@@ -40,9 +41,16 @@ pub struct SelectionOutlineMaterial {
 impl SelectionOutlineMaterial {
     /// Outline of `entity` in the given selection state, selection taking precedence over hover.
     fn get(&self, state: &SelectionState, entity: Entity) -> Option<&Handle<OutlineMaterial>> {
-        if state.selected.iter().any(|selected| selected.entity() == entity) {
+        if state
+            .selected
+            .iter()
+            .any(|selected| selected.entity() == entity)
+        {
             Some(&self.selected)
-        } else if state.hovered.is_some_and(|hovered| hovered.entity() == entity) {
+        } else if state
+            .hovered
+            .is_some_and(|hovered| hovered.entity() == entity)
+        {
             Some(&self.hovered)
         } else {
             None
@@ -53,21 +61,21 @@ impl SelectionOutlineMaterial {
 pub struct SelectionPlugin;
 impl Plugin for SelectionPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<SelectionState>()
+        app.init_resource::<SelectionState>()
             .init_resource::<SelectionOutlineMaterial>()
             .register_type::<EntitySelectionType>()
             .register_type::<SelectionState>()
             .register_type::<SelectionOutlineMaterial>()
-            .add_plugins((select::SelectPlugin, drag::DragPlugin))
+            .add_plugins((
+                select::SelectPlugin,
+                drag::DragPlugin,
+                debug::SelectionDebugPlugin
+            ))
             .add_systems(Startup, init_outline_materials);
     }
 }
 
-fn init_outline_materials(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-) {
+fn init_outline_materials(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(SelectionOutlineMaterial {
         selected: asset_server.add(OutlineMaterial {
             label: "selection-outline".to_string(),

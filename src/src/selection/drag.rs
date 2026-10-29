@@ -12,8 +12,7 @@ const SELECTION_AREA_Y_OFFSET: f32 = 0.03;
 pub struct DragPlugin;
 impl Plugin for DragPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<SelectionDrag>()
+        app.init_resource::<SelectionDrag>()
             .register_type::<SelectionDrag>()
             .register_type::<DragRelease>()
             .register_type::<SelectionAreaAssets>()
@@ -136,7 +135,8 @@ pub(super) fn update_drag(
         });
         if let Ok(mut transform) = decals.get_mut(decal) {
             let center = (min + max) * 0.5;
-            transform.translation = Vec3::new(center.x, center.y + SELECTION_AREA_Y_OFFSET, center.z);
+            transform.translation =
+                Vec3::new(center.x, center.y + SELECTION_AREA_Y_OFFSET, center.z);
             transform.scale = Vec3::new(
                 (max.x - min.x).max(f32::EPSILON),
                 1.0,

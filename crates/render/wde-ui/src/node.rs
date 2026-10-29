@@ -1,6 +1,6 @@
 //! Components describing UI nodes: their layout style and how they are drawn.
 use bevy::prelude::*;
-use wde_renderer::prelude::{WdeColor, Texture};
+use wde_renderer::prelude::{Texture, WdeColor};
 
 use crate::style::UiStyle;
 

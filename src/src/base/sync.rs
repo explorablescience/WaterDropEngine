@@ -16,9 +16,10 @@ pub(super) fn update_bases(
         Entity,
         &GridEntity,
         Option<&InteriorModule>,
-        Option<&InBase>,
+        Option<&InBase>
     )>,
     bases: Query<(Entity, &Base)>,
+    mut spawned: Local<usize>
 ) {
     if !graph.is_changed() && added_modules.is_empty() {
         return;
@@ -39,22 +40,25 @@ pub(super) fn update_bases(
 
     // Bases are kept while their control room still defines one
     let mut base_of_room = HashMap::new();
-    for (base, Base { control_room }) in &bases {
+    for (base, Base { control_room, .. }) in &bases {
         match room_of.get(control_room) == Some(control_room) {
             true => {
                 base_of_room.insert(*control_room, base);
             }
-            false => commands.entity(base).despawn(),
+            false => commands.entity(base).despawn()
         }
     }
     for room in room_of.values() {
         base_of_room.entry(*room).or_insert_with(|| {
+            let name = base_name(*spawned);
+            *spawned += 1;
             commands
                 .spawn((
-                    Name::new("Base"),
+                    Name::new(name.clone()),
                     Base {
-                        control_room: *room,
-                    },
+                        name,
+                        control_room: *room
+                    }
                 ))
                 .id()
         });
@@ -75,5 +79,19 @@ pub(super) fn update_bases(
                 commands.entity(entity).try_remove::<InBase>();
             }
         }
+    }
+}
+
+const BASE_NAMES: [&str; 12] = [
+    "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta", "Theta", "Iota", "Kappa",
+    "Lambda", "Omega"
+];
+
+/// `Base Alpha`, ..., `Base Omega`, then `Base Alpha 2`, ...
+fn base_name(index: usize) -> String {
+    let name = BASE_NAMES[index % BASE_NAMES.len()];
+    match index / BASE_NAMES.len() {
+        0 => format!("Base {name}"),
+        n => format!("Base {name} {}", n + 1)
     }
 }

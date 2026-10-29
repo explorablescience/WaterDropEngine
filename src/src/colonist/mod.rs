@@ -1,5 +1,5 @@
-mod spawn;
 mod animate;
+mod spawn;
 
 use wde::prelude::*;
 
@@ -17,14 +17,13 @@ pub struct ColonistMarker;
 #[derive(Message, Clone, Reflect)]
 pub struct MSpawnColonist {
     pub name: String,
-    pub position: Vec3,
+    pub position: Vec3
 }
 
 pub struct ColonistPlugin;
 impl Plugin for ColonistPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_message::<MSpawnColonist>()
+        app.add_message::<MSpawnColonist>()
             .register_type::<ColonistMarker>()
             .register_type::<MSpawnColonist>()
             .add_plugins((animate::AnimateColonistPlugin, spawn::SpawnColonistPlugin));

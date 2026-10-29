@@ -58,7 +58,7 @@ const DEMO_BASE: &[(&str, [f32; 2], GridRotation)] = &[
     // Modules in the east dome
     ("Residence", [17.0, 1.0], GridRotation::R180),
     ("Residence", [19.0, 3.0], GridRotation::R270),
-    ("Grocery", [21.0, -1.0], GridRotation::R0),
+    ("Grocery", [21.0, -1.0], GridRotation::R0)
 ];
 
 pub fn spawn_demo_base(mut placement_queue: ResMut<PlacementQueue>) {

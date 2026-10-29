@@ -2,12 +2,21 @@ use wde::prelude::*;
 
 use bevy::{prelude::*, window::PrimaryWindow};
 
-use crate::{colonist::ENTITIES_COLLIDER_GROUP, selection::{EntitySelectionType, SelectionOutlineMaterial, SelectionState, drag::{self, DragRelease, SelectionDrag}}};
+use crate::{
+    colonist::ENTITIES_COLLIDER_GROUP,
+    selection::{
+        EntitySelectionType, SelectionOutlineMaterial, SelectionState,
+        drag::{self, DragRelease, SelectionDrag}
+    }
+};
 
 pub struct SelectPlugin;
 impl Plugin for SelectPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (drag::update_drag, update_selected, outline_new_meshes).chain());
+        app.add_systems(
+            Update,
+            (drag::update_drag, update_selected, outline_new_meshes).chain()
+        );
     }
 }
 
@@ -35,7 +44,9 @@ fn update_selected(
     selection_materials: Res<SelectionOutlineMaterial>,
     mut selection_state: ResMut<SelectionState>
 ) {
-    selection_state.selected.retain(|selected| existing_query.contains(selected.entity()));
+    selection_state
+        .selected
+        .retain(|selected| existing_query.contains(selected.entity()));
 
     // Placement tools and UI own the mouse
     let captured = input_capture.is_captured() || ui_pointer.over_ui;
@@ -99,7 +110,13 @@ fn update_selected(
 
     for target in changed {
         let material = selection_materials.get(&selection_state, target.entity());
-        set_entity_outline(&mut commands, &children_query, &mesh_query, target.entity(), material);
+        set_entity_outline(
+            &mut commands,
+            &children_query,
+            &mesh_query,
+            target.entity(),
+            material
+        );
     }
 }
 
@@ -121,11 +138,19 @@ fn hovered_entity(
 
     let (collider, _) = physics
         .cast_ray(&ray, &RayCastConfig::with_filter(ENTITIES_COLLIDER_GROUP))
-        .or_else(|| physics.cast_ray(&ray, &RayCastConfig::with_filter(crate::MODULES_COLLIDER_GROUP)))
+        .or_else(|| {
+            physics.cast_ray(
+                &ray,
+                &RayCastConfig::with_filter(crate::MODULES_COLLIDER_GROUP)
+            )
+        })
         .or_else(|| physics.cast_ray(&ray, &RayCastConfig::with_filter(ColliderGroup::all())))?;
     let group = physics.collider_group(collider)?;
     // Colliders are spawned as children of the entity owning the meshes
-    let entity = collider_parent_query.get(collider).map(ChildOf::parent).ok()?;
+    let entity = collider_parent_query
+        .get(collider)
+        .map(ChildOf::parent)
+        .ok()?;
     match group {
         crate::BUILDINGS_COLLIDER_GROUP => Some(EntitySelectionType::Building(entity)),
         crate::MODULES_COLLIDER_GROUP => Some(EntitySelectionType::Module(entity)),
@@ -150,7 +175,9 @@ fn outline_new_meshes(
             .iter_ancestors(mesh)
             .find_map(|ancestor| selection_materials.get(&selection_state, ancestor))
         {
-            commands.entity(mesh).try_insert(PbrMaterial3d(material.clone()));
+            commands
+                .entity(mesh)
+                .try_insert(PbrMaterial3d(material.clone()));
         }
     }
 }
