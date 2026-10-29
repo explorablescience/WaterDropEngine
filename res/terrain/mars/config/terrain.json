@@ -1,0 +1,29 @@
+{
+    "version": 1.0,
+    "type": "res/config",
+    "path": "terrain/mars/config/terrain.json",
+    "label": "Mars - First Desert",
+    "description": "Description of the terrain stored in this folder: chunk layout, height encoding of the heightmaps, map files, and the rules deriving the slope and buildable masks. Read by wde-terrain and by res/terrain/generate.py.",
+    "data": {
+        "version": 1,
+        "layout": {
+            "chunk_count": 16,
+            "chunk_size": 64.0,
+            "chunk_resolution": 256
+        },
+        "heights": {
+            "min": -32.0,
+            "range": 72.0
+        },
+        "maps": {
+            "heightmap": "heightmaps/heightmap_{x}_{z}.png",
+            "splatmap": "splatmaps/splatmap_{x}_{z}-{k}.png"
+        },
+        "masks": {
+            "build_height_tolerance": 0.05,
+            "build_max_slope": 0.05,
+            "build_margin": 1.0,
+            "walk_max_slope": 0.9
+        }
+    }
+}

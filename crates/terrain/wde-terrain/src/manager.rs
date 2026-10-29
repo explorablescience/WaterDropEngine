@@ -3,7 +3,11 @@ use wde_logger::prelude::*;
 use bevy::prelude::*;
 use std::collections::HashMap;
 
-use crate::utils::image_decoder::decode_png;
+use crate::{
+    config::TerrainConfig,
+    masks::{ChunkMasks, chunk_masks, gpu_masks},
+    utils::image_decoder::decode_png
+};
 
 /// Number of chunks along each axis (terrain is CHUNK_COUNT×CHUNK_COUNT).
 pub const CHUNK_COUNT: u32 = 16;
@@ -14,10 +18,6 @@ pub const SPLAT_MAPS: u32 = 2;
 
 /// World-space size of one chunk.
 pub const CHUNK_SIZE: f32 = 64.0;
-/// Height of a heightmap value of 0, in world units.
-pub const TERRAIN_MIN_HEIGHT: f32 = -24.0;
-/// Height range covered by the heightmaps (from `TERRAIN_MIN_HEIGHT`), in world units.
-pub const CHUNK_HEIGHT: f32 = 64.0;
 /// Quads per chunk side at full detail.
 pub const CHUNK_RENDER_SUBDIVISIONS: u32 = 256;
 /// Samples per side of a chunk: its grid vertices, edges included (shared with the neighbors).
@@ -30,27 +30,38 @@ pub const DEFAULT_TERRAIN_PATH: &str = "terrain/mars";
 
 /// 2-D integer grid position of a terrain chunk.
 pub type ChunkPos = IVec2;
-/// Raw bytes of one chunk map in its GPU format: `CHUNK_MAP_SIZE`² `f32` normalized heights for
-/// a heightmap, `CHUNK_MAP_SIZE`² RGBA8 weights for a splat map.
+/// Raw bytes of one chunk map in its GPU format, `CHUNK_MAP_SIZE`² texels: `f32` normalized
+/// heights for a heightmap, RGBA8 weights for a splat map, RG8 slope and buildable for the masks.
 pub(crate) type TerrainTileData = Vec<u8>;
-/// (pos, map_type [0=height|1=splat], splat_index, data)
+/// Kind of chunk map of a [`TerrainDirtyTile`].
+pub(crate) const MAP_HEIGHT: u32 = 0;
+pub(crate) const MAP_SPLAT: u32 = 1;
+pub(crate) const MAP_MASKS: u32 = 2;
+/// (pos, map_type [`MAP_HEIGHT`|`MAP_SPLAT`|`MAP_MASKS`], splat_index, data)
 pub(crate) type TerrainDirtyTile = (ChunkPos, u32, u32, TerrainTileData);
 
 /// Source-of-truth terrain component.
 /// Owns the dirty queues consumed by the render and physics sub-systems.
 ///
-/// Chunk `(x, z)` is loaded from `res/<path>/heightmap_x_z.png` (8 or 16-bit grayscale) and
-/// `splatmap_x_z-<k>.png` (RGBA, materials `4k..4k+3`). Maps of any size are resampled to the
-/// chunk samples, edges included; missing heightmaps are flat at height 0.
+/// Loaded from `res/<path>/`, described by its [`TerrainConfig`] (`config/terrain.json`): each
+/// chunk has a heightmap (8 or 16-bit grayscale) and splat maps (RGBA, materials `4k..4k+3`),
+/// at the paths the config gives. Maps of any size are resampled to the chunk samples, edges
+/// included; missing heightmaps are flat at height 0.
+///
+/// The slope and buildable masks are derived from the heights (see [`Terrain::slope_at`]).
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Terrain {
     pub path: String,
+    pub config: TerrainConfig,
     /// Maps chunk grid position → sequential index (used by UI for iteration).
     pub pos_to_tile: HashMap<ChunkPos, usize>,
     /// World heights of each chunk, `CHUNK_SAMPLES`² row-major (rows along +Z).
     #[reflect(ignore)]
     pub heights: HashMap<ChunkPos, Vec<f32>>,
+    /// Masks of each chunk, same layout as the heights.
+    #[reflect(ignore)]
+    pub masks: HashMap<ChunkPos, ChunkMasks>,
 
     /// Tiles that need re-uploading to the GPU this frame.
     #[reflect(ignore)]
@@ -63,10 +74,10 @@ pub struct Terrain {
 impl Terrain {
     /// Load terrain data from `res/<path>/`.
     pub fn load(path: &str) -> Self {
-        let cur_dir = std::env::current_dir().unwrap();
-        let full_path = format!("{}/res/{}", cur_dir.display(), path);
+        let config = TerrainConfig::load(path);
+        let full_path = Self::folder(path);
         let samples = CHUNK_SAMPLES;
-        let flat = (0.0 - TERRAIN_MIN_HEIGHT) / CHUNK_HEIGHT;
+        let flat = (0.0 - config.min_height) / config.height_range;
 
         let positions: Vec<ChunkPos> = (0..CHUNK_COUNT)
             .flat_map(|i| {
@@ -90,7 +101,7 @@ impl Terrain {
 
         // Decode the maps of every chunk in parallel: normalized heights, RGBA8 weights
         let load_chunk = |pos: ChunkPos| -> (ChunkPos, Vec<f32>, Vec<Vec<[u8; 4]>>) {
-            let heights = match load_map(&format!("heightmap_{}_{}.png", pos.x, pos.y))
+            let heights = match load_map(&config.heightmap_file(pos))
                 .or_else(|| load_map("heightmap_default.png"))
             {
                 Some(image) => image.resample(0, samples),
@@ -98,7 +109,7 @@ impl Terrain {
             };
             let splats = (0..SPLAT_MAPS)
                 .map(|k| {
-                    match load_map(&format!("splatmap_{}_{}-{}.png", pos.x, pos.y, k))
+                    match load_map(&config.splatmap_file(pos, k))
                         .or_else(|| load_map("splatmap_default.png"))
                     {
                         Some(image) => {
@@ -156,11 +167,11 @@ impl Terrain {
         let mut dirty_physics = Vec::new();
         for (index, &pos) in positions.iter().enumerate() {
             let height_map: Vec<u8> = bytemuck::cast_slice(&with_border(&heights, pos)).to_vec();
-            dirty_render.push((pos, 0, 0, height_map.clone()));
-            dirty_physics.push((pos, 0, 0, height_map));
+            dirty_render.push((pos, MAP_HEIGHT, 0, height_map.clone()));
+            dirty_physics.push((pos, MAP_HEIGHT, 0, height_map));
             for (k, maps) in splats.iter().enumerate() {
                 let bytes = bytemuck::cast_slice(&with_border(maps, pos)).to_vec();
-                dirty_render.push((pos, 1, k as u32, bytes));
+                dirty_render.push((pos, MAP_SPLAT, k as u32, bytes));
             }
             pos_to_tile.insert(pos, index);
         }
@@ -170,18 +181,78 @@ impl Terrain {
             .map(|(pos, data)| {
                 let world = data
                     .iter()
-                    .map(|h| TERRAIN_MIN_HEIGHT + h * CHUNK_HEIGHT)
+                    .map(|h| config.min_height + h * config.height_range)
                     .collect();
                 (pos, world)
             })
             .collect();
-        Self {
+        let mut terrain = Self {
             path: path.to_string(),
+            config,
             pos_to_tile,
             heights,
+            masks: HashMap::new(),
             dirty_render,
             dirty_physics
+        };
+        terrain.refresh_masks(&positions);
+        terrain.log_masks();
+        terrain
+    }
+
+    /// Absolute path of the folder of the terrain in `res/<path>/`.
+    pub fn folder(path: &str) -> String {
+        let cur_dir = std::env::current_dir().unwrap();
+        format!("{}/res/{}", cur_dir.display(), path)
+    }
+
+    /// Derives the masks of the given chunks from their heights (and their neighbors'), and queues
+    /// them for the GPU.
+    fn refresh_masks(&mut self, positions: &[ChunkPos]) {
+        let rules = self.config.masks;
+        let heights = &self.heights;
+        let threads = std::thread::available_parallelism().map_or(4, |n| n.get());
+        let computed: Vec<(ChunkPos, ChunkMasks)> = std::thread::scope(|scope| {
+            positions
+                .chunks(positions.len().div_ceil(threads).max(1))
+                .map(|batch| {
+                    scope.spawn(move || {
+                        batch
+                            .iter()
+                            .filter(|pos| heights.contains_key(pos))
+                            .map(|pos| (*pos, chunk_masks(heights, *pos, &rules)))
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect::<Vec<_>>()
+                .into_iter()
+                .flat_map(|handle| handle.join().unwrap())
+                .collect()
+        });
+        self.masks.extend(computed);
+        for (pos, bytes) in gpu_masks(&self.masks, positions) {
+            self.dirty_render.push((pos, MAP_MASKS, 0, bytes));
         }
+    }
+
+    fn log_masks(&self) {
+        let (mut buildable, mut steep, mut total) = (0usize, 0usize, 0usize);
+        for masks in self.masks.values() {
+            buildable += masks.buildable.iter().filter(|b| **b).count();
+            steep += masks
+                .slope
+                .iter()
+                .filter(|s| **s > self.config.masks.walk_max_slope)
+                .count();
+            total += masks.slope.len();
+        }
+        let percent = |count: usize| 100.0 * count as f32 / total.max(1) as f32;
+        info!(
+            "Loaded terrain '{}': {:.1}% buildable, {:.1}% too steep to walk.",
+            self.path,
+            percent(buildable),
+            percent(steep)
+        );
     }
 
     /// Returns the chunk grid position for a world position, or `None` if out of bounds.
@@ -208,13 +279,21 @@ impl Terrain {
         Some(top * (1.0 - tz) + bottom * tz)
     }
 
-    /// Updates the CPU heights of a chunk from its GPU heightmap (e.g. after painting).
+    /// Updates the CPU heights of a chunk from its GPU heightmap (e.g. after painting), and the
+    /// masks around it.
     pub fn set_chunk_heights(&mut self, pos: ChunkPos, map: &[u8]) {
+        let (min, range) = (self.config.min_height, self.config.height_range);
         let world = chunk_samples(map)
             .into_iter()
-            .map(|h| TERRAIN_MIN_HEIGHT + h * CHUNK_HEIGHT)
+            .map(|h| min + h * range)
             .collect();
         self.heights.insert(pos, world);
+        // The build margin reaches into the neighbors
+        let around: Vec<ChunkPos> = (-1..=1)
+            .flat_map(|z| (-1..=1).map(move |x| pos + IVec2::new(x, z)))
+            .filter(|p| self.heights.contains_key(p))
+            .collect();
+        self.refresh_masks(&around);
     }
 }
 
@@ -271,35 +350,38 @@ fn stitch_edges(maps: &mut HashMap<ChunkPos, Vec<f32>>) {
 
 /// A chunk map with its one-sample border, taken from the neighbors (or extended at the edges
 /// of the terrain).
-fn with_border<T: Copy>(maps: &HashMap<ChunkPos, Vec<T>>, pos: ChunkPos) -> Vec<T> {
+pub(crate) fn with_border<T: Copy>(maps: &HashMap<ChunkPos, Vec<T>>, pos: ChunkPos) -> Vec<T> {
+    with_margin(maps, pos, 1)
+}
+
+/// A chunk map extended by `margin` samples on each side (`margin` < `CHUNK_SAMPLES`), taken
+/// from the neighbors (or extended at the edges of the terrain), row-major.
+pub(crate) fn with_margin<T: Copy>(
+    maps: &HashMap<ChunkPos, Vec<T>>,
+    pos: ChunkPos,
+    margin: i32
+) -> Vec<T> {
     let n = CHUNK_SAMPLES as i32;
     let own = &maps[&pos];
-    // Sample (x, z) in [-1, n]: beyond an edge, the neighbor's second sample (its first one is
-    // the shared edge)
-    let at = |x: i32, z: i32| -> T {
-        let (cx, lx) = match x {
-            -1 => (-1, n - 2),
-            x if x == n => (1, 1),
-            x => (0, x)
-        };
-        let (cz, lz) = match z {
-            -1 => (-1, n - 2),
-            z if z == n => (1, 1),
-            z => (0, z)
-        };
-        match maps.get(&(pos + IVec2::new(cx, cz))) {
-            Some(map) => map[(lz * n + lx) as usize],
-            None => own[(z.clamp(0, n - 1) * n + x.clamp(0, n - 1)) as usize]
-        }
+    let neighbors: [[Option<&Vec<T>>; 3]; 3] = std::array::from_fn(|z| {
+        std::array::from_fn(|x| maps.get(&(pos + IVec2::new(x as i32 - 1, z as i32 - 1))))
+    });
+    // Beyond an edge, the neighbor's samples past the shared edge
+    let split = |v: i32| match v {
+        v if v < 0 => (0, v + n - 1),
+        v if v >= n => (2, v - (n - 1)),
+        v => (1, v)
     };
-    let mut out = Vec::with_capacity((CHUNK_MAP_SIZE * CHUNK_MAP_SIZE) as usize);
-    for z in -1..=n {
-        if (0..n).contains(&z) {
-            out.push(at(-1, z));
-            out.extend_from_slice(&own[(z * n) as usize..((z + 1) * n) as usize]);
-            out.push(at(n, z));
-        } else {
-            out.extend((-1..=n).map(|x| at(x, z)));
+    let size = n + 2 * margin;
+    let mut out = Vec::with_capacity((size * size) as usize);
+    for z in -margin..n + margin {
+        let (cz, lz) = split(z);
+        for x in -margin..n + margin {
+            let (cx, lx) = split(x);
+            out.push(match neighbors[cz][cx] {
+                Some(map) => map[(lz * n + lx) as usize],
+                None => own[(z.clamp(0, n - 1) * n + x.clamp(0, n - 1)) as usize]
+            });
         }
     }
     out

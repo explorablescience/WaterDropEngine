@@ -36,10 +36,6 @@ const LINE_STEP: f32 = CELL_SIZE * 0.5;
 const LINE_HALF_WIDTH: f32 = 0.08;
 /// Rings of candidate spots searched around a group destination.
 const MAX_FORMATION_RINGS: usize = 24;
-/// Steepest outdoor ground walked on (height change per unit of distance, about 42°).
-const MAX_WALK_SLOPE: f32 = 0.9;
-/// Distance over which the ground slope is measured.
-const SLOPE_PROBE: f32 = 0.5;
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 enum Node {
@@ -138,18 +134,10 @@ impl NavWorld<'_> {
         let Some(terrain) = self.terrain else {
             return Some(0.0);
         };
-        let height = terrain.height_at(pos)?;
-        let steep = [Vec2::X, Vec2::Y].into_iter().any(|axis| {
-            let probe = axis * SLOPE_PROBE;
-            match (
-                terrain.height_at(pos + probe),
-                terrain.height_at(pos - probe)
-            ) {
-                (Some(a), Some(b)) => (a - b).abs() > MAX_WALK_SLOPE * 2.0 * SLOPE_PROBE,
-                _ => true
-            }
-        });
-        (!steep).then_some(height)
+        terrain
+            .is_walkable(pos)
+            .then(|| terrain.height_at(pos))
+            .flatten()
     }
 
     /// Walkable place at `pos`, `None` if blocked.

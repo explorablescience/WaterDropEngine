@@ -584,29 +584,15 @@ pub fn place_update(
     }
 }
 
-/// Height difference from 0 tolerated under a building: buildings stand on the flat colony
-/// plains, at height 0.
-const BUILDABLE_HEIGHT_TOLERANCE: f32 = 0.3;
-
-/// Whether the ground under a footprint is flat buildable ground (the plains at height 0).
+/// Whether the whole footprint stands on buildable ground (see [`Terrain::is_area_buildable`]).
 pub(crate) fn on_flat_ground(terrain: Option<&Terrain>, grid_entity: &GridEntity) -> bool {
     let Some(terrain) = terrain else {
         return true;
     };
-    let offsets = [
-        (0.0, 0.0),
-        (-1.0, -1.0),
-        (1.0, -1.0),
-        (1.0, 1.0),
-        (-1.0, 1.0)
-    ];
+    let half = Vec2::splat(TILE_SIZE * 0.5);
     grid_entity.footprint().iter().all(|tile| {
         let center = Grid::get_tile_world_pos(*tile);
-        offsets.iter().all(|(x, z)| {
-            terrain
-                .height_at(center + Vec2::new(*x, *z) * TILE_SIZE * 0.5)
-                .is_some_and(|h| h.abs() <= BUILDABLE_HEIGHT_TOLERANCE)
-        })
+        terrain.is_area_buildable(center - half, center + half)
     })
 }
 

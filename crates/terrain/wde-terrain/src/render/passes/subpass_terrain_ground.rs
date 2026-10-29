@@ -12,6 +12,7 @@ use crate::{
             materials::TerrainMaterialsBinding, terrain_buffer::TerrainBufferBinding,
             terrain_mesh::TerrainRenderPassMesh
         },
+        extractor,
         passes::pipeline::TerrainRenderPipeline,
         renderer_gpu::{TerrainChunkArrayBg, TerrainRendererGPU}
     }
@@ -24,33 +25,17 @@ impl SubRenderPassTerrainGround {
         mut render_terrain_extractor: ResMut<TerrainExtractor>,
         mut gpu_terrain_renderer: ResMut<TerrainRendererGPU>
     ) {
-        let (heightmap_array, splatmap_arrays, pos_to_layer, dirty, draw_list) = {
-            let mut query = main_world.query::<&TerrainRenderer>();
-            if let Ok(renderer) = query.single(&main_world) {
-                (
-                    renderer.heightmap_array.clone(),
-                    renderer.splatmap_arrays.clone(),
-                    renderer.pos_to_layer.clone(),
-                    renderer.dirty.clone(),
-                    renderer.draw_list.clone()
-                )
-            } else {
-                return;
-            }
-        };
+        let main_world: &mut World = &mut main_world;
+        let mut query = main_world.query::<&TerrainRenderer>();
+        if query.single(main_world).is_err() {
+            return;
+        }
         let mut main_terrain_extractor = main_world
             .get_resource_mut::<TerrainExtractor>()
             .expect("Main world is missing TerrainExtractor");
-        TerrainRendererGPU::extract_dirty(
-            &mut main_terrain_extractor,
-            &mut render_terrain_extractor,
-            heightmap_array,
-            splatmap_arrays,
-            pos_to_layer,
-            dirty,
-            draw_list,
-            &mut gpu_terrain_renderer
-        );
+        extractor::extract_dirty(&mut main_terrain_extractor, &mut render_terrain_extractor);
+        let renderer = query.single(main_world).unwrap();
+        gpu_terrain_renderer.extract_renderer(renderer);
     }
 }
 

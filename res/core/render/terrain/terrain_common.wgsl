@@ -4,7 +4,8 @@ struct TerrainDescription {
     tile_subdivisions: f32,                  // quads per chunk side at full detail
     min_height:        f32,                  // world height of a heightmap value of 0
     map_size:          f32,                  // texels per side of a chunk map (samples + border)
-    _padding:          vec2<f32>,
+    debug_view:        f32,                  // 0 off, 1 buildable, 2 slope
+    walk_max_angle:    f32,                  // slope angle of the steepest walkable ground, over 90°
     tiling:            array<vec4<f32>, 2>,  // world size of one texture repeat, per material
     height_blend:      array<vec4<f32>, 2>,  // relief-based blend sharpness, per material
 }

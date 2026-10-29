@@ -3,9 +3,7 @@ use wde_logger::prelude::*;
 use bevy::{ecs::system::SystemParamItem, prelude::*};
 use std::collections::HashSet;
 use wde_renderer::prelude::*;
-use wde_terrain::prelude::ChunkPos;
-
-use wde_terrain::prelude::{CHUNK_HEIGHT, TERRAIN_MIN_HEIGHT};
+use wde_terrain::prelude::{ChunkPos, TerrainRendererGPU};
 
 use crate::{paint::brush::PaintMode, processor::ExtractedPaintCommands};
 
@@ -92,6 +90,7 @@ fn update_commands_buffer(
     mut commands_buffer_desc: ResMut<CommandsBufferDescription>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     mut extracted_commands: ResMut<ExtractedPaintCommands>,
+    terrain: Res<TerrainRendererGPU>,
     mut is_not_first: Local<bool>
 ) {
     let _span = info_span!("update_commands_buffer").entered();
@@ -115,6 +114,9 @@ fn update_commands_buffer(
     };
 
     // Prepare the data
+    let Some(config) = &terrain.config else {
+        return;
+    };
     let data: Vec<CommandDescription> = extracted_commands
         .commands
         .iter()
@@ -131,7 +133,7 @@ fn update_commands_buffer(
                 PaintMode::Smooth => 4.0,
                 PaintMode::Flatten => 5.0
             },
-            target_height: (command.world_position.y - TERRAIN_MIN_HEIGHT) / CHUNK_HEIGHT,
+            target_height: (command.world_position.y - config.min_height) / config.height_range,
             _padding: [0.0; 2]
         })
         .collect();

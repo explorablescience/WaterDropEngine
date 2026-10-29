@@ -10,6 +10,9 @@
 //! - `Terrain/Paint`: brush mode, radius, strength and color.
 //! - `Terrain/Settings`: tiling and height blending of the ground materials.
 //! - `Terrain/Save`: writes the edited maps back to the PNG files of the terrain in `res/`.
+//!
+//! The `Debug/Terrain` window tints the terrain with its masks (buildable, slope), and reads them
+//! under the cursor.
 use wde_logger::prelude::*;
 
 use bevy::prelude::*;
@@ -41,12 +44,13 @@ impl Plugin for TerrainEditorPlugin {
 }
 
 fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let terrain = Terrain::load(DEFAULT_TERRAIN_PATH);
     let entity = commands
         .spawn((
             Name::new("Terrain"),
             Transform::default(),
-            Terrain::load(DEFAULT_TERRAIN_PATH),
-            TerrainRenderer::new(&asset_server),
+            TerrainRenderer::new(&asset_server, &terrain),
+            terrain,
             TerrainPhysics::default()
         ))
         .id();
@@ -92,17 +96,16 @@ fn handle_extracted_tiles(
 
         // Optionally save to disk.
         if save_manager.saving {
-            let cur_dir = std::env::current_dir().unwrap();
-            let full_path = format!("{}/res/{}", cur_dir.display(), terrain.path);
+            let folder = Terrain::folder(&terrain.path);
             let result = match map_type {
                 0 => save_heightmap(
-                    &format!("{}/heightmap_{}_{}.png", full_path, pos.x, pos.y),
+                    &format!("{folder}/{}", terrain.config.heightmap_file(*pos)),
                     data
                 ),
                 1 => save_splatmap(
                     &format!(
-                        "{}/splatmap_{}_{}-{}.png",
-                        full_path, pos.x, pos.y, splat_map_index
+                        "{folder}/{}",
+                        terrain.config.splatmap_file(*pos, *splat_map_index)
                     ),
                     data
                 ),

@@ -27,6 +27,9 @@ struct VertexOutput {
 @group(3) @binding(2) var in_splatmap_a_sampler: sampler;
 @group(3) @binding(3) var in_splatmap_b:         texture_2d_array<f32>;
 @group(3) @binding(4) var in_splatmap_b_sampler: sampler;
+// Slope angle over 90°, and whether buildable
+@group(3) @binding(5) var in_masks:              texture_2d_array<f32>;
+@group(3) @binding(6) var in_masks_sampler:      sampler;
 
 // Slope (1 - normal.y) from which materials are also projected on the vertical planes
 const TRIPLANAR_START: f32 = 0.2;
@@ -41,6 +44,8 @@ const NORMAL_STRENGTH: f32 = 0.7;
 const LARGE_SCALE: f32 = 0.31;
 const LARGE_ROTATION: mat2x2<f32> = mat2x2<f32>(0.8, 0.6, -0.6, 0.8);
 const LARGE_MIX: f32 = 0.45;
+// Opacity of the debug views over the ground
+const DEBUG_MIX: f32 = 0.65;
 
 // ── TERRAIN NORMAL ──────────────────────────────────────────────
 
@@ -90,6 +95,29 @@ fn value_noise(p: vec2<f32>) -> f32 {
 // Low-frequency brightness variation, hiding the repetition of the material textures
 fn macro_variation(xz: vec2<f32>) -> f32 {
     return value_noise(xz * 0.011) * 0.55 + value_noise(xz * 0.043) * 0.3 + value_noise(xz * 0.17) * 0.15;
+}
+
+// ── DEBUG VIEWS ─────────────────────────────────────────────────
+
+fn debug_tint(masks: vec2<f32>) -> vec3<f32> {
+    let angle = masks.r;
+    let walk  = in_terrain.walk_max_angle;
+    let steep = step(walk, angle);
+    if in_terrain.debug_view < 1.5 {
+        // Buildable: green, outlined; walkable: sand; too steep to walk: red
+        let buildable = smoothstep(0.45, 0.55, masks.g);
+        let outline = 1.0 - smoothstep(0.0, fwidth(masks.g) * 1.5, abs(masks.g - 0.5));
+        var color = mix(vec3<f32>(0.9, 0.75, 0.45), vec3<f32>(0.85, 0.12, 0.08), steep);
+        color = mix(color, vec3<f32>(0.15, 0.8, 0.25), buildable);
+        return mix(color, vec3<f32>(0.02, 0.2, 0.05), outline * 0.8);
+    }
+    // Slope: blue (flat), green, yellow (steepest walkable), then red; a contour every 5°
+    let t = clamp(angle / walk, 0.0, 1.0);
+    var color = mix(vec3<f32>(0.1, 0.3, 0.9), vec3<f32>(0.1, 0.8, 0.3), smoothstep(0.0, 0.5, t));
+    color = mix(color, vec3<f32>(0.95, 0.85, 0.1), smoothstep(0.5, 1.0, t));
+    color = mix(color, vec3<f32>(0.85, 0.1, 0.08), steep);
+    let contour = abs(fract(angle * 18.0 + 0.5) - 0.5) / max(fwidth(angle * 18.0), 1e-4);
+    return color * mix(0.6, 1.0, smoothstep(0.5, 1.5, contour));
 }
 
 // ── MATERIALS ───────────────────────────────────────────────────
@@ -227,7 +255,13 @@ fn main(in: VertexOutput) -> FragOutput {
 
     // Broad brightness and hue variation across the plains
     albedo *= mix(vec3<f32>(0.8, 0.84, 0.9), vec3<f32>(1.12, 1.05, 0.98), macro_variation(in.world_pos.xz));
-    out.albedo_metallic  = vec4<f32>(albedo / sum, 0.0);
+    albedo = albedo / sum;
+
+    let masks = textureSample(in_masks, in_masks_sampler, splat_uv, layer).rg;
+    if in_terrain.debug_view > 0.5 {
+        albedo = mix(albedo, debug_tint(masks), DEBUG_MIX);
+    }
+    out.albedo_metallic  = vec4<f32>(albedo, 0.0);
     // Martian dust and rock are matte
     out.normal_roughness = vec4<f32>(normalize(normal / sum), mix(0.6, 1.0, roughness / sum));
     out.ao    = ao / sum;

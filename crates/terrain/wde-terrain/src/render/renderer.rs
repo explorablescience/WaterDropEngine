@@ -5,8 +5,10 @@ use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
 use crate::{
+    config::TerrainConfig,
     manager::{
-        CHUNK_COUNT, CHUNK_MAP_SIZE, CHUNK_SIZE, ChunkPos, SPLAT_MAPS, Terrain, TerrainDirtyTile
+        CHUNK_COUNT, CHUNK_MAP_SIZE, CHUNK_SIZE, ChunkPos, MAP_HEIGHT, SPLAT_MAPS, Terrain,
+        TerrainDirtyTile
     },
     render::dependencies::terrain_buffer::TerrainTileDescription
 };
@@ -26,11 +28,13 @@ pub struct TerrainDrawList {
 }
 
 /// CPU-side terrain renderer.
-/// Holds the shared texture arrays (one heightmap array, `SPLAT_MAPS` splat map arrays), the
-/// dirty queue forwarded to the GPU each frame, and the chunks to draw.
+/// Holds the shared texture arrays (one heightmap array, `SPLAT_MAPS` splat map arrays, one mask
+/// array), the dirty queue forwarded to the GPU each frame, and the chunks to draw.
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct TerrainRenderer {
+    /// Description of the terrain drawn.
+    pub config: TerrainConfig,
     /// Maps chunk position → array layer index (= tile index).
     pub pos_to_layer: HashMap<ChunkPos, u32>,
     /// Single R32Float texture array (normalized heights): one layer per chunk.
@@ -39,6 +43,9 @@ pub struct TerrainRenderer {
     /// Rgba8Unorm texture arrays of the materials weights: one layer per chunk.
     #[reflect(ignore)]
     pub splatmap_arrays: Vec<Handle<Texture>>,
+    /// Rg8Unorm texture array of the slope and buildable masks: one layer per chunk.
+    #[reflect(ignore)]
+    pub mask_array: Option<Handle<Texture>>,
     /// Dirty tiles forwarded from `Terrain` each frame.
     #[reflect(ignore)]
     pub dirty: Vec<TerrainDirtyTile>,
@@ -51,8 +58,8 @@ pub struct TerrainRenderer {
 }
 
 impl TerrainRenderer {
-    /// Create the shared texture arrays.
-    pub fn new(asset_server: &AssetServer) -> Self {
+    /// Create the shared texture arrays, one layer per chunk of the terrain.
+    pub fn new(asset_server: &AssetServer, terrain: &Terrain) -> Self {
         let layer_count = CHUNK_COUNT * CHUNK_COUNT;
         let usages = TextureUsages::COPY_SRC
             | TextureUsages::COPY_DST
@@ -80,23 +87,27 @@ impl TerrainRenderer {
                 })
             })
             .collect();
+        let mask_array = asset_server.add(Texture {
+            label: "terrain_mask_array".to_string(),
+            size: (CHUNK_MAP_SIZE, CHUNK_MAP_SIZE),
+            format: TextureFormat::Rg8Unorm,
+            usages: TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING,
+            layer_count,
+            ..Default::default()
+        });
 
-        // Build the position→layer map in the same iteration order used by Terrain::load.
-        let mut pos_to_layer = HashMap::new();
-        let mut layer = 0u32;
-        for i in 0..CHUNK_COUNT {
-            for j in 0..CHUNK_COUNT {
-                let px = i as i32 - (CHUNK_COUNT as i32) / 2;
-                let pz = j as i32 - (CHUNK_COUNT as i32) / 2;
-                pos_to_layer.insert(IVec2::new(px, pz), layer);
-                layer += 1;
-            }
-        }
+        let pos_to_layer = terrain
+            .pos_to_tile
+            .iter()
+            .map(|(pos, tile)| (*pos, *tile as u32))
+            .collect();
 
         Self {
+            config: terrain.config.clone(),
             pos_to_layer,
             heightmap_array: Some(heightmap_array),
             splatmap_arrays,
+            mask_array: Some(mask_array),
             dirty: Vec::new(),
             draw_list: TerrainDrawList::default(),
             bounds: HashMap::new()
@@ -118,7 +129,7 @@ impl TerrainRenderer {
         // Height bounds of the chunks whose heightmap changed
         let renderer = renderer.as_mut();
         for (pos, map_type, _, _) in &renderer.dirty {
-            if *map_type == 0
+            if *map_type == MAP_HEIGHT
                 && let Some(heights) = terrain.heights.get(pos)
             {
                 let bounds = heights

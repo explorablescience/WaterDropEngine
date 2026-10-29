@@ -5,7 +5,7 @@ use wde_physics::prelude::*;
 
 use crate::{
     HEIGHTMAP_COLLIDER_GROUP,
-    manager::{CHUNK_HEIGHT, CHUNK_SIZE, ChunkPos, TERRAIN_MIN_HEIGHT, Terrain, chunk_samples}
+    manager::{CHUNK_SIZE, ChunkPos, MAP_HEIGHT, Terrain, chunk_samples}
 };
 
 #[derive(Component, Default, Reflect)]
@@ -41,15 +41,16 @@ impl TerrainPhysics {
         }
         let parent = physics.parent.unwrap();
 
+        let (min_height, height_range) = (terrain.config.min_height, terrain.config.height_range);
         for (tile_pos, tile_type, _, data) in terrain.dirty_physics.drain(..) {
-            if tile_type != 0 {
+            if tile_type != MAP_HEIGHT {
                 continue; // Only heightmaps drive colliders.
             }
 
             let collider = Collider::from(
                 HeightfieldCollider::from_heights(
                     chunk_samples(&data),
-                    [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE]
+                    [CHUNK_SIZE, height_range, CHUNK_SIZE]
                 )
                 .with_group(HEIGHTMAP_COLLIDER_GROUP)
             );
@@ -65,7 +66,7 @@ impl TerrainPhysics {
                         )),
                         Transform::from_xyz(
                             tile_pos.x as f32 * CHUNK_SIZE,
-                            TERRAIN_MIN_HEIGHT,
+                            min_height,
                             tile_pos.y as f32 * CHUNK_SIZE
                         ),
                         collider,

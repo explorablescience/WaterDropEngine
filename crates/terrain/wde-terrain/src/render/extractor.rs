@@ -73,7 +73,7 @@ pub struct PendingReadbacks {
 }
 
 /// Transfer the main world's extraction queue into the render world.
-/// Called by [`TerrainRendererGPU::extract_dirty`] during the Extract phase.
+/// Called during the Extract phase, with the terrain renderer.
 pub fn extract_dirty(main: &mut TerrainExtractor, render: &mut TerrainExtractor) {
     render.tiles_to_extract = std::mem::take(&mut main.tiles_to_extract);
 }

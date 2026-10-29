@@ -2,10 +2,8 @@ use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::{
-    manager::{
-        CHUNK_HEIGHT, CHUNK_MAP_SIZE, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE, SPLAT_MAP_COUNT,
-        SPLAT_MAPS, TERRAIN_MIN_HEIGHT
-    },
+    config::TerrainConfig,
+    manager::{CHUNK_MAP_SIZE, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE, SPLAT_MAP_COUNT, SPLAT_MAPS},
     render::renderer_gpu::TerrainRendererGPU
 };
 
@@ -20,16 +18,29 @@ pub struct TerrainRenderSettings {
     pub tiling: [f32; TERRAIN_MATERIAL_COUNT],
     /// How much each material's relief (displacement map) pushes it over the others where they
     /// blend: 0 gives smooth fades, higher values crisp, natural transitions.
-    pub height_blend: [f32; TERRAIN_MATERIAL_COUNT]
+    pub height_blend: [f32; TERRAIN_MATERIAL_COUNT],
+    pub debug_view: TerrainDebugView
 }
 impl Default for TerrainRenderSettings {
     fn default() -> Self {
         Self {
             //      dust regolith pebbles gravel sediment cliff basalt compacted
             tiling: [10.0, 12.0, 5.0, 5.0, 12.0, 14.0, 12.0, 6.0],
-            height_blend: [0.6, 0.5, 0.8, 0.9, 0.7, 1.0, 1.0, 0.4]
+            height_blend: [0.6, 0.5, 0.8, 0.9, 0.7, 1.0, 1.0, 0.4],
+            debug_view: TerrainDebugView::Off
         }
     }
+}
+
+/// Tint of the terrain showing its masks.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Reflect)]
+pub enum TerrainDebugView {
+    #[default]
+    Off,
+    /// Green where buildable, neutral where walkable, red where too steep to walk.
+    Buildable,
+    /// Slope angle, from blue (flat) to yellow (steepest walkable), then red.
+    Slope
 }
 
 #[repr(C)]
@@ -39,21 +50,29 @@ pub struct TerrainDescription {
     pub tile_subdivisions: f32,
     pub min_height: f32,
     pub map_size: f32,
-    pub _padding: [f32; 2],
+    /// 0 off, 1 buildable, 2 slope (see [`TerrainDebugView`]).
+    pub debug_view: f32,
+    /// Slope angle of the steepest walkable ground, over 90°.
+    pub walk_max_angle: f32,
     pub tiling: [[f32; 4]; SPLAT_MAPS as usize],
     pub height_blend: [[f32; 4]; SPLAT_MAPS as usize]
 }
 impl TerrainDescription {
-    fn new(settings: &TerrainRenderSettings) -> Self {
+    fn new(settings: &TerrainRenderSettings, config: &TerrainConfig) -> Self {
         let pack = |values: &[f32; TERRAIN_MATERIAL_COUNT]| {
             std::array::from_fn(|k| std::array::from_fn(|c| values[k * 4 + c]))
         };
         Self {
-            tile_size: [CHUNK_SIZE, CHUNK_HEIGHT, CHUNK_SIZE],
+            tile_size: [CHUNK_SIZE, config.height_range, CHUNK_SIZE],
             tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
-            min_height: TERRAIN_MIN_HEIGHT,
+            min_height: config.min_height,
             map_size: CHUNK_MAP_SIZE as f32,
-            _padding: [0.0; 2],
+            debug_view: match settings.debug_view {
+                TerrainDebugView::Off => 0.0,
+                TerrainDebugView::Buildable => 1.0,
+                TerrainDebugView::Slope => 2.0
+            },
+            walk_max_angle: config.masks.walk_max_slope.atan() / std::f32::consts::FRAC_PI_2,
             tiling: pack(&settings.tiling),
             height_blend: pack(&settings.height_blend)
         }
@@ -93,7 +112,8 @@ impl RenderData for TerrainBuffer {
                     usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
                     content: Some(
                         bytemuck::cast_slice(&[TerrainDescription::new(
-                            &TerrainRenderSettings::default()
+                            &TerrainRenderSettings::default(),
+                            &TerrainConfig::default()
                         )])
                         .into()
                     )
@@ -131,13 +151,19 @@ impl RenderBinding for TerrainBufferBinding {
     }
 }
 
+/// Uploads the description once the terrain is known, then whenever the settings change.
 pub(crate) fn update_terrain_description_buffer(
     render_instance: Res<RenderInstance>,
     terrain_buffer: ResRenderData<TerrainBuffer>,
     buffers: Res<RenderAssets<GpuBuffer>>,
-    settings: Res<TerrainRenderSettings>
+    settings: Res<TerrainRenderSettings>,
+    terrain: Res<TerrainRendererGPU>,
+    mut uploaded: Local<bool>
 ) {
-    if !settings.is_changed() {
+    let Some(config) = &terrain.config else {
+        return;
+    };
+    if *uploaded && !settings.is_changed() {
         return;
     }
     let terrain_buffer = match terrain_buffer.iter().next() {
@@ -151,9 +177,10 @@ pub(crate) fn update_terrain_description_buffer(
     let render_instance = render_instance.0.read().unwrap();
     buf.buffer.write(
         &render_instance,
-        bytemuck::cast_slice(&[TerrainDescription::new(&settings)]),
+        bytemuck::cast_slice(&[TerrainDescription::new(&settings, config)]),
         0
     );
+    *uploaded = true;
 }
 
 /// Uploads the chunks drawn this frame (see [`crate::render::renderer::TerrainDrawList`]).

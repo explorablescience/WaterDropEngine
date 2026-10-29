@@ -17,7 +17,8 @@ impl Plugin for TerrainEditorUIPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, ui_paint_terrain)
             .add_systems(Update, ui_save_terrain)
-            .add_systems(Update, ui_terrain_settings);
+            .add_systems(Update, ui_terrain_settings)
+            .add_systems(Update, ui_terrain_debug);
     }
 }
 
@@ -94,6 +95,80 @@ fn ui_terrain_settings(
                     Slider::new(&mut settings.height_blend[i], 0.0..=2.0)
                         .text(format!("Material {i}"))
                 );
+            }
+        });
+}
+
+fn ui_terrain_debug(
+    ctx: Res<UIContext>,
+    mut settings: ResMut<TerrainRenderSettings>,
+    terrain: Query<&Terrain>,
+    cursor: Res<TerrainCursorPos>,
+    mut ui_menu: ResMut<UIMenu>
+) {
+    UIWindow::new("Terrain")
+        .default_pos([100.0, 260.0])
+        .open(ui_menu.clicked_mut("Debug/Terrain"))
+        .show(&ctx.0, |ui| {
+            let view = settings.debug_view;
+            let mut selected = view;
+            ui.horizontal(|ui| {
+                ui.label("View:");
+                ComboBox::from_id_salt("terrain_debug_view")
+                    .selected_text(format!("{view:?}"))
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut selected, TerrainDebugView::Off, "Off");
+                        ui.selectable_value(
+                            &mut selected,
+                            TerrainDebugView::Buildable,
+                            "Buildable"
+                        );
+                        ui.selectable_value(&mut selected, TerrainDebugView::Slope, "Slope");
+                    });
+            });
+            if selected != view {
+                settings.debug_view = selected;
+            }
+            match view {
+                TerrainDebugView::Off => {}
+                TerrainDebugView::Buildable => {
+                    ui.label("Green: buildable. Sand: walkable. Red: too steep to walk.");
+                }
+                TerrainDebugView::Slope => {
+                    ui.label("Blue: flat, to yellow: steepest walkable. Red: too steep to walk.");
+                    ui.label("A contour line every 5°.");
+                }
+            }
+
+            ui.separator();
+            let Ok(terrain) = terrain.single() else {
+                return;
+            };
+            ui.label(format!("Terrain: {}", terrain.config.label));
+            let Some(pos) = cursor.pos() else {
+                ui.label("Cursor: off the terrain");
+                return;
+            };
+            let xz = pos.xz();
+            ui.label(format!(
+                "Cursor: ({:.1}, {:.1}), height {:.2}",
+                xz.x, xz.y, pos.y
+            ));
+            if let Some(slope) = terrain.slope_at(xz) {
+                ui.label(format!(
+                    "Slope: {:.1}°, {}, {}",
+                    slope.atan().to_degrees(),
+                    if terrain.is_walkable(xz) {
+                        "walkable"
+                    } else {
+                        "too steep to walk"
+                    },
+                    if terrain.is_buildable(xz) {
+                        "buildable"
+                    } else {
+                        "not buildable"
+                    }
+                ));
             }
         });
 }

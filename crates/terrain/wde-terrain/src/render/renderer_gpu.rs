@@ -4,18 +4,21 @@ use bevy::{ecs::system::SystemParamItem, prelude::*};
 use wde_renderer::prelude::*;
 
 use crate::{
-    manager::{ChunkPos, TerrainDirtyTile},
-    prelude::TerrainExtractor,
-    render::{extractor, renderer::TerrainDrawList}
+    config::TerrainConfig,
+    manager::{ChunkPos, MAP_HEIGHT, MAP_MASKS, MAP_SPLAT, TerrainDirtyTile},
+    prelude::TerrainRenderer,
+    render::renderer::TerrainDrawList
 };
 
 // ─── Render bind group (texture_2d_array sampling) ──────────────────────────
 
-/// Heightmaps (read texel by texel, unfiltered), then each splat map array with its sampler.
+/// Heightmaps (read texel by texel, unfiltered), then each splat map array with its sampler,
+/// then the masks with theirs.
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct TerrainChunkArrayBg {
     pub heightmap_array: Option<Handle<Texture>>,
-    pub splatmap_arrays: Vec<Handle<Texture>>
+    pub splatmap_arrays: Vec<Handle<Texture>>,
+    pub mask_array: Option<Handle<Texture>>
 }
 impl RenderBinding for TerrainChunkArrayBg {
     type Params = ();
@@ -31,6 +34,10 @@ impl RenderBinding for TerrainChunkArrayBg {
                 .add_texture_array_view_from_id(Some(splatmap.id()))
                 .add_texture_sampler_from_id(Some(splatmap.id()));
         }
+        let mask = self.mask_array.as_ref().map(|h| h.id());
+        builder
+            .add_texture_array_view_from_id(mask)
+            .add_texture_sampler_from_id(mask);
     }
 
     fn label(&self) -> &str {
@@ -76,6 +83,9 @@ pub struct TerrainRendererGPU {
 
     pub heightmap_array: Option<Handle<Texture>>,
     pub splatmap_arrays: Vec<Handle<Texture>>,
+    pub mask_array: Option<Handle<Texture>>,
+    /// Description of the terrain drawn, set with the texture handles.
+    pub config: Option<TerrainConfig>,
 
     pub render_bind_group: Option<Handle<TerrainChunkArrayBg>>,
     pub compute_bind_group: Option<Handle<TerrainComputeArrayBg>>,
@@ -84,31 +94,18 @@ pub struct TerrainRendererGPU {
 }
 
 impl TerrainRendererGPU {
-    /// Transfer the physics extraction queue and dirty tile uploads from the main world.
+    /// Transfer the dirty tile uploads and the chunks to draw from the main world renderer.
     /// Also does the one-time GPU handle initialisation on the first call.
-    #[allow(clippy::too_many_arguments)]
-    pub fn extract_dirty(
-        main_terrain_extractor: &mut TerrainExtractor,
-        render_terrain_extractor: &mut TerrainExtractor,
-        heightmap_array: Option<Handle<Texture>>,
-        splatmap_arrays: Vec<Handle<Texture>>,
-        pos_to_layer: HashMap<ChunkPos, u32>,
-        dirty: Vec<TerrainDirtyTile>,
-        draw_list: TerrainDrawList,
-        gpu_terrain_renderer: &mut TerrainRendererGPU
-    ) {
-        // Move the tile-extraction queue from main world → render world.
-        extractor::extract_dirty(main_terrain_extractor, render_terrain_extractor);
-
-        // One-time initialisation of GPU handles.
-        if gpu_terrain_renderer.heightmap_array.is_none() {
-            gpu_terrain_renderer.heightmap_array = heightmap_array;
-            gpu_terrain_renderer.splatmap_arrays = splatmap_arrays;
-            gpu_terrain_renderer.pos_to_layer = pos_to_layer;
+    pub fn extract_renderer(&mut self, renderer: &TerrainRenderer) {
+        if self.heightmap_array.is_none() {
+            self.heightmap_array = renderer.heightmap_array.clone();
+            self.splatmap_arrays = renderer.splatmap_arrays.clone();
+            self.mask_array = renderer.mask_array.clone();
+            self.pos_to_layer = renderer.pos_to_layer.clone();
+            self.config = Some(renderer.config.clone());
         }
-
-        gpu_terrain_renderer.dirty.extend(dirty);
-        gpu_terrain_renderer.draw_list = draw_list;
+        self.dirty.extend(renderer.dirty.iter().cloned());
+        self.draw_list = renderer.draw_list.clone();
     }
 
     /// Upload dirty tile data to the appropriate array layer on the GPU.
@@ -127,32 +124,19 @@ impl TerrainRendererGPU {
                 Some(&l) => l,
                 None => continue
             };
-            match map_type {
-                0 => {
-                    if let Some(handle) = &gpu.heightmap_array
-                        && let Some(tex) = textures.get(handle)
-                    {
-                        tex.texture.copy_from_buffer_layered(
-                            &render_instance,
-                            tex.texture.format,
-                            layer,
-                            bytemuck::cast_slice(&tile_data)
-                        );
-                    }
-                }
-                1 => {
-                    if let Some(handle) = gpu.splatmap_arrays.get(splat_index as usize)
-                        && let Some(tex) = textures.get(handle)
-                    {
-                        tex.texture.copy_from_buffer_layered(
-                            &render_instance,
-                            tex.texture.format,
-                            layer,
-                            bytemuck::cast_slice(&tile_data)
-                        );
-                    }
-                }
+            let handle = match map_type {
+                MAP_HEIGHT => gpu.heightmap_array.as_ref(),
+                MAP_SPLAT => gpu.splatmap_arrays.get(splat_index as usize),
+                MAP_MASKS => gpu.mask_array.as_ref(),
                 _ => unreachable!()
+            };
+            if let Some(tex) = handle.and_then(|h| textures.get(h)) {
+                tex.texture.copy_from_buffer_layered(
+                    &render_instance,
+                    tex.texture.format,
+                    layer,
+                    bytemuck::cast_slice(&tile_data)
+                );
             }
         }
     }
@@ -165,14 +149,18 @@ impl TerrainRendererGPU {
         if gpu.ready {
             return;
         }
-        if gpu.heightmap_array.is_none() || gpu.splatmap_arrays.is_empty() {
+        if gpu.heightmap_array.is_none()
+            || gpu.splatmap_arrays.is_empty()
+            || gpu.mask_array.is_none()
+        {
             return;
         }
 
         if gpu.render_bind_group.is_none() {
             gpu.render_bind_group = Some(asset_server.add(TerrainChunkArrayBg {
                 heightmap_array: gpu.heightmap_array.clone(),
-                splatmap_arrays: gpu.splatmap_arrays.clone()
+                splatmap_arrays: gpu.splatmap_arrays.clone(),
+                mask_array: gpu.mask_array.clone()
             }));
         }
         // The terrain editor paints the first splat map (materials 0 to 3)
