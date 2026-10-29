@@ -9,16 +9,18 @@ use bevy::{
 };
 use wde_renderer::prelude::*;
 
-use crate::render::dependencies::terrain_buffer::TERRAIN_MATERIAL_COUNT;
+use crate::{config::TerrainConfig, render::dependencies::terrain_buffer::TERRAIN_MATERIAL_COUNT};
 
 pub(crate) struct TerrainMaterialsPlugin;
 impl Plugin for TerrainMaterialsPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<TerrainMaterialTextures>().add_plugins((
-            ExtractResourcePlugin::<TerrainMaterialTextures>::default(),
-            RenderBindingRegisterPlugin::<TerrainMaterialsBinding>::default(),
-            RenderDataRegisterPlugin::<TerrainMaterials>::default()
-        ));
+        app.init_resource::<TerrainMaterialTextures>()
+            .init_resource::<TerrainMaterialSet>()
+            .add_plugins((
+                ExtractResourcePlugin::<TerrainMaterialTextures>::default(),
+                RenderBindingRegisterPlugin::<TerrainMaterialsBinding>::default(),
+                RenderDataRegisterPlugin::<TerrainMaterials>::default()
+            ));
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .add_systems(Render, fill_arrays.in_set(RenderSet::Prepare));
@@ -26,18 +28,21 @@ impl Plugin for TerrainMaterialsPlugin {
 }
 
 const TEX_SIZE: (u32, u32) = (1024, 1024);
-/// Materials in splat map order (`splatmap_x_z-0.png` RGBA, then `-1.png` RGBA), from
-/// `res/core/models/terrain/` (see `SOURCES.md` there).
-const MATERIALS: [&str; TERRAIN_MATERIAL_COUNT] = [
-    "mars_dust",
-    "mars_regolith",
-    "mars_pebbles",
-    "mars_gravel",
-    "mars_sediment",
-    "mars_cliff",
-    "mars_basalt",
-    "mars_compacted"
-];
+
+/// Texture folders in `res/` of the ground materials, in splat map order (see
+/// [`TerrainMaterial`](crate::prelude::TerrainMaterial)). The material textures are loaded once,
+/// when the app starts: insert it before running the app, usually from the config of the terrain
+/// that will be spawned.
+/// ```rust,ignore
+/// app.insert_resource(TerrainMaterialSet::from(&TerrainConfig::load("terrain/desert")));
+/// ```
+#[derive(Resource, Clone, Debug, Default)]
+pub struct TerrainMaterialSet(pub Vec<String>);
+impl From<&TerrainConfig> for TerrainMaterialSet {
+    fn from(config: &TerrainConfig) -> Self {
+        Self(config.materials.iter().map(|m| m.path.clone()).collect())
+    }
+}
 const TEX_TYPES: [&str; 5] = [
     "albedo",
     "normal",
@@ -72,21 +77,29 @@ impl TerrainMaterials {
     pub const TERRAIN_DISPLACEMENT_IDX: u32 = 4;
 }
 impl RenderData for TerrainMaterials {
-    type Params = (SResMut<TerrainMaterialTextures>, SRes<AssetServer>);
+    type Params = (
+        SResMut<TerrainMaterialTextures>,
+        SRes<TerrainMaterialSet>,
+        SRes<AssetServer>
+    );
 
     fn describe(
-        (materials, asset_server): &mut SystemParamItem<Self::Params>,
+        (materials, set, asset_server): &mut SystemParamItem<Self::Params>,
         builder: &mut RenderDataBuilder
     ) {
         // Load textures for each material and type
         let usages = TextureUsages::COPY_SRC | TextureUsages::TEXTURE_BINDING;
-        for material in MATERIALS {
+        if set.0.is_empty() {
+            warn!("No terrain materials set, the terrain will be drawn black.");
+        }
+        for material in set.0.iter().take(TERRAIN_MATERIAL_COUNT) {
             for (i, tex_type) in TEX_TYPES.iter().enumerate() {
-                let path = format!("core/models/terrain/{}/{}.png", material, tex_type);
+                let path = format!("{}/{}.png", material, tex_type);
+                let label = format!("terrain-{}-{}", material, tex_type);
                 let handle = asset_server.load_with_settings(
                     path,
                     move |settings: &mut TextureLoaderSettings| {
-                        settings.label = format!("terrain-{}-{}", material, tex_type);
+                        settings.label = label.clone();
                         settings.format = TEX_FORMATS[i];
                         settings.usages = usages;
                     }
@@ -115,7 +128,7 @@ impl RenderData for TerrainMaterials {
                     size,
                     format: TextureFormat::Rgba8UnormSrgb,
                     usages,
-                    layer_count: materials.albedo_textures.len() as u32,
+                    layer_count: TERRAIN_MATERIAL_COUNT as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
                     tiling: true,
                     ..Default::default()
@@ -128,7 +141,7 @@ impl RenderData for TerrainMaterials {
                     size,
                     format: TextureFormat::Rgba8Unorm,
                     usages,
-                    layer_count: materials.normal_textures.len() as u32,
+                    layer_count: TERRAIN_MATERIAL_COUNT as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
                     tiling: true,
                     ..Default::default()
@@ -141,7 +154,7 @@ impl RenderData for TerrainMaterials {
                     size,
                     format: TextureFormat::R8Unorm,
                     usages,
-                    layer_count: materials.roughness_textures.len() as u32,
+                    layer_count: TERRAIN_MATERIAL_COUNT as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
                     tiling: true,
                     ..Default::default()
@@ -154,7 +167,7 @@ impl RenderData for TerrainMaterials {
                     size,
                     format: TextureFormat::R8Unorm,
                     usages,
-                    layer_count: materials.ao_textures.len() as u32,
+                    layer_count: TERRAIN_MATERIAL_COUNT as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
                     tiling: true,
                     ..Default::default()
@@ -167,7 +180,7 @@ impl RenderData for TerrainMaterials {
                     size,
                     format: TextureFormat::R8Unorm,
                     usages,
-                    layer_count: materials.displacement_textures.len() as u32,
+                    layer_count: TERRAIN_MATERIAL_COUNT as u32,
                     mip_level_count: 0, // Auto-calculate max mip levels
                     tiling: true,
                     ..Default::default()

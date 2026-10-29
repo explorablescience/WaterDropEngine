@@ -3,7 +3,9 @@ use wde_renderer::prelude::*;
 
 use crate::{
     config::TerrainConfig,
-    manager::{CHUNK_MAP_SIZE, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE, SPLAT_MAP_COUNT, SPLAT_MAPS},
+    manager::{
+        CHUNK_MAP_SIZE, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE, SPLAT_MAP_COUNT, SPLAT_MAPS, Terrain
+    },
     render::renderer_gpu::TerrainRendererGPU
 };
 
@@ -11,7 +13,8 @@ const MAX_TERRAIN_TILES: usize = 1024;
 /// Number of terrain materials.
 pub const TERRAIN_MATERIAL_COUNT: usize = (SPLAT_MAPS * SPLAT_MAP_COUNT) as usize;
 
-/// Runtime-editable terrain rendering parameters synced to the render world each frame.
+/// Runtime-editable terrain rendering parameters synced to the render world each frame. The
+/// material parameters are reset from the [`TerrainConfig`] of each spawned terrain.
 #[derive(Resource, ExtractResource, Clone, Debug)]
 pub struct TerrainRenderSettings {
     /// World size covered by one repeat of each material's textures.
@@ -21,14 +24,32 @@ pub struct TerrainRenderSettings {
     pub height_blend: [f32; TERRAIN_MATERIAL_COUNT],
     pub debug_view: TerrainDebugView
 }
+impl TerrainRenderSettings {
+    /// Takes the material parameters of `config`.
+    pub fn apply_config(&mut self, config: &TerrainConfig) {
+        for (i, material) in config.materials.iter().enumerate() {
+            self.tiling[i] = material.tiling;
+            self.height_blend[i] = material.height_blend;
+        }
+    }
+}
 impl Default for TerrainRenderSettings {
     fn default() -> Self {
         Self {
-            //      dust regolith pebbles gravel sediment cliff basalt compacted
-            tiling: [10.0, 12.0, 5.0, 5.0, 12.0, 14.0, 12.0, 6.0],
-            height_blend: [0.6, 0.5, 0.8, 0.9, 0.7, 1.0, 1.0, 0.4],
+            tiling: [10.0; TERRAIN_MATERIAL_COUNT],
+            height_blend: [0.5; TERRAIN_MATERIAL_COUNT],
             debug_view: TerrainDebugView::Off
         }
+    }
+}
+
+/// Takes the material parameters of each spawned terrain.
+pub(crate) fn apply_terrain_config(
+    terrains: Query<&Terrain, Added<Terrain>>,
+    mut settings: ResMut<TerrainRenderSettings>
+) {
+    for terrain in &terrains {
+        settings.apply_config(&terrain.config);
     }
 }
 

@@ -3,14 +3,18 @@ use wde_logger::prelude::*;
 use bevy::prelude::*;
 use wde_scene::prelude::serialize;
 
-use crate::manager::{CHUNK_COUNT, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE};
+use crate::{
+    manager::{CHUNK_COUNT, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE},
+    render::dependencies::terrain_buffer::TERRAIN_MATERIAL_COUNT
+};
 
 const TERRAIN_CONFIG_VERSION: u64 = 1;
 /// Description of a terrain, in its folder.
 pub const TERRAIN_CONFIG_FILE: &str = "config/terrain.json";
 
 /// Description of a terrain, read from `res/<path>/config/terrain.json`: how its heightmaps encode
-/// heights, where its maps are, and the rules deriving its slope and buildable masks (see
+/// heights, where its maps are, its ground materials, and the rules deriving its slope and
+/// buildable masks (see
 /// [`Terrain::slope_at`](crate::prelude::Terrain::slope_at)). The chunk layout it declares must
 /// match the one the engine is built for ([`CHUNK_COUNT`], [`CHUNK_SIZE`],
 /// [`CHUNK_RENDER_SUBDIVISIONS`]).
@@ -26,7 +30,23 @@ pub struct TerrainConfig {
     pub heightmap: String,
     /// Splat map `k` of chunk `(x, z)`, with `{x}`, `{z}` and `{k}` placeholders.
     pub splatmap: String,
+    /// Ground materials in splat map order (map `k` RGBA blends materials `4k..4k+3`), at most
+    /// [`TERRAIN_MATERIAL_COUNT`].
+    pub materials: Vec<TerrainMaterial>,
     pub masks: TerrainMaskRules
+}
+
+/// Ground material blended by the splat maps.
+#[derive(Clone, Debug, Reflect)]
+pub struct TerrainMaterial {
+    /// Folder in `res/` of its textures: `albedo`, `normal`, `roughness`, `ambient_occlusion` and
+    /// `displacement` PNGs, all of the same size.
+    pub path: String,
+    /// World size covered by one repeat of its textures.
+    pub tiling: f32,
+    /// How much its relief pushes it over the others where they blend (see
+    /// [`TerrainRenderSettings::height_blend`](crate::prelude::TerrainRenderSettings::height_blend)).
+    pub height_blend: f32
 }
 
 /// Rules deriving the masks from the heights.
@@ -38,7 +58,7 @@ pub struct TerrainMaskRules {
     pub build_max_slope: f32,
     /// Distance kept between buildable ground and any ground that is not.
     pub build_margin: f32,
-    /// Steepest walkable ground, for colonists and vehicles alike.
+    /// Steepest walkable ground.
     pub walk_max_slope: f32
 }
 
@@ -50,6 +70,7 @@ impl Default for TerrainConfig {
             height_range: 72.0,
             heightmap: "heightmaps/heightmap_{x}_{z}.png".to_string(),
             splatmap: "splatmaps/splatmap_{x}_{z}-{k}.png".to_string(),
+            materials: Vec::new(),
             masks: TerrainMaskRules {
                 build_height_tolerance: 0.05,
                 build_max_slope: 0.05,
@@ -106,12 +127,34 @@ impl TerrainConfig {
             ));
         }
 
+        let materials = data["materials"].as_array().cloned().unwrap_or_default();
+        if materials.len() > TERRAIN_MATERIAL_COUNT {
+            return Err(format!(
+                "{} materials, at most {TERRAIN_MATERIAL_COUNT} are blended",
+                materials.len()
+            ));
+        }
+        let materials = materials
+            .iter()
+            .map(|material| {
+                Ok(TerrainMaterial {
+                    path: material["path"]
+                        .as_str()
+                        .ok_or("material without 'path'")?
+                        .to_string(),
+                    tiling: material["tiling"].as_f64().unwrap_or(10.0) as f32,
+                    height_blend: material["height_blend"].as_f64().unwrap_or(0.5) as f32
+                })
+            })
+            .collect::<Result<_, String>>()?;
+
         Ok(Self {
             label: parsed.label,
             min_height: number("heights", "min")?,
             height_range: number("heights", "range")?,
             heightmap: text("maps", "heightmap")?,
             splatmap: text("maps", "splatmap")?,
+            materials,
             masks: TerrainMaskRules {
                 build_height_tolerance: number("masks", "build_height_tolerance")?,
                 build_max_slope: number("masks", "build_max_slope")?,

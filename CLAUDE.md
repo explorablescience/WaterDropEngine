@@ -4,19 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-WaterDropEngine (WDE) is a personal 3D game engine written in Rust. It is built on top of **Bevy's ECS**, uses **wgpu** for rendering via a custom renderer, and **Rapier** for physics. The codebase is a Cargo workspace organized into a main application and multiple crates.
+WaterDropEngine (WDE) is a personal 3D game engine written in Rust. It is built on top of **Bevy's ECS**, uses **wgpu** for rendering via a custom renderer, and **Rapier** for physics. The codebase is a Cargo workspace of library crates, plus examples.
+
+The engine is **public and open source**, and must stay generic: game-specific code, assets and naming belong to the projects built on it (cloned next to this repository), which depend on these crates by path. Never mention or reference private projects here. Anything a game needs from the engine is exposed as configuration (resources, plugin fields, data files), never hardcoded here.
 
 ## Commands
 
 ```bash
-# Build and run (debug mode — recommended for development)
-cargo run --bin waterdropengine --package waterdropengine --features log-debug,debug,watch
-
-# Build and run (release)
-cargo build --release --bin waterdropengine --package waterdropengine --features log-debug
-
 # Run examples
 cargo run --bin wde-examples --package wde-examples --features log-debug,debug,watch
+
+# Check that a single module builds and lints on its own
+cargo clippy -p wde --no-default-features --features terrain -- -D warnings
 
 # Run tests
 cargo test --workspace --all-targets
@@ -33,24 +32,29 @@ cargo +nightly fmt --all --check
 RUSTDOCFLAGS='-D warnings' cargo doc --workspace --no-deps
 ```
 
-### Feature flags (for `waterdropengine` and `wde` crates)
+### Feature flags (`wde` crate)
+
+Every module except the renderer, logger and scene is optional. A module feature enables the modules it depends on.
 
 | Flag | Effect |
 |---|---|
+| *(no default features)* | Renderer, logger and scenes only |
+| `minimal` (default) | `pbr`, `gltf`, `camera-controller` |
+| `full` | Every runtime module: `minimal`, `atmosphere`, `pbr-outline`, `gizmos`, `ui`, `physics`, `terrain` |
+| `everything` | `full`, plus `editor` and `terrain-editor` |
+| `camera`, `camera-controller`, `pbr`, `atmosphere`, `pbr-outline`, `gltf`, `animation`, `gizmos`, `ui`, `physics`, `terrain`, `terrain-editor`, `editor` | Individual modules |
 | `log-debug` | Enable debug-level logging |
 | `debug` | Enable Bevy debug features |
 | `watch` | Enable hot-reloading of assets |
 | `tracing` | Enable Tracy/Puffin profiling |
 | `gpu-debug` | Enable wgpu validation layer |
-| `editor` | Enable the in-game editor UI |
+
+When adding a module, gate its plugin, prelude and re-export in `crates/core/wde/src/lib.rs` behind its feature, and check that every feature still lints on its own.
 
 ## Workspace structure
 
 ```
-Cargo.toml              # Workspace root (members: src/, crates/*/*, examples/)
-src/                    # Main application (binary: waterdropengine)
-  src/main.rs           # Entry point — creates App, adds WdeDefaultPlugins + TestPlugin
-  src/test.rs           # TestPlugin: spawns scene entities for development testing
+Cargo.toml              # Workspace root (members: crates/*/*, examples/)
 crates/
   core/
     wde/                # Facade crate — re-exports all sub-crates as WdeDefaultPlugins
@@ -65,24 +69,25 @@ crates/
     wde-pbr-outline/    # Stencil-based object outline effect
     wde-gizmos/         # Debug gizmo rendering
     wde-ui/             # Game UI: taffy-laid-out UiNode entities with rounded rects, images and glyphon text (feature `ui`)
+    wde-animation/      # Rigid part animation of glTF models
   terrain/
-    wde-terrain/        # Terrain tiles with heightmaps and splat maps, physics integration
-    wde-terrain-editor/ # GPU compute-based terrain painting tools
-    wde-terrain-grid/   # LOD grid placement and management for terrain objects
+    wde-terrain/        # Chunked heightmap terrain: LOD rendering, splat-mapped materials (from its config), masks, physics
+    wde-terrain-editor/ # GPU compute-based terrain painting tools, attached to any spawned terrain
   wrappers/
     wde-wgpu/           # Low-level wgpu abstractions (instance, pipelines, buffers, textures)
     wde-physics/        # Rapier physics wrapper (colliders, raycasting)
     wde-logger/         # Tracing-based logger with editor overlay and panic handler
     wde-egui/           # Egui wrapper (superseded by wde-editor)
 examples/               # Standalone examples (custom render pass, PBR batches, ray casting…)
-res/                    # Assets loaded at runtime via Bevy's AssetServer (path: "res/")
+res/core/               # Engine assets (shaders, placeholder textures), loaded via Bevy's AssetServer (path: "res/"). Games link it as their own `res/core/`
+res/examples/           # Assets of the examples
 ```
 
 ## Architecture
 
 ### Plugin system
 
-Everything is a Bevy `Plugin`. The entry point is `WdeDefaultPlugins` ([crates/core/wde/src/lib.rs](crates/core/wde/src/lib.rs)), which composes `CustomBevyPlugins` (minimal Bevy setup) and `CustomWdePlugins` (all WDE sub-plugins). `wde_scene::ScenePlugin` is always added last.
+Everything is a Bevy `Plugin`. The entry point is `WdeDefaultPlugins` ([crates/core/wde/src/lib.rs](crates/core/wde/src/lib.rs)), which composes `CustomBevyPlugins` (minimal Bevy setup) and `CustomWdePlugins` (the WDE sub-plugins of the enabled features). `wde_scene::ScenePlugin` is always added last.
 
 ### Dual-world renderer
 
@@ -118,7 +123,7 @@ GPU assets implement the `RenderAsset` trait (`prepare()` creates the GPU object
 
 ### Physics
 
-`wde-physics` wraps Rapier. Attach a `Collider` component (cuboid, sphere, heightfield, etc.) with a `ColliderGroup` to any entity with a `Transform`. Use `PhysicsWorld` resource for raycasting. Terrain uses `TERRAIN_COLLIDER_GROUP` (GROUP_1) and buildings use `TERRAIN_BUILDINGS_COLLIDER_GROUP` (GROUP_2).
+`wde-physics` wraps Rapier. Attach a `Collider` component (cuboid, sphere, heightfield, etc.) with a `ColliderGroup` to any entity with a `Transform`. Use `PhysicsWorld` resource for raycasting. The terrain uses `HEIGHTMAP_COLLIDER_GROUP` (GROUP_1); the other groups are left to the games.
 
 ## Code style
 

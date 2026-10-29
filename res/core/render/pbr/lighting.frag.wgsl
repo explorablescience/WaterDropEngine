@@ -1,5 +1,5 @@
 #include "core/render/pbr/pbr_functions.wgsl"
-#include "core/render/atmosphere/mars_sky.wgsl"
+#include "core/render/atmosphere/sky.wgsl"
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -155,9 +155,9 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
         lo += light_contribution * attenuation;
     }
 
-    // Ambient term: sample the Mars sky
+    // Ambient term: sample the sky
     let kd = 0.2;
-    let irradiance = mars_sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
+    let irradiance = sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
     let ambient = kd * irradiance * albedo * ao;
 
     // HDR tone mapping (Reinhard) and final output

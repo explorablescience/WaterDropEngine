@@ -2,29 +2,29 @@
 //!
 //! # Overview
 //! WaterDropEngine is a modular game engine built on top of Bevy's ECS. It provides a collection of plugins and tools.
-//! The engine is composed of several modules, organized from low-level to high-level:
-//! - High-Level:
-//!    - [`wde_terrain`](wde_terrain): A plugin for generating and rendering procedural terrain.
-//!    - [`wde_terrain_editor`](wde_terrain_editor): A plugin for editing terrain in-game.
-//!    - [`wde_terrain_grid`](wde_terrain_grid): A plugin for managing terrain grids and LOD.
-//!    - [`wde_terrain_navigation`](wde_terrain_navigation): A plugin for pathfinding and navigation on terrain.
+//! The engine is composed of several modules, organized from low-level to high-level, each behind
+//! a feature of the same name (see [Features](#features)):
+//! - Terrain:
+//!    - [`wde_terrain`](wde_terrain): A plugin for loading, rendering and colliding chunked heightmap terrains.
+//!    - [`wde_terrain_editor`](wde_terrain_editor): A plugin for painting terrains in-game.
 //! - Render:
 //!    - [`wde_pbr`](wde_pbr): A plugin for physically based rendering (PBR) materials and lighting.
+//!    - [`wde_pbr_outline`](wde_pbr_outline): A plugin for drawing outlines around PBR meshes.
 //!    - [`wde_camera`](wde_camera): A plugin for managing cameras and viewports.
 //!    - [`wde_camera_controller`](wde_camera_controller): A plugin for controlling cameras with various input methods.
 //!    - [`wde_gltf`](wde_gltf): A plugin for loading and rendering glTF 3D models.
-//!    - [`wde_animation`](wde_animation): A plugin for animating rigid parts of models (e.g. colonist walk cycles).
+//!    - [`wde_animation`](wde_animation): A plugin for animating rigid parts of models (e.g. walk cycles).
 //!    - [`wde_gizmos`](wde_gizmos): A plugin for rendering debug gizmos and visualizations.
 //!    - [`wde_ui`](wde_ui): A plugin for laying out and drawing game UI with taffy.
-//! - Core:
+//! - Core (always included, except the editor):
 //!    - [`wde_renderer`](wde_renderer): A plugin for rendering 3D graphics using the `wgpu` graphics API.
 //!    - [`wde_scene`](wde_scene): A plugin for managing scenes, entities, and components.
 //!    - [`wde_editor`](wde_editor): A plugin for creating in-game editors and tools.
 //! - Wrappers:
-//!    - [`wde_wgpu`](wde_wgpu): A wrapper around the `wgpu` graphics API for rendering. It is superseeded by [`wde_renderer`](wde_renderer).
+//!    - `wde_wgpu`: A wrapper around the `wgpu` graphics API for rendering. It is superseeded by [`wde_renderer`](wde_renderer).
 //!    - [`wde_physics`](wde_physics): A wrapper around the `rapier` physics engine for 3D physics simulation.
 //!    - [`wde_logger`](wde_logger): A wrapper around the `tracing` library for logging and diagnostics.
-//!    - [`wde_egui`](wde_egui): A wrapper around the `egui` library for creating user interfaces. It is superseeded by [`wde_editor`](wde_editor).
+//!    - `wde_egui`: A wrapper around the `egui` library for creating user interfaces. It is superseeded by [`wde_editor`](wde_editor).
 //!
 //! # Getting Started
 //! To get started with WaterDropEngine, add the `wde` crate to your `Cargo.toml`:
@@ -46,10 +46,17 @@
 //! ```
 //!
 //! # Features
-//! WaterDropEngine is designed to be modular and extensible. You can enable or disable features! using Cargo features. For example, to enable the `pbr` feature for physically based rendering, add the following to your `Cargo.toml`:
+//! Each module is enabled by a Cargo feature, which also enables the modules it depends on. Three
+//! presets are provided:
+//! - `minimal` (default): PBR rendering, cameras with their controllers, and glTF models.
+//! - `full`: every runtime module (`minimal`, `atmosphere`, `pbr-outline`, `gizmos`, `ui`,
+//!   `physics`, `terrain`).
+//! - `everything`: `full`, plus the development tools (`editor`, `terrain-editor`).
+//!
+//! Without default features, only the renderer, the logger and the scenes are included:
 //! ```toml
 //! [dependencies]
-//! wde = { version = "0.1", features = ["pbr"] }
+//! wde = { version = "0.1", default-features = false, features = ["pbr", "ui"] }
 //! ```
 
 use bevy::{
@@ -150,19 +157,25 @@ impl Plugin for CustomWdePlugins {
                 window_title: self.window_title.clone(),
                 window_resolution: self.window_resolution,
                 window_icon: self.window_icon.clone()
-            },
-            wde_gltf::GltfPlugin,
-            wde_animation::AnimationPlugin,
-            wde_camera::CameraPlugin,
-            wde_camera_controller::CameraControllerPlugin,
-            wde_physics::PhysicsPlugin,
-            wde_terrain::TerrainPlugin,
-            wde_terrain_grid::TerrainGridPlugin,
-            wde_terrain_editor::TerrainEditorPlugin,
-            wde_terrain_navigation::TerrainNavigationPlugin,
-            wde_pbr_outline::PbrOutlinePlugin
+            }
         ));
 
+        #[cfg(feature = "gltf")]
+        app.add_plugins(wde_gltf::GltfPlugin);
+        #[cfg(feature = "animation")]
+        app.add_plugins(wde_animation::AnimationPlugin);
+        #[cfg(feature = "camera")]
+        app.add_plugins(wde_camera::CameraPlugin);
+        #[cfg(feature = "camera-controller")]
+        app.add_plugins(wde_camera_controller::CameraControllerPlugin);
+        #[cfg(feature = "physics")]
+        app.add_plugins(wde_physics::PhysicsPlugin);
+        #[cfg(feature = "terrain")]
+        app.add_plugins(wde_terrain::TerrainPlugin);
+        #[cfg(feature = "terrain-editor")]
+        app.add_plugins(wde_terrain_editor::TerrainEditorPlugin);
+        #[cfg(feature = "pbr-outline")]
+        app.add_plugins(wde_pbr_outline::PbrOutlinePlugin);
         #[cfg(feature = "gizmos")]
         app.add_plugins(wde_gizmos::GizmosPlugin);
         #[cfg(feature = "ui")]
@@ -172,7 +185,9 @@ impl Plugin for CustomWdePlugins {
         #[cfg(feature = "editor")]
         app.add_plugins(wde_editor::EditorPlugin);
         #[cfg(all(feature = "gizmos", feature = "editor"))]
-        app.add_plugins((debug::PhysicsDebugPlugin, debug::CameraDebugPlugin));
+        app.add_plugins(debug::CameraDebugPlugin);
+        #[cfg(all(feature = "gizmos", feature = "editor", feature = "physics"))]
+        app.add_plugins(debug::PhysicsDebugPlugin);
 
         // Always add the scene plugin last
         app.add_plugins(wde_scene::ScenePlugin);
@@ -195,52 +210,65 @@ pub mod prelude {
     pub use crate::WdeDefaultPlugins;
 
     // Core modules
-    pub use wde_animation::prelude::*;
-    pub use wde_camera::prelude::*;
-    pub use wde_camera_controller::prelude::*;
-    pub use wde_gltf::prelude::*;
     pub use wde_logger::prelude::*;
-    pub use wde_pbr_outline::prelude::*;
-    pub use wde_physics::prelude::*;
     pub use wde_renderer::prelude::*;
     pub use wde_scene::prelude::*;
-    pub use wde_terrain::prelude::*;
-    pub use wde_terrain_grid::prelude::*;
-    pub use wde_terrain_navigation::prelude::*;
 
-    // Optional feature modules
+    // Optional modules
     #[cfg(all(feature = "gizmos", feature = "editor"))]
-    pub use crate::debug::{CameraDebugSettings, PhysicsDebugSettings};
+    pub use crate::debug::CameraDebugSettings;
+    #[cfg(all(feature = "gizmos", feature = "editor", feature = "physics"))]
+    pub use crate::debug::PhysicsDebugSettings;
+    #[cfg(feature = "animation")]
+    pub use wde_animation::prelude::*;
+    #[cfg(feature = "camera")]
+    pub use wde_camera::prelude::*;
+    #[cfg(feature = "camera-controller")]
+    pub use wde_camera_controller::prelude::*;
     #[cfg(feature = "editor")]
     pub use wde_editor::prelude::*;
     #[cfg(feature = "gizmos")]
     pub use wde_gizmos::prelude::*;
+    #[cfg(feature = "gltf")]
+    pub use wde_gltf::prelude::*;
     #[cfg(feature = "pbr")]
     pub use wde_pbr::prelude::*;
+    #[cfg(feature = "pbr-outline")]
+    pub use wde_pbr_outline::prelude::*;
+    #[cfg(feature = "physics")]
+    pub use wde_physics::prelude::*;
+    #[cfg(feature = "terrain")]
+    pub use wde_terrain::prelude::*;
     #[cfg(feature = "ui")]
     pub use wde_ui::prelude::*;
 }
 
 // Re-export the modules for external use
-pub use wde_animation;
-pub use wde_camera;
-pub use wde_camera_controller;
-pub use wde_gltf;
 pub use wde_logger;
-pub use wde_pbr_outline;
-pub use wde_physics;
 pub use wde_renderer;
 pub use wde_scene;
-pub use wde_terrain;
-pub use wde_terrain_editor;
-pub use wde_terrain_grid;
-pub use wde_terrain_navigation;
 
+#[cfg(feature = "animation")]
+pub use wde_animation;
+#[cfg(feature = "camera")]
+pub use wde_camera;
+#[cfg(feature = "camera-controller")]
+pub use wde_camera_controller;
 #[cfg(feature = "editor")]
 pub use wde_editor;
 #[cfg(feature = "gizmos")]
 pub use wde_gizmos;
+#[cfg(feature = "gltf")]
+pub use wde_gltf;
 #[cfg(feature = "pbr")]
 pub use wde_pbr;
+#[cfg(feature = "pbr-outline")]
+pub use wde_pbr_outline;
+#[cfg(feature = "physics")]
+pub use wde_physics;
+#[cfg(feature = "terrain")]
+pub use wde_terrain;
+#[cfg(feature = "terrain-editor")]
+pub use wde_terrain_editor;
 #[cfg(feature = "ui")]
 pub use wde_ui;

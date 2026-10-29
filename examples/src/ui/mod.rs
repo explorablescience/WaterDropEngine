@@ -1,9 +1,9 @@
-//! Game UI demo: a colony-sim HUD laid out with `wde_ui`, on top of the scene.
+//! Game UI demo: a strategy game HUD laid out with `wde_ui`, on top of the scene.
 //!
-//! - The top bar holds resource chips and an animated oxygen gauge (relaid out every frame).
-//! - The left panel lists colonists, rows highlight on hover.
+//! - The top bar holds resource chips and an animated energy gauge (relaid out every frame).
+//! - The left panel lists units, rows highlight on hover.
 //! - The minimap places markers with absolute positioning.
-//! - The first toolbar button toggles the colonists panel, the others log their click.
+//! - The first toolbar button toggles the units panel, the others log their click.
 use bevy::prelude::*;
 use wde::prelude::{WdeColor, *};
 
@@ -12,7 +12,7 @@ impl Plugin for UiDemoPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, (init_scene, init_ui)).add_systems(
             Update,
-            (update_button_colors, handle_toolbar_clicks, animate_oxygen)
+            (update_button_colors, handle_toolbar_clicks, animate_energy)
         );
     }
 }
@@ -56,10 +56,10 @@ impl ButtonColors {
 struct ToolbarButton(usize);
 
 #[derive(Component)]
-struct ColonistsPanel;
+struct UnitsPanel;
 
 #[derive(Component)]
-struct OxygenLevel;
+struct EnergyLevel;
 
 fn init_scene(mut commands: Commands) {
     commands.spawn((
@@ -119,7 +119,7 @@ fn init_ui(mut commands: Commands) {
                 ..default()
             }))
             .with_children(|middle| {
-                spawn_colonists_panel(middle);
+                spawn_units_panel(middle);
                 spawn_minimap(middle);
             });
             spawn_toolbar(hud);
@@ -161,7 +161,7 @@ fn spawn_top_bar(hud: &mut ChildSpawnerCommands) {
             ..default()
         }));
 
-        // Oxygen gauge, its fill is animated by `animate_oxygen`
+        // Energy gauge, its fill is animated by `animate_energy`
         bar.spawn((
             UiNode(UiStyle {
                 width: Val::Px(220.0),
@@ -174,7 +174,7 @@ fn spawn_top_bar(hud: &mut ChildSpawnerCommands) {
             UiCornerRadius(7.0)
         ))
         .with_child((
-            OxygenLevel,
+            EnergyLevel,
             UiNode(UiStyle {
                 width: Val::Percent(70.0),
                 height: Val::Percent(100.0),
@@ -186,10 +186,10 @@ fn spawn_top_bar(hud: &mut ChildSpawnerCommands) {
     });
 }
 
-fn spawn_colonists_panel(middle: &mut ChildSpawnerCommands) {
+fn spawn_units_panel(middle: &mut ChildSpawnerCommands) {
     middle
         .spawn((
-            ColonistsPanel,
+            UnitsPanel,
             panel(UiStyle {
                 width: Val::Px(240.0),
                 flex_direction: FlexDirection::Column,
@@ -309,7 +309,7 @@ fn update_button_colors(
 fn handle_toolbar_clicks(
     mut clicks: MessageReader<UiClick>,
     buttons: Query<&ToolbarButton>,
-    mut panel: Single<&mut UiNode, With<ColonistsPanel>>
+    mut panel: Single<&mut UiNode, With<UnitsPanel>>
 ) {
     for click in clicks.read() {
         let Ok(ToolbarButton(index)) = buttons.get(click.entity) else {
@@ -321,13 +321,13 @@ fn handle_toolbar_clicks(
                 UiDisplay::None => UiDisplay::Flex,
                 _ => UiDisplay::None
             };
-            info!("Toggled the colonists panel.");
+            info!("Toggled the units panel.");
         } else {
             info!("Clicked toolbar button {}.", index);
         }
     }
 }
 
-fn animate_oxygen(time: Res<Time>, mut gauge: Single<&mut UiNode, With<OxygenLevel>>) {
+fn animate_energy(time: Res<Time>, mut gauge: Single<&mut UiNode, With<EnergyLevel>>) {
     gauge.0.width = Val::Percent(60.0 + 35.0 * time.elapsed_secs().sin());
 }

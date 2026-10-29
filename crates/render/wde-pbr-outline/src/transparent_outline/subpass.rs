@@ -46,8 +46,8 @@ impl RenderSubPass for SubRenderPassOutline {
 }
 
 /// Draws each material group in turn: its silhouette to the stencil, then its outline outside of
-/// it. As each group has its own stencil value, a group nested in another (e.g. a module in a
-/// dome) keeps its outline.
+/// it. As each group has its own stencil value, a group nested in another (e.g. furniture in a
+/// house) keeps its outline.
 fn draw_instances<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
     let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
     let render_pipeline =

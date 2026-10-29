@@ -1,5 +1,5 @@
 mod atmosphere_params;
-#[cfg(debug_assertions)]
+#[cfg(all(feature = "atmosphere", debug_assertions))]
 pub(crate) mod editor;
 mod pass_atmosphere;
 mod sun_light;

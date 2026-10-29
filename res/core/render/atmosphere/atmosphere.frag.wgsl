@@ -1,4 +1,4 @@
-#include "core/render/atmosphere/mars_sky.wgsl"
+#include "core/render/atmosphere/sky.wgsl"
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -37,6 +37,6 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     }
 
     let ray = view_ray(in.tex_coord);
-    let color = mars_sky(ray, in_atmosphere);
+    let color = sky(ray, in_atmosphere);
     return vec4<f32>(color, 1.0);
 }

@@ -21,14 +21,21 @@
 //!   [`HEIGHTMAP_COLLIDER_GROUP`].
 //!
 //! The [`TerrainCursorPos`](prelude::TerrainCursorPos) resource gives the terrain point under the
-//! cursor, in both the main and render worlds. The [`BUILDINGS_COLLIDER_GROUP`] and
-//! [`MODULES_COLLIDER_GROUP`] are reserved for the objects placed on the terrain (see
-//! `wde-terrain-grid`).
+//! cursor, in both the main and render worlds.
+//!
+//! The ground materials blended by the splat maps are listed in the config. Their textures are
+//! loaded when the app starts, from the [`TerrainMaterialSet`](prelude::TerrainMaterialSet)
+//! resource.
 //!
 //! # Example
 //! ```rust,ignore
+//! const TERRAIN_PATH: &str = "terrain/desert";
+//!
+//! app.insert_resource(TerrainMaterialSet::from(&TerrainConfig::load(TERRAIN_PATH)))
+//!     .add_systems(PreStartup, init);
+//!
 //! fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
-//!     let terrain = Terrain::load(DEFAULT_TERRAIN_PATH);
+//!     let terrain = Terrain::load(TERRAIN_PATH);
 //!     commands.spawn((
 //!         TerrainRenderer::new(&asset_server, &terrain),
 //!         terrain,
@@ -36,7 +43,7 @@
 //!     ));
 //! }
 //! ```
-//! `wde-terrain-editor` spawns this default terrain, and edits it.
+//! `wde-terrain-editor` edits the spawned terrain.
 
 use bevy::prelude::*;
 use wde_physics::prelude::*;
@@ -47,10 +54,6 @@ use crate::{
 
 /// The terrain heightmap.
 pub const HEIGHTMAP_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_1;
-/// The buildings placed on the terrain.
-pub const BUILDINGS_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_2;
-/// Modules placed inside buildings.
-pub const MODULES_COLLIDER_GROUP: ColliderGroup = ColliderGroup::GROUP_3;
 
 pub(crate) mod config;
 pub(crate) mod manager;
@@ -61,10 +64,14 @@ pub(crate) mod utils;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::config::{TERRAIN_CONFIG_FILE, TerrainConfig, TerrainMaskRules};
+    pub use crate::HEIGHTMAP_COLLIDER_GROUP;
+    pub use crate::config::{
+        TERRAIN_CONFIG_FILE, TerrainConfig, TerrainMaskRules, TerrainMaterial
+    };
     pub use crate::manager::*;
     pub use crate::masks::ChunkMasks;
     pub use crate::physics::terrain_physics::TerrainPhysics;
+    pub use crate::render::dependencies::materials::TerrainMaterialSet;
     pub use crate::render::dependencies::terrain_buffer::{
         TERRAIN_MATERIAL_COUNT, TerrainDebugView, TerrainRenderSettings
     };
@@ -75,7 +82,6 @@ pub mod prelude {
         TerrainChunkArrayBg, TerrainComputeArrayBg, TerrainRendererGPU
     };
     pub use crate::utils::cursor_pos::TerrainCursorPos;
-    pub use crate::{BUILDINGS_COLLIDER_GROUP, HEIGHTMAP_COLLIDER_GROUP, MODULES_COLLIDER_GROUP};
 }
 
 pub struct TerrainPlugin;

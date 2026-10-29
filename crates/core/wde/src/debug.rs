@@ -6,10 +6,12 @@ use bevy::{prelude::*, window::PrimaryWindow};
 use wde_camera::prelude::*;
 use wde_editor::prelude::*;
 use wde_gizmos::prelude::*;
+#[cfg(feature = "physics")]
 use wde_physics::prelude::*;
 use wde_renderer::prelude::WdeColor;
 
 /// Toggles for physics debug visualizations, editable from the "Engine/Physics" editor panel.
+#[cfg(feature = "physics")]
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
 pub struct PhysicsDebugSettings {
@@ -17,17 +19,18 @@ pub struct PhysicsDebugSettings {
     pub show_heightfields: bool
 }
 
+#[cfg(feature = "physics")]
 pub(crate) struct PhysicsDebugPlugin;
+#[cfg(feature = "physics")]
 impl Plugin for PhysicsDebugPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PhysicsDebugSettings>()
             .register_type::<PhysicsDebugSettings>()
             .add_systems(Update, (edit_physics_debug_settings, draw_collider_gizmos));
-        #[cfg(feature = "pbr")]
-        app.add_systems(Update, draw_cull_group_gizmos);
     }
 }
 
+#[cfg(feature = "physics")]
 fn edit_physics_debug_settings(
     ctx: Res<UIContext>,
     mut settings: ResMut<PhysicsDebugSettings>,
@@ -52,6 +55,7 @@ fn edit_physics_debug_settings(
 /// Draws every collider as a gizmo wireframe, positioned like the physics engine sees it: at the
 /// entity's world translation only, ignoring rotation and scale (colliders are always
 /// axis-aligned, see [`wde_physics`] `handle_changes`).
+#[cfg(feature = "physics")]
 fn draw_collider_gizmos(
     settings: Res<PhysicsDebugSettings>,
     colliders: Query<(&GlobalTransform, &Collider)>,
@@ -84,7 +88,6 @@ fn draw_collider_gizmos(
     }
 }
 
-#[cfg(feature = "pbr")]
 fn draw_cull_group_gizmos(
     settings: Res<wde_pbr::prelude::CullingSettings>,
     groups: Query<&wde_pbr::prelude::CullGroup>,
@@ -125,7 +128,14 @@ impl Plugin for CameraDebugPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CameraDebugSettings>()
             .register_type::<CameraDebugSettings>()
-            .add_systems(Update, (edit_camera_debug_settings, draw_camera_frustums));
+            .add_systems(
+                Update,
+                (
+                    edit_camera_debug_settings,
+                    draw_camera_frustums,
+                    draw_cull_group_gizmos
+                )
+            );
     }
 }
 

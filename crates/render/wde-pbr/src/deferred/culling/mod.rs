@@ -7,7 +7,7 @@
 //! passes draw that range only.
 //!
 //! # Levels
-//! 1. **Groups**: a [`CullGroup`] gives world-space bounds to a set of meshes, e.g. a base or a
+//! 1. **Groups**: a [`CullGroup`] gives world-space bounds to a set of meshes, e.g. a village or a
 //!    character. A group outside of a view hides all its meshes from it, and a group fully inside
 //!    shows them all, both without testing them one by one.
 //! 2. **Meshes**: the remaining meshes (in a group crossing the view edge, or in no group) are
@@ -16,9 +16,9 @@
 //! # Usage
 //! ```rust
 //! // Spawn the group, and keep its bounds up to date
-//! let base = commands.spawn(CullGroup(Aabb::new(Vec3::splat(-20.0), Vec3::splat(20.0)))).id();
-//! // Every mesh under this building is in the group
-//! commands.spawn((Transform::default(), CullGroupMember(base)));
+//! let group = commands.spawn(CullGroup(Aabb::new(Vec3::splat(-20.0), Vec3::splat(20.0)))).id();
+//! // Every mesh of the village is in the group
+//! commands.spawn((Transform::default(), CullGroupMember(group)));
 //! ```
 //! Levels can be toggled with the [`CullingSettings`] resource, editable in the `PBR/Culling`
 //! editor window along with the [`CullingStats`].

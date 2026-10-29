@@ -1,5 +1,5 @@
 #include "core/render/pbr/pbr_functions.wgsl"
-#include "core/render/atmosphere/mars_sky.wgsl"
+#include "core/render/atmosphere/sky.wgsl"
 
 // Forward lighting for alpha-blended PBR materials. Mirrors lighting.frag.wgsl (without shadows)
 // so glass matches the deferred opaque surfaces.
@@ -62,13 +62,13 @@ fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @locatio
             * in_pbr_params.lighting_params.x;
     }
 
-    let irradiance = mars_sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
+    let irradiance = sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
     let ambient = 0.2 * irradiance * albedo.rgb;
 
     // Glass reflects more at grazing angles: raise opacity and add a sky reflection there
     let n_dot_v = clamp(dot(normal, view_dir), 0.0, 1.0);
     let fresnel = pow(1.0 - n_dot_v, 5.0);
-    let reflection = mars_sky(reflect(-view_dir, normal), in_atmosphere) * in_pbr_params.lighting_params.y
+    let reflection = sky(reflect(-view_dir, normal), in_atmosphere) * in_pbr_params.lighting_params.y
         * fresnel * (1.0 - roughness) * 0.2;
     let alpha = clamp(albedo.a + fresnel * (1.0 - albedo.a) * 0.6, 0.0, 1.0);
 

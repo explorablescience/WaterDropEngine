@@ -5,7 +5,7 @@ edition = "2024"
 build = "build.rs"
 
 [dependencies]
-wde = { path = "../crates/core/wde", features = ["editor"] }
+wde = { path = "../crates/core/wde", features = ["everything"] }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 
@@ -17,3 +17,5 @@ fs_extra = "1.2"
 default = []
 watch = ["wde/watch"]
 tracing = ["wde/tracing"]
+log-debug = ["wde/log-debug"]
+debug = ["wde/debug"]

@@ -1,6 +1,6 @@
 //! Terrain editor for WaterDropEngine.
 //!
-//! Spawns the default terrain (see `wde-terrain`) with a paint brush, and edits it on the GPU:
+//! Gives each spawned terrain (see `wde-terrain`) a paint brush, and edits it on the GPU:
 //! the brush turns mouse strokes on the terrain into paint commands, run by a compute pass on the
 //! chunk maps. Painting modes edit the splat maps (paint, erase), the others the heightmaps (raise,
 //! lower, smooth, flatten). Edited chunks are read back to update the terrain heights and
@@ -37,29 +37,20 @@ impl Plugin for TerrainEditorPlugin {
             TerrainEditorUIPlugin
         ))
         .init_resource::<SaveManager>()
-        .add_systems(PreStartup, init)
+        .add_systems(Update, add_brush)
         .add_systems(Update, handle_extracted_tiles)
         .add_message::<ExtractedTileMessage>();
     }
 }
 
-fn init(mut commands: Commands, asset_server: Res<AssetServer>) {
-    let terrain = Terrain::load(DEFAULT_TERRAIN_PATH);
-    let entity = commands
-        .spawn((
-            Name::new("Terrain"),
-            Transform::default(),
-            TerrainRenderer::new(&asset_server, &terrain),
-            terrain,
-            TerrainPhysics::default()
-        ))
-        .id();
-
-    commands.spawn((
-        Name::new("Terrain Default Brush"),
-        PaintBrush::default(),
-        ChildOf(entity)
-    ));
+fn add_brush(mut commands: Commands, terrains: Query<Entity, Added<Terrain>>) {
+    for terrain in &terrains {
+        commands.spawn((
+            Name::new("Terrain Default Brush"),
+            PaintBrush::default(),
+            ChildOf(terrain)
+        ));
+    }
 }
 
 #[derive(Resource, Default)]

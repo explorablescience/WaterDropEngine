@@ -1,3 +1,6 @@
+// Without the `editor` feature, only the log readers used by `wde-editor` are reachable
+#![cfg_attr(not(feature = "editor"), allow(dead_code))]
+
 use std::{
     collections::{BTreeMap, VecDeque},
     sync::{Mutex, OnceLock},

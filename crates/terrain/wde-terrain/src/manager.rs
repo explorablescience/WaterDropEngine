@@ -25,8 +25,6 @@ pub const CHUNK_SAMPLES: u32 = CHUNK_RENDER_SUBDIVISIONS + 1;
 /// Samples per side of a chunk map on the GPU: the chunk samples, plus a one-sample border
 /// copied from the neighbors (seamless normals and blending across chunks).
 pub const CHUNK_MAP_SIZE: u32 = CHUNK_SAMPLES + 2;
-/// Terrain loaded by default, from `res/`.
-pub const DEFAULT_TERRAIN_PATH: &str = "terrain/mars";
 
 /// 2-D integer grid position of a terrain chunk.
 pub type ChunkPos = IVec2;
@@ -129,7 +127,7 @@ impl Terrain {
                                 })
                                 .collect()
                         }
-                        // Regolith (material 1) where there is no splat map
+                        // Material 1 where there is no splat map
                         None if k == 0 => vec![[0, 255, 0, 0]; (samples * samples) as usize],
                         None => vec![[0; 4]; (samples * samples) as usize]
                     }

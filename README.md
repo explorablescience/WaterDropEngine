@@ -41,14 +41,18 @@ At its core, *WaterDropEngine* relies on:
 - **[Rapier](https://rapier.rs/)** for physics and simple ray casting.
 
 
-## Running the engine
-To start running *WaterDropEngine*, you will need to have Rust installed on your computer. If you don't have it, you can install it by following the instructions on the [official website](https://www.rust-lang.org/tools/install).
+## Using the engine
+To start using *WaterDropEngine*, you will need to have Rust installed on your computer. If you don't have it, you can install it by following the instructions on the [official website](https://www.rust-lang.org/tools/install).
 
-Then, you'll need to fork the project into your own GitHub account, clone the repository using `git clone https://github.com/explorablescience/WaterDropEngine.git`.
+Then, clone the repository using `git clone https://github.com/explorablescience/WaterDropEngine.git`, and run the examples with:
+```bash
+cargo run --bin wde-examples --package wde-examples --features log-debug,debug,watch
+```
 
-Once all of these is done, ***you are ready to start using WaterDropEngine!***
-If you use `Visual Studio Code`, you can open the current repository by running `code .` in the terminal in the root of the project. Then a few configurations will be automatically generated for you. Mainly, you will have 3 configurations available in the "Run and Debug" tab:
-- `Trace` to run in debug mode with tracing enabled. You can then download [Tracy](https://github.com/wolfpld/tracy) to visualize the traces. It is a very useful tool to understand the performance of your game and to identify bottlenecks but has a lot of overhead, so it is not recommended to use it for long periods of time.
-- `Debug` to run in debug mode without tracing. This is the ***default configuration and is recommended for most of the development process***. It allows you to use the debugger and to have a good performance while developing your game.
-- `Release` to publish the game in release mode.
+To build your own project on it, clone it next to your project and depend on the `wde` crate by path. Its modules are behind Cargo features, with three presets: `minimal` (the default: PBR rendering, cameras and glTF models), `full` (every runtime module, terrain and physics included) and `everything` (`full` plus the in-game editor tools):
+```toml
+[dependencies]
+wde = { path = "../WaterDropEngine/crates/core/wde", features = ["full"] }
+```
+The engine assets (shaders, placeholder textures) are in `res/core/`: your project should expose them as its own `res/core/` folder, for example with a symbolic link created by its `build.rs`.
 

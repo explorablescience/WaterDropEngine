@@ -48,7 +48,7 @@ impl RenderAsset for SelectionAreaRenderPipeline {
                         materials.iter().next().map(|(_, m)| m.layout.clone()),
                     ],
                     // Drawn over everything (no depth test, no depth write): the decal must stay
-                    // visible on building floors, e.g. inside domes and tunnels
+                    // visible on floors, e.g. inside buildings
                     depth: DepthDescriptor {
                         enabled: true,
                         write: false,
