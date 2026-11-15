@@ -174,7 +174,7 @@ fn render_exposure(
         }
         pass.set_bind_group(0, bind_group_gpu);
         if let Err(e) = pass.dispatch(workgroups.0, workgroups.1, 1) {
-            debug!("Failed to dispatch the exposure compute: {:?}.", e);
+            trace!("Failed to dispatch the exposure compute: {:?}.", e);
             return false;
         }
     }

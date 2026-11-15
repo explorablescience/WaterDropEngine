@@ -7,7 +7,7 @@ use crate::{
 };
 use bevy::{
     app::{App, Plugin},
-    asset::{AssetEvent, AssetId, Assets},
+    asset::{AssetEvent, AssetId, Assets, Handle},
     ecs::prelude::*,
     prelude::MessageReader
 };
@@ -63,7 +63,9 @@ pub struct PipelineManager {
     /// CPU-side cache of shader assets keyed by asset id.
     shader_cache: HashMap<AssetId<Shader>, Shader>,
     /// Mapping from shader asset ids to pipelines that reference them (for hot-reload).
-    shader_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>>
+    shader_to_pipelines: HashMap<AssetId<Shader>, Vec<CachedPipelineIndex>>,
+    /// Shaders of pipelines whose creation is retried, kept alive so they are not reloaded on each try.
+    retried_shaders: HashMap<AssetId<Shader>, Handle<Shader>>
 }
 impl PipelineManager {
     /// Push the creation of a render pipeline to the pipeline manager queue.
@@ -73,13 +75,13 @@ impl PipelineManager {
         asset: E
     ) -> Result<CachedPipelineIndex, PrepareAssetError<E>> {
         // Check that every bind group layout is Some
-        for layout in descriptor.bind_group_layouts.iter() {
-            if layout.is_none() {
-                return Err(PrepareAssetError::RetryNextUpdate(asset));
-            }
+        if descriptor.bind_group_layouts.iter().any(Option::is_none) {
+            self.retain_shaders([&descriptor.vert, &descriptor.frag]);
+            return Err(PrepareAssetError::RetryNextUpdate(asset));
         }
 
-        // Store the pipeline descriptor to the queued pipelines
+        // Store the pipeline descriptor to the queued pipelines, which now keeps its shaders alive
+        self.release_shaders([&descriptor.vert, &descriptor.frag]);
         let id = self.pipeline_iter;
         self.processing_render_pipelines.insert(id, descriptor);
         self.pipeline_iter += 1;
@@ -93,17 +95,37 @@ impl PipelineManager {
         asset: E
     ) -> Result<CachedPipelineIndex, PrepareAssetError<E>> {
         // Check that every bind group layout is Some
-        for layout in descriptor.bind_group_layouts.iter() {
-            if layout.is_none() {
-                return Err(PrepareAssetError::RetryNextUpdate(asset));
-            }
+        if descriptor.bind_group_layouts.iter().any(Option::is_none) {
+            self.retain_shaders([&descriptor.comp]);
+            return Err(PrepareAssetError::RetryNextUpdate(asset));
         }
 
-        // Store the pipeline descriptor to the queued pipelines
+        // Store the pipeline descriptor to the queued pipelines, which now keeps its shader alive
+        self.release_shaders([&descriptor.comp]);
         let id = self.pipeline_iter;
         self.processing_compute_pipelines.insert(id, descriptor);
         self.pipeline_iter += 1;
         Ok(id)
+    }
+
+    fn retain_shaders<'a>(
+        &mut self,
+        shaders: impl IntoIterator<Item = &'a Option<Handle<Shader>>>
+    ) {
+        for shader in shaders.into_iter().flatten() {
+            self.retried_shaders
+                .entry(shader.id())
+                .or_insert_with(|| shader.clone());
+        }
+    }
+
+    fn release_shaders<'a>(
+        &mut self,
+        shaders: impl IntoIterator<Item = &'a Option<Handle<Shader>>>
+    ) {
+        for shader in shaders.into_iter().flatten() {
+            self.retried_shaders.remove(&shader.id());
+        }
     }
 
     /// Get the status of a pipeline from its cached index.
@@ -295,7 +317,7 @@ fn load_render_pipelines(
                 continue;
             }
         }
-        debug!("Loaded pipeline {} with id {}", descriptor.label, id);
+        trace!("Loaded pipeline {} with id {}.", descriptor.label, id);
 
         // Add the pipeline to the loaded pipelines
         pipelines_loaded_indices.push((*id, pipeline));

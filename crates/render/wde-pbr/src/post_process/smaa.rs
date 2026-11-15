@@ -310,7 +310,7 @@ fn render_smaa(world: &World, command_buffer: &mut CommandBuffer) -> bool {
         }) {
             Ok(render_pass) => render_pass,
             Err(e) => {
-                debug!("Failed to create the SMAA render pass: {}.", e);
+                trace!("Failed to create the SMAA render pass: {}.", e);
                 return false;
             }
         };

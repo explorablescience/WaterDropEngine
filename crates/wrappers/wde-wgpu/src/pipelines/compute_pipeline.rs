@@ -110,7 +110,6 @@ impl ComputePipeline {
     ///
     /// * `Result<(), RenderError>` - The result of the initialization.
     pub fn init(&mut self, instance: &RenderInstanceData) -> Result<(), RenderError> {
-        event!(LogLevel::TRACE, "Creating compute pipeline {}.", self.label);
         let d = &self.config;
 
         // Security checks
@@ -120,7 +119,6 @@ impl ComputePipeline {
         }
 
         // Load shader
-        trace!(self.label, "Loading compute shader.");
         let shader_module = match naga::front::wgsl::parse_str(&self.config.shader) {
             Ok(shader) => {
                 match naga::valid::Validator::new(
@@ -184,7 +182,6 @@ impl ComputePipeline {
         });
 
         // Create pipeline layout
-        trace!(self.label, "Creating compute pipeline instance.");
         let layout = instance
             .device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

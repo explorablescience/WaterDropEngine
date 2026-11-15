@@ -203,7 +203,7 @@ fn bake_environment(
     }
     pass.set_bind_group(0, &bake.bind_groups[0]);
     if let Err(e) = pass.dispatch(1, 1, 1) {
-        debug!("Failed to dispatch the environment harmonics: {:?}.", e);
+        trace!("Failed to dispatch the environment harmonics: {:?}.", e);
         return false;
     }
 
@@ -220,7 +220,7 @@ fn bake_environment(
             .set_push_constants(bytemuck::bytes_of(&params));
         let workgroups = size.div_ceil(PREFILTER_TILE);
         if let Err(e) = pass.dispatch(workgroups, workgroups, 6) {
-            debug!("Failed to dispatch the environment prefilter: {:?}.", e);
+            trace!("Failed to dispatch the environment prefilter: {:?}.", e);
             return false;
         }
     }

@@ -95,7 +95,7 @@ fn update(
             controller.yaw = yaw;
             controller.pitch = pitch;
             controller.initialized = true;
-            info!("Camera controller initialized.");
+            debug!("Camera controller initialized.");
         }
         if !controller.enabled {
             mouse_events.clear();

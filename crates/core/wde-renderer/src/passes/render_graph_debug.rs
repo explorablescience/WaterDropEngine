@@ -9,7 +9,7 @@ use bevy::{
     prelude::*
 };
 use bytemuck::{Pod, Zeroable};
-use wde_logger::prelude::*;
+use wde_logger::trace;
 use wde_wgpu::{
     bind_group::{BindGroupBuilder, BindGroupLayout},
     command_buffer::{CommandBuffer, RenderPassColorAttachment},
@@ -603,7 +603,7 @@ fn draw(
     let mut render_pass: RenderPassInstance = match render_pass {
         Ok(render_pass) => render_pass,
         Err(e) => {
-            debug!("Failed to create the debug view render pass: {}.", e);
+            trace!("Failed to create the debug view render pass: {}.", e);
             return false;
         }
     };

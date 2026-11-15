@@ -24,8 +24,6 @@ type FormedModelsResult =
 
 /// Transform a parsed `GltfModel` into engine `Vertex` arrays and indices.
 pub fn form_models(model: &GltfModel) -> FormedModelsResult {
-    trace!("Forming models from glTF data");
-
     // Iterate over meshes in the model
     let mut meshes_data: Vec<MeshDataSet> = Vec::new();
     let mut bounding_boxes: Vec<(Vec3, Vec3)> = Vec::new();
@@ -89,8 +87,6 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                     }
                 }
             }
-            trace!("Loaded {} vertices for {}", vertices.len(), primitive.name);
-
             // Apply node transform to vertices
             let transform_quat = Quat::from_array(primitive.rotation);
             let scale_vec = Vec3::from(primitive.scale);
@@ -148,7 +144,6 @@ pub fn form_models(model: &GltfModel) -> FormedModelsResult {
                     min = min.min(pos);
                     max = max.max(pos);
                 }
-                trace!("Computed bounding box from vertices for {}", primitive.name);
                 (min, max)
             };
 

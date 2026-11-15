@@ -107,8 +107,6 @@ impl RenderAsset for GpuMesh {
             Self::Params
         >
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        trace!(asset.label, "Preparing GPU mesh asset.");
-
         // Get the SSBO mesh resource
         let ssbo = match ssbo_mesh.iter().next() {
             Some((_, ssbo)) => ssbo,
@@ -268,7 +266,7 @@ impl AssetLoader for MeshLoader {
         settings: &Self::Settings,
         load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
-        info!("Loading mesh {}.", load_context.path());
+        debug!("Loading mesh {}.", load_context.path());
 
         // Update the label from the path
         let label = if settings.label.is_empty() {

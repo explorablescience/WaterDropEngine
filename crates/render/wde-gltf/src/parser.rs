@@ -36,7 +36,6 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
         .and_then(|p| p.to_str())
         .unwrap_or("")
         .to_string();
-    trace!("Parsing glTF file '{}'.", path);
 
     // Parse the JSON
     let json: Value = serde_json::from_slice(&bytes)?;
@@ -84,11 +83,6 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
     let buffer_views = json["bufferViews"]
         .as_array()
         .ok_or(GltfError::MissingField("bufferViews".to_string()))?;
-    trace!(
-        "Found {} bufferViews and {} accessors",
-        buffer_views.len(),
-        accessors.len()
-    );
 
     let mut slices_data = Vec::new();
     for (i, buffer_view) in buffer_views.iter().enumerate() {
@@ -130,7 +124,7 @@ pub fn parse_gltf(bytes: Vec<u8>, path: &str) -> Result<GltfModel, GltfError> {
     let nodes_list = json["scenes"][scene_index as usize]["nodes"]
         .as_array()
         .ok_or(GltfError::MissingField("scenes.nodes".to_string()))?;
-    trace!("Processing {} nodes", nodes_list.len());
+    trace!("Processing {} nodes of '{}'.", nodes_list.len(), path);
 
     // Handle each node, depth first so that parent bones come before their children
     let mut mesh_primitives: Vec<MeshPrimitive> = Vec::new();

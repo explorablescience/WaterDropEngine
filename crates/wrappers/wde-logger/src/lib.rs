@@ -72,23 +72,28 @@ type PreFmtSubscriber =
 /// A boxed [`Layer`] that can be used with [`LogPlugin::fmt_layer`].
 type BoxedFmtLayer = Box<dyn Layer<PreFmtSubscriber> + Send + Sync + 'static>;
 
-/// The default [`LogPlugin`] [`EnvFilter`].
+/// Target prefix of the engine crates, logged at [`LogPlugin::level`].
+const ENGINE_TARGET: &str = "wde";
+
+/// Overrides for dependencies that are noisy at `INFO`.
 const DEFAULT_FILTER: &str = concat!(
-    "wgpu_hal=warn,",
+    "wgpu=warn,",
     "wgpu_hal::vulkan::instance=error,",
-    "wgpu_core=warn,",
     "naga=warn,",
     "egui_wgpu=error,",
     "winit=warn,",
-    "cosmic_text=info,",
-    "calloop=debug,",
-    "notify_debouncer_full=debug,",
-    "notify::inotify=debug,",
+    "calloop=warn,",
+    "cosmic_text=warn,",
+    "notify=warn,",
+    "notify_debouncer_full=warn"
 );
 
 /// Plugin that configures logging for WaterDropEngine applications.
 ///
 /// # Configuration
+///
+/// The engine and the [`crates`](LogPlugin::crates) of the application are logged at
+/// [`level`](LogPlugin::level), every other dependency at `INFO` at most.
 ///
 /// The `RUST_LOG` environment variable overrides plugin settings and uses [`EnvFilter`] syntax.
 /// Set `NO_COLOR=1` to disable colored output (see [no-color.org](https://no-color.org/)).
@@ -102,11 +107,15 @@ const DEFAULT_FILTER: &str = concat!(
 /// - `debug!()` - Debug information
 /// - `trace!()` - Verbose tracing
 pub struct LogPlugin {
-    /// Filters logs using the [`EnvFilter`] format
+    /// Extra [`EnvFilter`] directives, applied after the levels.
     pub filter: String,
 
-    /// Filters out logs that are "less than" the given level. This can be further filtered using the `filter` setting.
+    /// Level of the engine and of [`crates`](LogPlugin::crates).
     pub level: LogLevel,
+
+    /// Targets of the application crates (crate names with `-` replaced by `_`, matched as
+    /// prefixes), logged at [`level`](LogPlugin::level) like the engine.
+    pub crates: Vec<String>,
 
     /// Optionally add an extra [`Layer`] to the tracing subscriber.
     pub custom_layer: fn(app: &mut App) -> Option<BoxedLayer>,
@@ -125,8 +134,9 @@ pub struct LogPlugin {
 impl Default for LogPlugin {
     fn default() -> Self {
         Self {
-            filter: DEFAULT_FILTER.to_string(),
+            filter: String::new(),
             level: LogLevel::INFO,
+            crates: Vec::new(),
             custom_layer: |_| None,
             fmt_layer: |_| None,
             log_file: std::env::temp_dir().join("waterdropengine").join("log.txt")
@@ -134,37 +144,43 @@ impl Default for LogPlugin {
     }
 }
 impl LogPlugin {
-    /// Sets the log level based on debug/release mode.
+    /// `DEBUG` in debug builds and `INFO` in release builds, overridden by the `--debug` and
+    /// `--trace` arguments.
     pub fn auto_level(mut self) -> Self {
-        #[cfg(debug_assertions)]
-        {
-            self.level = if cfg!(feature = "tracing") {
-                LogLevel::TRACE
-            } else {
-                LogLevel::DEBUG
-            };
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            let args = std::env::args().collect::<Vec<_>>();
-            self.level = if args.iter().any(|arg| arg == "--debug") {
-                LogLevel::DEBUG
-            } else {
-                LogLevel::INFO
-            };
-        }
+        let args = std::env::args().collect::<Vec<_>>();
+        self.level = if args.iter().any(|arg| arg == "--trace") {
+            LogLevel::TRACE
+        } else if cfg!(debug_assertions) || args.iter().any(|arg| arg == "--debug") {
+            LogLevel::DEBUG
+        } else {
+            LogLevel::INFO
+        };
         self
     }
 
-    /// Overrides the log level for a specific crate/module target, regardless of the global `level`.
-    ///
-    /// This is useful to keep the engine's own logs quiet (e.g. `LogLevel::INFO`) while enabling
-    /// more verbose logging (e.g. `LogLevel::DEBUG`) for your own game/application crate.
-    ///
-    /// `target` should be the crate's module path as used by `tracing` (i.e. the crate name with
-    /// `-` replaced by `_`), such as `"my_game"`.
+    /// Full [`EnvFilter`] directives built from the plugin settings.
+    fn directives(&self) -> String {
+        let mut directives = format!(
+            "{},{ENGINE_TARGET}={}",
+            self.level.min(LogLevel::INFO),
+            self.level
+        );
+        for target in &self.crates {
+            directives.push_str(&format!(",{target}={}", self.level));
+        }
+        directives.push_str(&format!(",{DEFAULT_FILTER}"));
+        if !self.filter.is_empty() {
+            directives.push_str(&format!(",{}", self.filter));
+        }
+        directives
+    }
+
+    /// Overrides the log level of a crate/module target (e.g. `"bevy_asset"`), regardless of `level`.
     pub fn with_crate_level(mut self, target: &str, level: LogLevel) -> Self {
-        self.filter = format!("{},{target}={level}", self.filter);
+        if !self.filter.is_empty() {
+            self.filter.push(',');
+        }
+        self.filter.push_str(&format!("{target}={level}"));
         self
     }
 }
@@ -174,10 +190,10 @@ impl Plugin for LogPlugin {
         configure_panic_hook();
 
         // Build the tracing subscriber with the configured layers and filters
+        let directives = self.directives();
         let (subscriber, _guard) = configure_subscriber(
             app,
-            self.level,
-            &self.filter,
+            &directives,
             self.custom_layer,
             self.fmt_layer,
             &self.log_file
@@ -205,10 +221,7 @@ impl Plugin for LogPlugin {
             ),
             (false, false) => ()
         }
-        debug!(
-            "Logger and tracing subscriber initialized successfully with filter '{}' and log level '{}'.",
-            self.filter, self.level
-        );
+        debug!("Log filter: {directives}.");
 
         // Log warnings about features that may increase memory usage and potential conflicts with existing loggers/subscribers
         #[cfg(feature = "tracing")]
@@ -217,8 +230,6 @@ impl Plugin for LogPlugin {
         );
         #[cfg(feature = "puffin")]
         debug!("Tracing with Puffin is active.");
-        #[cfg(feature = "editor")]
-        debug!("Tracing with editor log layer is active.");
     }
 }
 
@@ -233,8 +244,7 @@ fn configure_panic_hook() {
 
 fn configure_subscriber(
     app: &mut App,
-    level: LogLevel,
-    filter: &str,
+    directives: &str,
     custom_layer: fn(app: &mut App) -> Option<BoxedLayer>,
     fmt_layer: fn(app: &mut App) -> Option<BoxedFmtLayer>,
     log_file: &std::path::Path
@@ -248,7 +258,7 @@ fn configure_subscriber(
     let subscriber = subscriber.with((custom_layer)(app));
 
     // Set up filter corresponding to the env variable RUST_LOG, or use the default filter if the env variable is not set or invalid
-    let default_filter = { format!("{},{}", level, filter) };
+    let default_filter = directives;
     let filter_layer = EnvFilter::try_from_default_env()
         .or_else(|from_env_error| {
             _ = from_env_error
@@ -258,7 +268,7 @@ fn configure_subscriber(
                     // We cannot use the `error!` macro here because the logger is not ready yet.
                     eprintln!("Invalid RUST_LOG environment variable: {parse_err}. Falling back to default filter: {default_filter}");
                 });
-            Ok::<EnvFilter, FromEnvError>(EnvFilter::builder().parse_lossy(&default_filter))
+            Ok::<EnvFilter, FromEnvError>(EnvFilter::builder().parse_lossy(default_filter))
         })
         .unwrap();
     let subscriber = subscriber.with(filter_layer);

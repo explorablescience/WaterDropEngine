@@ -43,11 +43,13 @@ Every module except the renderer, logger and scene is optional. A module feature
 | `full` | Every runtime module: `minimal`, `atmosphere`, `pbr-outline`, `gizmos`, `ui`, `physics`, `terrain` |
 | `everything` | `full`, plus `editor` and `terrain-editor` |
 | `camera`, `camera-controller`, `pbr`, `atmosphere`, `pbr-outline`, `gltf`, `animation`, `gizmos`, `ui`, `physics`, `terrain`, `terrain-editor`, `editor` | Individual modules |
-| `log-debug` | Enable debug-level logging |
+| `log-debug` | Compile logs up to debug level (trace is stripped) |
 | `debug` | Enable Bevy debug features |
 | `watch` | Enable hot-reloading of assets |
 | `tracing` | Enable Tracy/Puffin profiling |
 | `gpu-debug` | Enable wgpu validation layer |
+
+Logs are at `DEBUG` in debug builds and `INFO` in release builds, overridden by the `--debug` and `--trace` arguments or by `RUST_LOG`. The level applies to the engine (`wde*`) and to the application crates given in `CustomWdePlugins::log_crates`; other dependencies are capped at `INFO`. Trace is for per-event details (asset loads, retries, skipped passes), never per-frame or per-resource logs.
 
 When adding a module, gate its plugin, prelude and re-export in `crates/core/wde/src/lib.rs` behind its feature, and check that every feature still lints on its own.
 

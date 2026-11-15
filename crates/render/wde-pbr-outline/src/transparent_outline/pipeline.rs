@@ -46,7 +46,7 @@ impl RenderAsset for OutlineRenderPipeline {
                     depth: DepthDescriptor {
                         enabled: true,
                         write: false,
-                        compare: CompareFunction::NotEqual,
+                        compare: CompareFunction::Always,
                         stencil: StencilState {
                             front: StencilFaceState {
                                 compare: CompareFunction::NotEqual,

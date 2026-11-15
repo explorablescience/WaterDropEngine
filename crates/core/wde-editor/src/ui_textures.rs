@@ -195,7 +195,7 @@ fn update_images(
         );
         handles.push((handle.clone(), id));
         handles_hashmap.insert(handle.asset_id(), id);
-        debug!(
+        trace!(
             "Registered UI texture with asset ID {:?} and Egui texture ID {:?}",
             handle.asset_id(),
             id

@@ -129,10 +129,7 @@ pub(crate) fn handle_changes(
             phworld.collider_to_entity.insert(col_handle, entity);
             phworld.entity_to_rigid_body.insert(entity, rb_handle);
             phworld.rigid_body_to_entity.insert(rb_handle, entity);
-            trace!(
-                "Added collider and rigidbody for entity {:?} with collider {:?} and rigidbody {:?} handles",
-                entity, col_handle, rb_handle
-            );
+            trace!("Added the collider and rigid body of entity {entity}.");
         }
     }
 
@@ -175,7 +172,7 @@ pub(crate) fn handle_changes(
 
     // Handle updated transforms
     {
-        let _span = trace_span!("handle_updated_transforms").entered();
+        let _span = debug_span!("handle_updated_transforms").entered();
         for entity in updated_transform.iter() {
             if let Some(&rb_handle) = phworld.entity_to_rigid_body.get(&entity) {
                 // Get the updated transform
@@ -228,7 +225,7 @@ pub(crate) fn handle_changes(
         || !updated_transform.is_empty()
         || !removed_collider_entities.is_empty()
     {
-        let _span = trace_span!("handle_changes_pipeline").entered();
+        let _span = debug_span!("handle_changes_pipeline").entered();
         let mut modified_colliders = Vec::new();
         for entity in new_collider
             .iter()
@@ -275,10 +272,7 @@ pub(crate) fn handle_changes(
                 // Remove the mappings
                 phworld.entity_to_collider.remove(&entity);
                 phworld.collider_to_entity.remove(&col_handle);
-                debug!(
-                    "Removed collider and rigidbody for entity {:?} with handle {:?}",
-                    entity, col_handle
-                );
+                trace!("Removed the collider and rigid body of entity {entity}.");
             }
         });
     }

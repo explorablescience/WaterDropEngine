@@ -234,16 +234,13 @@ fn prepare_assets<A: RenderAsset>(
 
     // Remove assets
     for removed in extracted_assets.removed.drain() {
-        let label = match render_assets.get(removed) {
-            Some(asset) => asset.label(),
-            None => "(asset not loaded)"
-        };
-        trace!(
-            "Removing asset {} of type {}.",
-            label,
-            std::any::type_name::<A::SourceAsset>()
-        );
-        render_assets.remove(removed);
+        if let Some(asset) = render_assets.remove(removed) {
+            trace!(
+                "Removed asset {} of type {}.",
+                asset.label(),
+                std::any::type_name::<A::SourceAsset>()
+            );
+        }
     }
 
     // Update changed assets

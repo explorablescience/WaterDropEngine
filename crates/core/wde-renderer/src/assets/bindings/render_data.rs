@@ -83,7 +83,7 @@ fn recreate_system<R: RenderData + TypePath + Sync + Send + 'static>(
     mut recreate_version: MessageWriter<RenderDataRecreated>
 ) {
     if let Some(true) = R::recreate(&params) {
-        debug!("Recreating render data {}.", std::any::type_name::<R>());
+        trace!("Recreating render data {}.", std::any::type_name::<R>());
 
         // Create new render data and update the asset
         let builder = {
@@ -219,10 +219,6 @@ impl<R: RenderData + Clone + Asset> RenderAsset for GpuRenderData<R> {
         asset: Self::SourceAsset,
         asset_server: &mut SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        trace!(
-            "Preparing render binding {} GPU resources.",
-            std::any::type_name::<R>()
-        );
         let mut buffers = Vec::new();
         let mut textures = Vec::new();
         let mut updated_builder = RenderDataBuilder::default();

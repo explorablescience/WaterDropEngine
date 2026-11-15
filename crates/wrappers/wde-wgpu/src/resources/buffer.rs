@@ -89,8 +89,6 @@ impl Buffer {
         usage: BufferUsage,
         content: Option<&[u8]>
     ) -> Self {
-        event!(LogLevel::TRACE, "Creating new buffer {}.", label);
-
         // In case the content is not provided, create an empty buffer.
         match content {
             Some(content) => {
@@ -280,7 +278,7 @@ impl Buffer {
 
         // Wait for the buffer to be mapped
         {
-            let _span = trace_span!("wait_for_buffer_mapping").entered();
+            let _span = debug_span!("wait_for_buffer_mapping").entered();
             if let Err(e) = instance.device.poll(wgpu::PollType::Wait {
                 submission_index: None,
                 timeout: None

@@ -165,7 +165,7 @@ impl Plugin for PipelinedRenderingPlugin {
                     }
                 }
 
-                debug!("exiting pipelined rendering thread");
+                debug!("Exiting the rendering thread.");
             })
             .expect("Failed to spawn render thread");
     }

@@ -155,7 +155,7 @@ pub async fn create_instance(
     label: &str,
     primary_window: Option<&RawHandleWrapperHolder>
 ) -> RenderInstanceData<'static> {
-    info!(label, "Creating render instance.");
+    debug!(label, "Creating render instance.");
     let _trace = info_span!("wgpu-instance-create").entered();
 
     // Set flags
@@ -172,10 +172,10 @@ pub async fn create_instance(
     // Allows e.g. `WGPU_VALIDATION=0` under Nsight, whose layers trip the validation layer.
     let flags = flags.with_env();
 
-    // Create wgpu instance
-    debug!(label, "Creating wgpu instance.");
+    // Create wgpu instance. GL is left out unless requested with `WGPU_BACKEND`, as probing it only produces warnings.
+    let backends = wgpu::Backends::from_env().unwrap_or(wgpu::Backends::PRIMARY);
     let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
+        backends,
         flags,
         memory_budget_thresholds: MemoryBudgetThresholds::default(),
         backend_options: BackendOptions::default()
@@ -201,7 +201,7 @@ pub async fn create_instance(
 
     // Retrieve adapter
     let adapter = instance
-        .enumerate_adapters(wgpu::Backends::all())
+        .enumerate_adapters(backends)
         .into_iter()
         .find(|a| a.get_info().backend == wgpu::Backend::Vulkan)
         .or_else(|| {
@@ -217,7 +217,7 @@ pub async fn create_instance(
     // Check adaptater infos
     let adapter_info = adapter.get_info();
     info!(
-        "Using {} adapter {}.",
+        "Using {} adapter {} ({:?}, {} {}).",
         match adapter_info.device_type {
             wgpu::DeviceType::DiscreteGpu => "discrete GPU",
             wgpu::DeviceType::IntegratedGpu => "integrated GPU",
@@ -225,9 +225,11 @@ pub async fn create_instance(
             wgpu::DeviceType::VirtualGpu => "virtual GPU",
             wgpu::DeviceType::Other => "other"
         },
-        adapter_info.name
+        adapter_info.name,
+        adapter_info.backend,
+        adapter_info.driver,
+        adapter_info.driver_info
     );
-    debug!("Adapter info: {:#?}", adapter_info);
     if adapter_info.device_type == wgpu::DeviceType::Cpu {
         warn!(
             "The selected adapter is using a driver that only supports software rendering, this will be very slow."
@@ -261,9 +263,8 @@ pub async fn create_instance(
     }
     .unwrap_or_else(|e| panic!("Failed to create wgpu device: {:?}", e));
 
-    // Log device infos
-    debug!("Configured wgpu adapter limits: {:#?}", device.limits());
-    debug!("Configured wgpu adapter features: {:#?}", device.features());
+    trace!("Device limits: {:?}.", device.limits());
+    trace!("Device features: {:?}.", device.features());
 
     // Handle uncaught device errors
     device.on_uncaptured_error(std::sync::Arc::new(|error| match error {
@@ -321,11 +322,9 @@ pub fn setup_surface(
     adapter: &wgpu::Adapter,
     present_mode: PresentMode
 ) -> SurfaceConfiguration {
-    debug!(label, "Configuring surface.");
-
     // Retrieve surface format (sRGB if possible)
     let surface_caps = surface.get_capabilities(adapter);
-    debug!("Surface capabilities: {:#?}", surface_caps);
+    trace!("Surface capabilities: {:?}.", surface_caps);
     let surface_format = surface_caps
         .formats
         .iter()
@@ -351,6 +350,10 @@ pub fn setup_surface(
         desired_maximum_frame_latency: 2
     };
     surface.configure(device, &surface_config);
+    debug!(
+        label,
+        "Configured the surface: {}x{}, {:?}, {:?}.", size.0, size.1, surface_format, present_mode
+    );
 
     surface_config
 }

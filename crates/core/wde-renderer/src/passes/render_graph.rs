@@ -298,7 +298,7 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
             RenderGraphDebug::end_custom_pass(world);
             // If it was Some(true or false), it means the pass used custom rendering logic.
             if !custom_render_result {
-                debug!(
+                trace!(
                     "Custom rendering for pass '{}' could not be completed. Skipping this pass for this frame.",
                     pass_label
                 );
@@ -325,7 +325,7 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
             match create_render_pass(world, &mut command_buffer, pass_label, &pass_desc) {
                 Ok(pass) => Some(pass),
                 Err(e) => {
-                    debug!(
+                    trace!(
                         "Failed to create render pass: '{}'. Skipping this frame.",
                         e
                     );

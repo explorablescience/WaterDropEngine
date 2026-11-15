@@ -1,7 +1,5 @@
 //! Texture creation and copy helpers built on `wgpu::Texture`.
 
-use wde_logger::prelude::*;
-
 use crate::RenderInstanceData;
 
 /// Surface texture.
@@ -135,7 +133,6 @@ impl Texture {
         cube: bool,
         compare: Option<wgpu::CompareFunction>
     ) -> Self {
-        event!(LogLevel::TRACE, "Creating wgpu texture {}.", label);
         debug_assert!(
             !cube || layer_count == 6,
             "Cube texture {label} must have 6 layers."
@@ -496,17 +493,8 @@ impl Texture {
     /// * `instance` - Game instance.
     pub fn generate_mipmaps(&self, instance: &RenderInstanceData<'_>) {
         if self.mip_level_count <= 1 {
-            trace!(
-                "Texture {} does not have multiple mip levels ({}), skipping mipmap generation.",
-                self.label, self.mip_level_count
-            );
             return;
         }
-
-        trace!(
-            "Generating mipmaps for texture {} with {} mip levels and {} layers.",
-            self.label, self.mip_level_count, self.layer_count
-        );
 
         // Create the blit shader module
         let shader_source = r#"
@@ -698,10 +686,5 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
         }
 
         command.submit(instance);
-        event!(
-            LogLevel::TRACE,
-            "Finished generating mipmaps for texture {}.",
-            self.label
-        );
     }
 }

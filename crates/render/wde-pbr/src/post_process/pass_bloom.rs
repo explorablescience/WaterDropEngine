@@ -200,7 +200,7 @@ fn render_bloom(
         }) {
             Ok(render_pass) => render_pass,
             Err(e) => {
-                debug!("Failed to create the bloom render pass: {}.", e);
+                trace!("Failed to create the bloom render pass: {}.", e);
                 return false;
             }
         };

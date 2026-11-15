@@ -234,11 +234,6 @@ impl<'a> RenderPassInstance<'a> {
             error!(self.label, "Vertex buffer is not set.");
             return Err(RenderError::MissingVertexBuffer);
         }
-        event!(
-            LogLevel::TRACE,
-            "Drawing {} instances from indirect buffer.",
-            count
-        );
         self.render_pass
             .multi_draw_indirect(&buffer.buffer, offset, count);
         Ok(())

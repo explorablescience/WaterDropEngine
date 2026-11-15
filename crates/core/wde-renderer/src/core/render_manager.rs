@@ -23,7 +23,7 @@ pub(crate) fn init_surface(
     primary_window: ExtractWorld<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>>,
     windows: ExtractWorld<Query<&Window>>
 ) {
-    trace!("Initializing wgpu surface");
+    trace!("Initializing the wgpu surface.");
 
     // Create the wgpu surface
     let surface = {
@@ -89,7 +89,7 @@ pub(crate) fn prepare(
 
     // Wait for the surface to be initialized
     if render_instance.0.read().unwrap().surface.is_none() {
-        debug!("Waiting for surface to be initialized.");
+        trace!("Waiting for the surface to be initialized.");
         return;
     }
 
@@ -107,13 +107,13 @@ pub(crate) fn prepare(
 
             // Check for zero size (minimized window)
             if config.width == 0 || config.height == 0 {
-                debug!("Skipping resize: zero width/height.");
+                trace!("Skipping resize: zero width/height.");
                 return;
             }
 
             // Reconfigure the surface with updated dimensions
-            info!(
-                "Swapchain resize requested. Reconfiguring surface to {}x{}.",
+            debug!(
+                "Surface outdated, reconfiguring it to {}x{}.",
                 config.width, config.height
             );
             instance::resize(
@@ -131,9 +131,8 @@ pub(crate) fn prepare(
                     swapchain_frame.data = Some(render_texture);
                 }
                 RenderEvent::Resize => {
-                    // Return early - let the next frame acquire the texture after resize completes
-                    // This is especially important on X11 where resize may not be synchronous
-                    warn!("Surface resize still pending after reconfiguration.");
+                    // The next frame acquires the texture once the resize completes (asynchronous on X11)
+                    debug!("Surface resize still pending after reconfiguration.");
                 }
                 RenderEvent::None => {}
             }
@@ -149,7 +148,7 @@ pub(crate) fn present(mut swapchain_frame: ResMut<SwapchainFrame>) {
     let _ = instance::present(match swapchain_frame.data.take() {
         Some(render_texture) => render_texture.texture,
         None => {
-            warn!("Skipping frame presentation: No swapchain render texture found.");
+            trace!("Skipping frame presentation: no swapchain texture was acquired.");
             return;
         }
     });

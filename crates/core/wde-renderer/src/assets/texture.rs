@@ -89,8 +89,6 @@ impl RenderAsset for GpuTexture {
         asset: Self::SourceAsset,
         render_instance: &mut bevy::ecs::system::SystemParamItem<Self::Params>
     ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
-        trace!(asset.label, "Preparing GPU texture asset.");
-
         let render_instance = render_instance.0.as_ref().read().unwrap();
 
         // Create the texture with mip levels
@@ -162,7 +160,7 @@ impl AssetLoader for TextureLoader {
         settings: &TextureLoaderSettings,
         load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
-        debug!("Loading texture {}.", load_context.path());
+        trace!("Loading texture {}.", load_context.path());
 
         // Read the texture data bytes
         let mut bytes = Vec::new();

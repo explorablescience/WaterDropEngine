@@ -283,7 +283,6 @@ impl RenderPipeline {
     ///
     /// * `Result<(), RenderError>` - The result of the initialization.
     pub fn init(&mut self, instance: &RenderInstanceData<'_>) -> Result<(), RenderError> {
-        event!(LogLevel::TRACE, "Creating render pipeline {}.", self.label);
         let d = &self.config;
 
         // Security checks
@@ -296,7 +295,6 @@ impl RenderPipeline {
         }
 
         // Load vertex shader
-        trace!(self.label, "Loading shaders.");
         let shader_module_vert = match naga::front::wgsl::parse_str(&self.config.vertex_shader) {
             Ok(shader) => {
                 match naga::valid::Validator::new(
@@ -427,7 +425,6 @@ impl RenderPipeline {
         });
 
         // Create pipeline layout
-        trace!(self.label, "Creating render pipeline instance.");
         let layout = instance
             .device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

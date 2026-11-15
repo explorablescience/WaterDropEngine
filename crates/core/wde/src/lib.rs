@@ -123,7 +123,7 @@ impl Plugin for CustomBevyPlugins {
     }
 }
 
-/// Custom WaterDropEngine plugins. Set it in [`WdeDefaultPlugins`] to configure the window:
+/// Custom WaterDropEngine plugins. Set it in [`WdeDefaultPlugins`] to configure the window and logs:
 /// ```rust
 /// app.add_plugins(WdeDefaultPlugins.set(CustomWdePlugins {
 ///     window_title: "My Game".into(),
@@ -137,7 +137,9 @@ pub struct CustomWdePlugins {
     pub window_resolution: (u32, u32),
     /// Icon shown in the OS taskbar/title bar. See
     /// [`WindowIcon::from_bytes`](wde_renderer::prelude::WindowIcon::from_bytes).
-    pub window_icon: Option<wde_renderer::prelude::WindowIcon>
+    pub window_icon: Option<wde_renderer::prelude::WindowIcon>,
+    /// Application crates logged at the engine's level (see [`wde_logger::LogPlugin::crates`]).
+    pub log_crates: Vec<String>
 }
 impl Default for CustomWdePlugins {
     fn default() -> Self {
@@ -145,14 +147,19 @@ impl Default for CustomWdePlugins {
         Self {
             window_title: render.window_title,
             window_resolution: render.window_resolution,
-            window_icon: render.window_icon
+            window_icon: render.window_icon,
+            log_crates: Vec::new()
         }
     }
 }
 impl Plugin for CustomWdePlugins {
     fn build(&self, app: &mut App) {
         app.add_plugins((
-            wde_logger::LogPlugin::default().auto_level(),
+            wde_logger::LogPlugin {
+                crates: self.log_crates.clone(),
+                ..Default::default()
+            }
+            .auto_level(),
             wde_renderer::RenderPlugin {
                 window_title: self.window_title.clone(),
                 window_resolution: self.window_resolution,
