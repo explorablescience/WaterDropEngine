@@ -38,6 +38,7 @@ impl GltfMaterial {
                 .loader()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
+                    settings.mipmaps = true;
                     settings.format = TextureFormat::Rgba8UnormSrgb;
                 })
                 .load(path)
@@ -52,6 +53,7 @@ impl GltfMaterial {
                     .loader()
                     .with_settings(move |settings: &mut TextureLoaderSettings| {
                         settings.label = label.clone();
+                        settings.mipmaps = true;
                     })
                     .load(path)
             });
@@ -64,6 +66,7 @@ impl GltfMaterial {
                 .loader()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
+                    settings.mipmaps = true;
                 })
                 .load(path)
         });
@@ -76,6 +79,7 @@ impl GltfMaterial {
                 .loader()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
+                    settings.mipmaps = true;
                 })
                 .load(path)
         });
@@ -88,6 +92,7 @@ impl GltfMaterial {
                 .loader()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
+                    settings.mipmaps = true;
                     settings.format = TextureFormat::Rgba8UnormSrgb;
                 })
                 .load(path)

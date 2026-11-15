@@ -190,7 +190,7 @@ impl Texture {
             usage: None
         });
 
-        // Create sampler: tiling textures repeat, and are filtered anisotropically when mipmapped
+        // Create sampler: tiling textures repeat, and mipmapped textures are filtered anisotropically
         let address_mode = match tiling {
             true => wgpu::AddressMode::Repeat,
             false => wgpu::AddressMode::ClampToEdge
@@ -210,7 +210,11 @@ impl Texture {
             lod_min_clamp: 0.0,
             lod_max_clamp: mip_level_count as f32,
             compare,
-            anisotropy_clamp: if tiling && mip_level_count > 1 { 16 } else { 1 },
+            anisotropy_clamp: if mip_level_count > 1 && compare.is_none() {
+                16
+            } else {
+                1
+            },
             border_color: None
         });
 
