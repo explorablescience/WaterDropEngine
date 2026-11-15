@@ -25,7 +25,7 @@ mod subpass;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::Gizmos;
+    pub use crate::{Gizmos, data::MAX_GIZMO_LINES};
 }
 
 #[derive(Resource, Default)]

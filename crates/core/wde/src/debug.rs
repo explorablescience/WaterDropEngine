@@ -2,7 +2,7 @@
 //! Exposes a "Show Colliders" toggle that draws box colliders as gizmo cubes, a "Show Frustums"
 //! toggle that draws the frustum of the cameras, and draws the PBR cull groups and shadow cascades
 //! when their "Show Groups" and "Show Bounds" settings are enabled.
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{math::FloatOrd, prelude::*, window::PrimaryWindow};
 use wde_camera::prelude::*;
 use wde_editor::prelude::*;
 use wde_gizmos::prelude::*;
@@ -51,38 +51,56 @@ fn edit_physics_debug_settings(
         });
 }
 
+/// Share of the gizmo line buffer the heightfield wireframes may use, the rest is left to the
+/// other gizmos.
+#[cfg(feature = "physics")]
+const HEIGHTFIELD_LINE_BUDGET: usize = MAX_GIZMO_LINES / 2;
+
 /// Draws every collider as a gizmo wireframe, positioned like the physics engine sees it: at the
 /// entity's world translation only, ignoring rotation and scale (colliders are always
-/// axis-aligned, see [`wde_physics`] `handle_changes`).
+/// axis-aligned, see [`wde_physics`] `handle_changes`). Heightfields are drawn nearest to the
+/// camera first, until [`HEIGHTFIELD_LINE_BUDGET`] is reached.
 #[cfg(feature = "physics")]
 fn draw_collider_gizmos(
     settings: Res<PhysicsDebugSettings>,
     colliders: Query<(&GlobalTransform, &Collider)>,
+    camera: Query<&GlobalTransform, With<ActiveCamera>>,
     mut gizmos: ResMut<Gizmos>
 ) {
     if !settings.show_colliders && !settings.show_heightfields {
         return;
     }
 
+    let mut heightfields = Vec::new();
     for (transform, collider) in &colliders {
         let origin = transform.translation();
-
         if settings.show_colliders
             && let Some(half_extents) = collider.box_half_extents()
         {
             let cube_transform = Transform::from_translation(origin).with_scale(half_extents * 2.0);
             gizmos.cube(cube_transform, WdeColor::from_srgba(0.0, 1.0, 0.0, 1.0));
+        } else if settings.show_heightfields {
+            heightfields.push((origin, collider));
         }
-        if settings.show_heightfields
-            && let Some(lines) = collider.heightfield_wireframe()
-        {
-            for (start, end) in lines {
-                gizmos.line(
-                    origin + start,
-                    origin + end,
-                    WdeColor::from_srgba(0.2, 0.6, 1.0, 1.0)
-                );
-            }
+    }
+
+    let eye = camera.single().map_or(Vec3::ZERO, |t| t.translation());
+    heightfields.sort_by_cached_key(|(origin, _)| FloatOrd(origin.distance_squared(eye)));
+    let mut budget = HEIGHTFIELD_LINE_BUDGET;
+    for (origin, collider) in heightfields {
+        let Some(lines) = collider.heightfield_wireframe() else {
+            continue;
+        };
+        if lines.len() > budget {
+            break;
+        }
+        budget -= lines.len();
+        for (start, end) in lines {
+            gizmos.line(
+                origin + start,
+                origin + end,
+                WdeColor::from_srgba(0.2, 0.6, 1.0, 1.0)
+            );
         }
     }
 }
