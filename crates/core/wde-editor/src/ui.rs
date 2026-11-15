@@ -40,6 +40,33 @@ impl Default for EngineUiConfig {
     }
 }
 
+/// Whether the menu bar is shown, toggled by `key` (`None` disables the shortcut). Windows opened
+/// from it stay open while it is hidden. Defaults to shown, toggled by F12.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct MenuBarVisibility {
+    pub visible: bool,
+    pub key: Option<KeyCode>
+}
+impl Default for MenuBarVisibility {
+    fn default() -> Self {
+        Self {
+            visible: true,
+            key: Some(KeyCode::F12)
+        }
+    }
+}
+
+fn toggle_menu_bar(
+    keys: Option<Res<ButtonInput<KeyCode>>>,
+    mut visibility: ResMut<MenuBarVisibility>
+) {
+    if let (Some(key), Some(keys)) = (visibility.key, keys)
+        && keys.just_pressed(key)
+    {
+        visibility.visible = !visibility.visible;
+    }
+}
+
 /// The editor plugin that manages the UI menu
 pub struct EditorUIMenu;
 impl Plugin for EditorUIMenu {
@@ -51,7 +78,17 @@ impl Plugin for EditorUIMenu {
             )
             .add_plugins(UITexturesPlugin)
             .init_resource::<UIMenu>()
-            .add_systems(PreUpdate, draw.in_set(EditorMenuBarSet).after(EguiPassSet));
+            .init_resource::<MenuBarVisibility>()
+            .add_systems(
+                PreUpdate,
+                (
+                    toggle_menu_bar,
+                    draw.run_if(|v: Res<MenuBarVisibility>| v.visible)
+                )
+                    .chain()
+                    .in_set(EditorMenuBarSet)
+                    .after(EguiPassSet)
+            );
     }
 }
 

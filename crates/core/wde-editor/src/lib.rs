@@ -49,7 +49,9 @@ pub mod prelude {
     // Re-export editor types
     pub use super::panels::FrameDataOverlayConfig;
     pub use super::theme as ui_theme;
-    pub use super::ui::{EditorMenuBarSet, EngineUiConfig, EngineUiSet, UIMenu, UIWindow};
+    pub use super::ui::{
+        EditorMenuBarSet, EngineUiConfig, EngineUiSet, MenuBarVisibility, UIMenu, UIWindow
+    };
     pub use super::ui_textures::{UITextureHandle, UITextures};
 }
 
