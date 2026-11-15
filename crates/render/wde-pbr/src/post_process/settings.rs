@@ -19,7 +19,8 @@ pub struct PostProcessSettings {
     pub dithering: bool,
     pub anti_aliasing: AntiAliasing,
     /// Quality of the [`AntiAliasing::Smaa`].
-    pub smaa_preset: SmaaPreset
+    pub smaa_preset: SmaaPreset,
+    pub sharpening: SharpeningSettings
 }
 
 /// Anti-aliasing of the final image.
@@ -53,6 +54,29 @@ impl SmaaPreset {
             Self::High => [0.1, 16.0, 8.0, 0.25],
             Self::Ultra => [0.05, 32.0, 16.0, 0.25]
         }
+    }
+}
+
+/// AMD FidelityFX contrast adaptive sharpening, applied after the anti-aliasing to restore the details it blurred.
+/// It sharpens the low-contrast areas more than the edges, which limits the halos.
+#[derive(Clone, Debug, Reflect)]
+pub struct SharpeningSettings {
+    pub enabled: bool,
+    /// Sharpening strength, in [0, 1].
+    pub sharpness: f32
+}
+impl Default for SharpeningSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            sharpness: 0.5
+        }
+    }
+}
+impl SharpeningSettings {
+    /// Negative weight of the neighbors at full amplitude, from -1/8 to -1/5.
+    fn peak(&self) -> f32 {
+        -1.0 / (8.0 - 3.0 * self.sharpness.clamp(0.0, 1.0))
     }
 }
 
@@ -301,6 +325,8 @@ pub(crate) struct PostProcessUniform {
     pub anti_aliasing: [f32; 4],
     /// See [`SmaaPreset::params`]
     pub smaa: [f32; 4],
+    /// x=enabled (0 or 1), y=peak weight (see [`SharpeningSettings::peak`])
+    pub sharpening: [f32; 4],
     /// x=eye adaptation (0 or 1), y=delta time in seconds, z=brighten speed, w=darken speed
     pub exposure: [f32; 4],
     /// x=min log2 luminance, y=log2 luminance range, z=low percentile, w=high percentile
@@ -370,6 +396,16 @@ impl PostProcessUniform {
             time: [time, 0.0, 0.0, 0.0],
             anti_aliasing: [settings.anti_aliasing as u32 as f32, 0.0, 0.0, 0.0],
             smaa: settings.smaa_preset.params(),
+            sharpening: [
+                if settings.sharpening.enabled {
+                    1.0
+                } else {
+                    0.0
+                },
+                settings.sharpening.peak(),
+                0.0,
+                0.0
+            ],
             exposure: [
                 if exposure.eye_adaptation { 1.0 } else { 0.0 },
                 delta.max(0.0),
@@ -489,6 +525,19 @@ mod tests {
         assert_eq!(exposure.compensation(0.0), 2.0);
         assert_eq!(exposure.compensation(1.0), -1.0);
         assert_eq!(exposure.compensation(0.5), 0.5);
+    }
+
+    #[test]
+    fn sharpening_peak_spans_cas_range() {
+        let peak = |sharpness| {
+            SharpeningSettings {
+                enabled: true,
+                sharpness
+            }
+            .peak()
+        };
+        assert_eq!(peak(0.0), -1.0 / 8.0);
+        assert_eq!(peak(1.0), -1.0 / 5.0);
     }
 
     #[test]

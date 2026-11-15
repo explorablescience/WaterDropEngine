@@ -188,7 +188,7 @@ impl RenderBinding for SmaaBlendBinding {
 }
 
 /// First two passes of the SMAA, from the LDR texture of the [`PostProcessTextures`]: the edge detection,
-/// then the blending weights of each pixel. The neighborhood blending is done by [`RenderPassPostProcess`](super::RenderPassPostProcess).
+/// then the blending weights of each pixel. The neighborhood blending is done by [`RenderPassAntiAliasing`](super::RenderPassAntiAliasing).
 ///
 /// It has a render index of 96, and does nothing when the [`AntiAliasing`] is not SMAA.
 pub struct RenderPassSmaa;
@@ -409,7 +409,7 @@ impl RenderAsset for SmaaWeightsPipeline {
     }
 }
 
-/// Neighborhood blending, drawn to the swapchain by the anti-aliasing sub-pass.
+/// Neighborhood blending, drawn by the anti-aliasing sub-pass.
 #[derive(TypePath, Default, Clone, Debug)]
 pub(crate) struct SmaaBlendPipeline(pub CachedPipelineIndex);
 impl RenderAsset for SmaaBlendPipeline {
@@ -430,7 +430,7 @@ impl RenderAsset for SmaaBlendPipeline {
                 "smaa-blend",
                 "core/render/post_process/smaa_blend.frag.wgsl",
                 binding.iter().next().map(|(_, b)| b.layout.clone()),
-                None,
+                Some(vec![PostProcessTextures::LDR_FORMAT]),
                 asset_server
             ),
             asset

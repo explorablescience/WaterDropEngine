@@ -7,7 +7,9 @@ use bevy::{
 };
 use wde_renderer::{prelude::*, wgpu_utils::BindGroup};
 
-use super::data::{AntiAliasingBinding, PostProcessCompositeBinding, PostProcessTextures};
+use super::data::{
+    AntiAliasingBinding, PostProcessCompositeBinding, PostProcessTextures, SharpeningBinding
+};
 use super::settings::{AntiAliasing, PostProcessUniform};
 use super::smaa::{SmaaBlendBinding, SmaaBlendPipeline};
 
@@ -40,11 +42,38 @@ impl RenderPass for RenderPassComposite {
     }
 }
 
+/// Anti-aliasing pass, rendering to the anti-aliased texture of the [`PostProcessTextures`].
+///
+/// It smooths the edges of the composited image, with the FXAA or the SMAA neighborhood blending. It has a render index of 97.
+pub struct RenderPassAntiAliasing;
+impl RenderPass for RenderPassAntiAliasing {
+    type Params = SRenderData<PostProcessTextures>;
+
+    fn describe(textures: &SystemParamItem<Self::Params>) -> RenderPassDesc {
+        RenderPassDesc {
+            attachments_colors: Some(vec![RenderPassDescColorAttachment {
+                texture: textures
+                    .iter()
+                    .next()
+                    .and_then(|(_, t)| t.get_texture(PostProcessTextures::ANTI_ALIASED_IDX))
+                    .map(|t| t.id()),
+                ..Default::default()
+            }]),
+            ..Default::default()
+        }
+    }
+    fn id() -> RenderPassId {
+        97
+    }
+    fn label() -> &'static str {
+        "post-process-anti-aliasing"
+    }
+}
+
 /// Final post-processing pass, rendering to the swapchain.
 ///
-/// Its anti-aliasing sub-pass copies the composited image to the swapchain, smoothing its edges (with the FXAA,
-/// or the SMAA neighborhood blending).
-/// Other full-screen effects can be added as sub-passes after it: they draw over the final image.
+/// Its sharpening sub-pass copies the anti-aliased image to the swapchain, with the contrast adaptive sharpening
+/// when it is enabled. Other full-screen effects can be added as sub-passes after it: they draw over the final image.
 ///
 /// It has a render index of 100: passes rendering to the swapchain over the scene (such as the UI) come after it.
 pub struct RenderPassPostProcess;
@@ -116,6 +145,41 @@ impl RenderAsset for AntiAliasingPipeline {
                     label: "post-process-anti-aliasing",
                     vert: Some(assets_server.load("core/render/post_process/fullscreen.vert.wgsl")),
                     frag: Some(assets_server.load("core/render/post_process/fxaa.frag.wgsl")),
+                    bind_group_layouts: vec![binding.iter().next().map(|(_, b)| b.layout.clone())],
+                    depth: DepthDescriptor {
+                        enabled: false,
+                        ..default()
+                    },
+                    render_targets: Some(vec![PostProcessTextures::LDR_FORMAT]),
+                    ..default()
+                },
+                asset
+            )?
+        ))
+    }
+}
+
+#[derive(TypePath, Default, Clone, Debug)]
+pub(crate) struct SharpeningPipeline(pub CachedPipelineIndex);
+impl RenderAsset for SharpeningPipeline {
+    type SourceAsset = RenderPipelineAsset<SharpeningPipeline>;
+    type Params = (
+        SRes<AssetServer>,
+        SResMut<PipelineManager>,
+        SBinding<SharpeningBinding>
+    );
+
+    fn prepare(
+        _id: AssetId<Self::SourceAsset>,
+        asset: Self::SourceAsset,
+        (assets_server, pipeline_manager, binding): &mut SystemParamItem<Self::Params>
+    ) -> Result<Self, PrepareAssetError<Self::SourceAsset>> {
+        Ok(SharpeningPipeline(
+            pipeline_manager.create_render_pipeline(
+                RenderPipelineDescriptor {
+                    label: "post-process-sharpening",
+                    vert: Some(assets_server.load("core/render/post_process/fullscreen.vert.wgsl")),
+                    frag: Some(assets_server.load("core/render/post_process/cas.frag.wgsl")),
                     bind_group_layouts: vec![binding.iter().next().map(|(_, b)| b.layout.clone())],
                     depth: DepthDescriptor {
                         enabled: false,
@@ -198,5 +262,26 @@ impl RenderSubPass for SubRenderPassAntiAliasing {
 
     fn label() -> &'static str {
         "post-process-anti-aliasing"
+    }
+}
+
+pub(crate) struct SubRenderPassSharpening;
+impl RenderSubPass for SubRenderPassSharpening {
+    type Params = (
+        SRes<RenderAssets<SharpeningPipeline>>,
+        SRes<PostProcessingMesh>,
+        SBinding<SharpeningBinding>
+    );
+
+    fn describe((pipeline, mesh, binding): &SystemParamItem<Self::Params>) -> RenderSubPassDesc {
+        fullscreen_draw(
+            pipeline.iter().next().map(|(_, p)| p.0),
+            mesh,
+            binding.iter().next().map(|(_, b)| b.bind_group.clone())
+        )
+    }
+
+    fn label() -> &'static str {
+        "post-process-sharpening"
     }
 }

@@ -21,8 +21,10 @@ pub struct PostProcessTextures;
 impl PostProcessTextures {
     /// The tonemapped image, before the anti-aliasing.
     pub const LDR_IDX: u32 = 0;
+    /// The anti-aliased image, before the sharpening.
+    pub const ANTI_ALIASED_IDX: u32 = 1;
     /// The first bloom mip. Mip `i` is at index `BLOOM_IDX + i`.
-    pub const BLOOM_IDX: u32 = 1;
+    pub const BLOOM_IDX: u32 = 2;
 
     pub const LDR_FORMAT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
 }
@@ -38,16 +40,21 @@ impl RenderData for PostProcessTextures {
             )
         };
         let usages = TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING;
-        builder.add_texture(
-            Self::LDR_IDX,
-            Texture {
-                label: "post-process-ldr".to_string(),
-                size,
-                format: Self::LDR_FORMAT,
-                usages,
-                ..Default::default()
-            }
-        );
+        for (idx, label) in [
+            (Self::LDR_IDX, "post-process-ldr"),
+            (Self::ANTI_ALIASED_IDX, "post-process-anti-aliased")
+        ] {
+            builder.add_texture(
+                idx,
+                Texture {
+                    label: label.to_string(),
+                    size,
+                    format: Self::LDR_FORMAT,
+                    usages,
+                    ..Default::default()
+                }
+            );
+        }
         for mip in 0..BLOOM_MIP_COUNT {
             builder.add_texture(
                 Self::BLOOM_IDX + mip,
@@ -206,6 +213,34 @@ impl RenderBinding for AntiAliasingBinding {
 
     fn label(&self) -> &str {
         "post-process-anti-aliasing-binding"
+    }
+}
+
+/// Inputs of the sharpening: the anti-aliased image and the parameters.
+#[derive(Asset, Clone, TypePath, Default)]
+pub(crate) struct SharpeningBinding;
+impl RenderBinding for SharpeningBinding {
+    type Params = (
+        SRenderData<PostProcessTextures>,
+        SRenderData<PostProcessBuffers>
+    );
+
+    fn describe(
+        &mut self,
+        (textures, buffers): &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
+        builder
+            .add_texture_view(textures, PostProcessTextures::ANTI_ALIASED_IDX)
+            .add_buffer(buffers, PostProcessBuffers::PARAMS_IDX);
+    }
+
+    fn has_dependencies(&self) -> bool {
+        true
+    }
+
+    fn label(&self) -> &str {
+        "post-process-sharpening-binding"
     }
 }
 

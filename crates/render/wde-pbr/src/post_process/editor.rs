@@ -202,6 +202,12 @@ fn edit_post_process_settings(
                             }
                         });
                 }
+                ui.add(Separator::default());
+                ui.columns(2, |cols| {
+                    cols[0].add(Checkbox::new(&mut s.sharpening.enabled, "Sharpening"));
+                    cols[1]
+                        .add(Slider::new(&mut s.sharpening.sharpness, 0.0..=1.0).text("Sharpness"));
+                });
             });
 
             egui::CollapsingHeader::new("Effects").show(ui, |ui| {

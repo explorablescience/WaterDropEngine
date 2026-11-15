@@ -7,7 +7,8 @@
 //! - [`RenderPassComposite`] (ID 95): composites the chromatic aberration, the bloom, the exposure, the color grading, the tonemapping,
 //!   the vignette, the film grain and the dithering into the LDR texture of the [`PostProcessTextures`].
 //! - [`RenderPassSmaa`] (ID 96): edge detection and blending weights of the SMAA, when it is the [`AntiAliasing`].
-//! - [`RenderPassPostProcess`] (ID 100): anti-aliases the LDR texture to the swapchain (see [`AntiAliasing`]).
+//! - [`RenderPassAntiAliasing`] (ID 97): anti-aliases the LDR texture (see [`AntiAliasing`]).
+//! - [`RenderPassPostProcess`] (ID 100): copies the anti-aliased image to the swapchain, sharpening it (see [`SharpeningSettings`]).
 //!
 //! To add a full-screen effect over the final image, add a sub-pass to [`RenderPassPostProcess`]. To add an HDR effect,
 //! add a pass between 50 and 91 that reads and writes the render texture.
@@ -26,7 +27,7 @@ mod smaa;
 
 pub use data::{BLOOM_MIP_COUNT, PostProcessTextures};
 pub use pass_bloom::RenderPassBloom;
-pub use pass_composite::{RenderPassComposite, RenderPassPostProcess};
+pub use pass_composite::{RenderPassAntiAliasing, RenderPassComposite, RenderPassPostProcess};
 pub use pass_exposure::RenderPassExposure;
 pub use pass_fog::RenderPassFog;
 pub use settings::*;
@@ -50,6 +51,7 @@ impl Plugin for PostProcessPlugin {
                 RenderBindingRegisterPlugin::<PostProcessParamsBinding>::default(),
                 RenderBindingRegisterPlugin::<PostProcessCompositeBinding>::default(),
                 RenderBindingRegisterPlugin::<AntiAliasingBinding>::default(),
+                RenderBindingRegisterPlugin::<SharpeningBinding>::default(),
                 RenderBindingRegisterPlugin::<FogBinding>::default(),
                 RenderPipelineRegisterPlugin::<FogPipeline>::default(),
                 RenderPipelineRegisterPlugin::<BloomDownsamplePipeline>::default(),
@@ -57,7 +59,8 @@ impl Plugin for PostProcessPlugin {
                 RenderPipelineRegisterPlugin::<ExposureHistogramPipeline>::default(),
                 RenderPipelineRegisterPlugin::<ExposureAveragePipeline>::default(),
                 RenderPipelineRegisterPlugin::<CompositePipeline>::default(),
-                RenderPipelineRegisterPlugin::<AntiAliasingPipeline>::default()
+                RenderPipelineRegisterPlugin::<AntiAliasingPipeline>::default(),
+                RenderPipelineRegisterPlugin::<SharpeningPipeline>::default()
             ))
             .add_plugins((
                 RenderDataRegisterPlugin::<SmaaTextures>::default(),
@@ -94,7 +97,9 @@ impl Plugin for PostProcessPlugin {
             .add_pass::<RenderPassComposite>()
             .add_sub_pass::<SubRenderPassComposite, RenderPassComposite>()
             .add_pass::<RenderPassSmaa>()
+            .add_pass::<RenderPassAntiAliasing>()
+            .add_sub_pass::<SubRenderPassAntiAliasing, RenderPassAntiAliasing>()
             .add_pass::<RenderPassPostProcess>()
-            .add_sub_pass::<SubRenderPassAntiAliasing, RenderPassPostProcess>();
+            .add_sub_pass::<SubRenderPassSharpening, RenderPassPostProcess>();
     }
 }
