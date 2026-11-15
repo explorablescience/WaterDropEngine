@@ -130,6 +130,8 @@ pub struct DebugViewSettings {
     pub exposure: f32,
     /// Reinhard tonemapping of the [`DebugViewMode::Color`], for HDR colors.
     pub tonemap: bool,
+    /// Views the stencil aspect of depth-stencil textures instead of their depth.
+    pub stencil: bool,
     pub layer: u32,
     pub mip: u32
 }
@@ -141,6 +143,7 @@ impl Default for DebugViewSettings {
             range: [0.0, 1.0],
             exposure: 0.0,
             tonemap: false,
+            stencil: false,
             layer: 0,
             mip: 0
         }
@@ -161,6 +164,7 @@ impl DebugViewSettings {
                 data(DebugChannels::R, [0.99, 1.0])
             }
             f if f.has_depth_aspect() => data(DebugChannels::R, [0.0, 1.0]),
+            TextureFormat::Stencil8 => Self::for_stencil(),
             TextureFormat::R32Float => data(DebugChannels::R, [0.0, 100.0]),
             f if f.sample_type(None, None) == Some(TextureSampleType::Uint) => {
                 data(DebugChannels::Rgb, [0.0, 255.0])
@@ -176,7 +180,32 @@ impl DebugViewSettings {
             _ => data(DebugChannels::Rgb, [0.0, 1.0])
         }
     }
+
+    /// Settings to view the stencil aspect of a texture.
+    pub fn for_stencil() -> Self {
+        Self {
+            mode: DebugViewMode::Integer,
+            channels: DebugChannels::R,
+            range: [0.0, 255.0],
+            stencil: true,
+            ..Default::default()
+        }
+    }
 }
+
+/// Linear color of an integer value in the [`DebugViewMode::Integer`]: black for 0, and hues spread by the golden
+/// ratio for the others.
+pub fn debug_integer_color(value: u32) -> [f32; 3] {
+    if value == 0 {
+        return [0.0; 3];
+    }
+    let hue = ((value - 1) as f32 * 0.618_034).fract();
+    [0.0, 2.0 / 3.0, 1.0 / 3.0].map(|offset| {
+        let ramp = (((hue + offset).fract() * 6.0 - 3.0).abs() - 1.0).clamp(0.0, 1.0);
+        1.0 + (ramp - 1.0) * DEBUG_INTEGER_SATURATION
+    })
+}
+const DEBUG_INTEGER_SATURATION: f32 = 0.8;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum DebugViewMode {
@@ -184,7 +213,10 @@ pub enum DebugViewMode {
     Data,
     /// Linear colors, with an exposure and an optional tonemapping.
     #[default]
-    Color
+    Color,
+    /// Rounded values, each with its own color (see [`debug_integer_color`]), such as stencil values. The `Rgb`
+    /// channels show the red one.
+    Integer
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -269,7 +301,7 @@ impl DebugTextureReport {
             layers: texture.layer_count,
             mips: texture.mip_level_count,
             viewable: texture.sample_count == 1
-                && view_pipeline_kind(texture.sample_type()).is_some()
+                && view_pipeline_kind(texture.sample_type(false)).is_some()
         }
     }
 }
@@ -684,7 +716,8 @@ fn draw(
     else {
         return false;
     };
-    let Some(kind) = view_pipeline_kind(source.sample_type()) else {
+    let settings = &state.settings;
+    let Some(kind) = view_pipeline_kind(source.sample_type(settings.stencil)) else {
         return false;
     };
     let pipeline_id = match kind {
@@ -699,10 +732,10 @@ fn draw(
         return false;
     };
 
-    let settings = &state.settings;
     let view = source.single_view(
         settings.layer.min(source.layer_count.saturating_sub(1)),
-        settings.mip.min(source.mip_level_count.saturating_sub(1))
+        settings.mip.min(source.mip_level_count.saturating_sub(1)),
+        settings.stencil
     );
     let bind_group = {
         let instance = world.resource::<RenderInstance>().0.read().unwrap();

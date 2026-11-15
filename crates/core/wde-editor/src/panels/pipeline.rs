@@ -337,11 +337,31 @@ fn texture_view(
     // View settings
     let settings = &mut view.settings;
     ui.horizontal(|ui| {
+        if let Some(format) = texture
+            .format
+            .filter(|f| f.is_combined_depth_stencil_format())
+        {
+            ui.label("Aspect");
+            let mut stencil = settings.stencil;
+            egui::ComboBox::from_id_salt("pipeline-aspect")
+                .selected_text(if stencil { "Stencil" } else { "Depth" })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(&mut stencil, false, "Depth");
+                    ui.selectable_value(&mut stencil, true, "Stencil");
+                });
+            if stencil != settings.stencil {
+                *settings = view_settings(format, stencil);
+            }
+        }
         ui.label("Mode");
         egui::ComboBox::from_id_salt("pipeline-mode")
             .selected_text(format!("{:?}", settings.mode))
             .show_ui(ui, |ui| {
-                for mode in [DebugViewMode::Data, DebugViewMode::Color] {
+                for mode in [
+                    DebugViewMode::Data,
+                    DebugViewMode::Color,
+                    DebugViewMode::Integer
+                ] {
                     ui.selectable_value(&mut settings.mode, mode, format!("{mode:?}"));
                 }
             });
@@ -360,7 +380,11 @@ fn texture_view(
                 }
             });
     });
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
+        if settings.mode == DebugViewMode::Integer {
+            integer_legend(ui);
+            return;
+        }
         let [min, max] = &mut settings.range;
         let speed = ((*max - *min).abs() * 0.002).max(1e-5);
         ui.label("Range");
@@ -382,7 +406,7 @@ fn texture_view(
         if ui.button("Reset view").clicked()
             && let Some(format) = texture.format
         {
-            *settings = DebugViewSettings::for_format(format);
+            *settings = view_settings(format, settings.stencil);
         }
     });
     ui.weak("NaN in magenta, infinity in cyan.");
@@ -407,6 +431,25 @@ fn texture_view(
             (uv.y * mip_size.1 as f32) as u32
         ));
     }
+}
+
+fn view_settings(format: TextureFormat, stencil: bool) -> DebugViewSettings {
+    if stencil {
+        DebugViewSettings::for_stencil()
+    } else {
+        DebugViewSettings::for_format(format)
+    }
+}
+
+/// Colors of the first values of the [`DebugViewMode::Integer`].
+fn integer_legend(ui: &mut egui::Ui) {
+    ui.label("Values");
+    for value in 0..16 {
+        let [r, g, b] = debug_integer_color(value);
+        swatch(ui, egui::Rgba::from_rgb(r, g, b).into());
+        ui.monospace(value.to_string());
+    }
+    ui.weak("...");
 }
 
 /// Recreates the texture the selected texture is drawn into when its size changes, and applies the default view

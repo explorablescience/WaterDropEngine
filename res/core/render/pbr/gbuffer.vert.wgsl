@@ -6,15 +6,16 @@ struct VertexOutput {
     @location(1) normal_world: vec3<f32>,     // Normal in world space
     @location(2) tangent_world: vec4<f32>,    // Tangent in world space
     @location(3) bitangent_world: vec3<f32>,  // Bitangent in world space
-    @location(4) @interpolate(flat) debug_lod: u32, // See lod_debug_albedo
+    @location(4) @interpolate(flat) debug: u32, // See mesh_debug_albedo
     @location(5) ndc_z: f32,                  // Linear view-space depth (-view_z, always positive)
+    @location(6) @interpolate(linear) barycentric: vec3<f32>, // See triangle_coverage
 };
 
 // Push constants informations about the current mesh
 struct PushConstants {
     first_vertex: u32,
     first_index: u32,
-    debug_lod: u32
+    debug: u32
 }
 var<push_constant> push_constants: PushConstants;
 
@@ -66,7 +67,8 @@ fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32)
     let clip_pos = in_camera.view_to_ndc * view_pos4;
     out.clip_position = clip_pos;
     out.ndc_z = -view_pos4.z;
-    out.debug_lod = push_constants.debug_lod;
+    out.debug = push_constants.debug;
+    out.barycentric = triangle_corner(vid);
 
     // Pass through texture coordinates
     out.tex_coord = tex_coord;

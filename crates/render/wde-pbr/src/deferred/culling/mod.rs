@@ -26,7 +26,8 @@
 //! commands.spawn((Transform::default(), CullGroupMember(group)));
 //! ```
 //! Levels can be toggled with the [`CullingSettings`] and [`LodSettings`] resources, editable in
-//! the `PBR/Culling` editor window along with the [`CullingStats`].
+//! the `PBR/Culling` editor window along with the [`CullingStats`]. The [`MeshDebugView`]s and the
+//! wireframe of [`LodSettings`] show the drawn levels and the size of their triangles on screen.
 use std::sync::{Arc, Mutex};
 
 use bevy::prelude::*;
@@ -41,7 +42,7 @@ mod groups;
 mod lod;
 
 pub use groups::{CullGroup, CullGroupMember, InCullGroup};
-pub use lod::LodSettings;
+pub use lod::{LodSettings, MeshDebugView};
 
 /// Culling views: the camera, then each shadow cascade.
 pub const CULL_VIEW_COUNT: usize = 4;

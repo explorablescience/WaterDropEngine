@@ -160,8 +160,8 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Read G-Buffer
     let tmp_g_albedo_metallic  = textureLoad(in_albedo_metallic_t, pixel, 0);
     let tmp_g_normal_roughness = textureLoad(in_normal_roughness_t, pixel, 0);
-    let albedo    = tmp_g_albedo_metallic.rgb;
-    let metallic  = clamp(tmp_g_albedo_metallic.a * in_pbr_params.material_params.x, 0.0, 1.0);
+    var albedo    = tmp_g_albedo_metallic.rgb;
+    var metallic  = clamp(tmp_g_albedo_metallic.a * in_pbr_params.material_params.x, 0.0, 1.0);
     let normal    = normalize(tmp_g_normal_roughness.xyz);
     let roughness = clamp(tmp_g_normal_roughness.a * in_pbr_params.material_params.y, 0.0, 1.0);
     let ao        = textureLoad(in_ao_t, pixel, 0).r;
@@ -172,6 +172,22 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
         if in_occlusion.debug.x > 0.0 {
             return vec4<f32>(vec3<f32>(occlusion), 1.0);
         }
+    }
+
+    let debug_view = pbr_debug_view(in_pbr_params);
+    if debug_view == PBR_DEBUG_ALBEDO {
+        return vec4<f32>(albedo, 1.0);
+    } else if debug_view == PBR_DEBUG_NORMALS {
+        return pbr_debug_data(normal * 0.5 + 0.5);
+    } else if debug_view == PBR_DEBUG_ROUGHNESS {
+        return pbr_debug_data(vec3<f32>(roughness));
+    } else if debug_view == PBR_DEBUG_METALLIC {
+        return pbr_debug_data(vec3<f32>(metallic));
+    } else if debug_view == PBR_DEBUG_OCCLUSION {
+        return pbr_debug_data(vec3<f32>(ao * occlusion));
+    } else if debug_view == PBR_DEBUG_CLAY {
+        albedo = vec3<f32>(PBR_DEBUG_CLAY_ALBEDO);
+        metallic = 0.0;
     }
 
     // View direction from camera to fragment
@@ -188,6 +204,9 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
         geo_normal *= sign(dot(geo_normal, view_dir) + 1e-6);
     }
     let shadow = sample_cascaded_shadow(world_position, geo_normal);
+    if debug_view == PBR_DEBUG_SHADOW {
+        return pbr_debug_data(vec3<f32>(shadow));
+    }
 
     // Accumulate lighting from each light source
     var lo = vec3<f32>(0.0);
@@ -215,10 +234,11 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let ambient = environment_lighting(
         in_environment_sh, in_environment_map, in_environment_sampler, in_environment_brdf,
         normal, view_dir, albedo, metallic, roughness, f0, ao * occlusion
-    ) * in_pbr_params.lighting_params.y;
+    );
+    let ambient_scale = in_pbr_params.lighting_params.y;
 
     // Linear HDR output, tonemapped in post-processing
-    var color = lo + ambient + emissive;
+    var color = pbr_debug_light(debug_view, lo, ambient.diffuse * ambient_scale, ambient.specular * ambient_scale, emissive);
     color = color * in_pbr_params.lighting_params.z;
     return vec4<f32>(color, 1.0);
 }

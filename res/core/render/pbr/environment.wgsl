@@ -41,6 +41,11 @@ fn specular_occlusion(n_dot_v: f32, ao: f32, roughness: f32) -> f32 {
     return clamp(pow(n_dot_v + ao, exp2(-16.0 * alpha - 1.0)) - 1.0 + ao, 0.0, 1.0);
 }
 
+struct EnvironmentLight {
+    diffuse: vec3<f32>,
+    specular: vec3<f32>
+}
+
 // Diffuse and specular light of a surface by the environment. The specular uses the split-sum approximation: the
 // prefiltered environment along the reflection, times the reflectance of the BRDF lookup table.
 fn environment_lighting(
@@ -50,7 +55,7 @@ fn environment_lighting(
     brdf_lut: texture_2d<f32>,
     n: vec3<f32>, v: vec3<f32>,
     albedo: vec3<f32>, metallic: f32, roughness: f32, f0: vec3<f32>, ao: f32
-) -> vec3<f32> {
+) -> EnvironmentLight {
     let n_dot_v = clamp(dot(n, v), 1e-4, 1.0);
     let brdf = textureSampleLevel(brdf_lut, map_sampler, vec2<f32>(n_dot_v, roughness), 0.0).rg;
     let reflectance = f0 * brdf.x + brdf.y;
@@ -61,5 +66,5 @@ fn environment_lighting(
 
     // The light not reflected by the specular layer is diffused
     let diffuse = (1.0 - reflectance) * (1.0 - metallic) * albedo * environment_diffuse(sh, n) * ao;
-    return diffuse + specular;
+    return EnvironmentLight(diffuse, specular);
 }

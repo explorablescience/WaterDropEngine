@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use wde_editor::prelude::*;
 
-use crate::prelude::PbrSettings;
+use crate::prelude::{PbrDebugView, PbrSettings};
 
 pub(crate) struct PbrLightingEditorPlugin;
 impl Plugin for PbrLightingEditorPlugin {
@@ -33,5 +33,30 @@ fn edit_pbr_settings(
                 cols[1]
                     .add(Slider::new(&mut pbr.roughness_scale, 0.0..=2.0).text("Roughness Scale"));
             });
+            ui.separator();
+
+            let mut view = pbr.debug_view;
+            ComboBox::from_label("Debug View")
+                .selected_text(view.label())
+                .show_ui(ui, |ui| {
+                    for (i, option) in PbrDebugView::ALL.into_iter().enumerate() {
+                        if i == 1 || option == PbrDebugView::Albedo {
+                            ui.separator();
+                        }
+                        ui.selectable_value(&mut view, option, option.label());
+                    }
+                });
+            if view != pbr.debug_view {
+                pbr.debug_view = view;
+            }
+            match pbr.debug_view {
+                PbrDebugView::Off => {}
+                v if v.is_data() => {
+                    ui.label("Values as they are, without post-processing.");
+                }
+                _ => {
+                    ui.label("Exposure frozen. No fog, bloom or screen effects.");
+                }
+            }
         });
 }

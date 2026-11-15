@@ -50,7 +50,7 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
 pub(crate) struct PushConstants {
     first_vertex: u32,
     first_index: u32,
-    debug_lod: u32
+    debug: u32
 }
 
 fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
@@ -106,7 +106,7 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
                 bytemuck::bytes_of(&[PushConstants {
                     first_vertex: mesh.ssbo_first_vertex,
                     first_index: lod.first_index,
-                    debug_lod: LodSettings::debug_lod(lod_settings, level, mesh.lods.len())
+                    debug: LodSettings::debug_flags(lod_settings, level, mesh.lods.len())
                 }])
             );
             if let Err(e) = render_pass.draw(0..lod.index_count, instances) {

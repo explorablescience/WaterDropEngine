@@ -6,8 +6,9 @@ struct VertexOutput {
     @location(1) normal_world: vec3<f32>,     // Normal in world space
     @location(2) tangent_world: vec4<f32>,    // Tangent in world space
     @location(3) bitangent_world: vec3<f32>,  // Bitangent in world space
-    @location(4) @interpolate(flat) debug_lod: u32, // See lod_debug_albedo
+    @location(4) @interpolate(flat) debug: u32, // See mesh_debug_albedo
     @location(5) ndc_z: f32,                  // View-space Z (linear depth)
+    @location(6) @interpolate(linear) barycentric: vec3<f32>, // See triangle_coverage
 };
 @group(1) @binding(0) var<uniform> in_camera: Camera;
 
@@ -34,6 +35,7 @@ struct Material3dUniform {
 @fragment
 fn main(in: VertexOutput) -> FragOutput {
     var out: FragOutput;
+    let coverage = triangle_coverage(in.barycentric);
 
     // Store linear view-space depth for better precision
     out.depth = write_depth(in.ndc_z);
@@ -47,8 +49,8 @@ fn main(in: VertexOutput) -> FragOutput {
     if (in_pbr_material.flags.y == 1.0) { // Metallic-roughness texture present
         metallic_value = textureSample(in_metallic_roughness_texture, in_metallic_roughness_sampler, in.tex_coord).b;
     }
-    if (in.debug_lod != 0u) {
-        albedo_color = lod_debug_albedo(albedo_color, in.debug_lod);
+    if (in.debug != 0u) {
+        albedo_color = mesh_debug_albedo(albedo_color, in.debug, coverage);
         metallic_value = 0.0;
     }
     out.albedo_metallic = vec4<f32>(albedo_color, metallic_value);
@@ -79,7 +81,7 @@ fn main(in: VertexOutput) -> FragOutput {
     if (in_pbr_material.emissive.w == 1.0) { // Emissive texture present
         emissive *= textureSample(in_emissive_texture, in_emissive_sampler, in.tex_coord).rgb;
     }
-    out.emissive = vec4<f32>(emissive, 0.0);
+    out.emissive = vec4<f32>(emissive * (1.0 - mesh_debug_wireframe(in.debug, coverage)), 0.0);
 
     return out;
 }

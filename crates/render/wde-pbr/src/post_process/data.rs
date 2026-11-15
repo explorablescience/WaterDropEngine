@@ -274,6 +274,7 @@ impl RenderBinding for FogBinding {
 
 pub(crate) fn extract_post_process_params(
     settings: ExtractWorld<Res<PostProcessSettings>>,
+    pbr: ExtractWorld<Res<PbrSettings>>,
     time: ExtractWorld<Res<Time>>,
     #[cfg(feature = "atmosphere")] atmosphere: ExtractWorld<Res<AtmosphereSettings>>,
     mut params: ResMut<PostProcessUniform>,
@@ -285,6 +286,7 @@ pub(crate) fn extract_post_process_params(
     );
     #[cfg(not(feature = "atmosphere"))]
     let day = 1.0;
+    let settings = settings.for_debug_view(pbr.debug_view);
     *params = PostProcessUniform::from_settings(
         &settings,
         time.elapsed_secs_wrapped(),

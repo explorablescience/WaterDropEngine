@@ -1,4 +1,5 @@
 #include "core/render/atmosphere/sky.wgsl"
+#include "core/render/pbr/pbr_params.wgsl"
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -17,6 +18,7 @@ struct Camera {
 // Linear view-space depth written by the GBuffer pass, 0 where there is no geometry
 @group(1) @binding(0) var in_depth_t: texture_2d<f32>;
 @group(2) @binding(1) var<uniform> in_atmosphere: AtmosphereParams;
+@group(2) @binding(2) var<uniform> in_pbr_params: PbrParams;
 
 // Reconstruct the world-space view ray for this fragment.
 fn view_ray(uv: vec2<f32>) -> vec3<f32> {
@@ -32,6 +34,10 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let depth = textureLoad(in_depth_t, vec2<i32>(in.clip_position.xy), 0).r;
     if depth > 0.0 {
         discard;
+    }
+    // The debug views of the lighting only show surfaces
+    if pbr_debug_view(in_pbr_params) != PBR_DEBUG_OFF {
+        return vec4<f32>(0.0, 0.0, 0.0, 1.0);
     }
 
     let ray = view_ray(in.tex_coord);

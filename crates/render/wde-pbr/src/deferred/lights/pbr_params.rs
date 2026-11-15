@@ -12,7 +12,8 @@ pub struct PbrSettings {
     pub exposure: f32,
     pub metallic_scale: f32,
     pub roughness_scale: f32,
-    pub min_roughness: f32
+    pub min_roughness: f32,
+    pub debug_view: PbrDebugView
 }
 impl Default for PbrSettings {
     fn default() -> Self {
@@ -22,7 +23,76 @@ impl Default for PbrSettings {
             exposure: 1.0,
             metallic_scale: 1.0,
             roughness_scale: 1.0,
-            min_roughness: 0.0
+            min_roughness: 0.0,
+            debug_view: PbrDebugView::Off
+        }
+    }
+}
+
+/// What the PBR lighting shows instead of the lit surfaces. The sky is black in every view.
+///
+/// The lighting views show one term of the light, at the exposure of the last lit frame and with the color grading,
+/// but without the fog, the bloom and the screen effects. The data views show a surface property as it is, without
+/// any post-processing. Same values as the `PBR_DEBUG_*` constants of `pbr_params.wgsl`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Reflect)]
+pub enum PbrDebugView {
+    #[default]
+    Off = 0,
+    /// Every surface grey and non-metallic, keeping its normals and roughness.
+    Clay = 1,
+    /// Light of the light sources, shadowed.
+    Direct = 2,
+    AmbientDiffuse = 3,
+    AmbientSpecular = 4,
+    Emissive = 5,
+    /// Linear albedo.
+    Albedo = 6,
+    /// World normals, from [-1, 1] to [0, 1].
+    Normals = 7,
+    /// Roughness, after the [`PbrSettings::roughness_scale`].
+    Roughness = 8,
+    /// Metallic, after the [`PbrSettings::metallic_scale`].
+    Metallic = 9,
+    /// Occlusion of the ambient light: of the material, times the screen-space one.
+    Occlusion = 10,
+    /// Visibility of the directional light through the shadow maps.
+    Shadow = 11
+}
+impl PbrDebugView {
+    pub const ALL: [Self; 12] = [
+        Self::Off,
+        Self::Clay,
+        Self::Direct,
+        Self::AmbientDiffuse,
+        Self::AmbientSpecular,
+        Self::Emissive,
+        Self::Albedo,
+        Self::Normals,
+        Self::Roughness,
+        Self::Metallic,
+        Self::Occlusion,
+        Self::Shadow
+    ];
+
+    /// Whether it shows a surface property rather than light.
+    pub fn is_data(self) -> bool {
+        self as u32 >= Self::Albedo as u32
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Off => "Off",
+            Self::Clay => "Clay",
+            Self::Direct => "Direct Light",
+            Self::AmbientDiffuse => "Ambient Diffuse",
+            Self::AmbientSpecular => "Ambient Specular",
+            Self::Emissive => "Emissive",
+            Self::Albedo => "Albedo",
+            Self::Normals => "Normals",
+            Self::Roughness => "Roughness",
+            Self::Metallic => "Metallic",
+            Self::Occlusion => "Occlusion",
+            Self::Shadow => "Shadow"
         }
     }
 }
@@ -30,7 +100,7 @@ impl Default for PbrSettings {
 #[repr(C)]
 #[derive(Resource, Clone, Copy, Debug, Pod, Zeroable)]
 pub struct PbrParamsUniform {
-    /// x=direct_scale, y=ambient_scale, z=exposure
+    /// x=direct_scale, y=ambient_scale, z=exposure, w=debug_view
     pub lighting_params: [f32; 4],
     /// x=metallic_scale, y=roughness_scale, z=min_roughness
     pub material_params: [f32; 4]
@@ -49,7 +119,7 @@ impl PbrParamsUniform {
                 settings.direct_scale,
                 settings.ambient_scale,
                 settings.exposure,
-                0.0
+                settings.debug_view as u32 as f32
             ],
             material_params: [
                 settings.metallic_scale,

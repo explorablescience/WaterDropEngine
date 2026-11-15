@@ -2,6 +2,18 @@ use bevy::prelude::*;
 use wde_camera::prelude::*;
 use wde_renderer::prelude::*;
 
+/// Coloring of the meshes, to check their levels of detail.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Reflect)]
+pub enum MeshDebugView {
+    #[default]
+    Off,
+    /// By drawn level: green, yellow, orange then red, and blue for the meshes without levels.
+    Levels,
+    /// By area of their triangles on screen: red under 1 pixel, orange 4, yellow 16, green 64,
+    /// blue over 256.
+    TriangleDensity
+}
+
 /// Selection of the levels of detail of the meshes (see [`Mesh::lods`]).
 #[derive(Resource, Clone, ExtractResource, Reflect)]
 #[reflect(Resource)]
@@ -12,18 +24,33 @@ pub struct LodSettings {
     pub max_pixel_error: f32,
     /// Draw every mesh with this level, or its coarsest one.
     pub force_level: Option<usize>,
-    /// Color the meshes by drawn level: green, yellow, orange then red, and blue for the meshes
-    /// without levels.
-    pub show_levels: bool
+    pub debug_view: MeshDebugView,
+    /// Draw the edges of the triangles over the meshes.
+    pub wireframe: bool
 }
 impl LodSettings {
-    /// Level `lod` of a mesh with `levels` levels, as given to the shaders: 0 when
-    /// [`Self::show_levels`] is unset, `lod + 1`, or `MAX_MESH_LODS + 1` without levels.
-    pub(crate) fn debug_lod(settings: Option<&Self>, lod: usize, levels: usize) -> u32 {
-        match settings {
-            Some(settings) if settings.show_levels && levels <= 1 => MAX_MESH_LODS as u32 + 1,
-            Some(settings) if settings.show_levels => lod as u32 + 1,
-            _ => 0
+    /// Whether a debug view changes the look of the meshes.
+    pub fn debugging(&self) -> bool {
+        self.debug_view != MeshDebugView::Off || self.wireframe
+    }
+
+    /// Debug views of level `lod` of a mesh with `levels` levels, as given to the shaders (see
+    /// `mesh_debug_albedo`): `lod + 1` in the low bits in the levels view, or `MAX_MESH_LODS + 1`
+    /// without levels, then the density and wireframe flags.
+    pub(crate) fn debug_flags(settings: Option<&Self>, lod: usize, levels: usize) -> u32 {
+        let Some(settings) = settings else {
+            return 0;
+        };
+        let view = match settings.debug_view {
+            MeshDebugView::Off => 0,
+            MeshDebugView::Levels if levels <= 1 => MAX_MESH_LODS as u32 + 1,
+            MeshDebugView::Levels => lod as u32 + 1,
+            MeshDebugView::TriangleDensity => DEBUG_DENSITY
+        };
+        view | if settings.wireframe {
+            DEBUG_WIREFRAME
+        } else {
+            0
         }
     }
 }
@@ -33,10 +60,15 @@ impl Default for LodSettings {
             enabled: true,
             max_pixel_error: 1.0,
             force_level: None,
-            show_levels: false
+            debug_view: MeshDebugView::Off,
+            wireframe: false
         }
     }
 }
+
+/// Same as `MESH_DEBUG_DENSITY` and `MESH_DEBUG_WIREFRAME` in the shaders.
+const DEBUG_DENSITY: u32 = 1 << 4;
+const DEBUG_WIREFRAME: u32 = 1 << 5;
 
 /// Culling camera, as seen by the level of detail selection.
 #[derive(Clone, Copy)]
@@ -158,6 +190,28 @@ mod tests {
     #[test]
     fn finer_when_scaled_up() {
         assert_eq!(select(100.0, 2.0), 1);
+    }
+
+    #[test]
+    fn debug_flags() {
+        let mut settings = LodSettings::default();
+        assert_eq!(LodSettings::debug_flags(Some(&settings), 2, 4), 0);
+        settings.debug_view = MeshDebugView::Levels;
+        assert_eq!(LodSettings::debug_flags(Some(&settings), 2, 4), 3);
+        assert_eq!(
+            LodSettings::debug_flags(Some(&settings), 0, 1),
+            MAX_MESH_LODS as u32 + 1
+        );
+        settings.wireframe = true;
+        assert_eq!(
+            LodSettings::debug_flags(Some(&settings), 2, 4),
+            3 | DEBUG_WIREFRAME
+        );
+        settings.debug_view = MeshDebugView::TriangleDensity;
+        assert_eq!(
+            LodSettings::debug_flags(Some(&settings), 2, 4),
+            DEBUG_DENSITY | DEBUG_WIREFRAME
+        );
     }
 
     #[test]

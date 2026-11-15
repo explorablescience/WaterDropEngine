@@ -140,6 +140,6 @@ pub use render_graph::*;
 pub(crate) use render_graph_debug::RenderGraphDebugPlugin;
 pub use render_graph_debug::{
     DebugChannels, DebugPassReport, DebugPointReport, DebugSelection, DebugTextureReport,
-    DebugViewMode, DebugViewSettings, RenderGraphDebug, RenderGraphDebugView
+    DebugViewMode, DebugViewSettings, RenderGraphDebug, RenderGraphDebugView, debug_integer_color
 };
 pub use render_graph_timings::{DebugFrameTimings, DebugTiming};

@@ -1,5 +1,9 @@
+use std::borrow::Cow;
+
 use bevy::prelude::*;
 use bytemuck::{Pod, Zeroable};
+
+use crate::prelude::PbrDebugView;
 
 /// Settings of the post-processing stack. Insert it in the main world to configure the effects.
 ///
@@ -22,6 +26,33 @@ pub struct PostProcessSettings {
     pub smaa_preset: SmaaPreset,
     pub taa: TaaSettings,
     pub sharpening: SharpeningSettings
+}
+impl PostProcessSettings {
+    /// The settings applied over a debug view of the lighting (see [`PbrDebugView`]): its lighting views keep the
+    /// exposure (frozen) and the color grading, its data views keep only the anti-aliasing.
+    pub fn for_debug_view(&self, view: PbrDebugView) -> Cow<'_, Self> {
+        if view == PbrDebugView::Off {
+            return Cow::Borrowed(self);
+        }
+        let mut s = self.clone();
+        s.fog.enabled = false;
+        s.bloom.enabled = false;
+        s.exposure.brighten_speed = 0.0;
+        s.exposure.darken_speed = 0.0;
+        s.vignette.intensity = 0.0;
+        s.chromatic_aberration.intensity = 0.0;
+        s.film_grain.intensity = 0.0;
+        s.sharpening.enabled = false;
+        if view.is_data() {
+            s.exposure.eye_adaptation = false;
+            s.exposure.day_compensation = 0.0;
+            s.exposure.night_compensation = 0.0;
+            s.color_grading = ColorGrading::default();
+            s.tonemapping = Tonemapping::None;
+            s.dithering = false;
+        }
+        Cow::Owned(s)
+    }
 }
 
 /// Anti-aliasing of the final image.

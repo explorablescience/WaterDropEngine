@@ -2,6 +2,7 @@
 // Shared PBR utility functions and types.
 // Include with:  #include "core/render/pbr/pbr_functions.wgsl"
 // ================================================================
+#include "core/render/pbr/pbr_params.wgsl"
 
 // ── SHARED TYPES & STRUCTURES ───────────────────────────────────
 
@@ -164,14 +165,6 @@ struct LightData {
     radiance:  vec3<f32>
 };
 
-/// Runtime parameters controlling deferred PBR lighting.
-struct PbrParams {
-    /// x=direct_scale, y=ambient_scale, z=exposure
-    lighting_params: vec4<f32>,
-    /// x=metallic_scale, y=roughness_scale, z=min_roughness
-    material_params: vec4<f32>
-};
-
 /// Compute light direction and radiance at a given world-space fragment position.
 fn get_light_data(light: Light, frag_world_pos: vec3<f32>) -> LightData {
     var light_dir: vec3<f32>;
@@ -233,19 +226,70 @@ fn get_depth_world_position(uv: vec2<f32>, linear_depth: f32, camera: Camera) ->
     return world.xyz;
 }
 
-/// Albedo of a mesh in the level of detail debug view: `debug_lod` is the drawn level + 1, 5 for a
-/// mesh without levels, 0 when the view is off. Keeps the shading of `albedo` to tell the parts apart.
-fn lod_debug_albedo(albedo: vec3<f32>, debug_lod: u32) -> vec3<f32> {
-    if (debug_lod == 0u) {
-        return albedo;
+// Debug views of the meshes (see LodSettings::debug_flags): the level + 1 in the low bits (5 for a mesh
+// without levels, 0 when off), then the flags
+const MESH_DEBUG_LEVEL_MASK: u32 = 15u;
+const MESH_DEBUG_DENSITY: u32 = 16u;
+const MESH_DEBUG_WIREFRAME: u32 = 32u;
+
+// Colors of the levels, and of the triangle densities from 1 to 256 pixels per triangle
+const MESH_DEBUG_COLORS = array<vec3<f32>, 5>(
+    vec3<f32>(0.1, 0.8, 0.1),
+    vec3<f32>(0.9, 0.85, 0.1),
+    vec3<f32>(1.0, 0.45, 0.05),
+    vec3<f32>(0.9, 0.05, 0.05),
+    vec3<f32>(0.2, 0.4, 0.95)
+);
+
+/// Barycentric coordinates of the corner `vertex_index` of its triangle, in a draw without index buffer.
+/// To be interpolated linearly in screen space, for `triangle_coverage`.
+fn triangle_corner(vertex_index: u32) -> vec3<f32> {
+    return select(vec3<f32>(0.0), vec3<f32>(1.0), vec3<u32>(0u, 1u, 2u) == vec3<u32>(vertex_index % 3u));
+}
+
+struct TriangleCoverage {
+    edge_distance: f32, // To the nearest edge of the triangle, in pixels
+    area: f32           // Of the triangle on screen, in pixels
+}
+
+/// Coverage of the triangle of a fragment, from its screen-space barycentric coordinates. Takes derivatives:
+/// call in uniform control flow.
+fn triangle_coverage(barycentric: vec3<f32>) -> TriangleCoverage {
+    let dx = dpdx(barycentric);
+    let dy = dpdy(barycentric);
+    let gradient = max(sqrt(dx * dx + dy * dy), vec3<f32>(1e-8));
+    let edge = barycentric / gradient;
+    var out: TriangleCoverage;
+    out.edge_distance = min(min(edge.x, edge.y), edge.z);
+    // The triangle is half the unit square in barycentric space
+    out.area = 0.5 / max(abs(dx.x * dy.y - dx.y * dy.x), 1e-12);
+    return out;
+}
+
+/// Albedo of a mesh in the debug views `debug`, keeping the shading of `albedo` to tell the parts apart in
+/// the levels view.
+fn mesh_debug_albedo(albedo: vec3<f32>, debug: u32, coverage: TriangleCoverage) -> vec3<f32> {
+    var colors = MESH_DEBUG_COLORS;
+    var color = albedo;
+    let level = debug & MESH_DEBUG_LEVEL_MASK;
+    if level != 0u {
+        let luma = dot(albedo, vec3<f32>(0.2126, 0.7152, 0.0722));
+        color = colors[min(level - 1u, 4u)] * (0.4 + 0.6 * luma);
     }
-    var colors = array<vec3<f32>, 5>(
-        vec3<f32>(0.1, 0.8, 0.1),
-        vec3<f32>(0.9, 0.85, 0.1),
-        vec3<f32>(1.0, 0.45, 0.05),
-        vec3<f32>(0.9, 0.05, 0.05),
-        vec3<f32>(0.2, 0.4, 0.95)
-    );
-    let luma = dot(albedo, vec3<f32>(0.2126, 0.7152, 0.0722));
-    return colors[min(debug_lod - 1u, 4u)] * (0.4 + 0.6 * luma);
+    if (debug & MESH_DEBUG_DENSITY) != 0u {
+        // Red, orange, yellow, green then blue every 4 times more pixels per triangle
+        let t = clamp(log2(coverage.area) * 0.5, 0.0, 3.999);
+        let i = u32(t);
+        var ramp = array<u32, 5>(3u, 2u, 1u, 0u, 4u);
+        color = mix(colors[ramp[i]], colors[ramp[i + 1u]], fract(t));
+    }
+    return color * (1.0 - mesh_debug_wireframe(debug, coverage));
+}
+
+/// Opacity of the wireframe over a fragment, 0 when off.
+fn mesh_debug_wireframe(debug: u32, coverage: TriangleCoverage) -> f32 {
+    if (debug & MESH_DEBUG_WIREFRAME) == 0u {
+        return 0.0;
+    }
+    return 1.0 - smoothstep(0.25, 1.0, coverage.edge_distance);
 }

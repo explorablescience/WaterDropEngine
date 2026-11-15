@@ -236,13 +236,14 @@ impl Texture {
     }
 
     /// `D2` view of a single layer and mip level, of the depth aspect for depth formats, so that any texture can be
-    /// read with `textureLoad` (see [`Texture::sample_type`]).
-    pub fn single_view(&self, layer: u32, mip_level: u32) -> TextureView {
+    /// read with `textureLoad` (see [`Texture::sample_type`]). With `stencil`, the stencil aspect of depth-stencil
+    /// formats is viewed instead.
+    pub fn single_view(&self, layer: u32, mip_level: u32, stencil: bool) -> TextureView {
         self.texture.create_view(&wgpu::TextureViewDescriptor {
             label: Some(format!("{}-layer-{}-mip-{}-view", self.label, layer, mip_level).as_str()),
             format: None,
             dimension: Some(wgpu::TextureViewDimension::D2),
-            aspect: self.aspect(),
+            aspect: self.aspect(stencil),
             base_mip_level: mip_level,
             mip_level_count: Some(1),
             base_array_layer: layer,
@@ -252,12 +253,14 @@ impl Texture {
     }
 
     /// Type of the values of a [`Texture::single_view`], or `None` if the format can't be read by a shader.
-    pub fn sample_type(&self) -> Option<TextureSampleType> {
-        self.format.sample_type(Some(self.aspect()), None)
+    pub fn sample_type(&self, stencil: bool) -> Option<TextureSampleType> {
+        self.format.sample_type(Some(self.aspect(stencil)), None)
     }
 
-    fn aspect(&self) -> wgpu::TextureAspect {
-        if self.format.has_depth_aspect() {
+    fn aspect(&self, stencil: bool) -> wgpu::TextureAspect {
+        if stencil && self.format.is_combined_depth_stencil_format() {
+            wgpu::TextureAspect::StencilOnly
+        } else if self.format.has_depth_aspect() {
             wgpu::TextureAspect::DepthOnly
         } else {
             wgpu::TextureAspect::All

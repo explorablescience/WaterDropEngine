@@ -9,7 +9,8 @@ struct VertexOutput {
     @location(0) tex_coord:    vec2<f32>,
     @location(1) normal_world: vec3<f32>,
     @location(2) world_pos:    vec3<f32>,
-    @location(3) @interpolate(flat) debug_lod: u32,
+    @location(3) @interpolate(flat) debug: u32,
+    @location(4) @interpolate(linear) barycentric: vec3<f32>,
 };
 
 @group(1) @binding(0) var<uniform> in_camera: Camera;
@@ -37,12 +38,25 @@ struct Material3dUniform {
 
 @fragment
 fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @location(0) vec4<f32> {
+    let coverage = triangle_coverage(in.barycentric);
     var albedo = in_pbr_material.albedo;
     if (in_pbr_material.flags.x == 1.0) {
         albedo = textureSample(in_albedo_texture, in_albedo_sampler, in.tex_coord);
     }
-    albedo = vec4<f32>(lod_debug_albedo(albedo.rgb, in.debug_lod), albedo.a);
-    let metallic  = clamp(in_pbr_material.metallic * in_pbr_params.material_params.x, 0.0, 1.0);
+    if (in.debug != 0u) {
+        albedo = vec4<f32>(mesh_debug_albedo(albedo.rgb, in.debug, coverage), albedo.a);
+    }
+    var metallic  = clamp(in_pbr_material.metallic * in_pbr_params.material_params.x, 0.0, 1.0);
+
+    // The data debug views show the opaque surfaces behind
+    let debug_view = pbr_debug_view(in_pbr_params);
+    if pbr_debug_is_data(debug_view) {
+        discard;
+    }
+    if debug_view == PBR_DEBUG_CLAY {
+        albedo = vec4<f32>(vec3<f32>(PBR_DEBUG_CLAY_ALBEDO), albedo.a);
+        metallic = 0.0;
+    }
     let roughness = clamp(in_pbr_material.roughness * in_pbr_params.material_params.y, 0.0, 1.0);
 
     var normal = normalize(in.normal_world);
@@ -74,7 +88,8 @@ fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @locatio
     let ambient = environment_lighting(
         in_environment_sh, in_environment_map, in_environment_sampler, in_environment_brdf,
         normal, view_dir, albedo.rgb, metallic, roughness, f0, 1.0
-    ) * in_pbr_params.lighting_params.y;
+    );
+    let ambient_scale = in_pbr_params.lighting_params.y;
 
     // Glass reflects more at grazing angles: raise opacity there
     let n_dot_v = clamp(dot(normal, view_dir), 0.0, 1.0);
@@ -86,7 +101,7 @@ fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @locatio
         emissive *= textureSample(in_emissive_texture, in_emissive_sampler, in.tex_coord).rgb;
     }
 
-    var color = lo + ambient + emissive;
+    var color = pbr_debug_light(debug_view, lo, ambient.diffuse * ambient_scale, ambient.specular * ambient_scale, emissive * (1.0 - mesh_debug_wireframe(in.debug, coverage)));
     color = color * in_pbr_params.lighting_params.z;
     return vec4<f32>(color, alpha);
 }
