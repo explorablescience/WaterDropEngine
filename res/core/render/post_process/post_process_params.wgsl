@@ -11,7 +11,8 @@ struct PostProcessParams {
     vignette_color: vec4<f32>,
     effects: vec4<f32>,        // x = chromatic aberration, y = grain intensity, z = grain response, w = dithering
     time: vec4<f32>,           // x = time in seconds
-    anti_aliasing: vec4<f32>,  // x = method (0 = none, 1 = FXAA)
+    anti_aliasing: vec4<f32>,  // x = method (0 = none, 1 = FXAA, 2 = SMAA)
+    smaa: vec4<f32>,           // x = edge threshold, y = search steps, z = diagonal search steps, w = corner rounding (< 0 disabled)
     exposure: vec4<f32>,       // x = eye adaptation, y = delta time, z = brighten speed, w = darken speed
     exposure_metering: vec4<f32>, // x = min log2 luminance, y = log2 luminance range, z = low percentile, w = high percentile
     exposure_limits: vec4<f32> // x = min EV, y = max EV

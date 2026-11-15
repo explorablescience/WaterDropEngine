@@ -42,7 +42,7 @@ fn luma_at(uv: vec2<f32>) -> f32 {
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let uv = in.tex_coord;
     let center = sample_color(uv);
-    if in_params.anti_aliasing.x < 0.5 {
+    if in_params.anti_aliasing.x != 1.0 {
         return vec4<f32>(center, 1.0);
     }
     let texel = 1.0 / vec2<f32>(textureDimensions(in_ldr_t));

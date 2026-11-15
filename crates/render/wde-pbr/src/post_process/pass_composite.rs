@@ -8,6 +8,8 @@ use bevy::{
 use wde_renderer::{prelude::*, wgpu_utils::BindGroup};
 
 use super::data::{AntiAliasingBinding, PostProcessCompositeBinding, PostProcessTextures};
+use super::settings::{AntiAliasing, PostProcessUniform};
+use super::smaa::{SmaaBlendBinding, SmaaBlendPipeline};
 
 /// Composite pass, rendering to the LDR texture of the [`PostProcessTextures`].
 ///
@@ -40,7 +42,8 @@ impl RenderPass for RenderPassComposite {
 
 /// Final post-processing pass, rendering to the swapchain.
 ///
-/// Its anti-aliasing sub-pass copies the composited image to the swapchain, smoothing its edges.
+/// Its anti-aliasing sub-pass copies the composited image to the swapchain, smoothing its edges (with the FXAA,
+/// or the SMAA neighborhood blending).
 /// Other full-screen effects can be added as sub-passes after it: they draw over the final image.
 ///
 /// It has a render index of 100: passes rendering to the swapchain over the scene (such as the UI) come after it.
@@ -166,12 +169,26 @@ impl RenderSubPass for SubRenderPassComposite {
 pub(crate) struct SubRenderPassAntiAliasing;
 impl RenderSubPass for SubRenderPassAntiAliasing {
     type Params = (
-        SRes<RenderAssets<AntiAliasingPipeline>>,
+        SRes<PostProcessUniform>,
         SRes<PostProcessingMesh>,
-        SBinding<AntiAliasingBinding>
+        SRes<RenderAssets<AntiAliasingPipeline>>,
+        SBinding<AntiAliasingBinding>,
+        SRes<RenderAssets<SmaaBlendPipeline>>,
+        SBinding<SmaaBlendBinding>
     );
 
-    fn describe((pipeline, mesh, binding): &SystemParamItem<Self::Params>) -> RenderSubPassDesc {
+    fn describe(
+        (params, mesh, pipeline, binding, smaa_pipeline, smaa_binding): &SystemParamItem<
+            Self::Params
+        >
+    ) -> RenderSubPassDesc {
+        // Until the SMAA is ready, the FXAA shader copies the image as is
+        if params.anti_aliasing() == AntiAliasing::Smaa
+            && let (Some((_, p)), Some((_, b))) =
+                (smaa_pipeline.iter().next(), smaa_binding.iter().next())
+        {
+            return fullscreen_draw(Some(p.0), mesh, Some(b.bind_group.clone()));
+        }
         fullscreen_draw(
             pipeline.iter().next().map(|(_, p)| p.0),
             mesh,

@@ -176,7 +176,7 @@ fn edit_post_process_settings(
                 egui::ComboBox::from_label("Method")
                     .selected_text(format!("{:?}", s.anti_aliasing))
                     .show_ui(ui, |ui| {
-                        for method in [AntiAliasing::None, AntiAliasing::Fxaa] {
+                        for method in [AntiAliasing::None, AntiAliasing::Fxaa, AntiAliasing::Smaa] {
                             ui.selectable_value(
                                 &mut s.anti_aliasing,
                                 method,
@@ -184,6 +184,24 @@ fn edit_post_process_settings(
                             );
                         }
                     });
+                if s.anti_aliasing == AntiAliasing::Smaa {
+                    egui::ComboBox::from_label("SMAA Preset")
+                        .selected_text(format!("{:?}", s.smaa_preset))
+                        .show_ui(ui, |ui| {
+                            for preset in [
+                                SmaaPreset::Low,
+                                SmaaPreset::Medium,
+                                SmaaPreset::High,
+                                SmaaPreset::Ultra
+                            ] {
+                                ui.selectable_value(
+                                    &mut s.smaa_preset,
+                                    preset,
+                                    format!("{preset:?}")
+                                );
+                            }
+                        });
+                }
             });
 
             egui::CollapsingHeader::new("Effects").show(ui, |ui| {

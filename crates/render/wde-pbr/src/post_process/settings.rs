@@ -17,7 +17,9 @@ pub struct PostProcessSettings {
     pub film_grain: FilmGrainSettings,
     /// Adds a tiny noise to the output to hide the banding of 8-bit gradients.
     pub dithering: bool,
-    pub anti_aliasing: AntiAliasing
+    pub anti_aliasing: AntiAliasing,
+    /// Quality of the [`AntiAliasing::Smaa`].
+    pub smaa_preset: SmaaPreset
 }
 
 /// Anti-aliasing of the final image.
@@ -26,7 +28,32 @@ pub enum AntiAliasing {
     None,
     /// Fast approximate anti-aliasing: blurs the contrasted edges along their direction.
     #[default]
-    Fxaa
+    Fxaa,
+    /// Subpixel morphological anti-aliasing: recognizes the shapes of the aliased edges, and blends each pixel
+    /// with its neighbors by the area the real edge covers. Sharper than FXAA, at about twice its cost.
+    Smaa
+}
+
+/// Quality of the SMAA: the edge threshold, and the length of the edges searched.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Reflect)]
+pub enum SmaaPreset {
+    Low,
+    Medium,
+    /// Also smooths the diagonal edges and rounds the corners.
+    #[default]
+    High,
+    Ultra
+}
+impl SmaaPreset {
+    /// x=edge threshold, y=search steps, z=diagonal search steps (0 disables them), w=corner rounding in [0, 1] (negative disables it).
+    fn params(self) -> [f32; 4] {
+        match self {
+            Self::Low => [0.15, 4.0, 0.0, -1.0],
+            Self::Medium => [0.1, 8.0, 0.0, -1.0],
+            Self::High => [0.1, 16.0, 8.0, 0.25],
+            Self::Ultra => [0.05, 32.0, 16.0, 0.25]
+        }
+    }
 }
 
 /// Exponential height fog, applied to the opaque geometry and to the sky, before the transparent objects.
@@ -272,6 +299,8 @@ pub(crate) struct PostProcessUniform {
     pub time: [f32; 4],
     /// x=anti-aliasing method
     pub anti_aliasing: [f32; 4],
+    /// See [`SmaaPreset::params`]
+    pub smaa: [f32; 4],
     /// x=eye adaptation (0 or 1), y=delta time in seconds, z=brighten speed, w=darken speed
     pub exposure: [f32; 4],
     /// x=min log2 luminance, y=log2 luminance range, z=low percentile, w=high percentile
@@ -285,6 +314,14 @@ impl Default for PostProcessUniform {
     }
 }
 impl PostProcessUniform {
+    pub fn anti_aliasing(&self) -> AntiAliasing {
+        match self.anti_aliasing[0] as u32 {
+            1 => AntiAliasing::Fxaa,
+            2 => AntiAliasing::Smaa,
+            _ => AntiAliasing::None
+        }
+    }
+
     /// `day` is the day amount in [0, 1] used for the exposure compensation.
     pub fn from_settings(settings: &PostProcessSettings, time: f32, delta: f32, day: f32) -> Self {
         let bloom = &settings.bloom;
@@ -332,6 +369,7 @@ impl PostProcessUniform {
             ],
             time: [time, 0.0, 0.0, 0.0],
             anti_aliasing: [settings.anti_aliasing as u32 as f32, 0.0, 0.0, 0.0],
+            smaa: settings.smaa_preset.params(),
             exposure: [
                 if exposure.eye_adaptation { 1.0 } else { 0.0 },
                 delta.max(0.0),

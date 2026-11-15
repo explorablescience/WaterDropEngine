@@ -259,21 +259,26 @@ fn get_format_properties(texture_format: TextureFormat) -> Option<(u32, u32)> {
     }
 }
 
-/// Convert an image to a pixel buffer.
-fn from_channels<T: Clone + Copy + bytemuck::NoUninit + bytemuck::Pod>(
-    data: &[T],
-    channels: u32
-) -> Vec<T> {
-    let inv_channels = [4, 3, 2, 1];
+/// Keeps the first `channels` channels of RGBA pixels.
+fn from_channels<T: Copy>(data: &[T], channels: u32) -> Vec<T> {
     if channels == 4 {
         return data.to_vec();
     }
-    let inv_channel = inv_channels[channels as usize - 1];
+    data.chunks_exact(4)
+        .flat_map(|pixel| pixel[..channels as usize].iter().copied())
+        .collect()
+}
 
-    // Extract channels
-    let mut buffer: Vec<T> = Vec::with_capacity(data.len() / inv_channel as usize);
-    for i in 0..data.len() / inv_channel as usize {
-        buffer.push(data[i * inv_channel as usize]);
+#[cfg(test)]
+mod tests {
+    use super::from_channels;
+
+    #[test]
+    fn from_channels_keeps_the_first_channels() {
+        let rgba = [1u8, 2, 3, 4, 5, 6, 7, 8];
+        assert_eq!(from_channels(&rgba, 1), [1, 5]);
+        assert_eq!(from_channels(&rgba, 2), [1, 2, 5, 6]);
+        assert_eq!(from_channels(&rgba, 3), [1, 2, 3, 5, 6, 7]);
+        assert_eq!(from_channels(&rgba, 4), rgba);
     }
-    buffer
 }
