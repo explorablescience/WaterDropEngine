@@ -9,6 +9,7 @@ struct VertexOutput {
     @location(0) tex_coord:    vec2<f32>,
     @location(1) normal_world: vec3<f32>,
     @location(2) world_pos:    vec3<f32>,
+    @location(3) @interpolate(flat) debug_lod: u32,
 };
 
 @group(1) @binding(0) var<uniform> in_camera: Camera;
@@ -40,6 +41,7 @@ fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @locatio
     if (in_pbr_material.flags.x == 1.0) {
         albedo = textureSample(in_albedo_texture, in_albedo_sampler, in.tex_coord);
     }
+    albedo = vec4<f32>(lod_debug_albedo(albedo.rgb, in.debug_lod), albedo.a);
     let metallic  = clamp(in_pbr_material.metallic * in_pbr_params.material_params.x, 0.0, 1.0);
     let roughness = clamp(in_pbr_material.roughness * in_pbr_params.material_params.y, 0.0, 1.0);
 

@@ -176,7 +176,12 @@ fn edit_post_process_settings(
                 egui::ComboBox::from_label("Method")
                     .selected_text(format!("{:?}", s.anti_aliasing))
                     .show_ui(ui, |ui| {
-                        for method in [AntiAliasing::None, AntiAliasing::Fxaa, AntiAliasing::Smaa] {
+                        for method in [
+                            AntiAliasing::None,
+                            AntiAliasing::Fxaa,
+                            AntiAliasing::Smaa,
+                            AntiAliasing::Taa
+                        ] {
                             ui.selectable_value(
                                 &mut s.anti_aliasing,
                                 method,
@@ -201,6 +206,13 @@ fn edit_post_process_settings(
                                 );
                             }
                         });
+                }
+                if s.anti_aliasing == AntiAliasing::Taa {
+                    ui.add(
+                        Slider::new(&mut s.taa.frame_weight, 0.01..=1.0)
+                            .logarithmic(true)
+                            .text("Frame Weight")
+                    );
                 }
                 ui.add(Separator::default());
                 ui.columns(2, |cols| {

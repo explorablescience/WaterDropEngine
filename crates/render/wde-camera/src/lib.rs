@@ -43,7 +43,7 @@ use crate::camera::CameraFeature;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use crate::camera::{ActiveCamera, Camera, CameraBinding, CameraRender};
+    pub use crate::camera::{ActiveCamera, Camera, CameraBinding, CameraRender, ProjectionJitter};
     pub use crate::frustum::{Aabb, Frustum, FrustumTest};
     pub use crate::roles::{CameraRole, ControlledCamera, CullingCamera, SetCameraRole};
     pub use crate::transform::TransformUniform;

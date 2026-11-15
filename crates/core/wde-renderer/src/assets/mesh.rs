@@ -24,10 +24,16 @@ use wde_wgpu::{
 use crate::{
     assets::{GpuBuffer, RenderAssets, SRenderData},
     core::RenderInstance,
-    utils::{SsboMesh, ssbo_mesh::SsboMeshDescriptor}
+    utils::{
+        SsboMesh,
+        ssbo_mesh::{SSBO_MESH_MAX_INDICES, SSBO_MESH_MAX_VERTICES, SsboMeshDescriptor}
+    }
 };
 
-use super::asset::{PrepareAssetError, RenderAsset};
+use super::{
+    asset::{PrepareAssetError, RenderAsset},
+    mesh_lod::{MeshLod, MeshLodSettings}
+};
 
 /// Utils component that stores a [`Mesh`] asset handle for 3D rendering.
 #[derive(Component, Reflect, Default, Clone)]
@@ -49,6 +55,8 @@ pub struct Mesh {
 
     pub vertices: Vec<Vertex>,
     pub indices: Vec<u32>,
+    /// Simplified levels of detail, coarser each, after the full mesh (see [`Mesh::generate_lods`]).
+    pub lods: Vec<MeshLod>,
     pub bbox: MeshBbox,
 
     /// If true, the vertices and indices will automatically be placed in the SSBO mesh buffers [`SsboMesh`] for GPU access; if false, separate vertex and index buffers will be created with `VERTEX` and `INDEX` usage respectively. Defaults to true.
@@ -71,8 +79,21 @@ pub struct GpuMesh {
     /// If not using SSBO, the GPU index buffer containing `u32` index data. `None` if `use_ssbo` is true.
     pub index_buffer: Option<Buffer>,
 
+    /// Index count of the full mesh.
     pub index_count: u32,
+    /// Levels of detail, the full mesh first. Meshes outside of the SSBO only have the full mesh.
+    pub lods: Vec<GpuMeshLod>,
     pub bounding_box: MeshBbox
+}
+
+/// Level of detail of a [`GpuMesh`].
+#[derive(Clone, Copy, Debug)]
+pub struct GpuMeshLod {
+    /// Offset to the indices of this level in the [`SsboMesh`] (0 outside of the SSBO).
+    pub first_index: u32,
+    pub index_count: u32,
+    /// See [`MeshLod::error`], 0 for the full mesh.
+    pub error: f32
 }
 
 /// The SSBO region a given CPU [`Mesh`] asset currently occupies.
@@ -134,6 +155,24 @@ impl RenderAsset for GpuMesh {
             BufferUsage::INDEX
         };
 
+        // The levels of detail follow the full mesh in the index buffer
+        let mut lods = vec![GpuMeshLod {
+            first_index: 0,
+            index_count: asset.indices.len() as u32,
+            error: 0.0
+        }];
+        let mut indices = asset.indices;
+        if asset.use_ssbo {
+            for lod in &asset.lods {
+                lods.push(GpuMeshLod {
+                    first_index: indices.len() as u32,
+                    index_count: lod.indices.len() as u32,
+                    error: lod.error
+                });
+                indices.extend_from_slice(&lod.indices);
+            }
+        }
+
         // Create staging buffers
         let render_instance = render_instance.0.read().unwrap();
         let vertex_buffer = Buffer::new(
@@ -146,9 +185,9 @@ impl RenderAsset for GpuMesh {
         let index_buffer = Buffer::new(
             &render_instance,
             format!("{}-indices-staging", asset.label).as_str(),
-            std::mem::size_of::<u32>() * asset.indices.len(),
+            std::mem::size_of::<u32>() * indices.len(),
             usage_index,
-            Some(bytemuck::cast_slice(&asset.indices))
+            Some(bytemuck::cast_slice(&indices))
         );
 
         // If not using SSBO, return the buffers directly
@@ -157,7 +196,8 @@ impl RenderAsset for GpuMesh {
                 label: asset.label,
                 ssbo_first_vertex: 0,
                 ssbo_first_index: 0,
-                index_count: asset.indices.len() as u32,
+                index_count: lods[0].index_count,
+                lods,
                 bounding_box: asset.bbox,
                 use_ssbo: asset.use_ssbo,
                 vertex_buffer: Some(vertex_buffer),
@@ -168,7 +208,7 @@ impl RenderAsset for GpuMesh {
         // Copy to GPU buffers, reusing this asset's existing SSBO region if its vertex/index count
         // hasn't changed since last time, instead of bump-allocating a new one
         let vertices_count = asset.vertices.len() as u32;
-        let indices_count = asset.indices.len() as u32;
+        let indices_count = indices.len() as u32;
 
         let reused = mesh_allocations.0.get(&id).filter(|alloc| {
             alloc.vertex_count == vertices_count && alloc.index_count == indices_count
@@ -178,6 +218,15 @@ impl RenderAsset for GpuMesh {
             None => {
                 let first_vertex = ssbo_descriptor.vertex_buffer_offset;
                 let first_index = ssbo_descriptor.index_buffer_offset;
+                if (first_vertex + vertices_count) as usize > SSBO_MESH_MAX_VERTICES
+                    || (first_index + indices_count) as usize > SSBO_MESH_MAX_INDICES
+                {
+                    return Err(PrepareAssetError::Fatal(format!(
+                        "Mesh {} does not fit in the SSBO mesh buffers ({} vertices, {} indices \
+                         at most).",
+                        asset.label, SSBO_MESH_MAX_VERTICES, SSBO_MESH_MAX_INDICES
+                    )));
+                }
                 ssbo_descriptor.vertex_buffer_offset += vertices_count;
                 ssbo_descriptor.index_buffer_offset += indices_count;
                 mesh_allocations.0.insert(
@@ -219,7 +268,14 @@ impl RenderAsset for GpuMesh {
             label: asset.label,
             ssbo_first_vertex: first_vertex,
             ssbo_first_index: first_index,
-            index_count: indices_count,
+            index_count: lods[0].index_count,
+            lods: lods
+                .into_iter()
+                .map(|lod| GpuMeshLod {
+                    first_index: first_index + lod.first_index,
+                    ..lod
+                })
+                .collect(),
             bounding_box: asset.bbox,
             use_ssbo: asset.use_ssbo,
             vertex_buffer: None,
@@ -237,13 +293,17 @@ impl RenderAsset for GpuMesh {
 pub struct MeshLoaderSettings {
     pub label: String,
     /// Should the vertices and indices be in the SSBO mesh buffers? Defaults to true. If false, separate vertex and index buffers will be created.
-    pub use_ssbo: bool
+    pub use_ssbo: bool,
+    /// Levels of detail to generate, none if `None`.
+    #[serde(default)]
+    pub lods: Option<MeshLodSettings>
 }
 impl Default for MeshLoaderSettings {
     fn default() -> Self {
         Self {
             label: "Unknown Mesh".to_string(),
-            use_ssbo: true
+            use_ssbo: true,
+            lods: Some(MeshLodSettings::default())
         }
     }
 }
@@ -361,13 +421,18 @@ impl AssetLoader for MeshLoader {
             // Push indices
             indices.extend_from_slice(&mesh.indices);
         }
-        Ok(Mesh {
+        let mut mesh = Mesh {
             label,
             vertices,
             indices,
+            lods: Vec::new(),
             bbox: bounding_box,
             use_ssbo: settings.use_ssbo
-        })
+        };
+        if let Some(lods) = &settings.lods {
+            mesh.generate_lods(lods);
+        }
+        Ok(mesh)
     }
 
     fn extensions(&self) -> &[&str] {

@@ -2,6 +2,7 @@
 //!
 //! The effects run in these render passes:
 //! - [`RenderPassFog`] (ID 30): exponential height fog, blended over the opaque geometry and the sky, before the transparent objects.
+//! - [`RenderPassTaa`] (ID 90): temporal anti-aliasing of the HDR render texture, when it is the [`AntiAliasing`].
 //! - [`RenderPassBloom`] (ID 91): downsamples then upsamples the render texture through the bloom mips.
 //! - [`RenderPassExposure`] (ID 92): eye adaptation, from a luminance histogram of the render texture (see [`ExposureSettings`]).
 //! - [`RenderPassComposite`] (ID 95): composites the chromatic aberration, the bloom, the exposure, the color grading, the tonemapping,
@@ -11,7 +12,7 @@
 //! - [`RenderPassPostProcess`] (ID 100): copies the anti-aliased image to the swapchain, sharpening it (see [`SharpeningSettings`]).
 //!
 //! To add a full-screen effect over the final image, add a sub-pass to [`RenderPassPostProcess`]. To add an HDR effect,
-//! add a pass between 50 and 91 that reads and writes the render texture.
+//! add a pass between 50 and 90 that reads and writes the render texture.
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
@@ -24,6 +25,7 @@ mod pass_exposure;
 mod pass_fog;
 mod settings;
 mod smaa;
+mod taa;
 
 pub use data::{BLOOM_MIP_COUNT, PostProcessTextures};
 pub use pass_bloom::RenderPassBloom;
@@ -32,6 +34,7 @@ pub use pass_exposure::RenderPassExposure;
 pub use pass_fog::RenderPassFog;
 pub use settings::*;
 pub use smaa::{RenderPassSmaa, SmaaTextures};
+pub use taa::{RenderPassTaa, TaaTextures};
 
 use data::*;
 use pass_bloom::*;
@@ -39,6 +42,7 @@ use pass_composite::*;
 use pass_exposure::*;
 use pass_fog::*;
 use smaa::*;
+use taa::*;
 
 pub(crate) struct PostProcessPlugin;
 impl Plugin for PostProcessPlugin {
@@ -69,8 +73,12 @@ impl Plugin for PostProcessPlugin {
                 RenderBindingRegisterPlugin::<SmaaBlendBinding>::default(),
                 RenderPipelineRegisterPlugin::<SmaaEdgesPipeline>::default(),
                 RenderPipelineRegisterPlugin::<SmaaWeightsPipeline>::default(),
-                RenderPipelineRegisterPlugin::<SmaaBlendPipeline>::default()
-            ));
+                RenderPipelineRegisterPlugin::<SmaaBlendPipeline>::default(),
+                RenderDataRegisterPlugin::<TaaTextures>::default(),
+                RenderBindingRegisterPlugin::<TaaBinding>::default(),
+                RenderPipelineRegisterPlugin::<TaaPipeline>::default()
+            ))
+            .add_systems(PostUpdate, sync_projection_jitter);
         #[cfg(debug_assertions)]
         app.add_plugins(editor::PostProcessEditorPlugin);
 
@@ -82,6 +90,7 @@ impl Plugin for PostProcessPlugin {
             .init_resource::<FogUniform>()
             .init_resource::<BloomBindGroups>()
             .init_resource::<ExposureBindGroup>()
+            .init_resource::<TaaState>()
             .add_systems(Extract, extract_post_process_params)
             .add_systems(
                 Render,
@@ -92,6 +101,7 @@ impl Plugin for PostProcessPlugin {
             .resource_mut::<RenderGraph>()
             .add_pass::<RenderPassFog>()
             .add_sub_pass::<SubRenderPassFog, RenderPassFog>()
+            .add_pass::<RenderPassTaa>()
             .add_pass::<RenderPassBloom>()
             .add_pass::<RenderPassExposure>()
             .add_pass::<RenderPassComposite>()

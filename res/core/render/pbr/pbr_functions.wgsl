@@ -232,3 +232,20 @@ fn get_depth_world_position(uv: vec2<f32>, linear_depth: f32, camera: Camera) ->
     let world = camera.view_to_world * vec4<f32>(view_pos, 1.0);
     return world.xyz;
 }
+
+/// Albedo of a mesh in the level of detail debug view: `debug_lod` is the drawn level + 1, 5 for a
+/// mesh without levels, 0 when the view is off. Keeps the shading of `albedo` to tell the parts apart.
+fn lod_debug_albedo(albedo: vec3<f32>, debug_lod: u32) -> vec3<f32> {
+    if (debug_lod == 0u) {
+        return albedo;
+    }
+    var colors = array<vec3<f32>, 5>(
+        vec3<f32>(0.1, 0.8, 0.1),
+        vec3<f32>(0.9, 0.85, 0.1),
+        vec3<f32>(1.0, 0.45, 0.05),
+        vec3<f32>(0.9, 0.05, 0.05),
+        vec3<f32>(0.2, 0.4, 0.95)
+    );
+    let luma = dot(albedo, vec3<f32>(0.2126, 0.7152, 0.0722));
+    return colors[min(debug_lod - 1u, 4u)] * (0.4 + 0.6 * luma);
+}

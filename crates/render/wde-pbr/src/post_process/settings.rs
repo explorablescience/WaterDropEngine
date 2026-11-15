@@ -20,6 +20,7 @@ pub struct PostProcessSettings {
     pub anti_aliasing: AntiAliasing,
     /// Quality of the [`AntiAliasing::Smaa`].
     pub smaa_preset: SmaaPreset,
+    pub taa: TaaSettings,
     pub sharpening: SharpeningSettings
 }
 
@@ -32,7 +33,25 @@ pub enum AntiAliasing {
     Fxaa,
     /// Subpixel morphological anti-aliasing: recognizes the shapes of the aliased edges, and blends each pixel
     /// with its neighbors by the area the real edge covers. Sharper than FXAA, at about twice its cost.
-    Smaa
+    Smaa,
+    /// Temporal anti-aliasing: jitters the projection by a sub-pixel offset each frame, and accumulates the frames
+    /// reprojected by the camera motion, in HDR before the bloom. Resolves the details thinner than a pixel and stops
+    /// their flickering, but softens the image (pair it with the [`SharpeningSettings`]). The objects moving on their
+    /// own are not reprojected, so their history is mostly rejected and they are less anti-aliased.
+    Taa
+}
+
+/// Settings of the [`AntiAliasing::Taa`].
+#[derive(Clone, Debug, Reflect)]
+pub struct TaaSettings {
+    /// Weight of the current frame in the accumulated image, in (0, 1]. Lower is smoother and more stable,
+    /// but slower to react and more prone to ghosting.
+    pub frame_weight: f32
+}
+impl Default for TaaSettings {
+    fn default() -> Self {
+        Self { frame_weight: 0.05 }
+    }
 }
 
 /// Quality of the SMAA: the edge threshold, and the length of the edges searched.
@@ -321,7 +340,7 @@ pub(crate) struct PostProcessUniform {
     pub effects: [f32; 4],
     /// x=time in seconds
     pub time: [f32; 4],
-    /// x=anti-aliasing method
+    /// x=anti-aliasing method, y=TAA frame weight
     pub anti_aliasing: [f32; 4],
     /// See [`SmaaPreset::params`]
     pub smaa: [f32; 4],
@@ -344,6 +363,7 @@ impl PostProcessUniform {
         match self.anti_aliasing[0] as u32 {
             1 => AntiAliasing::Fxaa,
             2 => AntiAliasing::Smaa,
+            3 => AntiAliasing::Taa,
             _ => AntiAliasing::None
         }
     }
@@ -394,7 +414,12 @@ impl PostProcessUniform {
                 if settings.dithering { 1.0 } else { 0.0 }
             ],
             time: [time, 0.0, 0.0, 0.0],
-            anti_aliasing: [settings.anti_aliasing as u32 as f32, 0.0, 0.0, 0.0],
+            anti_aliasing: [
+                settings.anti_aliasing as u32 as f32,
+                settings.taa.frame_weight.clamp(0.01, 1.0),
+                0.0,
+                0.0
+            ],
             smaa: settings.smaa_preset.params(),
             sharpening: [
                 if settings.sharpening.enabled {
@@ -538,6 +563,25 @@ mod tests {
         };
         assert_eq!(peak(0.0), -1.0 / 8.0);
         assert_eq!(peak(1.0), -1.0 / 5.0);
+    }
+
+    #[test]
+    fn anti_aliasing_round_trips() {
+        for method in [
+            AntiAliasing::None,
+            AntiAliasing::Fxaa,
+            AntiAliasing::Smaa,
+            AntiAliasing::Taa
+        ] {
+            let settings = PostProcessSettings {
+                anti_aliasing: method,
+                ..Default::default()
+            };
+            assert_eq!(
+                PostProcessUniform::from_settings(&settings, 0.0, 0.0, 1.0).anti_aliasing(),
+                method
+            );
+        }
     }
 
     #[test]

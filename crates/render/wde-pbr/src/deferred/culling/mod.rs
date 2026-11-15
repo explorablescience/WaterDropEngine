@@ -13,6 +13,11 @@
 //! 2. **Meshes**: the remaining meshes (in a group crossing the view edge, or in no group) are
 //!    tested with the bounds of their mesh, moved by their transform.
 //!
+//! # Levels of detail
+//! Each visible instance is drawn with the coarsest of the [`Mesh::lods`] whose error, projected
+//! on the screen of the culling camera from the nearest point of its bounds, stays under
+//! [`LodSettings::max_pixel_error`]. The shadow cascades use the level of the camera.
+//!
 //! # Usage
 //! ```rust
 //! // Spawn the group, and keep its bounds up to date
@@ -20,8 +25,8 @@
 //! // Every mesh of the village is in the group
 //! commands.spawn((Transform::default(), CullGroupMember(group)));
 //! ```
-//! Levels can be toggled with the [`CullingSettings`] resource, editable in the `PBR/Culling`
-//! editor window along with the [`CullingStats`].
+//! Levels can be toggled with the [`CullingSettings`] and [`LodSettings`] resources, editable in
+//! the `PBR/Culling` editor window along with the [`CullingStats`].
 use std::sync::{Arc, Mutex};
 
 use bevy::prelude::*;
@@ -33,8 +38,10 @@ mod cull;
 #[cfg(debug_assertions)]
 mod editor;
 mod groups;
+mod lod;
 
 pub use groups::{CullGroup, CullGroupMember, InCullGroup};
+pub use lod::LodSettings;
 
 /// Culling views: the camera, then each shadow cascade.
 pub const CULL_VIEW_COUNT: usize = 4;
@@ -75,6 +82,12 @@ pub struct CullingStats {
     pub instances: usize,
     /// Instances drawn in each view.
     pub drawn: [usize; CULL_VIEW_COUNT],
+    /// Triangles drawn in each view.
+    pub triangles: [usize; CULL_VIEW_COUNT],
+    /// Instances drawn with each level of detail in the camera view, among the meshes with levels.
+    pub lods: [usize; MAX_MESH_LODS],
+    /// Instances of meshes without levels of detail drawn in the camera view.
+    pub without_lods: usize,
     pub groups: usize,
     /// Groups outside of each view.
     pub groups_culled: [usize; CULL_VIEW_COUNT],
@@ -93,13 +106,16 @@ impl Plugin for CullingPlugin {
     fn build(&self, app: &mut App) {
         let stats = CullingStatsShared::default();
         app.init_resource::<CullingSettings>()
+            .init_resource::<LodSettings>()
             .insert_resource(stats.clone())
             .register_type::<CullingSettings>()
+            .register_type::<LodSettings>()
             .register_type::<CullGroup>()
             .register_type::<CullGroupMember>()
             .register_type::<InCullGroup>()
             .add_plugins((
                 ExtractResourcePlugin::<CullingSettings>::default(),
+                ExtractResourcePlugin::<LodSettings>::default(),
                 ExtractComponentPlugin::<InCullGroup>::default()
             ))
             .add_systems(PostUpdate, groups::resolve_cull_groups);
@@ -108,11 +124,17 @@ impl Plugin for CullingPlugin {
             .unwrap()
             .insert_resource(stats)
             .init_resource::<CullingSettings>()
+            .init_resource::<LodSettings>()
+            .init_resource::<lod::LodCamera>()
             .init_resource::<cull::CameraFrustum>()
             .init_resource::<cull::ExtractedCullGroups>()
             .add_systems(
                 Extract,
-                (cull::extract_camera_frustum, cull::extract_cull_groups)
+                (
+                    cull::extract_camera_frustum,
+                    cull::extract_cull_groups,
+                    lod::extract_lod_camera
+                )
             )
             .add_systems(
                 Render,

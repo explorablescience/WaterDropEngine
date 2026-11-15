@@ -207,6 +207,7 @@ impl CapsuleMesh {
             label: label.to_string(),
             vertices,
             indices,
+            lods: Vec::new(),
             bbox: bounding_box,
             use_ssbo: false
         }

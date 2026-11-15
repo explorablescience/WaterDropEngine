@@ -56,8 +56,19 @@ pub(crate) struct Batch {
     pub _key: BatchKey,
     /// Render entity and SSBO transform ID of each instance.
     pub instances: Vec<(Entity, u32)>,
-    /// Instances visible in each culling view, as a range of the "instance to transform" buffer.
-    pub views: [Range<u32>; CULL_VIEW_COUNT]
+    /// Instances visible in each culling view with each level of detail, as ranges of the
+    /// "instance to transform" buffer.
+    pub views: [[Range<u32>; MAX_MESH_LODS]; CULL_VIEW_COUNT]
+}
+impl Batch {
+    /// Non-empty instance ranges of each level of detail in `view`.
+    pub(crate) fn lods(&self, view: usize) -> impl Iterator<Item = (usize, Range<u32>)> + '_ {
+        self.views[view]
+            .iter()
+            .cloned()
+            .enumerate()
+            .filter(|(_, range)| !range.is_empty())
+    }
 }
 // Resource to store the batches of entities for rendering. The key is the combination of mesh and material, and the value is the batch of entities that share that mesh and material.
 #[derive(Resource, Default)]

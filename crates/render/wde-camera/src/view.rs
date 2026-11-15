@@ -66,45 +66,43 @@ pub(crate) struct CameraUniform {
     // From view to world coordinates
     pub view_to_world: [[f32; 4]; 4],
     // Camera position
-    pub position: [f32; 4]
+    pub position: [f32; 4],
+    // From world to ndc coordinates, without the jitter
+    pub world_to_ndc_unjittered: [[f32; 4]; 4],
+    // `world_to_ndc_unjittered` of the previous frame
+    pub prev_world_to_ndc: [[f32; 4]; 4],
+    // xy = offset of the projection in NDC
+    pub jitter: [f32; 4]
 }
 impl CameraUniform {
-    /// Create a new camera uniform buffer.
-    pub fn new(transform: &GlobalTransform, camera_view: &CameraView, aspect_ratio: f32) -> Self {
-        let world_to_view = Self::get_world_to_view(transform).to_cols_array_2d();
-        let view_to_ndc = Self::get_view_to_ndc(camera_view, aspect_ratio).to_cols_array_2d();
-        let ndc_to_view = Mat4::from_cols_array_2d(&view_to_ndc)
-            .inverse()
-            .to_cols_array_2d();
-        let view_to_world = Mat4::from_cols_array_2d(&world_to_view)
-            .inverse()
-            .to_cols_array_2d();
+    /// Create a new camera uniform buffer. The projection is offset by `jitter` in NDC, and `prev_world_to_ndc` is
+    /// the unjittered world to ndc matrix of the previous frame.
+    pub fn new(
+        transform: &GlobalTransform,
+        camera_view: &CameraView,
+        aspect_ratio: f32,
+        jitter: Vec2,
+        prev_world_to_ndc: Mat4
+    ) -> Self {
+        let world_to_view = Self::get_world_to_view(transform);
+        let projection = Self::get_view_to_ndc(camera_view, aspect_ratio);
+        let view_to_ndc = Mat4::from_translation(jitter.extend(0.0)) * projection;
 
         Self {
-            world_to_view,
-            view_to_ndc,
-            ndc_to_view,
-            view_to_world,
+            world_to_view: world_to_view.to_cols_array_2d(),
+            view_to_ndc: view_to_ndc.to_cols_array_2d(),
+            ndc_to_view: view_to_ndc.inverse().to_cols_array_2d(),
+            view_to_world: world_to_view.inverse().to_cols_array_2d(),
             position: [
                 transform.translation().x,
                 transform.translation().y,
                 transform.translation().z,
                 1.0
-            ]
+            ],
+            world_to_ndc_unjittered: (projection * world_to_view).to_cols_array_2d(),
+            prev_world_to_ndc: prev_world_to_ndc.to_cols_array_2d(),
+            jitter: [jitter.x, jitter.y, 0.0, 0.0]
         }
-    }
-
-    /// Get the world to ndc matrix ((openGL to WGPU) * projection * view).
-    #[inline]
-    #[allow(dead_code)]
-    fn get_world_to_ndc(
-        transform: &GlobalTransform,
-        camera_view: &CameraView,
-        aspect_ratio: f32
-    ) -> Mat4 {
-        let view = Self::get_world_to_view(transform);
-        let proj = Self::get_view_to_ndc(camera_view, aspect_ratio);
-        proj * view
     }
 
     /// Get the world to view matrix.

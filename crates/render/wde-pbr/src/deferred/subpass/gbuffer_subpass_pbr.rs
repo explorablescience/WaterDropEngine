@@ -1,6 +1,6 @@
 use crate::{
     deferred::subpass::{GBufferRenderPipeline, gbuffer_bindgroup::SsboTransformBinding},
-    prelude::{BatchList, CAMERA_VIEW, PbrMaterial, is_batch_blended}
+    prelude::{BatchList, CAMERA_VIEW, LodSettings, PbrMaterial, is_batch_blended}
 };
 use wde_logger::prelude::*;
 
@@ -49,7 +49,8 @@ impl RenderSubPass for SubRenderPassGbufferPbr {
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct PushConstants {
     first_vertex: u32,
-    first_index: u32
+    first_index: u32,
+    debug_lod: u32
 }
 
 fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<'pass>) {
@@ -58,36 +59,21 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
         .get_resource::<RenderAssets<GpuRenderBinding<PbrMaterial>>>()
         .unwrap();
     let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
+    let lod_settings = world.get_resource::<LodSettings>();
 
     // Create the batches of draw commands
-    let mut current_mesh_id = None;
-    let mut current_index_count = 0;
     let mut current_material_id = None;
     for batch_key in batches.sorted_batches.iter() {
         if is_batch_blended(materials, batch_key) {
             continue;
         }
-        let instances = match batches.batches.get(batch_key) {
-            Some(batch) if !batch.views[CAMERA_VIEW].is_empty() => batch.views[CAMERA_VIEW].clone(),
-            _ => continue
+        let (Some(batch), Some(mesh)) =
+            (batches.batches.get(batch_key), meshes.get(batch_key.mesh))
+        else {
+            continue;
         };
-        // Set the mesh
-        if current_mesh_id != Some(batch_key.mesh) {
-            let mesh = match meshes.get(batch_key.mesh) {
-                Some(mesh) => mesh,
-                None => continue
-            };
-            current_index_count = mesh.index_count;
-            current_mesh_id = Some(batch_key.mesh);
-
-            // Set push constants
-            render_pass.set_push_constants(
-                ShaderStages::VERTEX,
-                bytemuck::bytes_of(&[PushConstants {
-                    first_vertex: mesh.ssbo_first_vertex,
-                    first_index: mesh.ssbo_first_index
-                }])
-            );
+        if batch.lods(CAMERA_VIEW).next().is_none() {
+            continue;
         }
 
         // Set the material
@@ -110,9 +96,22 @@ fn draw_custom<'pass>(world: &'pass World, render_pass: &mut RenderPassInstance<
             }
         }
 
-        // Draw the mesh
-        if let Err(e) = render_pass.draw(0..current_index_count, instances) {
-            error!("Failed to draw: {:?}.", e);
+        // Draw each level of detail of the mesh
+        for (level, instances) in batch.lods(CAMERA_VIEW) {
+            let Some(lod) = mesh.lods.get(level) else {
+                continue;
+            };
+            render_pass.set_push_constants(
+                ShaderStages::VERTEX,
+                bytemuck::bytes_of(&[PushConstants {
+                    first_vertex: mesh.ssbo_first_vertex,
+                    first_index: lod.first_index,
+                    debug_lod: LodSettings::debug_lod(lod_settings, level, mesh.lods.len())
+                }])
+            );
+            if let Err(e) = render_pass.draw(0..lod.index_count, instances) {
+                error!("Failed to draw: {:?}.", e);
+            }
         }
     }
 }

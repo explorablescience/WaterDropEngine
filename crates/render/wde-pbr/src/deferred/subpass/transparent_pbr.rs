@@ -13,8 +13,8 @@ use wde_renderer::prelude::*;
 use crate::{
     deferred::subpass::gbuffer_bindgroup::SsboTransformBinding,
     prelude::{
-        BatchList, CAMERA_VIEW, EnvironmentData, LightsData, PbrMaterial, RenderTexture,
-        is_batch_blended
+        BatchList, CAMERA_VIEW, EnvironmentData, LightsData, LodSettings, PbrMaterial,
+        RenderTexture, is_batch_blended
     }
 };
 
@@ -108,7 +108,8 @@ impl RenderAsset for TransparentPbrRenderPipeline {
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 struct PushConstants {
     first_vertex: u32,
-    first_index: u32
+    first_index: u32,
+    debug_lod: u32
 }
 
 pub(crate) struct SubRenderPassTransparentPbr;
@@ -149,6 +150,7 @@ fn draw_transparent<'pass>(world: &'pass World, render_pass: &mut RenderPassInst
         .get_resource::<RenderAssets<GpuRenderBinding<PbrMaterial>>>()
         .unwrap();
     let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
+    let lod_settings = world.get_resource::<LodSettings>();
 
     for batch_key in batches.sorted_batches.iter() {
         if !is_batch_blended(materials, batch_key) {
@@ -161,20 +163,25 @@ fn draw_transparent<'pass>(world: &'pass World, render_pass: &mut RenderPassInst
         ) else {
             continue;
         };
-        let instances = batch.views[CAMERA_VIEW].clone();
-        if instances.is_empty() {
+        if batch.lods(CAMERA_VIEW).next().is_none() {
             continue;
         }
-        render_pass.set_push_constants(
-            ShaderStages::VERTEX,
-            bytemuck::bytes_of(&PushConstants {
-                first_vertex: mesh.ssbo_first_vertex,
-                first_index: mesh.ssbo_first_index
-            })
-        );
         render_pass.set_bind_group(3, &material.bind_group);
-        if let Err(e) = render_pass.draw(0..mesh.index_count, instances) {
-            error!("Failed to draw transparent batch: {:?}.", e);
+        for (level, instances) in batch.lods(CAMERA_VIEW) {
+            let Some(lod) = mesh.lods.get(level) else {
+                continue;
+            };
+            render_pass.set_push_constants(
+                ShaderStages::VERTEX,
+                bytemuck::bytes_of(&PushConstants {
+                    first_vertex: mesh.ssbo_first_vertex,
+                    first_index: lod.first_index,
+                    debug_lod: LodSettings::debug_lod(lod_settings, level, mesh.lods.len())
+                })
+            );
+            if let Err(e) = render_pass.draw(0..lod.index_count, instances) {
+                error!("Failed to draw transparent batch: {:?}.", e);
+            }
         }
     }
 }

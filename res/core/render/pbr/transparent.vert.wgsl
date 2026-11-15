@@ -5,11 +5,13 @@ struct VertexOutput {
     @location(0) tex_coord:    vec2<f32>,
     @location(1) normal_world: vec3<f32>,
     @location(2) world_pos:    vec3<f32>,
+    @location(3) @interpolate(flat) debug_lod: u32,
 };
 
 struct PushConstants {
     first_vertex: u32,
-    first_index: u32
+    first_index: u32,
+    debug_lod: u32
 }
 var<push_constant> push_constants: PushConstants;
 
@@ -46,6 +48,7 @@ fn main(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32)
     let world_pos4 = obj_to_world * vec4<f32>(vertex.position, 1.0);
     out.clip_position = in_camera.view_to_ndc * in_camera.world_to_view * world_pos4;
     out.world_pos = world_pos4.xyz;
+    out.debug_lod = push_constants.debug_lod;
     out.tex_coord = vec2<f32>(vertex.uv_x, vertex.uv_y);
     out.normal_world = normal_matrix(obj_to_world) * vec3<f32>(vertex.normal_x, vertex.normal_y, vertex.normal_z);
 

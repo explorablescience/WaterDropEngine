@@ -6,7 +6,8 @@ struct VertexOutput {
     @location(1) normal_world: vec3<f32>,     // Normal in world space
     @location(2) tangent_world: vec4<f32>,    // Tangent in world space
     @location(3) bitangent_world: vec3<f32>,  // Bitangent in world space
-    @location(4) ndc_z: f32,                  // View-space Z (linear depth)
+    @location(4) @interpolate(flat) debug_lod: u32, // See lod_debug_albedo
+    @location(5) ndc_z: f32,                  // View-space Z (linear depth)
 };
 @group(1) @binding(0) var<uniform> in_camera: Camera;
 
@@ -45,6 +46,10 @@ fn main(in: VertexOutput) -> FragOutput {
     }
     if (in_pbr_material.flags.y == 1.0) { // Metallic-roughness texture present
         metallic_value = textureSample(in_metallic_roughness_texture, in_metallic_roughness_sampler, in.tex_coord).b;
+    }
+    if (in.debug_lod != 0u) {
+        albedo_color = lod_debug_albedo(albedo_color, in.debug_lod);
+        metallic_value = 0.0;
     }
     out.albedo_metallic = vec4<f32>(albedo_color, metallic_value);
 

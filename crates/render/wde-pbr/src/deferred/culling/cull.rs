@@ -7,7 +7,9 @@ use wde_renderer::prelude::*;
 
 use super::{
     CAMERA_VIEW, CULL_VIEW_COUNT, CullGroup, CullingSettings, CullingStats, CullingStatsShared,
-    InCullGroup, shadow_view
+    InCullGroup, LodSettings,
+    lod::{LodCamera, select_lod},
+    shadow_view
 };
 use crate::prelude::{
     BatchList, CascadeEnabledFlags, CastShadow, ExtractedCascadedShadowParams,
@@ -22,9 +24,12 @@ pub(crate) struct CameraFrustum(Option<Frustum>);
 #[derive(Resource, Default)]
 pub(crate) struct ExtractedCullGroups(EntityHashMap<Aabb>);
 
-/// World-space bounds of a batched instance.
+/// World-space bounds of a batched instance, and the largest scale of its transform.
 #[derive(Component)]
-pub(crate) struct WorldBounds(Aabb);
+pub(crate) struct WorldBounds {
+    aabb: Aabb,
+    scale: f32
+}
 
 pub(super) fn extract_camera_frustum(
     camera: ExtractWorld<Query<(&GlobalTransform, &CameraView), With<CullingCamera>>>,
@@ -79,31 +84,41 @@ pub(super) fn update_world_bounds(
             continue;
         };
         let aabb = Aabb::new(mesh.bounding_box.min, mesh.bounding_box.max).transformed(transform);
+        let axes = transform.affine().matrix3;
+        let scale = axes
+            .x_axis
+            .length()
+            .max(axes.y_axis.length())
+            .max(axes.z_axis.length());
         match bounds {
-            Some(mut bounds) => bounds.0 = aabb,
+            Some(mut bounds) => *bounds = WorldBounds { aabb, scale },
             None => {
-                commands.entity(entity).insert(WorldBounds(aabb));
+                commands.entity(entity).insert(WorldBounds { aabb, scale });
             }
         }
     }
 }
 
-/// Writes the visible instances of each batch in each view to the instance to transform buffer.
+/// Writes the visible instances of each batch in each view to the instance to transform buffer,
+/// grouped by level of detail.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn cull_instances(
     mut batches: ResMut<BatchList>,
+    meshes: Res<RenderAssets<GpuMesh>>,
     instance_to_transform: ResRenderData<PbrSsboInstanceToTransform>,
     buffers: Res<RenderAssets<GpuBuffer>>,
     render_instance: Res<RenderInstance>,
     materials: Res<RenderAssets<GpuRenderBinding<PbrMaterial>>>,
     settings: Res<CullingSettings>,
     camera: Res<CameraFrustum>,
+    (lod_settings, lod_camera): (Res<LodSettings>, Res<LodCamera>),
     cascades: Res<ExtractedCascadedShadowParams>,
     cascades_enabled: Res<CascadeEnabledFlags>,
     groups: Res<ExtractedCullGroups>,
     instances: Query<(Option<&WorldBounds>, Option<&InCullGroup>, Has<CastShadow>)>,
     shared_stats: Res<CullingStatsShared>,
-    mut lists: Local<[Vec<u32>; CULL_VIEW_COUNT]>
+    mut lists: Local<[Vec<u32>; CULL_VIEW_COUNT]>,
+    mut lod_lists: Local<[[Vec<u32>; MAX_MESH_LODS]; CULL_VIEW_COUNT]>
 ) {
     let _span = debug_span!("pbr_culling").entered();
     let start = Instant::now();
@@ -151,11 +166,20 @@ pub(super) fn cull_instances(
     }
     for (key, batch) in batches.batches.iter_mut() {
         let shadowed = !is_batch_blended(&materials, key);
-        let starts = lists.each_ref().map(|list| list.len() as u32);
+        let mesh_lods = meshes.get(key.mesh).map_or(&[][..], |mesh| &mesh.lods[..]);
         for &(entity, transform_id) in &batch.instances {
             let (bounds, group, cast_shadow) = instances.get(entity).unwrap_or((None, None, false));
             let group = group.and_then(|g| group_tests.get(&g.0));
-            for (view, list) in lists.iter_mut().enumerate() {
+            let lod = bounds.map_or(0, |bounds| {
+                select_lod(
+                    mesh_lods,
+                    &bounds.aabb,
+                    bounds.scale,
+                    lod_camera.0.as_ref(),
+                    &lod_settings
+                )
+            });
+            for (view, view_lists) in lod_lists.iter_mut().enumerate() {
                 if view != CAMERA_VIEW
                     && !(shadowed && cast_shadow && cascades_enabled.0[view - shadow_view(0)])
                 {
@@ -167,17 +191,33 @@ pub(super) fn cull_instances(
                     (Some(frustum), _) => match (settings.meshes, bounds) {
                         (true, Some(bounds)) => {
                             stats.mesh_tests += 1;
-                            frustum.intersects(&bounds.0)
+                            frustum.intersects(&bounds.aabb)
                         }
                         _ => true
                     }
                 };
                 if visible {
-                    list.push(transform_id);
+                    view_lists[lod].push(transform_id);
                 }
             }
         }
-        batch.views = std::array::from_fn(|view| starts[view]..lists[view].len() as u32);
+
+        // The levels of each view follow each other
+        for (view, view_lists) in lod_lists.iter_mut().enumerate() {
+            for (lod, lod_list) in view_lists.iter_mut().enumerate() {
+                let start = lists[view].len() as u32;
+                let count = lod_list.len();
+                lists[view].append(lod_list);
+                batch.views[view][lod] = start..lists[view].len() as u32;
+                stats.triangles[view] +=
+                    count * mesh_lods.get(lod).map_or(0, |l| l.index_count as usize / 3);
+                if view == CAMERA_VIEW && mesh_lods.len() > 1 {
+                    stats.lods[lod] += count;
+                } else if view == CAMERA_VIEW {
+                    stats.without_lods += count;
+                }
+            }
+        }
     }
 
     // The views follow each other in the buffer
@@ -199,8 +239,10 @@ pub(super) fn cull_instances(
         return;
     }
     for batch in batches.batches.values_mut() {
-        for (range, base) in batch.views.iter_mut().zip(offsets) {
-            *range = range.start + base..range.end + base;
+        for (lods, base) in batch.views.iter_mut().zip(offsets) {
+            for range in lods {
+                *range = range.start + base..range.end + base;
+            }
         }
     }
     let render_instance = render_instance.0.read().unwrap();

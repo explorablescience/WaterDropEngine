@@ -186,35 +186,30 @@ fn draw_shadow_cascade<'pass>(
         .get_resource::<RenderAssets<GpuRenderBinding<PbrMaterial>>>()
         .unwrap();
 
-    let mut current_mesh_id = None;
-    let mut current_index_count = 0;
     for batch_key in batches.sorted_batches.iter() {
         if is_batch_blended(materials, batch_key) {
             continue;
         }
-        let instances = match batches.batches.get(batch_key) {
-            Some(batch) if !batch.views[shadow_view(cascade_idx)].is_empty() => {
-                batch.views[shadow_view(cascade_idx)].clone()
-            }
-            _ => continue
+        let (Some(batch), Some(mesh)) =
+            (batches.batches.get(batch_key), meshes.get(batch_key.mesh))
+        else {
+            continue;
         };
-        if current_mesh_id != Some(batch_key.mesh) {
-            let Some(mesh) = meshes.get(batch_key.mesh) else {
+        for (lod, instances) in batch.lods(shadow_view(cascade_idx)) {
+            let Some(lod) = mesh.lods.get(lod) else {
                 continue;
             };
-            current_index_count = mesh.index_count;
-            current_mesh_id = Some(batch_key.mesh);
             render_pass.set_push_constants(
                 ShaderStages::VERTEX,
                 bytemuck::bytes_of(&[ShadowPushConstants {
                     first_vertex: mesh.ssbo_first_vertex,
-                    first_index: mesh.ssbo_first_index,
+                    first_index: lod.first_index,
                     cascade_index: cascade_idx
                 }])
             );
-        }
-        if let Err(e) = render_pass.draw(0..current_index_count, instances) {
-            error!("Shadow draw failed: {:?}.", e);
+            if let Err(e) = render_pass.draw(0..lod.index_count, instances) {
+                error!("Shadow draw failed: {:?}.", e);
+            }
         }
     }
 }

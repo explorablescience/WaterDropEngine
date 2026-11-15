@@ -66,6 +66,7 @@ pub fn load_entity(mut commands: Commands, server: Res<AssetServer>) {
             Vertex { position: [1.0, 1.0, 0.0], uv: [1.0, 1.0], ..Default::default() },
         ],
         indices: vec![0, 1, 2, 0, 2, 3],
+        lods: Vec::new(),
         bbox: MeshBbox {
             min: Vec3::new(-1.0, -1.0, 0.0),
             max: Vec3::new(1.0, 1.0, 0.0),

@@ -159,10 +159,21 @@ pub struct MeshGeometry {
 }
 
 /// Options for loading a glTF model.
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize)]
+#[serde(default)]
 pub struct GltfLoaderSettings {
     /// The optional stencil value to set the stencil buffer to when rendering the model. By default, no stencil value is set.
-    pub stencil_value: Option<u32>
+    pub stencil_value: Option<u32>,
+    /// Levels of detail generated for each mesh, none if `None`.
+    pub lods: Option<MeshLodSettings>
+}
+impl Default for GltfLoaderSettings {
+    fn default() -> Self {
+        Self {
+            stencil_value: None,
+            lods: Some(MeshLodSettings::default())
+        }
+    }
 }
 
 #[derive(Default, TypePath)]
@@ -175,7 +186,7 @@ impl AssetLoader for GltfAssetLoader {
     async fn load(
         &self,
         reader: &mut dyn Reader,
-        _settings: &Self::Settings,
+        settings: &Self::Settings,
         load_context: &mut LoadContext<'_>
     ) -> Result<Self::Asset, Self::Error> {
         let path = load_context.path().clone();
@@ -221,16 +232,20 @@ impl AssetLoader for GltfAssetLoader {
         {
             let label = format!("gltf_mesh_{}", i);
             let (bb_min, bb_max) = bounding_boxes[i];
-            let mesh_asset = Mesh {
+            let mut mesh_asset = Mesh {
                 label: label.clone(),
                 vertices: vertices.clone(),
                 indices: indices_data.clone(),
+                lods: Vec::new(),
                 bbox: MeshBbox {
                     min: bb_min,
                     max: bb_max
                 },
                 use_ssbo: true
             };
+            if let Some(lods) = &settings.lods {
+                mesh_asset.generate_lods(lods);
+            }
 
             models.push((
                 load_context.add_labeled_asset(label.clone(), mesh_asset),

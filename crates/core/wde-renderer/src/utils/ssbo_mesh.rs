@@ -4,9 +4,9 @@ use wde_wgpu::{buffer::BufferUsage, utils::Vertex};
 use crate::prelude::*;
 
 /// Maximum number of vertices that can be stored in the SSBO buffers.
-const MAX_VERTICES: usize = 1_000_000;
-/// Maximum number of indices that can be stored in the SSBO buffers.
-const MAX_INDICES: usize = 3_000_000;
+pub const SSBO_MESH_MAX_VERTICES: usize = 1_000_000;
+/// Maximum number of indices that can be stored in the SSBO buffers, levels of detail included.
+pub const SSBO_MESH_MAX_INDICES: usize = 6_000_000;
 
 /// Resource describing the layout of [SsboMesh] data.
 #[derive(Resource, Default)]
@@ -33,7 +33,7 @@ impl RenderData for SsboMesh {
             Self::VERTEX_BUFFER_ID,
             Buffer {
                 label: "ssbo-mesh-vertex-buffer-gpu".to_string(),
-                size: std::mem::size_of::<Vertex>() * MAX_VERTICES,
+                size: std::mem::size_of::<Vertex>() * SSBO_MESH_MAX_VERTICES,
                 usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
                 content: None
             }
@@ -42,7 +42,7 @@ impl RenderData for SsboMesh {
             Self::INDEX_BUFFER_ID,
             Buffer {
                 label: "ssbo-mesh-index-buffer-gpu".to_string(),
-                size: std::mem::size_of::<u32>() * MAX_INDICES,
+                size: std::mem::size_of::<u32>() * SSBO_MESH_MAX_INDICES,
                 usage: BufferUsage::STORAGE | BufferUsage::COPY_DST,
                 content: None
             }
