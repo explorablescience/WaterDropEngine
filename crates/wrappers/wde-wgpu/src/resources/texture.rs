@@ -1,5 +1,7 @@
 //! Texture creation and copy helpers built on `wgpu::Texture`.
 
+use std::{collections::HashMap, sync::Mutex};
+
 use crate::{
     RenderInstanceData,
     memory::{GpuAllocation, GpuMemoryCategory}
@@ -453,7 +455,7 @@ impl Texture {
         self.copy_from_texture(instance, &surface_texture.texture, size);
     }
 
-    /// Copy texture to texture at a given array layer.
+    /// Copy texture to texture at a given array layer, with the next submit.
     /// It is assumed that the texture is the same size as the source texture.
     /// Note that the input texture must have the COPY_SRC usage, and the output texture must have the COPY_DST usage.
     ///
@@ -499,10 +501,10 @@ impl Texture {
         );
 
         // Submit the commands
-        command.submit(instance);
+        command.queue(instance);
     }
 
-    /// Generate mipmaps for this texture.
+    /// Generate mipmaps for this texture, with the next submit.
     /// The texture must have been created with TEXTURE_BINDING | RENDER_ATTACHMENT | COPY_SRC usage.
     /// This method uses a simple blit approach to downsample each mip level from the previous one.
     ///
@@ -514,118 +516,8 @@ impl Texture {
             return;
         }
 
-        // Create the blit shader module
-        let shader_source = r#"
-struct VertexOutput {
-    @builtin(position) position: vec4<f32>,
-    @location(0) tex_coord: vec2<f32>,
-}
-
-@vertex
-fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
-    var out: VertexOutput;
-    let x = f32((vertex_index << 1u) & 2u);
-    let y = f32(vertex_index & 2u);
-    out.position = vec4<f32>(x * 2.0 - 1.0, y * 2.0 - 1.0, 0.0, 1.0);
-    out.tex_coord = vec2<f32>(x, 1.0 - y);
-    return out;
-}
-
-@group(0) @binding(0) var src_texture: texture_2d<f32>;
-@group(0) @binding(1) var src_sampler: sampler;
-
-@fragment
-fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(src_texture, src_sampler, in.tex_coord);
-}
-"#;
-
-        let shader = instance
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("mipmap_blit_shader"),
-                source: wgpu::ShaderSource::Wgsl(shader_source.into())
-            });
-
-        // Create sampler for mipmap generation (linear filtering for downsampling)
-        let blit_sampler = instance.device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("mipmap_blit_sampler"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
-
-        // Create bind group layout
-        let bind_group_layout =
-            instance
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("mipmap_blit_bind_group_layout"),
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Texture {
-                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                                view_dimension: wgpu::TextureViewDimension::D2,
-                                multisampled: false
-                            },
-                            count: None
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                            count: None
-                        }
-                    ]
-                });
-
-        // Create pipeline layout
-        let pipeline_layout =
-            instance
-                .device
-                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                    label: Some("mipmap_blit_pipeline_layout"),
-                    bind_group_layouts: &[&bind_group_layout],
-                    push_constant_ranges: &[]
-                });
-
-        // Create render pipeline
-        let pipeline = instance
-            .device
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("mipmap_blit_pipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vs_main"),
-                    buffers: &[],
-                    compilation_options: Default::default()
-                },
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some("fs_main"),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: self.format,
-                        blend: None,
-                        write_mask: wgpu::ColorWrites::ALL
-                    })],
-                    compilation_options: Default::default()
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    ..Default::default()
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                multiview: None,
-                cache: None
-            });
+        let (pipeline, bind_group_layout, blit_sampler) =
+            instance.mipmap_blit.get(instance, self.format);
 
         // Generate each mip level
         let mut command = crate::command_buffer::CommandBuffer::new(instance, "Generate Mipmaps");
@@ -703,6 +595,135 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
             }
         }
 
-        command.submit(instance);
+        command.queue(instance);
+    }
+}
+
+const MIPMAP_BLIT_SHADER: &str = r#"
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) tex_coord: vec2<f32>,
+}
+
+@vertex
+fn vs_main(@builtin(vertex_index) vertex_index: u32) -> VertexOutput {
+    var out: VertexOutput;
+    let x = f32((vertex_index << 1u) & 2u);
+    let y = f32(vertex_index & 2u);
+    out.position = vec4<f32>(x * 2.0 - 1.0, y * 2.0 - 1.0, 0.0, 1.0);
+    out.tex_coord = vec2<f32>(x, 1.0 - y);
+    return out;
+}
+
+@group(0) @binding(0) var src_texture: texture_2d<f32>;
+@group(0) @binding(1) var src_sampler: sampler;
+
+@fragment
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    return textureSample(src_texture, src_sampler, in.tex_coord);
+}
+"#;
+
+struct MipmapBlitShared {
+    shader: wgpu::ShaderModule,
+    sampler: wgpu::Sampler,
+    bind_group_layout: wgpu::BindGroupLayout,
+    pipeline_layout: wgpu::PipelineLayout,
+    pipelines: HashMap<TextureFormat, wgpu::RenderPipeline>
+}
+
+/// Blit pipelines of [`Texture::generate_mipmaps`], built once per texture format.
+#[derive(Default)]
+pub(crate) struct MipmapBlit(Mutex<Option<MipmapBlitShared>>);
+impl MipmapBlit {
+    fn get(
+        &self,
+        instance: &RenderInstanceData<'_>,
+        format: TextureFormat
+    ) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout, wgpu::Sampler) {
+        let device = &instance.device;
+        let mut shared = self.0.lock().unwrap();
+        let shared = shared.get_or_insert_with(|| {
+            let bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("mipmap_blit_bind_group_layout"),
+                    entries: &[
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Texture {
+                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                                view_dimension: wgpu::TextureViewDimension::D2,
+                                multisampled: false
+                            },
+                            count: None
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                            count: None
+                        }
+                    ]
+                });
+            MipmapBlitShared {
+                shader: device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("mipmap_blit_shader"),
+                    source: wgpu::ShaderSource::Wgsl(MIPMAP_BLIT_SHADER.into())
+                }),
+                sampler: device.create_sampler(&wgpu::SamplerDescriptor {
+                    label: Some("mipmap_blit_sampler"),
+                    address_mode_u: wgpu::AddressMode::ClampToEdge,
+                    address_mode_v: wgpu::AddressMode::ClampToEdge,
+                    address_mode_w: wgpu::AddressMode::ClampToEdge,
+                    mag_filter: wgpu::FilterMode::Linear,
+                    min_filter: wgpu::FilterMode::Linear,
+                    mipmap_filter: wgpu::FilterMode::Nearest,
+                    ..Default::default()
+                }),
+                pipeline_layout: device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("mipmap_blit_pipeline_layout"),
+                    bind_group_layouts: &[&bind_group_layout],
+                    push_constant_ranges: &[]
+                }),
+                bind_group_layout,
+                pipelines: HashMap::new()
+            }
+        });
+        let pipeline = shared.pipelines.entry(format).or_insert_with(|| {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                label: Some("mipmap_blit_pipeline"),
+                layout: Some(&shared.pipeline_layout),
+                vertex: wgpu::VertexState {
+                    module: &shared.shader,
+                    entry_point: Some("vs_main"),
+                    buffers: &[],
+                    compilation_options: Default::default()
+                },
+                fragment: Some(wgpu::FragmentState {
+                    module: &shared.shader,
+                    entry_point: Some("fs_main"),
+                    targets: &[Some(wgpu::ColorTargetState {
+                        format,
+                        blend: None,
+                        write_mask: wgpu::ColorWrites::ALL
+                    })],
+                    compilation_options: Default::default()
+                }),
+                primitive: wgpu::PrimitiveState {
+                    topology: wgpu::PrimitiveTopology::TriangleList,
+                    ..Default::default()
+                },
+                depth_stencil: None,
+                multisample: wgpu::MultisampleState::default(),
+                multiview: None,
+                cache: None
+            })
+        });
+        (
+            pipeline.clone(),
+            shared.bind_group_layout.clone(),
+            shared.sampler.clone()
+        )
     }
 }

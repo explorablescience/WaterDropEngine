@@ -12,7 +12,8 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 use std::{
     fs::File,
-    io::{BufReader, Error}
+    io::{BufReader, Error},
+    time::Duration
 };
 use thiserror::Error;
 use tobj::LoadError;
@@ -113,6 +114,7 @@ pub struct MeshSsboAllocations(HashMap<AssetId<Mesh>, MeshSsboAllocation>);
 
 impl RenderAsset for GpuMesh {
     type SourceAsset = Mesh;
+    const PREPARE_BUDGET: Option<Duration> = Some(Duration::from_millis(4));
     type Params = (
         SRes<RenderInstance>,
         SResMut<SsboMeshDescriptor>,
@@ -143,18 +145,6 @@ impl RenderAsset for GpuMesh {
             _ => return Err(PrepareAssetError::RetryNextUpdate(asset))
         };
 
-        // Buffer usage
-        let usage_vertex = if asset.use_ssbo {
-            BufferUsage::COPY_SRC
-        } else {
-            BufferUsage::VERTEX
-        };
-        let usage_index = if asset.use_ssbo {
-            BufferUsage::COPY_SRC
-        } else {
-            BufferUsage::INDEX
-        };
-
         // The levels of detail follow the full mesh in the index buffer
         let mut lods = vec![GpuMeshLod {
             first_index: 0,
@@ -172,26 +162,23 @@ impl RenderAsset for GpuMesh {
                 indices.extend_from_slice(&lod.indices);
             }
         }
-
-        // Create staging buffers
         let render_instance = render_instance.0.read().unwrap();
-        let vertex_buffer = Buffer::new(
-            &render_instance,
-            format!("{}-vertex-staging", asset.label).as_str(),
-            std::mem::size_of::<Vertex>() * asset.vertices.len(),
-            usage_vertex,
-            Some(bytemuck::cast_slice(&asset.vertices))
-        );
-        let index_buffer = Buffer::new(
-            &render_instance,
-            format!("{}-indices-staging", asset.label).as_str(),
-            std::mem::size_of::<u32>() * indices.len(),
-            usage_index,
-            Some(bytemuck::cast_slice(&indices))
-        );
 
-        // If not using SSBO, return the buffers directly
         if !asset.use_ssbo {
+            let vertex_buffer = Buffer::new(
+                &render_instance,
+                format!("{}-vertex", asset.label).as_str(),
+                std::mem::size_of::<Vertex>() * asset.vertices.len(),
+                BufferUsage::VERTEX,
+                Some(bytemuck::cast_slice(&asset.vertices))
+            );
+            let index_buffer = Buffer::new(
+                &render_instance,
+                format!("{}-indices", asset.label).as_str(),
+                std::mem::size_of::<u32>() * indices.len(),
+                BufferUsage::INDEX,
+                Some(bytemuck::cast_slice(&indices))
+            );
             return Ok(GpuMesh {
                 label: asset.label,
                 ssbo_first_vertex: 0,
@@ -242,26 +229,16 @@ impl RenderAsset for GpuMesh {
             }
         };
 
-        // Calculate byte offsets and sizes for buffer copy operations
-        let vertices_offset_bytes = (first_vertex as u64) * (std::mem::size_of::<Vertex>() as u64);
-        let indices_offset_bytes = (first_index as u64) * (std::mem::size_of::<u32>() as u64);
-        let vertices_size_bytes = (vertices_count as u64) * (std::mem::size_of::<Vertex>() as u64);
-        let indices_size_bytes = (indices_count as u64) * (std::mem::size_of::<u32>() as u64);
-
-        ssbo_vertex_buffer.buffer.copy_from_buffer_offset(
+        // Staged by the queue, and uploaded with the next submit
+        ssbo_vertex_buffer.buffer.write(
             &render_instance,
-            &vertex_buffer,
-            0,
-            vertices_offset_bytes,
-            vertices_size_bytes
+            bytemuck::cast_slice(&asset.vertices),
+            first_vertex as usize * std::mem::size_of::<Vertex>()
         );
-
-        ssbo_index_buffer.buffer.copy_from_buffer_offset(
+        ssbo_index_buffer.buffer.write(
             &render_instance,
-            &index_buffer,
-            0,
-            indices_offset_bytes,
-            indices_size_bytes
+            bytemuck::cast_slice(&indices),
+            first_index as usize * std::mem::size_of::<u32>()
         );
 
         Ok(GpuMesh {

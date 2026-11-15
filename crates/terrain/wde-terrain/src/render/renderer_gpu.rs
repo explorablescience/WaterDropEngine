@@ -119,6 +119,7 @@ impl TerrainRendererGPU {
         }
         let render_instance = render_instance.0.read().unwrap();
         let dirty = std::mem::take(&mut gpu.dirty);
+        let mut waiting = Vec::new();
         for (pos, map_type, splat_index, tile_data) in dirty {
             let layer = match gpu.pos_to_layer.get(&pos) {
                 Some(&l) => l,
@@ -130,15 +131,21 @@ impl TerrainRendererGPU {
                 MAP_MASKS => gpu.mask_array.as_ref(),
                 _ => unreachable!()
             };
-            if let Some(tex) = handle.and_then(|h| textures.get(h)) {
-                tex.texture.copy_from_buffer_layered(
+            let Some(handle) = handle else {
+                continue;
+            };
+            match textures.get(handle) {
+                Some(tex) => tex.texture.copy_from_buffer_layered(
                     &render_instance,
                     tex.texture.format,
                     layer,
                     bytemuck::cast_slice(&tile_data)
-                );
+                ),
+                // Kept until the array texture is prepared
+                None => waiting.push((pos, map_type, splat_index, tile_data))
             }
         }
+        gpu.dirty.extend(waiting);
     }
 
     /// Create the single render and compute bind groups once textures are ready.

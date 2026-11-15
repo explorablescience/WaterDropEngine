@@ -81,19 +81,18 @@ impl Plugin for CustomBevyPlugins {
                     min_total_threads: 1,
                     max_total_threads: usize::MAX,
 
-                    // Use 1 core for IO
+                    // Asset loaders (decoding, mesh simplification) run on the IO pool
                     io: TaskPoolThreadAssignmentPolicy {
                         min_threads: 1,
-                        max_threads: 2,
+                        max_threads: 4,
                         percent: 0.25,
                         on_thread_spawn: None,
                         on_thread_destroy: None
                     },
 
-                    // Use 1 core for async compute
                     async_compute: TaskPoolThreadAssignmentPolicy {
                         min_threads: 1,
-                        max_threads: 2,
+                        max_threads: 4,
                         percent: 0.25,
                         on_thread_spawn: None,
                         on_thread_destroy: None

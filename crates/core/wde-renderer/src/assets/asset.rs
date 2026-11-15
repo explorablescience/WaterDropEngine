@@ -1,4 +1,4 @@
-use std::any::TypeId;
+use std::{any::TypeId, time::Duration};
 
 use wde_logger::prelude::*;
 
@@ -8,7 +8,10 @@ use bevy::{
         system::{StaticSystemParam, SystemParam, SystemParamItem, SystemState},
         world
     },
-    platform::collections::{HashMap, HashSet},
+    platform::{
+        collections::{HashMap, HashSet},
+        time::Instant
+    },
     prelude::*,
     utils::prelude::ShortName
 };
@@ -28,6 +31,11 @@ pub enum PrepareAssetError<E: Send + Sync + 'static> {
 pub trait RenderAsset: Send + Sync + 'static + Sized {
     type SourceAsset: Asset + Clone;
     type Params: SystemParam;
+
+    /// Time spent preparing assets of this type each frame, the others waiting for the next frames.
+    /// Spreads large uploads (whose cost is paid in the next submit) over several frames. `None`
+    /// prepares them all in the frame they arrive.
+    const PREPARE_BUDGET: Option<Duration> = None;
 
     /// Prepare the GPU asset from the CPU source [bevy::prelude::Asset] using the render-world system params.
     /// `id` is the stable ID of the source asset, allowing implementations to recognize a re-prepare of a
@@ -316,11 +324,17 @@ fn prepare_assets<A: RenderAsset>(
 ) {
     let mut params = params.into_inner();
     let queued_assets = std::mem::take(&mut prepare_next_frame.assets);
+    let start = Instant::now();
+    let over_budget = || A::PREPARE_BUDGET.is_some_and(|budget| start.elapsed() >= budget);
 
     // Initialize the render assets from the previous frame that have not been finalized yet
     for (id, extracted_asset) in queued_assets {
         // Skip previous frame's assets removed or updated
         if extracted_assets.removed.contains(&id) || extracted_assets.added.contains(&id) {
+            continue;
+        }
+        if over_budget() {
+            prepare_next_frame.assets.push((id, extracted_asset));
             continue;
         }
 
@@ -355,6 +369,11 @@ fn prepare_assets<A: RenderAsset>(
 
     // Update changed assets
     for (id, extracted_asset) in extracted_assets.extracted.drain(..) {
+        // The previous version stays until it is replaced
+        if over_budget() {
+            prepare_next_frame.assets.push((id, extracted_asset));
+            continue;
+        }
         render_assets.remove(id);
 
         // Load the asset to the GPU from the CPU

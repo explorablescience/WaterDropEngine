@@ -251,15 +251,25 @@ impl CommandBuffer {
         WComputePass::new(label, compute_pass)
     }
 
-    /// Finish and submit a command buffer.
+    /// Finish and submit a command buffer, after the [queued](Self::queue) ones.
     ///
     /// # Arguments
     ///
     /// * `instance` - The render instance.
     pub fn submit(self, instance: &RenderInstanceData) {
+        let mut commands = std::mem::take(&mut *instance.queued_commands.lock().unwrap());
+        commands.push(self.encoder.finish());
+        instance.queue.submit(commands);
+    }
+
+    /// Finish the command buffer, and send it with the next [submit](Self::submit). Each submit is costly,
+    /// so prefer this to many small submits, such as for uploads.
+    pub fn queue(self, instance: &RenderInstanceData) {
         instance
-            .queue
-            .submit(std::iter::once(self.encoder.finish()));
+            .queued_commands
+            .lock()
+            .unwrap()
+            .push(self.encoder.finish());
     }
 
     /// Copy a buffer to another buffer.

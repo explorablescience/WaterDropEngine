@@ -119,7 +119,10 @@ pub struct RenderInstanceData<'a> {
     /// Instance of the GPU device.
     pub instance: wgpu::Instance,
     /// Surface configuration of the instance.
-    pub surface_config: Option<SurfaceConfiguration>
+    pub surface_config: Option<SurfaceConfiguration>,
+    pub(crate) mipmap_blit: crate::texture::MipmapBlit,
+    /// Command buffers sent with the next submit, see [`CommandBuffer::queue`](crate::command_buffer::CommandBuffer::queue).
+    pub(crate) queued_commands: std::sync::Mutex<Vec<wgpu::CommandBuffer>>
 }
 
 /// Opens the device without `VK_EXT_external_memory_dma_buf`, which wgpu enables when available
@@ -313,7 +316,9 @@ pub async fn create_instance(
         surface,
         adapter,
         instance,
-        surface_config: None
+        surface_config: None,
+        mipmap_blit: Default::default(),
+        queued_commands: Default::default()
     }
 }
 

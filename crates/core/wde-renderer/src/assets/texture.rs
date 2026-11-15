@@ -7,7 +7,10 @@ use bevy::{
 };
 use image::GenericImageView;
 use serde::{Deserialize, Serialize};
-use std::io::{Error, ErrorKind};
+use std::{
+    io::{Error, ErrorKind},
+    time::Duration
+};
 use thiserror::Error;
 
 use crate::core::RenderInstance;
@@ -84,6 +87,7 @@ pub struct GpuTexture {
 impl RenderAsset for GpuTexture {
     type SourceAsset = Texture;
     type Params = SRes<RenderInstance>;
+    const PREPARE_BUDGET: Option<Duration> = Some(Duration::from_millis(4));
 
     fn prepare(
         _id: AssetId<Self::SourceAsset>,
