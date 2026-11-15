@@ -17,7 +17,7 @@ use super::asset::{PrepareAssetError, RenderAsset};
 
 // Reexport structs
 pub use wde_wgpu::texture::{
-    DEPTH_FORMAT, FilterMode, SWAPCHAIN_FORMAT, TextureFormat, TextureUsages
+    DEPTH_FORMAT, FilterMode, SWAPCHAIN_FORMAT, TextureFormat, TextureSampleType, TextureUsages
 };
 
 /// Stores a CPU texture with raw pixel data and metadata for GPU allocation.

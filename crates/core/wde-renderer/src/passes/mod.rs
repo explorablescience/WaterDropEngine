@@ -122,6 +122,7 @@ mod pipeline_manager;
 mod pipeline_register_plugin;
 mod pipeline_types;
 mod render_graph;
+mod render_graph_debug;
 
 // Reexport wgpu types
 pub use wde_wgpu::pipelines::{
@@ -135,3 +136,8 @@ pub use pipeline_manager::*;
 pub use pipeline_register_plugin::*;
 pub use pipeline_types::*;
 pub use render_graph::*;
+pub(crate) use render_graph_debug::RenderGraphDebugPlugin;
+pub use render_graph_debug::{
+    DebugChannels, DebugPassReport, DebugPointReport, DebugSelection, DebugTextureReport,
+    DebugViewMode, DebugViewSettings, RenderGraphDebug, RenderGraphDebugView
+};

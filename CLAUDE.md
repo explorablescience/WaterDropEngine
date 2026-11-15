@@ -60,7 +60,7 @@ crates/
     wde/                # Facade crate — re-exports all sub-crates as WdeDefaultPlugins
     wde-renderer/       # Custom wgpu renderer (render graph, pipelines, sync between worlds)
     wde-scene/          # Scene management (entity hierarchy, serialization)
-    wde-editor/         # In-game editor UI panels (ECS inspector, logs, profiler, render graph view)
+    wde-editor/         # In-game editor UI panels (ECS inspector, logs, profiler, pipeline debug view of the render graph)
   render/
     wde-camera/         # Camera component and view/projection math
     wde-camera-controller/ # ThirdPersonController and FreeCameraController

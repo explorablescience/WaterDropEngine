@@ -289,6 +289,26 @@ impl BindGroupLayoutBuilder {
         self
     }
 
+    /// Add a 2D texture read as the given sample type, such as a [`Texture::single_view`](crate::texture::Texture::single_view).
+    pub fn add_texture_view_sample_type(
+        &mut self,
+        binding: u32,
+        visibility: ShaderStages,
+        sample_type: wgpu::TextureSampleType
+    ) -> &mut Self {
+        self.layout_entries.push(wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility,
+            ty: wgpu::BindingType::Texture {
+                multisampled: false,
+                view_dimension: wgpu::TextureViewDimension::D2,
+                sample_type
+            },
+            count: None
+        });
+        self
+    }
+
     /// Add a depth texture to the bind group.
     ///
     /// # Arguments

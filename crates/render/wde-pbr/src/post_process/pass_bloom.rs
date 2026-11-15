@@ -185,7 +185,7 @@ fn render_bloom(
         .rev()
         .map(|mip| (mip, mip + 2, upsample, false));
     for (target, source, pipeline, is_downsample) in downsamples.chain(upsamples) {
-        let render_pass = command_buffer.create_render_pass("bloom", |builder| {
+        let mut render_pass = match command_buffer.create_render_pass("bloom", |builder| {
             builder.add_color_attachment(RenderPassColorAttachment {
                 texture: Some(&mips[target].texture.view),
                 load: if is_downsample {
@@ -197,8 +197,7 @@ fn render_bloom(
                 resolve_target: None
             });
             Ok(())
-        });
-        let mut render_pass = match render_pass {
+        }) {
             Ok(render_pass) => render_pass,
             Err(e) => {
                 debug!("Failed to create the bloom render pass: {}.", e);
@@ -226,6 +225,18 @@ fn render_bloom(
         if render_pass.draw_indexed(0..6, 0..1).is_err() {
             return false;
         }
+        drop(render_pass);
+        let step = if is_downsample {
+            "downsample"
+        } else {
+            "upsample"
+        };
+        RenderGraphDebug::capture(
+            world,
+            command_buffer,
+            &format!("{step} mip {target}"),
+            &[bind_groups.textures[target + 1]]
+        );
     }
     true
 }

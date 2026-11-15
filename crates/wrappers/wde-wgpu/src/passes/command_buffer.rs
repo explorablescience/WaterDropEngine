@@ -279,6 +279,16 @@ impl CommandBuffer {
         );
     }
 
+    /// Copy a whole texture into another of the same size and format, such as the swapchain texture (when it has
+    /// the `COPY_SRC` usage).
+    pub fn copy_texture_to_texture(&mut self, source: &wgpu::Texture, destination: &wgpu::Texture) {
+        self.encoder.copy_texture_to_texture(
+            source.as_image_copy(),
+            destination.as_image_copy(),
+            source.size()
+        );
+    }
+
     /// Copy a buffer to another buffer with offsets.
     /// Please use the `copy_from_buffer` method of the buffer to copy data.
     ///

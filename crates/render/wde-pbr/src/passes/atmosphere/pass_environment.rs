@@ -224,6 +224,10 @@ fn bake_environment(
             return false;
         }
     }
+    drop(pass);
+    if let Some(map) = bake.map {
+        RenderGraphDebug::capture(world, command_buffer, "prefiltered map", &[map]);
+    }
     true
 }
 

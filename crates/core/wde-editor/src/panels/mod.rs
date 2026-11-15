@@ -3,8 +3,8 @@ use bevy::prelude::*;
 mod ecs;
 mod framedata;
 mod logs;
+mod pipeline;
 mod profiler;
-mod rendergraph;
 
 pub use framedata::FrameDataOverlayConfig;
 
@@ -15,6 +15,6 @@ impl Plugin for PanelsPlugin {
             .add_plugins(framedata::UIFrameDataPlugin)
             .add_plugins(logs::LogsPanelPlugin)
             .add_plugins(profiler::ProfilerPlugin)
-            .add_plugins(rendergraph::RenderGraphPanelPlugin);
+            .add_plugins(pipeline::PipelinePanelPlugin);
     }
 }

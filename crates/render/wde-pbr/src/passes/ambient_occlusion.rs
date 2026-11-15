@@ -394,28 +394,54 @@ fn render_ambient_occlusion(world: &World, command_buffer: &mut CommandBuffer) -
     };
 
     // GTAO into the occlusion texture, then blurred horizontally into the blur texture and back vertically
+    let id = |idx| data.get_texture(idx).unwrap().id();
+    let (occlusion_id, blurred_id) = (
+        id(AmbientOcclusionData::OCCLUSION_IDX),
+        id(AmbientOcclusionData::BLUR_IDX)
+    );
     let draws = [
-        (occlusion, gtao, vec![camera, input], None),
-        (blurred, blur, vec![blur_x], Some(0u32)),
-        (occlusion, blur, vec![blur_y], Some(1u32))
+        (
+            occlusion,
+            occlusion_id,
+            "gtao",
+            gtao,
+            vec![camera, input],
+            None
+        ),
+        (
+            blurred,
+            blurred_id,
+            "blur-x",
+            blur,
+            vec![blur_x],
+            Some(0u32)
+        ),
+        (
+            occlusion,
+            occlusion_id,
+            "blur-y",
+            blur,
+            vec![blur_y],
+            Some(1u32)
+        )
     ];
-    for (target, pipeline, bind_groups, axis) in draws {
-        let render_pass = command_buffer.create_render_pass("ambient-occlusion", |builder| {
-            builder.add_color_attachment(RenderPassColorAttachment {
-                texture: Some(&target.texture.view),
-                load: LoadOp::Clear(WdeColor::WHITE.into()),
-                store: StoreOp::Store,
-                resolve_target: None
-            });
-            Ok(())
-        });
-        let mut render_pass = match render_pass {
-            Ok(render_pass) => render_pass,
-            Err(e) => {
-                debug!("Failed to create the ambient occlusion render pass: {}.", e);
-                return false;
-            }
-        };
+    for (target, target_id, step, pipeline, bind_groups, axis) in draws {
+        let mut render_pass =
+            match command_buffer.create_render_pass("ambient-occlusion", |builder| {
+                builder.add_color_attachment(RenderPassColorAttachment {
+                    texture: Some(&target.texture.view),
+                    load: LoadOp::Clear(WdeColor::WHITE.into()),
+                    store: StoreOp::Store,
+                    resolve_target: None
+                });
+                Ok(())
+            }) {
+                Ok(render_pass) => render_pass,
+                Err(e) => {
+                    debug!("Failed to create the ambient occlusion render pass: {}.", e);
+                    return false;
+                }
+            };
         if render_pass.set_pipeline(pipeline).is_err() {
             return false;
         }
@@ -431,6 +457,8 @@ fn render_ambient_occlusion(world: &World, command_buffer: &mut CommandBuffer) -
         if render_pass.draw_indexed(0..6, 0..1).is_err() {
             return false;
         }
+        drop(render_pass);
+        RenderGraphDebug::capture(world, command_buffer, step, &[target_id]);
     }
     true
 }

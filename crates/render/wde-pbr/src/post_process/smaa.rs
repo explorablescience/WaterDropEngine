@@ -281,12 +281,25 @@ fn render_smaa(world: &World, command_buffer: &mut CommandBuffer) -> bool {
         return false;
     };
 
+    // Debug views: the weights step also shows its inputs
+    let id = |idx| data.get_texture(idx).unwrap().id();
+    let (edges_id, weights_id) = (id(SmaaTextures::EDGES_IDX), id(SmaaTextures::WEIGHTS_IDX));
+    let luts = world.resource::<SmaaLuts>();
+    let edges_step = [edges_id];
+    let weights_step = [weights_id, edges_id, luts.area.id(), luts.search.id()];
+
     // Both targets are cleared, as the edge detection discards the pixels without edges
-    for (target, pipeline, bind_group) in [
-        (edges, edges_pipeline, edges_input),
-        (weights, weights_pipeline, weights_input)
+    for (target, pipeline, bind_group, step, debug_textures) in [
+        (edges, edges_pipeline, edges_input, "edges", &edges_step[..]),
+        (
+            weights,
+            weights_pipeline,
+            weights_input,
+            "weights",
+            &weights_step[..]
+        )
     ] {
-        let render_pass = command_buffer.create_render_pass("smaa", |builder| {
+        let mut render_pass = match command_buffer.create_render_pass("smaa", |builder| {
             builder.add_color_attachment(RenderPassColorAttachment {
                 texture: Some(&target.texture.view),
                 load: LoadOp::Clear(WdeColor::TRANSPARENT.into()),
@@ -294,8 +307,7 @@ fn render_smaa(world: &World, command_buffer: &mut CommandBuffer) -> bool {
                 resolve_target: None
             });
             Ok(())
-        });
-        let mut render_pass = match render_pass {
+        }) {
             Ok(render_pass) => render_pass,
             Err(e) => {
                 debug!("Failed to create the SMAA render pass: {}.", e);
@@ -312,6 +324,8 @@ fn render_smaa(world: &World, command_buffer: &mut CommandBuffer) -> bool {
         if render_pass.draw_indexed(0..6, 0..1).is_err() {
             return false;
         }
+        drop(render_pass);
+        RenderGraphDebug::capture(world, command_buffer, step, debug_textures);
     }
     true
 }

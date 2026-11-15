@@ -12,7 +12,8 @@ use wde_wgpu::pipelines::BindGroup;
 
 use crate::{
     assets::{Mesh, Texture},
-    core::SwapchainFrame
+    core::SwapchainFrame,
+    passes::RenderGraphDebug
 };
 
 pub use wde_wgpu::command_buffer::{LoadOp, Operations, StoreOp};
@@ -289,10 +290,12 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
         let pass_index = *graph.render_passes_by_id.get(pass_id).unwrap();
         let pass = &mut graph.passes[pass_index];
         let pass_label = pass.label();
-        let pass_desc = pass.describe(world);
+        let mut pass_desc = pass.describe(world);
+        RenderGraphDebug::begin_pass(world, *pass_id, pass_label);
 
         // Try custom rendering logic for this pass
         if let Some(custom_render_result) = pass.custom_render(world, &mut command_buffer) {
+            RenderGraphDebug::end_custom_pass(world);
             // If it was Some(true or false), it means the pass used custom rendering logic.
             if !custom_render_result {
                 debug!(
@@ -313,12 +316,14 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
                 sub_passes.push((sub_pass_label, sub_pass_desc));
             }
         }
+        let sub_pass_labels: Vec<&str> = sub_passes.iter().map(|(label, _)| *label).collect();
+        let capture = RenderGraphDebug::graph_pass(world, &pass_desc, &sub_pass_labels);
 
         // Create the render pass from its description
         let _pass_span = debug_span!("render_pass", pass_id = *pass_id, pass_label).entered();
         let mut render_pass =
             match create_render_pass(world, &mut command_buffer, pass_label, &pass_desc) {
-                Ok(pass) => pass,
+                Ok(pass) => Some(pass),
                 Err(e) => {
                     debug!(
                         "Failed to create render pass: '{}'. Skipping this frame.",
@@ -328,17 +333,53 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
                 }
             };
 
-        // Execute sub-passes in order of addition
-        for (sub_pass_label, sub_pass_desc) in &sub_passes {
+        // Execute sub-passes in order of addition. The debug capture ends the render pass after the selected one,
+        // and the following ones continue in a new render pass, loading the attachments.
+        let last = sub_passes.len().saturating_sub(1);
+        for (i, (sub_pass_label, sub_pass_desc)) in sub_passes.iter().enumerate() {
             let _sub_pass_span =
                 debug_span!("render_sub_pass", sub_pass_label = *sub_pass_label).entered();
-            render_sub_pass(world, &mut render_pass, sub_pass_desc);
+            if let Some(render_pass) = render_pass.as_mut() {
+                render_sub_pass(world, render_pass, sub_pass_desc);
+            }
+            if let Some((point, texture)) = capture
+                && point == i
+            {
+                render_pass = None;
+                if let Some(texture) = texture {
+                    RenderGraphDebug::draw_selected(world, &mut command_buffer, texture);
+                }
+                if i < last {
+                    load_attachments(&mut pass_desc);
+                    render_pass =
+                        create_render_pass(world, &mut command_buffer, pass_label, &pass_desc).ok();
+                }
+            }
+        }
+        if sub_passes.is_empty()
+            && let Some((_, Some(texture))) = capture
+        {
+            drop(render_pass);
+            RenderGraphDebug::draw_selected(world, &mut command_buffer, texture);
         }
     }
+    RenderGraphDebug::final_pass(world, &mut command_buffer);
+    RenderGraphDebug::end_frame(world);
 
     // Submit commands
     let render_instance = world.get_resource::<RenderInstance>().unwrap();
     command_buffer.submit(&render_instance.0.read().unwrap());
+}
+
+/// Makes the attachments of a pass keep their content, to continue it in a new render pass.
+fn load_attachments(pass_desc: &mut RenderPassDesc) {
+    for color in pass_desc.attachments_colors.iter_mut().flatten() {
+        color.load = LoadOp::Load;
+    }
+    if let Some(depth) = pass_desc.attachments_depth.as_mut() {
+        depth.load = LoadOp::Load;
+        depth.stencil_load = LoadOp::Load;
+    }
 }
 
 fn create_render_pass<'p>(

@@ -89,6 +89,11 @@ impl Plugin for RenderPlugin {
         });
 
         // Finally, add the other plugins
-        app.add_plugins((SyncPlugin, UtilsPlugin, AssetsPlugin));
+        app.add_plugins((
+            SyncPlugin,
+            UtilsPlugin,
+            AssetsPlugin,
+            crate::passes::RenderGraphDebugPlugin
+        ));
     }
 }
