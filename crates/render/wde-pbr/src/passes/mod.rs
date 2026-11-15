@@ -2,12 +2,16 @@ use bevy::prelude::*;
 use wde_editor::prelude::EngineUiSet;
 use wde_renderer::prelude::*;
 
+mod ambient_occlusion;
 mod atmosphere;
 mod pass_deferred_gbuffer;
 mod pass_deferred_lighting;
 mod pass_transparent;
 pub mod shadow;
 
+pub use ambient_occlusion::{
+    AmbientOcclusionData, AmbientOcclusionSettings, RenderPassAmbientOcclusion
+};
 pub use atmosphere::*;
 pub use pass_deferred_gbuffer::*;
 pub use pass_deferred_lighting::*;
@@ -18,7 +22,8 @@ pub(crate) struct PassesPlugin;
 impl Plugin for PassesPlugin {
     fn build(&self, app: &mut App) {
         // Register shadow settings in the main world
-        app.init_resource::<CascadedShadowSettings>();
+        app.init_resource::<CascadedShadowSettings>()
+            .add_plugins(ambient_occlusion::AmbientOcclusionPlugin);
 
         // Add the render graph nodes
         let render_world = app.get_sub_app_mut(RenderApp).unwrap();

@@ -1,5 +1,6 @@
 #include "core/render/pbr/pbr_functions.wgsl"
 #include "core/render/pbr/environment.wgsl"
+#include "core/render/pbr/ambient_occlusion.wgsl"
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -16,6 +17,9 @@ struct VertexOutput {
 @group(1) @binding(2) var in_normal_roughness_t: texture_2d<f32>;
 @group(1) @binding(3) var in_ao_t: texture_2d<f32>;
 @group(1) @binding(4) var in_emissive_t: texture_2d<f32>;
+// Half resolution screen-space ambient occlusion
+@group(1) @binding(5) var in_occlusion_t: texture_2d<f32>;
+@group(1) @binding(6) var<uniform> in_occlusion: AmbientOcclusionParams;
 
 // Light storage buffer (Light type comes from pbr_functions.wgsl)
 @group(2) @binding(0) var<storage, read> in_lights: array<Light>;
@@ -162,6 +166,13 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let roughness = clamp(tmp_g_normal_roughness.a * in_pbr_params.material_params.y, 0.0, 1.0);
     let ao        = textureLoad(in_ao_t, pixel, 0).r;
     let emissive  = textureLoad(in_emissive_t, pixel, 0).rgb;
+    var occlusion = 1.0;
+    if in_occlusion.effect.w > 0.0 {
+        occlusion = upsample_occlusion(in_occlusion_t, pixel, depth_z);
+        if in_occlusion.debug.x > 0.0 {
+            return vec4<f32>(vec3<f32>(occlusion), 1.0);
+        }
+    }
 
     // View direction from camera to fragment
     let view_dir = normalize(in_camera.position.xyz - world_position);
@@ -200,10 +211,10 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
         lo += light_contribution * attenuation;
     }
 
-    // Ambient light of the environment
+    // Ambient light of the environment, occluded by the material and the screen-space occlusion
     let ambient = environment_lighting(
         in_environment_sh, in_environment_map, in_environment_sampler, in_environment_brdf,
-        normal, view_dir, albedo, metallic, roughness, f0, ao
+        normal, view_dir, albedo, metallic, roughness, f0, ao * occlusion
     ) * in_pbr_params.lighting_params.y;
 
     // Linear HDR output, tonemapped in post-processing

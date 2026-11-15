@@ -13,11 +13,14 @@ use crate::{passes::shadow::ShadowSamplingBinding, prelude::*};
 #[derive(TypePath, Default, Clone, Asset)]
 pub(crate) struct RenderBindingGBuffer;
 impl RenderBinding for RenderBindingGBuffer {
-    type Params = SRenderData<DeferredTextures>;
+    type Params = (
+        SRenderData<DeferredTextures>,
+        SRenderData<AmbientOcclusionData>
+    );
 
     fn describe(
         &mut self,
-        deferred_textures: &SystemParamItem<Self::Params>,
+        (deferred_textures, ambient_occlusion): &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
         builder
@@ -25,7 +28,9 @@ impl RenderBinding for RenderBindingGBuffer {
             .add_texture_view(deferred_textures, DeferredTextures::ALBEDO_IDX)
             .add_texture_view(deferred_textures, DeferredTextures::NORMAL_IDX)
             .add_texture_view(deferred_textures, DeferredTextures::AO_IDX)
-            .add_texture_view(deferred_textures, DeferredTextures::EMISSIVE_IDX);
+            .add_texture_view(deferred_textures, DeferredTextures::EMISSIVE_IDX)
+            .add_texture_view(ambient_occlusion, AmbientOcclusionData::OCCLUSION_IDX)
+            .add_buffer(ambient_occlusion, AmbientOcclusionData::PARAMS_IDX);
     }
 
     fn has_dependencies(&self) -> bool {
@@ -60,7 +65,8 @@ impl RenderBinding for LightsDataBinding {
 }
 
 /// The render pass for rendering the lighting of opaque objects in the deferred rendering pipeline.
-/// It uses the G-buffer textures rendered in the previous render pass [`crate::prelude::RenderPassGBuffer`] to calculate the lighting, and writes to the final render texture, which is then presented on the screen.
+/// It uses the G-buffer textures rendered in the previous render pass [`crate::prelude::RenderPassGBuffer`] and the
+/// [`RenderPassAmbientOcclusion`] to calculate the lighting, and writes to the final render texture, which is then presented on the screen.
 ///
 /// Note:
 ///  - This render pass is not responsible for rendering transparent objects, which are rendered in a separate render pass[`crate::prelude::RenderPassTransparent`].
