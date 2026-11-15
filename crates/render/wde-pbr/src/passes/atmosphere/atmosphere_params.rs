@@ -84,6 +84,44 @@ impl Default for AtmosphereSettings {
     }
 }
 
+impl AtmosphereSettings {
+    /// Normalized time of day in [0, 1], animated from `elapsed_secs` if `animate_time` is set.
+    pub fn current_time_of_day(&self, elapsed_secs: f32) -> f32 {
+        if self.animate_time {
+            (elapsed_secs / self.day_length_seconds.max(1.0)).fract()
+        } else {
+            self.time_of_day.fract()
+        }
+    }
+
+    /// Direction toward the sun at a normalized time of day, matching the sky shader.
+    pub fn sun_direction(time_of_day: f32) -> Vec3 {
+        let sun_elevation = (time_of_day - 0.25) * std::f32::consts::TAU;
+        Vec3::new(
+            sun_elevation.cos() * SUN_AZIMUTH.cos(),
+            sun_elevation.sin(),
+            sun_elevation.cos() * SUN_AZIMUTH.sin()
+        )
+        .normalize()
+    }
+
+    /// Smooth day amount in [0, 1] for a sun height, matching the sky shader.
+    pub fn day_amount(&self, sun_height: f32) -> f32 {
+        let twilight_w = 0.06 + (0.20 - 0.06) * self.twilight_softness.clamp(0.0, 1.0);
+        smoothstep(-twilight_w, twilight_w, sun_height)
+    }
+}
+
+const SUN_AZIMUTH: f32 = -0.95;
+
+pub(crate) fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32 {
+    if edge0 == edge1 {
+        return if x < edge0 { 0.0 } else { 1.0 };
+    }
+    let t = ((x - edge0) / (edge1 - edge0)).clamp(0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+
 #[repr(C)]
 #[derive(Resource, Clone, Copy, Debug, Pod, Zeroable)]
 pub struct AtmosphereParamsUniform {

@@ -9,6 +9,9 @@ use wde_renderer::prelude::*;
 
 use crate::prelude::*;
 
+/// Number of bins of the luminance histogram of the eye adaptation.
+pub(crate) const EXPOSURE_HISTOGRAM_BINS: usize = 64;
+
 /// Number of bloom mips, each one half the size of the previous one (the first is half the screen size).
 pub const BLOOM_MIP_COUNT: u32 = 6;
 
@@ -70,12 +73,16 @@ impl RenderData for PostProcessTextures {
     }
 }
 
-/// Uniform buffers of the post-processing stack, written each frame.
+/// Buffers of the post-processing stack: the uniforms written each frame, and the eye adaptation state kept on the GPU.
 #[derive(Asset, Clone, TypePath, Default)]
 pub(crate) struct PostProcessBuffers;
 impl PostProcessBuffers {
     pub const PARAMS_IDX: u32 = 0;
     pub const FOG_IDX: u32 = 1;
+    /// Luminance histogram of the current frame (`EXPOSURE_HISTOGRAM_BINS` u32 counts).
+    pub const HISTOGRAM_IDX: u32 = 2;
+    /// Adapted exposure: an f32 in EV stops, then a u32 set once it is initialized.
+    pub const EXPOSURE_IDX: u32 = 3;
 }
 impl RenderData for PostProcessBuffers {
     type Params = ();
@@ -98,6 +105,24 @@ impl RenderData for PostProcessBuffers {
                     size: std::mem::size_of::<FogUniform>(),
                     usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
                     content: Some(bytemuck::cast_slice(&[FogUniform::default()]).to_vec())
+                }
+            )
+            .add_buffer(
+                Self::HISTOGRAM_IDX,
+                Buffer {
+                    label: "post-process-exposure-histogram".to_string(),
+                    size: EXPOSURE_HISTOGRAM_BINS * std::mem::size_of::<u32>(),
+                    usage: BufferUsage::STORAGE,
+                    content: None
+                }
+            )
+            .add_buffer(
+                Self::EXPOSURE_IDX,
+                Buffer {
+                    label: "post-process-exposure".to_string(),
+                    size: 2 * std::mem::size_of::<u32>(),
+                    usage: BufferUsage::STORAGE,
+                    content: None
                 }
             );
     }
@@ -122,7 +147,7 @@ impl RenderBinding for PostProcessParamsBinding {
     }
 }
 
-/// Inputs of the final composite: the render texture, the bloom and the parameters.
+/// Inputs of the final composite: the render texture, the bloom, the parameters and the adapted exposure.
 #[derive(Asset, Clone, TypePath, Default)]
 pub(crate) struct PostProcessCompositeBinding;
 impl RenderBinding for PostProcessCompositeBinding {
@@ -142,7 +167,8 @@ impl RenderBinding for PostProcessCompositeBinding {
             .add_texture_sampler(render_texture, RenderTexture::BINDING)
             .add_texture_view(textures, PostProcessTextures::BLOOM_IDX)
             .add_texture_sampler(textures, PostProcessTextures::BLOOM_IDX)
-            .add_buffer(buffers, PostProcessBuffers::PARAMS_IDX);
+            .add_buffer(buffers, PostProcessBuffers::PARAMS_IDX)
+            .add_buffer(buffers, PostProcessBuffers::EXPOSURE_IDX);
     }
 
     fn has_dependencies(&self) -> bool {
@@ -214,10 +240,22 @@ impl RenderBinding for FogBinding {
 pub(crate) fn extract_post_process_params(
     settings: ExtractWorld<Res<PostProcessSettings>>,
     time: ExtractWorld<Res<Time>>,
+    #[cfg(feature = "atmosphere")] atmosphere: ExtractWorld<Res<AtmosphereSettings>>,
     mut params: ResMut<PostProcessUniform>,
     mut fog: ResMut<FogUniform>
 ) {
-    *params = PostProcessUniform::from_settings(&settings, time.elapsed_secs_wrapped());
+    #[cfg(feature = "atmosphere")]
+    let day = atmosphere.day_amount(
+        AtmosphereSettings::sun_direction(atmosphere.current_time_of_day(time.elapsed_secs())).y
+    );
+    #[cfg(not(feature = "atmosphere"))]
+    let day = 1.0;
+    *params = PostProcessUniform::from_settings(
+        &settings,
+        time.elapsed_secs_wrapped(),
+        time.delta_secs(),
+        day
+    );
     *fog = FogUniform::from_settings(&settings.fog);
 }
 

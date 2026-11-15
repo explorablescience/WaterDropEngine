@@ -77,6 +77,49 @@ fn edit_post_process_settings(
                 });
             });
 
+            egui::CollapsingHeader::new("Exposure").show(ui, |ui| {
+                let exposure = &mut s.exposure;
+                ui.columns(2, |cols| {
+                    cols[0].add(
+                        Slider::new(&mut exposure.day_compensation, -4.0..=4.0).text("Day EV")
+                    );
+                    cols[1].add(
+                        Slider::new(&mut exposure.night_compensation, -4.0..=4.0).text("Night EV")
+                    );
+                });
+                ui.add(Checkbox::new(
+                    &mut exposure.eye_adaptation,
+                    "Eye Adaptation"
+                ));
+                ui.columns(2, |cols| {
+                    cols[0].add(Slider::new(&mut exposure.min_ev, -8.0..=8.0).text("Min EV"));
+                    cols[1].add(Slider::new(&mut exposure.max_ev, -8.0..=8.0).text("Max EV"));
+                });
+                ui.columns(2, |cols| {
+                    cols[0].add(
+                        Slider::new(&mut exposure.low_percentile, 0.0..=1.0).text("Low Percentile")
+                    );
+                    cols[1].add(
+                        Slider::new(&mut exposure.high_percentile, 0.0..=1.0)
+                            .text("High Percentile")
+                    );
+                });
+                ui.columns(2, |cols| {
+                    cols[0].add(
+                        Slider::new(&mut exposure.brighten_speed, 0.0..=10.0)
+                            .text("Brighten Speed")
+                    );
+                    cols[1].add(
+                        Slider::new(&mut exposure.darken_speed, 0.0..=10.0).text("Darken Speed")
+                    );
+                });
+                ui.columns(2, |cols| {
+                    let [min, max] = &mut exposure.luminance_range;
+                    cols[0].add(Slider::new(min, -16.0..=0.0).text("Min Log Luminance"));
+                    cols[1].add(Slider::new(max, 0.0..=16.0).text("Max Log Luminance"));
+                });
+            });
+
             egui::CollapsingHeader::new("Color Grading").show(ui, |ui| {
                 let grading = &mut s.color_grading;
                 ui.columns(2, |cols| {

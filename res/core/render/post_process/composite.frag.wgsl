@@ -6,6 +6,7 @@
 @group(0) @binding(2) var in_bloom_t: texture_2d<f32>;
 @group(0) @binding(3) var in_bloom_s: sampler;
 @group(0) @binding(4) var<uniform> in_params: PostProcessParams;
+@group(0) @binding(5) var<storage, read> in_exposure: ExposureState;
 
 fn sample_hdr(uv: vec2<f32>) -> vec3<f32> {
     return textureSampleLevel(in_hdr_t, in_hdr_s, uv, 0.0).rgb;
@@ -41,8 +42,9 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
         color += textureSampleLevel(in_bloom_t, in_bloom_s, uv, 0.0).rgb * p.bloom.w;
     }
 
-    // Color grading in HDR
-    color *= p.grading.x;
+    // Exposure and color grading in HDR
+    let adapted_ev = select(0.0, in_exposure.ev, p.exposure.x > 0.5 && in_exposure.initialized != 0u);
+    color *= p.grading.x * exp2(adapted_ev);
     color = max(p.white_balance * color, vec3<f32>(0.0));
     color = 0.18 * pow(color / 0.18, vec3<f32>(p.grading.y));
     color *= p.color_filter.rgb;

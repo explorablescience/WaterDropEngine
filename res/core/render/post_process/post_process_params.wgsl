@@ -11,8 +11,19 @@ struct PostProcessParams {
     vignette_color: vec4<f32>,
     effects: vec4<f32>,        // x = chromatic aberration, y = grain intensity, z = grain response, w = dithering
     time: vec4<f32>,           // x = time in seconds
-    anti_aliasing: vec4<f32>   // x = method (0 = none, 1 = FXAA)
+    anti_aliasing: vec4<f32>,  // x = method (0 = none, 1 = FXAA)
+    exposure: vec4<f32>,       // x = eye adaptation, y = delta time, z = brighten speed, w = darken speed
+    exposure_metering: vec4<f32>, // x = min log2 luminance, y = log2 luminance range, z = low percentile, w = high percentile
+    exposure_limits: vec4<f32> // x = min EV, y = max EV
 };
+
+// Eye adaptation state, kept on the GPU between frames
+struct ExposureState {
+    ev: f32,
+    initialized: u32
+};
+
+const EXPOSURE_HISTOGRAM_BINS: u32 = 64u;
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,

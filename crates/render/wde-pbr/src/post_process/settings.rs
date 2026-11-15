@@ -9,6 +9,7 @@ use bytemuck::{Pod, Zeroable};
 pub struct PostProcessSettings {
     pub fog: FogSettings,
     pub bloom: BloomSettings,
+    pub exposure: ExposureSettings,
     pub color_grading: ColorGrading,
     pub tonemapping: Tonemapping,
     pub vignette: VignetteSettings,
@@ -94,6 +95,55 @@ impl Default for BloomSettings {
             threshold_softness: 0.5,
             scatter: 0.7
         }
+    }
+}
+
+/// Exposure of the image, on top of [`ColorGrading::exposure`]: a day/night compensation, and an
+/// optional eye adaptation to the image brightness, measured with a luminance histogram.
+#[derive(Clone, Debug, Reflect)]
+pub struct ExposureSettings {
+    /// Exposure compensation in EV stops in full daylight.
+    pub day_compensation: f32,
+    /// Exposure compensation in EV stops at night, blended with the day one by the sun height
+    /// (requires the `atmosphere` feature, else the day compensation is used).
+    pub night_compensation: f32,
+    /// Adapts the exposure so that the average luminance of the image becomes middle grey.
+    pub eye_adaptation: bool,
+    /// Range of the measured luminance, in log2 units. The pixels outside are clamped to it.
+    pub luminance_range: [f32; 2],
+    /// Fraction of the darkest pixels ignored by the metering, in [0, 1].
+    pub low_percentile: f32,
+    /// Fraction of the pixels below which the brightest are ignored, in [0, 1].
+    pub high_percentile: f32,
+    /// Limits of the adapted exposure, in EV stops.
+    pub min_ev: f32,
+    pub max_ev: f32,
+    /// Adaptation rate when the exposure increases (the image got darker), in 1/s.
+    pub brighten_speed: f32,
+    /// Adaptation rate when the exposure decreases (the image got brighter), in 1/s.
+    pub darken_speed: f32
+}
+impl Default for ExposureSettings {
+    fn default() -> Self {
+        Self {
+            day_compensation: 0.0,
+            night_compensation: 0.0,
+            eye_adaptation: false,
+            luminance_range: [-10.0, 6.0],
+            low_percentile: 0.1,
+            high_percentile: 0.9,
+            min_ev: -4.0,
+            max_ev: 4.0,
+            brighten_speed: 1.0,
+            darken_speed: 3.0
+        }
+    }
+}
+impl ExposureSettings {
+    /// Compensation in EV stops for a day amount in [0, 1] (0 at night, 1 in daylight).
+    pub fn compensation(&self, day: f32) -> f32 {
+        self.night_compensation
+            + (self.day_compensation - self.night_compensation) * day.clamp(0.0, 1.0)
     }
 }
 
@@ -221,18 +271,28 @@ pub(crate) struct PostProcessUniform {
     /// x=time in seconds
     pub time: [f32; 4],
     /// x=anti-aliasing method
-    pub anti_aliasing: [f32; 4]
+    pub anti_aliasing: [f32; 4],
+    /// x=eye adaptation (0 or 1), y=delta time in seconds, z=brighten speed, w=darken speed
+    pub exposure: [f32; 4],
+    /// x=min log2 luminance, y=log2 luminance range, z=low percentile, w=high percentile
+    pub exposure_metering: [f32; 4],
+    /// x=min EV, y=max EV
+    pub exposure_limits: [f32; 4]
 }
 impl Default for PostProcessUniform {
     fn default() -> Self {
-        Self::from_settings(&PostProcessSettings::default(), 0.0)
+        Self::from_settings(&PostProcessSettings::default(), 0.0, 0.0, 1.0)
     }
 }
 impl PostProcessUniform {
-    pub fn from_settings(settings: &PostProcessSettings, time: f32) -> Self {
+    /// `day` is the day amount in [0, 1] used for the exposure compensation.
+    pub fn from_settings(settings: &PostProcessSettings, time: f32, delta: f32, day: f32) -> Self {
         let bloom = &settings.bloom;
         let grading = &settings.color_grading;
         let vignette = &settings.vignette;
+        let exposure = &settings.exposure;
+        let [min_lum, max_lum] = exposure.luminance_range;
+        let low = exposure.low_percentile.clamp(0.0, 1.0);
         let wb = white_balance(grading.temperature, grading.tint);
         let rgb = |c: [f32; 3]| [c[0], c[1], c[2], 0.0];
         Self {
@@ -248,7 +308,7 @@ impl PostProcessUniform {
             ],
             white_balance: [wb.x_axis, wb.y_axis, wb.z_axis].map(|c| c.extend(0.0).to_array()),
             grading: [
-                grading.exposure.exp2(),
+                (grading.exposure + exposure.compensation(day)).exp2(),
                 grading.contrast.max(0.01),
                 grading.saturation.max(0.0),
                 settings.tonemapping as u32 as f32
@@ -271,7 +331,25 @@ impl PostProcessUniform {
                 if settings.dithering { 1.0 } else { 0.0 }
             ],
             time: [time, 0.0, 0.0, 0.0],
-            anti_aliasing: [settings.anti_aliasing as u32 as f32, 0.0, 0.0, 0.0]
+            anti_aliasing: [settings.anti_aliasing as u32 as f32, 0.0, 0.0, 0.0],
+            exposure: [
+                if exposure.eye_adaptation { 1.0 } else { 0.0 },
+                delta.max(0.0),
+                exposure.brighten_speed.max(0.0),
+                exposure.darken_speed.max(0.0)
+            ],
+            exposure_metering: [
+                min_lum,
+                (max_lum - min_lum).max(0.01),
+                low,
+                exposure.high_percentile.clamp(low, 1.0)
+            ],
+            exposure_limits: [
+                exposure.min_ev,
+                exposure.max_ev.max(exposure.min_ev),
+                0.0,
+                0.0
+            ]
         }
     }
 }
@@ -361,6 +439,18 @@ mod tests {
         for c in [diff.x_axis, diff.y_axis, diff.z_axis] {
             assert!(c.abs().max_element() < 0.01, "{wb:?}");
         }
+    }
+
+    #[test]
+    fn exposure_compensation_blends_night_to_day() {
+        let exposure = ExposureSettings {
+            day_compensation: -1.0,
+            night_compensation: 2.0,
+            ..Default::default()
+        };
+        assert_eq!(exposure.compensation(0.0), 2.0);
+        assert_eq!(exposure.compensation(1.0), -1.0);
+        assert_eq!(exposure.compensation(0.5), 0.5);
     }
 
     #[test]

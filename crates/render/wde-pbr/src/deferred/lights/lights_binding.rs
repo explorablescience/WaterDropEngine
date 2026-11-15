@@ -178,13 +178,10 @@ fn extract_atmosphere_params(
     time: ExtractWorld<Res<Time>>,
     mut uniform: ResMut<AtmosphereParamsUniform>
 ) {
-    let day_length = settings.day_length_seconds.max(1.0);
-    let time_of_day = if settings.animate_time {
-        (time.elapsed_secs() / day_length).fract()
-    } else {
-        settings.time_of_day.fract()
-    };
-    *uniform = AtmosphereParamsUniform::from_settings(&settings, time_of_day);
+    *uniform = AtmosphereParamsUniform::from_settings(
+        &settings,
+        settings.current_time_of_day(time.elapsed_secs())
+    );
 }
 
 fn extract_pbr_params(
