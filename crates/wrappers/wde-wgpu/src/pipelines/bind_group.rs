@@ -299,7 +299,7 @@ impl BindGroupLayoutBuilder {
         self
     }
 
-    /// Add a depth texture sampler to the bind group.
+    /// Add a depth comparison sampler to the bind group (`sampler_comparison` in WGSL).
     ///
     /// # Arguments
     ///
@@ -313,7 +313,7 @@ impl BindGroupLayoutBuilder {
         self.layout_entries.push(wgpu::BindGroupLayoutEntry {
             binding,
             visibility,
-            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
             count: None
         });
 

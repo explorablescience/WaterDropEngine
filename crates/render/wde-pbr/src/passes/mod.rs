@@ -63,7 +63,7 @@ impl Plugin for PassesPlugin {
             RenderPipelineRegisterPlugin::<ShadowMapPipeline>::default(),
             RenderPipelineRegisterPlugin::<ShadowMapPipeline1>::default(),
             RenderPipelineRegisterPlugin::<ShadowMapPipeline2>::default(),
-            RenderBindingRegisterPlugin::<RenderBindingResolved>::default(),
+            RenderBindingRegisterPlugin::<RenderBindingGBuffer>::default(),
             RenderBindingRegisterPlugin::<LightsDataBinding>::default(),
             #[cfg(feature = "atmosphere")]
             RenderBindingRegisterPlugin::<AtmosphereDepthBinding>::default(),

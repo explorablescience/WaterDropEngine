@@ -15,11 +15,11 @@ struct Camera {
 
 struct ShadowParams {
     view_proj: mat4x4<f32>,
-    light_dir: vec4<f32>,  // xyz = direction toward sun, w = depth bias
-    kernel_half_size: f32, // kernel half size for PCF sampling for each cascade (x, y, z) and unused (w)
-    kernel_scale: f32,     // kernel scale for PCF sampling for each cascade (x, y, z) and unused (w)
+    light_dir: vec4<f32>,  // xyz = light direction, w = size of a shadow map texel in world units
+    kernel_half_size: f32, // PCF kernel half size in texels
+    kernel_scale: f32,     // spacing of the PCF taps in texels
     shadow_intensity: f32,
-    _padding: f32
+    depth_range: f32       // depth of the light frustum in world units
 }
 
 

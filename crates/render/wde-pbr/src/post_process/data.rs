@@ -16,10 +16,12 @@ pub const BLOOM_MIP_COUNT: u32 = 6;
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct PostProcessTextures;
 impl PostProcessTextures {
-    /// The resolved HDR render texture.
-    pub const HDR_IDX: u32 = 0;
+    /// The tonemapped image, before the anti-aliasing.
+    pub const LDR_IDX: u32 = 0;
     /// The first bloom mip. Mip `i` is at index `BLOOM_IDX + i`.
     pub const BLOOM_IDX: u32 = 1;
+
+    pub const LDR_FORMAT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
 }
 impl RenderData for PostProcessTextures {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
@@ -34,11 +36,11 @@ impl RenderData for PostProcessTextures {
         };
         let usages = TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING;
         builder.add_texture(
-            Self::HDR_IDX,
+            Self::LDR_IDX,
             Texture {
-                label: "post-process-hdr".to_string(),
+                label: "post-process-ldr".to_string(),
                 size,
-                format: RenderTexture::FORMAT,
+                format: Self::LDR_FORMAT,
                 usages,
                 ..Default::default()
             }
@@ -120,23 +122,24 @@ impl RenderBinding for PostProcessParamsBinding {
     }
 }
 
-/// Inputs of the final composite: the resolved HDR texture, the bloom and the parameters.
+/// Inputs of the final composite: the render texture, the bloom and the parameters.
 #[derive(Asset, Clone, TypePath, Default)]
 pub(crate) struct PostProcessCompositeBinding;
 impl RenderBinding for PostProcessCompositeBinding {
     type Params = (
+        SRenderData<RenderTexture>,
         SRenderData<PostProcessTextures>,
         SRenderData<PostProcessBuffers>
     );
 
     fn describe(
         &mut self,
-        (textures, buffers): &SystemParamItem<Self::Params>,
+        (render_texture, textures, buffers): &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
         builder
-            .add_texture_view(textures, PostProcessTextures::HDR_IDX)
-            .add_texture_sampler(textures, PostProcessTextures::HDR_IDX)
+            .add_texture_view(render_texture, RenderTexture::BINDING)
+            .add_texture_sampler(render_texture, RenderTexture::BINDING)
             .add_texture_view(textures, PostProcessTextures::BLOOM_IDX)
             .add_texture_sampler(textures, PostProcessTextures::BLOOM_IDX)
             .add_buffer(buffers, PostProcessBuffers::PARAMS_IDX);
@@ -151,7 +154,36 @@ impl RenderBinding for PostProcessCompositeBinding {
     }
 }
 
-/// Inputs of the fog: the resolved linear depth and the fog parameters.
+/// Inputs of the anti-aliasing: the tonemapped image and the parameters.
+#[derive(Asset, Clone, TypePath, Default)]
+pub(crate) struct AntiAliasingBinding;
+impl RenderBinding for AntiAliasingBinding {
+    type Params = (
+        SRenderData<PostProcessTextures>,
+        SRenderData<PostProcessBuffers>
+    );
+
+    fn describe(
+        &mut self,
+        (textures, buffers): &SystemParamItem<Self::Params>,
+        builder: &mut RenderBindingBuilder
+    ) {
+        builder
+            .add_texture_view(textures, PostProcessTextures::LDR_IDX)
+            .add_texture_sampler(textures, PostProcessTextures::LDR_IDX)
+            .add_buffer(buffers, PostProcessBuffers::PARAMS_IDX);
+    }
+
+    fn has_dependencies(&self) -> bool {
+        true
+    }
+
+    fn label(&self) -> &str {
+        "post-process-anti-aliasing-binding"
+    }
+}
+
+/// Inputs of the fog: the linear depth and the fog parameters.
 #[derive(Asset, Clone, TypePath, Default)]
 pub(crate) struct FogBinding;
 impl RenderBinding for FogBinding {
@@ -166,8 +198,7 @@ impl RenderBinding for FogBinding {
         builder: &mut RenderBindingBuilder
     ) {
         builder
-            .add_texture_view(deferred, DeferredTextures::DEPTH_RESOLVED_IDX)
-            .add_texture_sampler(deferred, DeferredTextures::DEPTH_RESOLVED_IDX)
+            .add_texture_view(deferred, DeferredTextures::DEPTH_IDX)
             .add_buffer(buffers, PostProcessBuffers::FOG_IDX);
     }
 

@@ -64,7 +64,6 @@ impl RenderAsset for SelectionAreaRenderPipeline {
                         size: std::mem::size_of::<PushConstants>() as u32
                     }],
                     render_targets: Some(vec![RenderTexture::FORMAT]),
-                    sample_count: MSAA_SAMPLE_COUNT,
                     vertex_buffer: false,
                     ..default()
                 },

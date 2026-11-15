@@ -79,7 +79,9 @@ pub struct Texture {
     pub sample_count: u32,
     pub layer_count: u32,
     pub mip_level_count: u32,
-    pub filterable: bool
+    pub filterable: bool,
+    /// Comparison function of the sampler, making it a comparison sampler (`sampler_comparison` in WGSL).
+    pub compare: Option<wgpu::CompareFunction>
 }
 
 impl std::fmt::Debug for Texture {
@@ -92,6 +94,7 @@ impl std::fmt::Debug for Texture {
             .field("layer_count", &self.layer_count)
             .field("mip_level_count", &self.mip_level_count)
             .field("filterable", &self.filterable)
+            .field("compare", &self.compare)
             .finish()
     }
 }
@@ -109,6 +112,7 @@ impl Texture {
     /// * `sample_count` - Sample count of the texture (e.g. 1 for no MSAA, 4 for 4x MSAA, etc.).
     /// * `layer_count` - Number of layers in the texture array. Default is 1 (for non-array textures).
     /// * `mip_level_count` - Number of mip levels. Default is 1 (no mipmaps). If set to 0, it will be auto-calculated based on the texture size.
+    /// * `compare` - If set, the sampler is a comparison sampler using this function (for depth textures).
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         instance: &RenderInstanceData<'_>,
@@ -120,7 +124,8 @@ impl Texture {
         layer_count: u32,
         mip_level_count: u32,
         filterable: bool,
-        tiling: bool
+        tiling: bool,
+        compare: Option<wgpu::CompareFunction>
     ) -> Self {
         event!(LogLevel::TRACE, "Creating wgpu texture {}.", label);
 
@@ -193,7 +198,7 @@ impl Texture {
             },
             lod_min_clamp: 0.0,
             lod_max_clamp: mip_level_count as f32,
-            compare: None,
+            compare,
             anisotropy_clamp: if tiling && mip_level_count > 1 { 16 } else { 1 },
             border_color: None
         });
@@ -209,7 +214,8 @@ impl Texture {
             sample_count,
             layer_count,
             mip_level_count,
-            filterable
+            filterable,
+            compare
         }
     }
 

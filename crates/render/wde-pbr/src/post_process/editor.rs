@@ -129,6 +129,20 @@ fn edit_post_process_settings(
                     });
             });
 
+            egui::CollapsingHeader::new("Anti-Aliasing").show(ui, |ui| {
+                egui::ComboBox::from_label("Method")
+                    .selected_text(format!("{:?}", s.anti_aliasing))
+                    .show_ui(ui, |ui| {
+                        for method in [AntiAliasing::None, AntiAliasing::Fxaa] {
+                            ui.selectable_value(
+                                &mut s.anti_aliasing,
+                                method,
+                                format!("{method:?}")
+                            );
+                        }
+                    });
+            });
+
             egui::CollapsingHeader::new("Effects").show(ui, |ui| {
                 let vignette = &mut s.vignette;
                 ui.label("Vignette");

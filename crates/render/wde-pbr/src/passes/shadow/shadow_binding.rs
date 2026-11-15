@@ -44,7 +44,7 @@ impl RenderBinding for ShadowSamplingBinding {
             .add_depth_texture_view(shadow_data, ShadowMapData::SHADOW_MAP_CASCADE_2)
             .add_texture_sampler(shadow_data, ShadowMapData::SHADOW_MAP_CASCADE_0)
             .add_buffer(shadow_data, ShadowMapData::PARAMS_BUFFER_IDX)
-            .add_buffer(shadow_data, ShadowMapData::CASCADE_SPLITS_BUFFER_IDX);
+            .add_buffer(shadow_data, ShadowMapData::CASCADES_BUFFER_IDX);
     }
 
     fn has_dependencies(&self) -> bool {

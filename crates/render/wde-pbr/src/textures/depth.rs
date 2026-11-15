@@ -10,7 +10,7 @@ use wde_renderer::prelude::*;
 /// Describes a depth texture that can be used in rendering.
 ///
 /// Notes:
-/// - It uses the [`DEPTH_FORMAT`], as well as the [`MSAA_SAMPLE_COUNT`] for multisampling.
+/// - It uses the [`DEPTH_FORMAT`], without multisampling.
 /// - It is created and resized automatically based on the window size
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct DepthTexture(pub Handle<Texture>);
@@ -35,7 +35,6 @@ impl RenderData for DepthTexture {
                 size,
                 format: DEPTH_FORMAT,
                 usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                sample_count: MSAA_SAMPLE_COUNT,
                 filterable: false,
                 ..Default::default()
             }

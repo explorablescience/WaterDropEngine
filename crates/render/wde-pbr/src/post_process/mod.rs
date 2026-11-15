@@ -2,13 +2,13 @@
 //!
 //! The effects run in these render passes:
 //! - [`RenderPassFog`] (ID 30): exponential height fog, blended over the opaque geometry and the sky, before the transparent objects.
-//! - [`RenderPassHdrResolve`] (ID 90): resolves the MSAA render texture into the HDR texture of the [`PostProcessTextures`].
-//! - [`RenderPassBloom`] (ID 91): downsamples then upsamples the HDR texture through the bloom mips.
-//! - [`RenderPassPostProcess`] (ID 100): composites the chromatic aberration, the bloom, the color grading, the tonemapping,
-//!   the vignette, the film grain and the dithering to the swapchain.
+//! - [`RenderPassBloom`] (ID 91): downsamples then upsamples the render texture through the bloom mips.
+//! - [`RenderPassComposite`] (ID 95): composites the chromatic aberration, the bloom, the color grading, the tonemapping,
+//!   the vignette, the film grain and the dithering into the LDR texture of the [`PostProcessTextures`].
+//! - [`RenderPassPostProcess`] (ID 100): anti-aliases the LDR texture to the swapchain (see [`AntiAliasing`]).
 //!
 //! To add a full-screen effect over the final image, add a sub-pass to [`RenderPassPostProcess`]. To add an HDR effect,
-//! add a pass between 90 and 100 that reads and writes the HDR texture of the [`PostProcessTextures`].
+//! add a pass between 50 and 91 that reads and writes the render texture.
 use bevy::prelude::*;
 use wde_renderer::prelude::*;
 
@@ -21,8 +21,8 @@ mod pass_fog;
 mod settings;
 
 pub use data::{BLOOM_MIP_COUNT, PostProcessTextures};
-pub use pass_bloom::{RenderPassBloom, RenderPassHdrResolve};
-pub use pass_composite::RenderPassPostProcess;
+pub use pass_bloom::RenderPassBloom;
+pub use pass_composite::{RenderPassComposite, RenderPassPostProcess};
 pub use pass_fog::RenderPassFog;
 pub use settings::*;
 
@@ -41,11 +41,13 @@ impl Plugin for PostProcessPlugin {
                 RenderDataRegisterPlugin::<PostProcessBuffers>::default(),
                 RenderBindingRegisterPlugin::<PostProcessParamsBinding>::default(),
                 RenderBindingRegisterPlugin::<PostProcessCompositeBinding>::default(),
+                RenderBindingRegisterPlugin::<AntiAliasingBinding>::default(),
                 RenderBindingRegisterPlugin::<FogBinding>::default(),
                 RenderPipelineRegisterPlugin::<FogPipeline>::default(),
                 RenderPipelineRegisterPlugin::<BloomDownsamplePipeline>::default(),
                 RenderPipelineRegisterPlugin::<BloomUpsamplePipeline>::default(),
-                RenderPipelineRegisterPlugin::<CompositePipeline>::default()
+                RenderPipelineRegisterPlugin::<CompositePipeline>::default(),
+                RenderPipelineRegisterPlugin::<AntiAliasingPipeline>::default()
             ));
         #[cfg(debug_assertions)]
         app.add_plugins(editor::PostProcessEditorPlugin);
@@ -65,9 +67,10 @@ impl Plugin for PostProcessPlugin {
             .resource_mut::<RenderGraph>()
             .add_pass::<RenderPassFog>()
             .add_sub_pass::<SubRenderPassFog, RenderPassFog>()
-            .add_pass::<RenderPassHdrResolve>()
             .add_pass::<RenderPassBloom>()
+            .add_pass::<RenderPassComposite>()
+            .add_sub_pass::<SubRenderPassComposite, RenderPassComposite>()
             .add_pass::<RenderPassPostProcess>()
-            .add_sub_pass::<SubRenderPassComposite, RenderPassPostProcess>();
+            .add_sub_pass::<SubRenderPassAntiAliasing, RenderPassPostProcess>();
     }
 }

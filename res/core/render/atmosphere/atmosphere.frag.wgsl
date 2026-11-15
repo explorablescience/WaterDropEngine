@@ -14,10 +14,8 @@ struct Camera {
 }
 @group(0) @binding(0) var<uniform> in_camera: Camera;
 
-// Resolved (non-MSAA) linear view-space depth written by the GBuffer pass.
-// Pixels with no geometry have depth == 0.
+// Linear view-space depth written by the GBuffer pass, 0 where there is no geometry
 @group(1) @binding(0) var in_depth_t: texture_2d<f32>;
-@group(1) @binding(1) var in_depth_s: sampler;
 @group(2) @binding(1) var<uniform> in_atmosphere: AtmosphereParams;
 
 // Reconstruct the world-space view ray for this fragment.
@@ -31,7 +29,7 @@ fn view_ray(uv: vec2<f32>) -> vec3<f32> {
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     // Skip pixels that already have geometry written by the PBR passes.
-    let depth = textureSample(in_depth_t, in_depth_s, in.tex_coord).r;
+    let depth = textureLoad(in_depth_t, vec2<i32>(in.clip_position.xy), 0).r;
     if depth > 0.0 {
         discard;
     }

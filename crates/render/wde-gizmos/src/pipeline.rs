@@ -50,7 +50,6 @@ impl RenderAsset for GizmoRenderPipeline {
                     cull_mode: None,
                     topology: RenderTopology::LineList,
                     render_targets: Some(vec![RenderTexture::FORMAT]),
-                    sample_count: MSAA_SAMPLE_COUNT,
                     // Vertices are pulled from the gizmo lines storage buffer by index, not read
                     // from a hardware vertex buffer.
                     vertex_buffer: false,
@@ -100,7 +99,6 @@ impl RenderAsset for GizmoQuadRenderPipeline {
                     cull_mode: None,
                     topology: RenderTopology::TriangleList,
                     render_targets: Some(vec![RenderTexture::FORMAT]),
-                    sample_count: MSAA_SAMPLE_COUNT,
                     vertex_buffer: false,
                     ..default()
                 },

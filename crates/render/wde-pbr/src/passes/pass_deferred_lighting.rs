@@ -11,8 +11,8 @@ use wde_renderer::prelude::{WdeColor, *};
 use crate::{passes::shadow::ShadowSamplingBinding, prelude::*};
 
 #[derive(TypePath, Default, Clone, Asset)]
-pub(crate) struct RenderBindingResolved;
-impl RenderBinding for RenderBindingResolved {
+pub(crate) struct RenderBindingGBuffer;
+impl RenderBinding for RenderBindingGBuffer {
     type Params = SRenderData<DeferredTextures>;
 
     fn describe(
@@ -21,14 +21,10 @@ impl RenderBinding for RenderBindingResolved {
         builder: &mut RenderBindingBuilder
     ) {
         builder
-            .add_texture_view(deferred_textures, DeferredTextures::DEPTH_RESOLVED_IDX)
-            .add_texture_sampler(deferred_textures, DeferredTextures::DEPTH_RESOLVED_IDX)
-            .add_texture_view(deferred_textures, DeferredTextures::ALBEDO_RESOLVED_IDX)
-            .add_texture_sampler(deferred_textures, DeferredTextures::ALBEDO_RESOLVED_IDX)
-            .add_texture_view(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX)
-            .add_texture_sampler(deferred_textures, DeferredTextures::NORMAL_RESOLVED_IDX)
-            .add_texture_view(deferred_textures, DeferredTextures::AO_RESOLVED_IDX)
-            .add_texture_sampler(deferred_textures, DeferredTextures::AO_RESOLVED_IDX);
+            .add_texture_view(deferred_textures, DeferredTextures::DEPTH_IDX)
+            .add_texture_view(deferred_textures, DeferredTextures::ALBEDO_IDX)
+            .add_texture_view(deferred_textures, DeferredTextures::NORMAL_IDX)
+            .add_texture_view(deferred_textures, DeferredTextures::AO_IDX);
     }
 
     fn has_dependencies(&self) -> bool {
@@ -36,7 +32,7 @@ impl RenderBinding for RenderBindingResolved {
     }
 
     fn label(&self) -> &str {
-        "deferred-textures-resolved-binding"
+        "deferred-textures-binding"
     }
 }
 
@@ -66,7 +62,7 @@ impl RenderBinding for LightsDataBinding {
 ///
 /// Note:
 ///  - This render pass is not responsible for rendering transparent objects, which are rendered in a separate render pass[`crate::prelude::RenderPassTransparent`].
-///  - This render pass clears the color attachment (MSAA render texture) to black.
+///  - This render pass clears the color attachment (the render texture) to black.
 ///  - It has a render index of 20.
 pub struct RenderPassDeferredLighting;
 impl RenderPass for RenderPassDeferredLighting {
@@ -102,7 +98,7 @@ impl RenderAsset for DeferredLightingPipeline {
         SRes<AssetServer>,
         SResMut<PipelineManager>,
         SBinding<CameraBinding>,
-        SBinding<RenderBindingResolved>,
+        SBinding<RenderBindingGBuffer>,
         SBinding<LightsDataBinding>,
         SBinding<ShadowSamplingBinding>
     );
@@ -131,7 +127,6 @@ impl RenderAsset for DeferredLightingPipeline {
                         ..default()
                     },
                     render_targets: Some(vec![RenderTexture::FORMAT]),
-                    sample_count: MSAA_SAMPLE_COUNT,
                     ..default()
                 },
                 asset
@@ -146,7 +141,7 @@ impl RenderSubPass for SubRenderPassLightingPbr {
         SRes<RenderAssets<DeferredLightingPipeline>>,
         SRes<PostProcessingMesh>,
         SBinding<CameraBinding>,
-        SBinding<RenderBindingResolved>,
+        SBinding<RenderBindingGBuffer>,
         SBinding<LightsDataBinding>,
         SBinding<ShadowSamplingBinding>
     );

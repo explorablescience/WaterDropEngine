@@ -17,7 +17,7 @@ impl Plugin for RenderTexturePlugin {
 /// The HDR render texture of the pbr renderer, in linear color.
 ///
 /// Notes:
-/// - It uses the [`RenderTexture::FORMAT`], as well as the [`MSAA_SAMPLE_COUNT`] for multisampling. Pipelines drawing into it must declare this format in their `render_targets`.
+/// - It uses the [`RenderTexture::FORMAT`], without multisampling (anti-aliasing is done in post-processing). Pipelines drawing into it must declare this format in their `render_targets`.
 /// - It is created and resized automatically based on the window size
 /// - It is resolved, tonemapped and post-processed to the swapchain at the end of the frame (see [`crate::post_process`]).
 #[derive(Asset, Clone, TypePath, Default)]
@@ -44,8 +44,6 @@ impl RenderData for RenderTexture {
                 size,
                 format: RenderTexture::FORMAT,
                 usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                sample_count: MSAA_SAMPLE_COUNT,
-                filterable: false,
                 ..Default::default()
             }
         );

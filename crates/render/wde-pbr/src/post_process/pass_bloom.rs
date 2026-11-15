@@ -12,42 +12,7 @@ use wde_renderer::{prelude::*, wgpu_utils::*};
 use super::data::{BLOOM_MIP_COUNT, PostProcessParamsBinding};
 use crate::prelude::*;
 
-/// Resolves the MSAA [`RenderTexture`] into the single-sampled HDR texture of the [`PostProcessTextures`].
-///
-/// It has a render index of 90, after every pass drawing into the render texture.
-pub struct RenderPassHdrResolve;
-impl RenderPass for RenderPassHdrResolve {
-    type Params = (SRenderData<RenderTexture>, SRenderData<PostProcessTextures>);
-
-    fn describe((render_texture, textures): &SystemParamItem<Self::Params>) -> RenderPassDesc {
-        RenderPassDesc {
-            attachments_colors: Some(vec![RenderPassDescColorAttachment {
-                texture: render_texture
-                    .iter()
-                    .next()
-                    .and_then(|(_, t)| t.get_texture(RenderTexture::BINDING))
-                    .map(|t| t.id()),
-                store: StoreOp::Discard,
-                resolve_target: textures
-                    .iter()
-                    .next()
-                    .and_then(|(_, t)| t.get_texture(PostProcessTextures::HDR_IDX))
-                    .map(|t| t.id()),
-                ..Default::default()
-            }]),
-            ..Default::default()
-        }
-    }
-
-    fn id() -> RenderPassId {
-        90
-    }
-    fn label() -> &'static str {
-        "hdr-resolve"
-    }
-}
-
-/// Bloom: downsamples the HDR texture through the bloom mips (thresholding the first one), then
+/// Bloom: downsamples the [`RenderTexture`] through the bloom mips (thresholding the first one), then
 /// upsamples them back to the first mip, which is added to the image in the composite pass.
 ///
 /// It has a render index of 91, and does nothing when the bloom is disabled.
@@ -89,7 +54,7 @@ fn bloom_source_layout() -> BindGroupLayout {
     })
 }
 
-/// Bind groups sampling each bloom source: the HDR texture, then each bloom mip.
+/// Bind groups sampling each bloom source: the render texture, then each bloom mip.
 #[derive(Resource, Default)]
 pub(crate) struct BloomBindGroups {
     textures: Vec<AssetId<Texture>>,
@@ -105,11 +70,16 @@ impl BloomBindGroups {
         else {
             return false;
         };
-        let Some(ids) = (0..=BLOOM_MIP_COUNT)
-            .map(|i| {
-                data.get_texture(PostProcessTextures::HDR_IDX + i)
-                    .map(|t| t.id())
-            })
+        let render_texture = world
+            .resource::<RenderAssets<GpuRenderData<RenderTexture>>>()
+            .iter()
+            .next()
+            .and_then(|(_, t)| t.get_texture(RenderTexture::BINDING));
+        let Some(ids) = std::iter::once(render_texture)
+            .chain(
+                (0..BLOOM_MIP_COUNT).map(|i| data.get_texture(PostProcessTextures::BLOOM_IDX + i))
+            )
+            .map(|t| t.map(|t| t.id()))
             .collect::<Option<Vec<_>>>()
         else {
             return false;
@@ -209,7 +179,7 @@ fn render_bloom(
         return false;
     };
 
-    // Source `i` of the bind groups is mip `i - 1` (source 0 being the HDR texture)
+    // Source `i` of the bind groups is mip `i - 1` (source 0 being the render texture)
     let downsamples = (0..mips.len()).map(|mip| (mip, mip, downsample, true));
     let upsamples = (0..mips.len() - 1)
         .rev()

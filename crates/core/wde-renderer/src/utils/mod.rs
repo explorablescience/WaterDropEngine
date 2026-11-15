@@ -23,9 +23,6 @@ pub use color::WdeColor;
 pub use post_process_mesh::PostProcessingMesh;
 pub use ssbo_mesh::{SsboMesh, SsboMeshBinding};
 
-/** Multisample anti-aliasing sample count used throughout the renderer. */
-pub const MSAA_SAMPLE_COUNT: u32 = 4;
-
 pub(crate) struct UtilsPlugin;
 impl Plugin for UtilsPlugin {
     fn build(&self, app: &mut App) {

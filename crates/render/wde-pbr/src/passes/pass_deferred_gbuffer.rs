@@ -5,7 +5,7 @@ use bevy::{ecs::system::SystemParamItem, prelude::*};
 use crate::prelude::*;
 
 /// The render pass for rendering opaque objects into the G-buffer, in the deferred rendering pipeline.
-/// It writes to the depth texture, as well as the albedo, normal and depth textures of the G-buffer, which are then resolved for use in the lighting pass [`crate::prelude::RenderPassDeferredLighting`] (no MSAA in the lighting pass, so we need to resolve the multisampled textures).
+/// It writes to the depth texture, as well as the depth, albedo, normal and AO textures of the G-buffer, read by the lighting pass [`crate::prelude::RenderPassDeferredLighting`].
 ///
 /// Note:
 ///  - This render pass is not responsible for rendering transparent objects, which are rendered in a separate render pass[`crate::prelude::RenderPassTransparent`].
@@ -29,60 +29,21 @@ impl RenderPass for RenderPassDeferredGBuffer {
                 stencil_load: LoadOp::Clear(0),
                 ..default()
             }),
-            attachments_colors: Some(vec![
-                RenderPassDescColorAttachment {
-                    texture: deferred_textures
-                        .get_texture(DeferredTextures::DEPTH_IDX)
-                        .map(|t| t.id()),
-                    resolve_target: Some(
-                        deferred_textures
-                            .get_texture(DeferredTextures::DEPTH_RESOLVED_IDX)
-                            .unwrap()
-                            .id()
-                    ),
-                    load: LoadOp::Clear(WdeColor::BLACK),
+            attachments_colors: Some(
+                [
+                    (DeferredTextures::DEPTH_IDX, WdeColor::BLACK),
+                    (DeferredTextures::ALBEDO_IDX, WdeColor::BLACK),
+                    (DeferredTextures::NORMAL_IDX, WdeColor::BLACK),
+                    (DeferredTextures::AO_IDX, WdeColor::WHITE)
+                ]
+                .into_iter()
+                .map(|(idx, clear)| RenderPassDescColorAttachment {
+                    texture: deferred_textures.get_texture(idx).map(|t| t.id()),
+                    load: LoadOp::Clear(clear),
                     ..default()
-                },
-                RenderPassDescColorAttachment {
-                    texture: deferred_textures
-                        .get_texture(DeferredTextures::ALBEDO_IDX)
-                        .map(|t| t.id()),
-                    resolve_target: Some(
-                        deferred_textures
-                            .get_texture(DeferredTextures::ALBEDO_RESOLVED_IDX)
-                            .unwrap()
-                            .id()
-                    ),
-                    load: LoadOp::Clear(WdeColor::BLACK),
-                    ..default()
-                },
-                RenderPassDescColorAttachment {
-                    texture: deferred_textures
-                        .get_texture(DeferredTextures::NORMAL_IDX)
-                        .map(|t| t.id()),
-                    resolve_target: Some(
-                        deferred_textures
-                            .get_texture(DeferredTextures::NORMAL_RESOLVED_IDX)
-                            .unwrap()
-                            .id()
-                    ),
-                    load: LoadOp::Clear(WdeColor::BLACK),
-                    ..default()
-                },
-                RenderPassDescColorAttachment {
-                    texture: deferred_textures
-                        .get_texture(DeferredTextures::AO_IDX)
-                        .map(|t| t.id()),
-                    resolve_target: Some(
-                        deferred_textures
-                            .get_texture(DeferredTextures::AO_RESOLVED_IDX)
-                            .unwrap()
-                            .id()
-                    ),
-                    load: LoadOp::Clear(WdeColor::WHITE),
-                    ..default()
-                },
-            ])
+                })
+                .collect()
+            )
         }
     }
 

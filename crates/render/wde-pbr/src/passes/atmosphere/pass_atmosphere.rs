@@ -10,7 +10,7 @@ use wde_renderer::prelude::*;
 
 use crate::prelude::*;
 
-/// Bind group exposing the resolved linear depth texture so the atmosphere shader
+/// Bind group exposing the linear depth texture so the atmosphere shader
 /// can test whether a pixel has geometry and discard it.
 #[derive(TypePath, Default, Clone, Asset)]
 pub struct AtmosphereDepthBinding;
@@ -22,9 +22,7 @@ impl RenderBinding for AtmosphereDepthBinding {
         deferred_textures: &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
-        builder
-            .add_texture_view(deferred_textures, DeferredTextures::DEPTH_RESOLVED_IDX)
-            .add_texture_sampler(deferred_textures, DeferredTextures::DEPTH_RESOLVED_IDX);
+        builder.add_texture_view(deferred_textures, DeferredTextures::DEPTH_IDX);
     }
 
     fn has_dependencies(&self) -> bool {
@@ -36,7 +34,7 @@ impl RenderBinding for AtmosphereDepthBinding {
     }
 }
 
-/// Atmosphere render pass — renders a full-screen sky into the MSAA render texture.
+/// Atmosphere render pass — renders a full-screen sky into the render texture.
 ///
 /// It runs after deferred lighting (ID 20) and before transparent objects (ID 50).
 pub struct RenderPassAtmosphere;
@@ -100,7 +98,6 @@ impl RenderAsset for AtmospherePipeline {
                         ..default()
                     },
                     render_targets: Some(vec![RenderTexture::FORMAT]),
-                    sample_count: MSAA_SAMPLE_COUNT,
                     ..default()
                 },
                 asset

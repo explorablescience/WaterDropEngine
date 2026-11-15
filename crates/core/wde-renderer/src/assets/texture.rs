@@ -11,6 +11,7 @@ use std::io::{Error, ErrorKind};
 use thiserror::Error;
 
 use crate::core::RenderInstance;
+use wde_wgpu::render_pipeline::CompareFunction;
 
 use super::asset::{PrepareAssetError, RenderAsset};
 
@@ -44,6 +45,9 @@ pub struct Texture {
     /// Whether sampling repeats the texture (UVs wrap around), with anisotropic filtering when
     /// mipmapped. Defaults to false (UVs clamped to the edges).
     pub tiling: bool,
+    /// If set, the sampler of the texture is a comparison sampler (`sampler_comparison` in WGSL) using this
+    /// function, such as for shadow maps. Defaults to None.
+    pub compare: Option<CompareFunction>,
 
     /// Raw pixel data for the texture, in the format specified by `format`. Defaults to empty.
     pub data: Vec<u8>
@@ -60,6 +64,7 @@ impl Default for Texture {
             mip_level_count: 1,
             filterable: true,
             tiling: false,
+            compare: None,
             data: Vec::new()
         }
     }
@@ -96,7 +101,8 @@ impl RenderAsset for GpuTexture {
             asset.layer_count,
             asset.mip_level_count,
             asset.filterable,
-            asset.tiling
+            asset.tiling,
+            asset.compare
         );
 
         // Copy the texture data
@@ -192,6 +198,7 @@ impl AssetLoader for TextureLoader {
             mip_level_count: 1,
             filterable: true,
             tiling: false,
+            compare: None,
             data
         })
     }

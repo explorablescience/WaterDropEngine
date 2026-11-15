@@ -10,7 +10,8 @@ struct PostProcessParams {
     vignette: vec4<f32>,       // x = intensity, y = radius, z = smoothness, w = roundness
     vignette_color: vec4<f32>,
     effects: vec4<f32>,        // x = chromatic aberration, y = grain intensity, z = grain response, w = dithering
-    time: vec4<f32>            // x = time in seconds
+    time: vec4<f32>,           // x = time in seconds
+    anti_aliasing: vec4<f32>   // x = method (0 = none, 1 = FXAA)
 };
 
 struct VertexOutput {

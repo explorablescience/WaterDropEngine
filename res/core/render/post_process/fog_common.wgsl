@@ -20,10 +20,9 @@ struct FogParams {
 
 @group(0) @binding(0) var<uniform> in_camera: Camera;
 
-// Resolved linear view-space depth, 0 where there is no geometry
+// Linear view-space depth, 0 where there is no geometry
 @group(1) @binding(0) var in_depth_t: texture_2d<f32>;
-@group(1) @binding(1) var in_depth_s: sampler;
-@group(1) @binding(2) var<uniform> in_fog: FogParams;
+@group(1) @binding(1) var<uniform> in_fog: FogParams;
 
 @group(2) @binding(0) var<storage, read> in_lights: array<Light>;
 
@@ -68,7 +67,7 @@ fn fog_sun_scattering(ray: vec3<f32>) -> vec3<f32> {
 
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let depth = textureSample(in_depth_t, in_depth_s, in.tex_coord).r;
+    let depth = textureLoad(in_depth_t, vec2<i32>(in.clip_position.xy), 0).r;
     let camera_pos = in_camera.position.xyz;
 
     var ray = view_ray(in.tex_coord);

@@ -516,7 +516,21 @@ where
                         )
                     }
                     RenderBindingType::TextureSampler => {
-                        builder.add_texture_sampler(binding as u32, vis)
+                        let Some(texture) =
+                            gpu_textures.get(asset_builder.textures[*idx as usize].unwrap())
+                        else {
+                            trace!(
+                                "Texture (Sampler) {} for render binding {} is not ready, retrying...",
+                                asset_builder.textures[*idx as usize].unwrap(),
+                                asset.label()
+                            );
+                            is_err = true;
+                            return;
+                        };
+                        match texture.texture.compare {
+                            Some(_) => builder.add_depth_texture_sampler(binding as u32, vis),
+                            None => builder.add_texture_sampler(binding as u32, vis)
+                        }
                     }
                     RenderBindingType::StorageTexture => {
                         let Some(texture) =

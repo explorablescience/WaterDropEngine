@@ -16,23 +16,24 @@ impl Plugin for DeferredTexturesPlugin {
 
 pub struct PbrTextureFormat;
 impl PbrTextureFormat {
-    pub const DEPTH: TextureFormat = TextureFormat::R16Float;
+    /// Linear view-space depth. 32 bits, as a 16-bit depth is too coarse to reconstruct positions (shadow banding).
+    pub const DEPTH: TextureFormat = TextureFormat::R32Float;
     pub const ALBEDO: TextureFormat = TextureFormat::Rgba8UnormSrgb;
     pub const NORMAL: TextureFormat = TextureFormat::Rgba16Float;
     pub const AO: TextureFormat = TextureFormat::R8Unorm;
 }
 
+/// The G-buffer textures, written by the [`RenderPassDeferredGBuffer`](crate::passes::RenderPassDeferredGBuffer).
+///
+/// They are not multisampled: averaging G-buffer samples at geometry edges mixes the depth, normal and albedo
+/// of the object with the background. The depth is not filterable and is read with `textureLoad`.
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct DeferredTextures;
 impl DeferredTextures {
     pub const DEPTH_IDX: u32 = 0;
-    pub const DEPTH_RESOLVED_IDX: u32 = 1;
-    pub const ALBEDO_IDX: u32 = 2;
-    pub const ALBEDO_RESOLVED_IDX: u32 = 3;
-    pub const NORMAL_IDX: u32 = 4;
-    pub const NORMAL_RESOLVED_IDX: u32 = 5;
-    pub const AO_IDX: u32 = 6;
-    pub const AO_RESOLVED_IDX: u32 = 7;
+    pub const ALBEDO_IDX: u32 = 1;
+    pub const NORMAL_IDX: u32 = 2;
+    pub const AO_IDX: u32 = 3;
 }
 impl RenderData for DeferredTextures {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
@@ -46,95 +47,34 @@ impl RenderData for DeferredTextures {
             )
         };
         let usages = TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING;
-        builder
-            .add_texture(
-                DeferredTextures::DEPTH_IDX,
+        for (idx, label, format, filterable) in [
+            (Self::DEPTH_IDX, "pbr-depth", PbrTextureFormat::DEPTH, false),
+            (
+                Self::ALBEDO_IDX,
+                "pbr-albedo",
+                PbrTextureFormat::ALBEDO,
+                true
+            ),
+            (
+                Self::NORMAL_IDX,
+                "pbr-normal",
+                PbrTextureFormat::NORMAL,
+                true
+            ),
+            (Self::AO_IDX, "pbr-ao", PbrTextureFormat::AO, true)
+        ] {
+            builder.add_texture(
+                idx,
                 Texture {
-                    label: "pbr-depth".to_string(),
+                    label: label.to_string(),
                     size,
-                    format: PbrTextureFormat::DEPTH,
+                    format,
                     usages,
-                    sample_count: MSAA_SAMPLE_COUNT,
-                    filterable: false,
-                    ..Default::default()
-                }
-            )
-            .add_texture(
-                DeferredTextures::DEPTH_RESOLVED_IDX,
-                Texture {
-                    label: "pbr-depth-resolved".to_string(),
-                    size,
-                    format: PbrTextureFormat::DEPTH,
-                    usages,
-                    ..Default::default()
-                }
-            )
-            .add_texture(
-                DeferredTextures::ALBEDO_IDX,
-                Texture {
-                    label: "pbr-albedo".to_string(),
-                    size,
-                    format: PbrTextureFormat::ALBEDO,
-                    usages,
-                    sample_count: MSAA_SAMPLE_COUNT,
-                    filterable: false,
-                    ..Default::default()
-                }
-            )
-            .add_texture(
-                DeferredTextures::ALBEDO_RESOLVED_IDX,
-                Texture {
-                    label: "pbr-albedo-resolved".to_string(),
-                    size,
-                    format: PbrTextureFormat::ALBEDO,
-                    usages,
-                    ..Default::default()
-                }
-            )
-            .add_texture(
-                DeferredTextures::NORMAL_IDX,
-                Texture {
-                    label: "pbr-normal".to_string(),
-                    size,
-                    format: PbrTextureFormat::NORMAL,
-                    usages,
-                    sample_count: MSAA_SAMPLE_COUNT,
-                    filterable: false,
-                    ..Default::default()
-                }
-            )
-            .add_texture(
-                DeferredTextures::NORMAL_RESOLVED_IDX,
-                Texture {
-                    label: "pbr-normal-resolved".to_string(),
-                    size,
-                    format: PbrTextureFormat::NORMAL,
-                    usages,
-                    ..Default::default()
-                }
-            )
-            .add_texture(
-                DeferredTextures::AO_IDX,
-                Texture {
-                    label: "pbr-ao".to_string(),
-                    size,
-                    format: PbrTextureFormat::AO,
-                    usages,
-                    sample_count: MSAA_SAMPLE_COUNT,
-                    filterable: false,
-                    ..Default::default()
-                }
-            )
-            .add_texture(
-                DeferredTextures::AO_RESOLVED_IDX,
-                Texture {
-                    label: "pbr-ao-resolved".to_string(),
-                    size,
-                    format: PbrTextureFormat::AO,
-                    usages,
+                    filterable,
                     ..Default::default()
                 }
             );
+        }
     }
 
     fn recreate((_, surface_resized): &SystemParamItem<Self::Params>) -> Option<bool> {

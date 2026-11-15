@@ -16,7 +16,7 @@ const FOG_SHADER: &str = "core/render/post_process/fog_sky.frag.wgsl";
 #[cfg(not(feature = "atmosphere"))]
 const FOG_SHADER: &str = "core/render/post_process/fog.frag.wgsl";
 
-/// Fog render pass: blends the fog over the opaque geometry and the sky of the MSAA [`RenderTexture`].
+/// Fog render pass: blends the fog over the opaque geometry and the sky of the [`RenderTexture`].
 ///
 /// It runs after the atmosphere (ID 25) and before the transparent objects (ID 50), so that overlays are not fogged.
 pub struct RenderPassFog;
@@ -77,7 +77,6 @@ impl RenderAsset for FogPipeline {
                 },
                 fragment_blend: Some(BlendState::ALPHA_BLENDING),
                 render_targets: Some(vec![RenderTexture::FORMAT]),
-                sample_count: MSAA_SAMPLE_COUNT,
                 ..default()
             },
             asset

@@ -13,11 +13,10 @@
 //! - Then, for each frame, a `Batches` resource is created from the extracted entities, sorted by their material handle to minimize render pipeline changes. Each `Batch` points to the corresponding mesh and material handles, as well as an instance index. It then uses another buffer to store pointers from the entity instance indices to their transform IDs in the [SsboTransform](crate::SsboTransform) buffer (see `ModelUuidToTransformUuidRender`).
 //! - The instances of each batch are then frustum culled against the camera and each shadow cascade (see the [`culling`] module), and the visible ones are written to their view region of the instance to transform buffer.
 //! - Finally, the render pass iterates over the batches and renders them, writing to the G-buffer [`DeferredTextures`](crate::DeferredTextures) and the depth texture.
-//! - It then resolves the G-buffer textures to `DeferredTexturesResolved` for use in the lighting pass, which doesn't use MSAA.
 //!
 //! ## Lighting pass (see [`RenderPassDeferredLighting`](crate::passes::RenderPassDeferredLighting))
 //! - This pass first extracts the light data from the main world to the render world, and stores it in the `LightsSsbo` ssbo. Supported light types are currently [DirectionalLight], [PointLight] and [SpotLight].
-//! - Then, for each frame, it reads the G-buffer textures and the light data, and computes the final lit colors, which it writes to a [`RenderTexture`](crate::prelude::RenderTexture) in MSAA format.
+//! - Then, for each frame, it reads the G-buffer textures and the light data, and computes the final lit colors, which it writes to a [`RenderTexture`](crate::prelude::RenderTexture).
 //!
 //! ## Limitations
 //! The number of supported lights and tracked PBR transform entries is limited by:

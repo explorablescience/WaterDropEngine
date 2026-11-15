@@ -11,47 +11,65 @@ use wde_renderer::prelude::*;
 
 use crate::prelude::DirectionalLight;
 
+/// Resolution of the shadow map of each cascade.
+pub const SHADOW_MAP_SIZE: u32 = 4096;
+
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct ShadowParamsUniform {
     pub view_proj: [[f32; 4]; 4],
-    pub light_dir: [f32; 4],   // xyz = direction toward sun, w = depth bias
-    pub kernel_half_size: f32, // kernel half size for PCF sampling
-    pub kernel_scale: f32,     // kernel scale for PCF sampling
+    /// xyz = light direction, w = size of a shadow map texel in world units
+    pub light_dir: [f32; 4],
+    pub kernel_half_size: f32,
+    pub kernel_scale: f32,
     pub shadow_intensity: f32,
-    pub _padding: f32
+    /// Depth of the light frustum in world units
+    pub depth_range: f32
 }
 impl Default for ShadowParamsUniform {
     fn default() -> Self {
         Self {
             view_proj: Mat4::IDENTITY.to_cols_array_2d(),
-            light_dir: [0.0, 1.0, 0.0, 0.005],
+            light_dir: [0.0, -1.0, 0.0, 1.0],
             kernel_half_size: 1.0,
             kernel_scale: 1.0,
             shadow_intensity: 1.0,
-            _padding: 0.0
+            depth_range: 1.0
         }
     }
 }
 
-/// Cascaded shadow mapping settings with per-cascade configuration.
+/// Parameters shared by the cascades.
+#[repr(C)]
+#[derive(Copy, Clone, Default, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct ShadowCascadesUniform {
+    /// xyz = view depth where each cascade ends, w = blend fraction
+    pub splits: [f32; 4],
+    /// x = normal bias in texels
+    pub params: [f32; 4]
+}
+
+/// Cascaded shadow mapping settings of the directional light.
+///
+/// Each cascade covers a range of view depths, and its shadow map covers the bounding sphere of that slice of the view
+/// frustum: its size does not change when the camera rotates, and it moves by whole texels, so the shadows don't shimmer.
 #[derive(Resource, Reflect, Clone, ExtractResource)]
 #[reflect(Resource)]
 pub struct CascadedShadowSettings {
-    // Depth texture size configs
-    /// Linear depth split distances: [cascade0_end, cascade1_end, cascade2_end]
+    /// View depth where each cascade ends. The shadows fade out at the end of the last one.
     pub split_distances: [f32; 3],
-    /// Orthographic box half-width per cascade
-    pub ortho_sizes: [f32; 3],
-    /// Frustum depth per cascade
-    pub ortho_depths: [f32; 3],
+    /// Fraction of each cascade, at its end, cross-faded with the next one.
+    pub blend_fraction: f32,
+    /// Distance towards the light, beyond the slice of a cascade, from which objects cast shadows into it.
+    pub caster_distance: f32,
+    /// Offset of the shadow lookups along the surface normal, in texels, against shadow acne.
+    pub normal_bias: f32,
 
-    // Shadow appearance configs
-    /// PCF kernel half size in texels (e.g. 1.0 for 3x3 kernel)
+    /// PCF kernel half size in texels (0 for a single bilinear tap, 1 for 3x3 taps, ...).
     pub kernel_half_size: [u32; 3],
-    /// PCF kernel scale (e.g. 1.0 for normal sampling, >1.0 for softer shadows)
+    /// Spacing of the PCF taps, in texels.
     pub kernel_scale: [f32; 3],
-    /// Individual cascade shadow intensity multiplier
+    /// Darkness of the shadows, in [0, 1].
     pub shadow_intensity: [f32; 3],
 
     /// Enable individual cascades for debugging
@@ -61,10 +79,11 @@ impl Default for CascadedShadowSettings {
     fn default() -> Self {
         Self {
             split_distances: [50.0, 150.0, 400.0],
-            ortho_sizes: [60.0, 200.0, 400.0],
-            ortho_depths: [100.0, 300.0, 800.0],
-            kernel_half_size: [5, 3, 1],
-            kernel_scale: [0.9, 0.7, 1.0],
+            blend_fraction: 0.15,
+            caster_distance: 200.0,
+            normal_bias: 1.0,
+            kernel_half_size: [3, 2, 1],
+            kernel_scale: [1.0, 1.0, 1.0],
             shadow_intensity: [0.8, 0.8, 0.8],
             cascade_enabled: [true, true, true]
         }
@@ -79,47 +98,45 @@ pub(crate) fn params_data_ui(
     UIWindow::new("Shadow Settings")
         .open(ui_menu.clicked_mut("PBR/Shadows"))
         .show(&ctx.0, |ui| {
-            for i in 0..3 {
-                ui.label(format!("Cascade {}", i));
-                ui.add(Checkbox::new(
-                    &mut cascaded_settings.cascade_enabled[i],
-                    "Enabled"
-                ));
+            let settings = &mut *cascaded_settings;
+            ui.columns(2, |cols| {
+                cols[0].add(
+                    Slider::new(&mut settings.blend_fraction, 0.0..=0.5).text("Blend Fraction")
+                );
+                cols[1].add(
+                    Slider::new(&mut settings.caster_distance, 0.0..=1000.0)
+                        .text("Caster Distance")
+                        .suffix(" m")
+                );
+            });
+            ui.add(Slider::new(&mut settings.normal_bias, 0.0..=5.0).text("Normal Bias"));
 
+            for i in 0..3 {
+                ui.separator();
+                ui.label(format!("Cascade {}", i));
                 ui.columns(2, |cols| {
-                    cols[0].add(
-                        Slider::new(&mut cascaded_settings.split_distances[i], 1.0..=500.0)
+                    cols[0].add(Checkbox::new(&mut settings.cascade_enabled[i], "Enabled"));
+                    cols[1].add(
+                        Slider::new(&mut settings.split_distances[i], 1.0..=1000.0)
                             .text("Split Distance")
                             .suffix(" m")
                     );
-                    cols[1].add(
-                        Slider::new(&mut cascaded_settings.ortho_sizes[i], 1.0..=500.0)
-                            .text("Ortho Size")
-                            .suffix(" m")
-                    );
                 });
                 ui.columns(2, |cols| {
                     cols[0].add(
-                        Slider::new(&mut cascaded_settings.ortho_depths[i], 1.0..=1000.0)
-                            .text("Ortho Depth")
-                            .suffix(" m")
-                    );
-                    cols[1].add(
-                        Slider::new(&mut cascaded_settings.kernel_half_size[i], 1..=10)
+                        Slider::new(&mut settings.kernel_half_size[i], 0..=8)
                             .text("PCF Kernel Half Size")
                             .suffix(" px")
                     );
-                });
-                ui.columns(2, |cols| {
-                    cols[0].add(
-                        Slider::new(&mut cascaded_settings.kernel_scale[i], 0.001..=5.0)
+                    cols[1].add(
+                        Slider::new(&mut settings.kernel_scale[i], 0.1..=3.0)
                             .text("PCF Kernel Scale")
                     );
-                    cols[1].add(
-                        Slider::new(&mut cascaded_settings.shadow_intensity[i], 0.001..=2.0)
-                            .text("Shadow Intensity")
-                    );
                 });
+                ui.add(
+                    Slider::new(&mut settings.shadow_intensity[i], 0.0..=1.0)
+                        .text("Shadow Intensity")
+                );
             }
         });
 }
@@ -150,52 +167,67 @@ fn ortho_rh_wgpu(left: f32, right: f32, bottom: f32, top: f32, near: f32, far: f
     )
 }
 
+/// Smallest sphere containing the view frustum between the view depths `near` and `far`, as its distance along the
+/// view axis and its radius. `k` is the distance of the frustum corners to the view axis, per unit of depth.
+fn frustum_slice_sphere(near: f32, far: f32, k: f32) -> (f32, f32) {
+    let center = (far + near) * (1.0 + k * k) * 0.5;
+    if center >= far {
+        (far, k * far)
+    } else {
+        (center, ((far - center).powi(2) + (k * far).powi(2)).sqrt())
+    }
+}
+
 pub(crate) fn extract_cascaded_shadow_params(
     lights: ExtractWorld<Query<&DirectionalLight>>,
     settings: ExtractWorld<Res<CascadedShadowSettings>>,
-    camera: ExtractWorld<Single<&GlobalTransform, With<ActiveCamera>>>,
+    camera: ExtractWorld<Single<(&GlobalTransform, &CameraView), With<ActiveCamera>>>,
+    window: ExtractWorld<Query<&Window>>,
     mut params: ResMut<ExtractedCascadedShadowParams>
 ) {
     let Some(light) = lights.iter().next() else {
         return;
     };
+    let Ok(window) = window.single() else {
+        return;
+    };
+    let (camera_transform, camera_view) = **camera;
 
     let dir = light.direction.normalize();
-    let camera_pos = camera.translation();
-    let camera_forward = camera.forward();
+    let up = if dir.y.abs() < 0.99 { Vec3::Y } else { Vec3::X };
+    let light_rotation = Mat4::look_at_rh(Vec3::ZERO, dir, up);
+    let tan_y = (camera_view.fov.to_radians() * 0.5).tan();
+    let aspect = (window.width() / window.height().max(1.0)).max(1e-3);
+    let k = tan_y * (1.0 + aspect * aspect).sqrt();
 
-    for cascade_idx in 0..3 {
-        let ortho_size = settings.ortho_sizes[cascade_idx];
-        let ortho_depth = settings.ortho_depths[cascade_idx];
-
-        // Position frustum at midpoint of this cascade's depth range
-        let prev_split = if cascade_idx == 0 {
-            0.0
-        } else {
-            settings.split_distances[cascade_idx - 1]
+    for cascade in 0..3 {
+        let far = settings.split_distances[cascade];
+        let near = match cascade {
+            0 => camera_view.znear,
+            _ => settings.split_distances[cascade - 1] * (1.0 - settings.blend_fraction)
         };
-        let curr_split = settings.split_distances[cascade_idx];
-        let center_distance = (prev_split + curr_split) / 2.0;
-        let mut center = camera_pos + camera_forward * center_distance;
+        let (center_distance, radius) = frustum_slice_sphere(near, far.max(near + 0.01), k);
+        let radius = (radius * 2.0).ceil() * 0.5;
+        let texel = 2.0 * radius / SHADOW_MAP_SIZE as f32;
 
-        // Fine grid quantization per cascade
-        let texel_world_size = ortho_size / 2048.0;
-        center = (center / texel_world_size).round() * texel_world_size;
+        // Snap the center to the texels in light space
+        let center = camera_transform.translation() + camera_transform.forward() * center_distance;
+        let center_ls = light_rotation.transform_point3(center);
+        let snapped = ((center_ls.truncate() / texel).floor() * texel).extend(center_ls.z);
+        let center = light_rotation.inverse().transform_point3(snapped);
 
-        // Position eye along light direction
-        let eye = center - dir * (ortho_depth * 0.5);
-        let up = if dir.y.abs() < 0.99 { Vec3::Y } else { Vec3::X };
-        let view = Mat4::look_at_rh(eye, center, up);
-        let half = ortho_size * 0.5;
-        let proj = ortho_rh_wgpu(-half, half, -half, half, 0.0, ortho_depth);
+        let depth_range = 2.0 * radius + settings.caster_distance;
+        let eye = center - dir * (radius + settings.caster_distance);
+        let view = Mat4::look_at_rh(eye, eye + dir, up);
+        let proj = ortho_rh_wgpu(-radius, radius, -radius, radius, 0.0, depth_range);
 
-        params.0[cascade_idx] = ShadowParamsUniform {
+        params.0[cascade] = ShadowParamsUniform {
             view_proj: (proj * view).to_cols_array_2d(),
-            light_dir: [dir.x, dir.y, dir.z, 0.0005],
-            kernel_half_size: settings.kernel_half_size[cascade_idx] as f32,
-            kernel_scale: settings.kernel_scale[cascade_idx],
-            shadow_intensity: settings.shadow_intensity[cascade_idx],
-            _padding: 0.0
+            light_dir: [dir.x, dir.y, dir.z, texel],
+            kernel_half_size: settings.kernel_half_size[cascade] as f32,
+            kernel_scale: settings.kernel_scale[cascade],
+            shadow_intensity: settings.shadow_intensity[cascade].clamp(0.0, 1.0),
+            depth_range
         };
     }
 }
@@ -223,26 +255,23 @@ pub(crate) fn update_cascaded_shadow_params_buffer(
     let Some(buffer) = buffers.get(&buffer_handle) else {
         return;
     };
-    // Write all 3 cascades to the params buffer
     buffer.buffer.write(
         &render_instance.0.read().unwrap(),
         bytemuck::cast_slice(&extracted.0),
         0
     );
 
-    // Update cascade splits buffer
-    if let Some(splits_buffer_handle) = data.get_buffer(ShadowMapData::CASCADE_SPLITS_BUFFER_IDX)
-        && let Some(splits_buffer) = buffers.get(&splits_buffer_handle)
+    if let Some(cascades_buffer_handle) = data.get_buffer(ShadowMapData::CASCADES_BUFFER_IDX)
+        && let Some(cascades_buffer) = buffers.get(&cascades_buffer_handle)
     {
-        let splits_data = [
-            settings.split_distances[0],
-            settings.split_distances[1],
-            settings.split_distances[2],
-            0.0_f32
-        ];
-        splits_buffer.buffer.write(
+        let [s0, s1, s2] = settings.split_distances;
+        let cascades = ShadowCascadesUniform {
+            splits: [s0, s1, s2, settings.blend_fraction.clamp(0.0, 1.0)],
+            params: [settings.normal_bias.max(0.0), 0.0, 0.0, 0.0]
+        };
+        cascades_buffer.buffer.write(
             &render_instance.0.read().unwrap(),
-            bytemuck::cast_slice(&[splits_data]),
+            bytemuck::cast_slice(&[cascades]),
             0
         );
     }
@@ -256,13 +285,13 @@ impl ShadowMapData {
     pub const SHADOW_MAP_CASCADE_1: u32 = 1;
     pub const SHADOW_MAP_CASCADE_2: u32 = 2;
     pub const PARAMS_BUFFER_IDX: u32 = 3;
-    pub const CASCADE_SPLITS_BUFFER_IDX: u32 = 4;
+    pub const CASCADES_BUFFER_IDX: u32 = 4;
 }
 impl RenderData for ShadowMapData {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
 
     fn describe((_window, _): &mut SystemParamItem<Self::Params>, builder: &mut RenderDataBuilder) {
-        let size = (4096, 4096);
+        let size = (SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
         builder
             .add_texture(
                 Self::SHADOW_MAP_CASCADE_0,
@@ -271,7 +300,7 @@ impl RenderData for ShadowMapData {
                     size,
                     format: TextureFormat::Depth32Float,
                     usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                    filterable: true,
+                    compare: Some(CompareFunction::LessEqual),
                     ..Default::default()
                 }
             )
@@ -282,7 +311,7 @@ impl RenderData for ShadowMapData {
                     size,
                     format: TextureFormat::Depth32Float,
                     usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                    filterable: true,
+                    compare: Some(CompareFunction::LessEqual),
                     ..Default::default()
                 }
             )
@@ -293,7 +322,7 @@ impl RenderData for ShadowMapData {
                     size,
                     format: TextureFormat::Depth32Float,
                     usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
-                    filterable: true,
+                    compare: Some(CompareFunction::LessEqual),
                     ..Default::default()
                 }
             )
@@ -309,12 +338,14 @@ impl RenderData for ShadowMapData {
                 }
             )
             .add_buffer(
-                Self::CASCADE_SPLITS_BUFFER_IDX,
+                Self::CASCADES_BUFFER_IDX,
                 Buffer {
-                    label: "cascade-splits".to_string(),
-                    size: std::mem::size_of::<[f32; 4]>(),
+                    label: "shadow-cascades".to_string(),
+                    size: std::mem::size_of::<ShadowCascadesUniform>(),
                     usage: BufferUsage::UNIFORM | BufferUsage::COPY_DST,
-                    content: Some(bytemuck::cast_slice(&[[50.0_f32, 150.0, 400.0, 0.0]]).to_vec())
+                    content: Some(
+                        bytemuck::cast_slice(&[ShadowCascadesUniform::default()]).to_vec()
+                    )
                 }
             );
     }

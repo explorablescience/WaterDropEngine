@@ -1,6 +1,6 @@
 #include "core/render/post_process/post_process_params.wgsl"
 
-// The first downsample (from the HDR texture) applies the threshold and a Karis average against fireflies
+// The first downsample (from the render texture) applies the threshold and a Karis average against fireflies
 struct BloomPass {
     first: u32
 };

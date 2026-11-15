@@ -79,7 +79,7 @@ impl RenderAsset for ShadowMapPipeline {
                     ..default()
                 },
                 render_targets: Some(vec![]),
-                cull_mode: Some(Face::Front),
+                cull_mode: None,
                 vertex_buffer: false,
                 push_constants: vec![PushConstantDescriptor {
                     stages: ShaderStages::VERTEX,
@@ -291,7 +291,7 @@ impl RenderAsset for ShadowMapPipeline1 {
                         ..default()
                     },
                     render_targets: Some(vec![]),
-                    cull_mode: Some(Face::Front),
+                    cull_mode: None,
                     vertex_buffer: false,
                     push_constants: vec![PushConstantDescriptor {
                         stages: ShaderStages::VERTEX,
@@ -419,7 +419,7 @@ impl RenderAsset for ShadowMapPipeline2 {
                         ..default()
                     },
                     render_targets: Some(vec![]),
-                    cull_mode: Some(Face::Front),
+                    cull_mode: None,
                     vertex_buffer: false,
                     push_constants: vec![PushConstantDescriptor {
                         stages: ShaderStages::VERTEX,

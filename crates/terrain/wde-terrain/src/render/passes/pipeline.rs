@@ -55,7 +55,6 @@ impl RenderAsset for TerrainRenderPipeline {
                         enabled: true,
                         ..Default::default()
                     },
-                    sample_count: MSAA_SAMPLE_COUNT,
                     ..Default::default()
                 },
                 asset

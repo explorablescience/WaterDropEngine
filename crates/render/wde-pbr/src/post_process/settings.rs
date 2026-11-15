@@ -15,7 +15,17 @@ pub struct PostProcessSettings {
     pub chromatic_aberration: ChromaticAberrationSettings,
     pub film_grain: FilmGrainSettings,
     /// Adds a tiny noise to the output to hide the banding of 8-bit gradients.
-    pub dithering: bool
+    pub dithering: bool,
+    pub anti_aliasing: AntiAliasing
+}
+
+/// Anti-aliasing of the final image.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Reflect)]
+pub enum AntiAliasing {
+    None,
+    /// Fast approximate anti-aliasing: blurs the contrasted edges along their direction.
+    #[default]
+    Fxaa
 }
 
 /// Exponential height fog, applied to the opaque geometry and to the sky, before the transparent objects.
@@ -209,7 +219,9 @@ pub(crate) struct PostProcessUniform {
     /// x=chromatic aberration, y=grain intensity, z=grain response, w=dithering
     pub effects: [f32; 4],
     /// x=time in seconds
-    pub time: [f32; 4]
+    pub time: [f32; 4],
+    /// x=anti-aliasing method
+    pub anti_aliasing: [f32; 4]
 }
 impl Default for PostProcessUniform {
     fn default() -> Self {
@@ -258,7 +270,8 @@ impl PostProcessUniform {
                 settings.film_grain.response.clamp(0.0, 1.0),
                 if settings.dithering { 1.0 } else { 0.0 }
             ],
-            time: [time, 0.0, 0.0, 0.0]
+            time: [time, 0.0, 0.0, 0.0],
+            anti_aliasing: [settings.anti_aliasing as u32 as f32, 0.0, 0.0, 0.0]
         }
     }
 }

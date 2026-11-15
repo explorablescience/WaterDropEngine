@@ -85,7 +85,6 @@ impl RenderAsset for GBufferRenderPipeline {
                         offset: 0,
                         size: std::mem::size_of::<PushConstants>() as u32
                     }],
-                    sample_count: MSAA_SAMPLE_COUNT,
                     vertex_buffer: false,
                     ..default()
                 },
