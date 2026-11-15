@@ -31,6 +31,7 @@ struct FragOutput {
     @location(1) albedo_metallic:  vec4<f32>,  // (r,g,b) = albedo  a = metallic
     @location(2) normal_roughness: vec4<f32>,  // (r,g,b) = normal  a = roughness
     @location(3) ao:               f32,        // Ambient occlusion (1.0 = fully lit, 0.0 = fully occluded)
+    @location(4) emissive:         vec4<f32>,  // (r,g,b) = emitted radiance (HDR)  a = unused
 };
 
 

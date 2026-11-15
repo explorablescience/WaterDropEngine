@@ -674,13 +674,27 @@ fn parse_material(
         .collect::<Vec<f32>>();
     let metallic_factor = pbr["metallicFactor"].as_f64().unwrap_or(1.0) as f32;
     let roughness_factor = pbr["roughnessFactor"].as_f64().unwrap_or(1.0) as f32;
+    let emissive_factor = material_json["emissiveFactor"]
+        .as_array()
+        .map(|v| {
+            v.iter()
+                .map(|v| v.as_f64().unwrap_or(0.0) as f32)
+                .collect::<Vec<f32>>()
+        })
+        .and_then(|v| v.try_into().ok())
+        .unwrap_or([0.0; 3]);
+    let emissive_strength =
+        material_json["extensions"]["KHR_materials_emissive_strength"]["emissiveStrength"]
+            .as_f64()
+            .unwrap_or(1.0) as f32;
 
     // Extract material textures
-    const OPT_TEX_CANDIDATES: [(&str, &str); 4] = [
+    const OPT_TEX_CANDIDATES: [(&str, &str); 5] = [
         ("pbr", "baseColorTexture"),
         ("pbr", "metallicRoughnessTexture"),
         ("root", "normalTexture"),
-        ("root", "occlusionTexture")
+        ("root", "occlusionTexture"),
+        ("root", "emissiveTexture")
     ];
     let mut opt_textures_urls = HashMap::new();
     for tex_name in OPT_TEX_CANDIDATES {
@@ -725,6 +739,9 @@ fn parse_material(
         base_color_tex_url: opt_textures_urls.get("baseColorTexture").cloned(),
         metallic_roughness_tex_url: opt_textures_urls.get("metallicRoughnessTexture").cloned(),
         normal_tex_url: opt_textures_urls.get("normalTexture").cloned(),
-        occlusion_tex_url: opt_textures_urls.get("occlusionTexture").cloned()
+        occlusion_tex_url: opt_textures_urls.get("occlusionTexture").cloned(),
+        emissive: emissive_factor,
+        emissive_strength,
+        emissive_tex_url: opt_textures_urls.get("emissiveTexture").cloned()
     }))
 }

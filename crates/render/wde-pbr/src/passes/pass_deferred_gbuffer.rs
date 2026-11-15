@@ -5,7 +5,7 @@ use bevy::{ecs::system::SystemParamItem, prelude::*};
 use crate::prelude::*;
 
 /// The render pass for rendering opaque objects into the G-buffer, in the deferred rendering pipeline.
-/// It writes to the depth texture, as well as the depth, albedo, normal and AO textures of the G-buffer, read by the lighting pass [`crate::prelude::RenderPassDeferredLighting`].
+/// It writes to the depth texture, as well as the depth, albedo, normal, AO and emissive textures of the G-buffer, read by the lighting pass [`crate::prelude::RenderPassDeferredLighting`].
 ///
 /// Note:
 ///  - This render pass is not responsible for rendering transparent objects, which are rendered in a separate render pass[`crate::prelude::RenderPassTransparent`].
@@ -34,7 +34,8 @@ impl RenderPass for RenderPassDeferredGBuffer {
                     (DeferredTextures::DEPTH_IDX, WdeColor::BLACK),
                     (DeferredTextures::ALBEDO_IDX, WdeColor::BLACK),
                     (DeferredTextures::NORMAL_IDX, WdeColor::BLACK),
-                    (DeferredTextures::AO_IDX, WdeColor::WHITE)
+                    (DeferredTextures::AO_IDX, WdeColor::WHITE),
+                    (DeferredTextures::EMISSIVE_IDX, WdeColor::BLACK)
                 ]
                 .into_iter()
                 .map(|(idx, clear)| RenderPassDescColorAttachment {

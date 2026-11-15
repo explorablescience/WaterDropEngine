@@ -20,6 +20,7 @@ pub struct PbrMaterial3d<T: RenderBinding + Asset>(pub Handle<T>);
 /// struct Material3dUniform {
 ///     flags: vec4<f32>, // Flags indicating material textures (1.0 = present, 0.0 = absent) - albedo, metallic-roughness, normal, occlusion
 ///     albedo: vec4<f32>, // Albedo color of the material (r, g, b)
+///     emissive: vec4<f32>, // Emitted radiance (r, g, b) = factor * strength, w = emissive texture flag
 ///     metallic: f32,    // Metallic intensity of the material
 ///     roughness: f32,   // Roughness intensity of the material
 ///     _padding: vec2<f32>, // Unused padding to align to 16 bytes
@@ -34,6 +35,8 @@ pub struct PbrMaterial3d<T: RenderBinding + Asset>(pub Handle<T>);
 /// @group(2) @binding(6) var normal_sampler: sampler;                      /// Normal texture sampler
 /// @group(2) @binding(7) var occlusion_texture: texture_2d<f32>;           /// Occlusion texture (r)
 /// @group(2) @binding(8) var occlusion_sampler: sampler;                   /// Occlusion texture sampler
+/// @group(2) @binding(9) var emissive_texture: texture_2d<f32>;            /// Emissive texture (r, g, b), sRGB
+/// @group(2) @binding(10) var emissive_sampler: sampler;                   /// Emissive texture sampler
 /// ```
 #[repr(C)]
 #[derive(Default, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
@@ -42,6 +45,8 @@ pub(crate) struct PbrMaterialUniform {
     pub flags: [f32; 4],
     /// Albedo color of the material (r, g, b).
     pub albedo: [f32; 4],
+    /// Emitted radiance (factor * strength), w = 1.0 when the emissive texture is present.
+    pub emissive: [f32; 4],
     /// Metallic intensity of the material.
     pub metallic: f32,
     /// Roughness intensity of the material.
@@ -70,7 +75,7 @@ pub struct PbrMaterial {
     /// The albedo color of the material instance (r, g, b).
     /// The alpha channel is the opacity when `alpha_mode` is [PbrAlphaMode::Blend], unused otherwise.
     pub albedo: (f32, f32, f32, f32),
-    /// The albedo texture of the material instance. If `None`, the material will use the albedo color.
+    /// The albedo texture of the material instance, expected in sRGB. If `None`, the material will use the albedo color.
     pub albedo_t: Option<Handle<Texture>>,
 
     /// The metallic intensity of the material instance.
@@ -88,6 +93,14 @@ pub struct PbrMaterial {
     /// The occlusion texture of the material instance.
     /// The occlusion value is stored in the red channel.
     pub occlusion_t: Option<Handle<Texture>>,
+
+    /// The emitted color of the material instance (linear r, g, b), multiplied by `emissive_t` when set.
+    /// Added to the lit color as is, so it is not affected by the lights and feeds the bloom.
+    pub emissive: (f32, f32, f32),
+    /// Multiplier of `emissive`, to emit more than 1.0 (glTF `KHR_materials_emissive_strength`).
+    pub emissive_strength: f32,
+    /// The emissive texture of the material instance (r, g, b), expected in sRGB.
+    pub emissive_t: Option<Handle<Texture>>,
 
     /// An optional stencil value to set the stencil buffer to when rendering the material.
     pub stencil_value: Option<u32>,
@@ -116,6 +129,10 @@ impl Default for PbrMaterial {
 
             normal_t: None,
             occlusion_t: None,
+
+            emissive: (0.0, 0.0, 0.0),
+            emissive_strength: 1.0,
+            emissive_t: None,
 
             stencil_value: None,
 
@@ -147,6 +164,12 @@ impl RenderBinding for PbrMaterial {
                 if self.occlusion_t.is_some() { 1.0 } else { 0.0 }
             ],
             albedo: [self.albedo.0, self.albedo.1, self.albedo.2, self.albedo.3],
+            emissive: [
+                self.emissive.0 * self.emissive_strength,
+                self.emissive.1 * self.emissive_strength,
+                self.emissive.2 * self.emissive_strength,
+                if self.emissive_t.is_some() { 1.0 } else { 0.0 }
+            ],
             metallic: self.metallic,
             roughness: self.roughness,
             _padding: [0.0, 0.0]
@@ -171,33 +194,16 @@ impl RenderBinding for PbrMaterial {
 
         // Build the material
         builder.add_buffer_from_id(Some(self.uniform_buffer.as_ref().unwrap().id()));
-        if let Some(albedo_t) = &self.albedo_t {
-            builder.add_texture_view_from_id(Some(albedo_t.id()));
-            builder.add_texture_sampler_from_id(Some(albedo_t.id()));
-        } else {
-            builder.add_texture_view_from_id(Some(placeholder_tex.0.id()));
-            builder.add_texture_sampler_from_id(Some(placeholder_tex.0.id()));
-        }
-        if let Some(metallic_roughness_t) = &self.metallic_roughness_t {
-            builder.add_texture_view_from_id(Some(metallic_roughness_t.id()));
-            builder.add_texture_sampler_from_id(Some(metallic_roughness_t.id()));
-        } else {
-            builder.add_texture_view_from_id(Some(placeholder_tex.0.id()));
-            builder.add_texture_sampler_from_id(Some(placeholder_tex.0.id()));
-        }
-        if let Some(normal_t) = &self.normal_t {
-            builder.add_texture_view_from_id(Some(normal_t.id()));
-            builder.add_texture_sampler_from_id(Some(normal_t.id()));
-        } else {
-            builder.add_texture_view_from_id(Some(placeholder_tex.0.id()));
-            builder.add_texture_sampler_from_id(Some(placeholder_tex.0.id()));
-        }
-        if let Some(occlusion_t) = &self.occlusion_t {
-            builder.add_texture_view_from_id(Some(occlusion_t.id()));
-            builder.add_texture_sampler_from_id(Some(occlusion_t.id()));
-        } else {
-            builder.add_texture_view_from_id(Some(placeholder_tex.0.id()));
-            builder.add_texture_sampler_from_id(Some(placeholder_tex.0.id()));
+        for texture in [
+            &self.albedo_t,
+            &self.metallic_roughness_t,
+            &self.normal_t,
+            &self.occlusion_t,
+            &self.emissive_t
+        ] {
+            let id = texture.as_ref().unwrap_or(&placeholder_tex.0).id();
+            builder.add_texture_view_from_id(Some(id));
+            builder.add_texture_sampler_from_id(Some(id));
         }
     }
 

@@ -16,6 +16,7 @@ struct VertexOutput {
 struct Material3dUniform {
     flags: vec4<f32>,
     albedo: vec4<f32>,
+    emissive: vec4<f32>,
     metallic: f32,
     roughness: f32,
     _padding: vec2<f32>,
@@ -23,6 +24,8 @@ struct Material3dUniform {
 @group(3) @binding(0) var<uniform> in_pbr_material: Material3dUniform;
 @group(3) @binding(1) var in_albedo_texture: texture_2d<f32>;
 @group(3) @binding(2) var in_albedo_sampler: sampler;
+@group(3) @binding(9) var in_emissive_texture: texture_2d<f32>;
+@group(3) @binding(10) var in_emissive_sampler: sampler;
 
 @group(1) @binding(1) var<storage, read> in_lights: array<Light>;
 @group(1) @binding(3) var<uniform> in_pbr_params: PbrParams;
@@ -76,7 +79,12 @@ fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @locatio
     let fresnel = pow(1.0 - n_dot_v, 5.0);
     let alpha = clamp(albedo.a + fresnel * (1.0 - albedo.a) * 0.6, 0.0, 1.0);
 
-    var color = lo + ambient;
+    var emissive = in_pbr_material.emissive.rgb;
+    if (in_pbr_material.emissive.w == 1.0) {
+        emissive *= textureSample(in_emissive_texture, in_emissive_sampler, in.tex_coord).rgb;
+    }
+
+    var color = lo + ambient + emissive;
     color = color * in_pbr_params.lighting_params.z;
     return vec4<f32>(color, alpha);
 }

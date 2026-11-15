@@ -13,6 +13,7 @@ struct VertexOutput {
 struct Material3dUniform {
     flags: vec4<f32>,    // Flags indicating material textures (1.0 = present, 0.0 = absent) - albedo, metallic-roughness, normal, occlusion
     albedo: vec4<f32>,   // Albedo color of the material (r, g, b)
+    emissive: vec4<f32>, // Emitted radiance (r, g, b), w = 1.0 when the emissive texture is present
     metallic: f32,       // Metallic intensity of the material
     roughness: f32,      // Roughness intensity of the material
     _padding: vec2<f32>, // Unused padding to align to 16 bytes
@@ -26,6 +27,8 @@ struct Material3dUniform {
 @group(3) @binding(6) var in_normal_sampler: sampler;                      /// Normal texture sampler
 @group(3) @binding(7) var in_occlusion_texture: texture_2d<f32>;           /// Occlusion texture (r)
 @group(3) @binding(8) var in_occlusion_sampler: sampler;                   /// Occlusion texture sampler
+@group(3) @binding(9) var in_emissive_texture: texture_2d<f32>;            /// Emissive texture (r, g, b)
+@group(3) @binding(10) var in_emissive_sampler: sampler;                   /// Emissive texture sampler
 
 @fragment
 fn main(in: VertexOutput) -> FragOutput {
@@ -65,6 +68,13 @@ fn main(in: VertexOutput) -> FragOutput {
         ao = textureSample(in_occlusion_texture, in_occlusion_sampler, in.tex_coord).r;
     }
     out.ao = ao;
+
+    // Emissive
+    var emissive: vec3<f32> = in_pbr_material.emissive.rgb;
+    if (in_pbr_material.emissive.w == 1.0) { // Emissive texture present
+        emissive *= textureSample(in_emissive_texture, in_emissive_sampler, in.tex_coord).rgb;
+    }
+    out.emissive = vec4<f32>(emissive, 0.0);
 
     return out;
 }

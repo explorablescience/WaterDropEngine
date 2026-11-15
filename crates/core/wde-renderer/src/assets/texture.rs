@@ -187,7 +187,7 @@ impl AssetLoader for TextureLoader {
             8 => from_channels(&image.into_rgba8(), format_properties.1),
             16 => bytemuck::cast_slice(&from_channels(&image.into_rgba16(), format_properties.1))
                 .to_vec(),
-            21 => bytemuck::cast_slice(&from_channels(&image.into_rgba32f(), format_properties.1))
+            32 => bytemuck::cast_slice(&from_channels(&image.into_rgba32f(), format_properties.1))
                 .to_vec(),
             _ => unreachable!()
         };

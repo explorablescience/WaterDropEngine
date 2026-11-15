@@ -75,10 +75,11 @@ impl RenderAsset for GBufferRenderPipeline {
                     },
                     render_targets: Some(vec![
                         // Same order as the PbrDeferredTextures
-                        PbrTextureFormat::DEPTH,  // Depth
-                        PbrTextureFormat::ALBEDO, // Albedo
-                        PbrTextureFormat::NORMAL, // Normal
-                        PbrTextureFormat::AO,     // AO
+                        PbrTextureFormat::DEPTH,    // Depth
+                        PbrTextureFormat::ALBEDO,   // Albedo
+                        PbrTextureFormat::NORMAL,   // Normal
+                        PbrTextureFormat::AO,       // AO
+                        PbrTextureFormat::EMISSIVE, // Emissive
                     ]),
                     push_constants: vec![PushConstantDescriptor {
                         stages: ShaderStages::VERTEX,

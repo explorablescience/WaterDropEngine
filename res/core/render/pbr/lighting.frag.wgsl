@@ -15,6 +15,7 @@ struct VertexOutput {
 @group(1) @binding(1) var in_albedo_metallic_t: texture_2d<f32>;
 @group(1) @binding(2) var in_normal_roughness_t: texture_2d<f32>;
 @group(1) @binding(3) var in_ao_t: texture_2d<f32>;
+@group(1) @binding(4) var in_emissive_t: texture_2d<f32>;
 
 // Light storage buffer (Light type comes from pbr_functions.wgsl)
 @group(2) @binding(0) var<storage, read> in_lights: array<Light>;
@@ -160,6 +161,7 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let normal    = normalize(tmp_g_normal_roughness.xyz);
     let roughness = clamp(tmp_g_normal_roughness.a * in_pbr_params.material_params.y, 0.0, 1.0);
     let ao        = textureLoad(in_ao_t, pixel, 0).r;
+    let emissive  = textureLoad(in_emissive_t, pixel, 0).rgb;
 
     // View direction from camera to fragment
     let view_dir = normalize(in_camera.position.xyz - world_position);
@@ -205,7 +207,7 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     ) * in_pbr_params.lighting_params.y;
 
     // Linear HDR output, tonemapped in post-processing
-    var color = lo + ambient;
+    var color = lo + ambient + emissive;
     color = color * in_pbr_params.lighting_params.z;
     return vec4<f32>(color, 1.0);
 }

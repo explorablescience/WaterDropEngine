@@ -21,6 +21,8 @@ impl PbrTextureFormat {
     pub const ALBEDO: TextureFormat = TextureFormat::Rgba8UnormSrgb;
     pub const NORMAL: TextureFormat = TextureFormat::Rgba16Float;
     pub const AO: TextureFormat = TextureFormat::R8Unorm;
+    /// Emitted radiance, in HDR.
+    pub const EMISSIVE: TextureFormat = TextureFormat::Rgba16Float;
 }
 
 /// The G-buffer textures, written by the [`RenderPassDeferredGBuffer`](crate::passes::RenderPassDeferredGBuffer).
@@ -34,6 +36,7 @@ impl DeferredTextures {
     pub const ALBEDO_IDX: u32 = 1;
     pub const NORMAL_IDX: u32 = 2;
     pub const AO_IDX: u32 = 3;
+    pub const EMISSIVE_IDX: u32 = 4;
 }
 impl RenderData for DeferredTextures {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
@@ -61,7 +64,13 @@ impl RenderData for DeferredTextures {
                 PbrTextureFormat::NORMAL,
                 true
             ),
-            (Self::AO_IDX, "pbr-ao", PbrTextureFormat::AO, true)
+            (Self::AO_IDX, "pbr-ao", PbrTextureFormat::AO, true),
+            (
+                Self::EMISSIVE_IDX,
+                "pbr-emissive",
+                PbrTextureFormat::EMISSIVE,
+                true
+            )
         ] {
             builder.add_texture(
                 idx,

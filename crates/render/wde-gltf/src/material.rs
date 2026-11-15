@@ -17,7 +17,11 @@ pub struct GltfMaterial {
     pub roughness: f32,
     pub metallic_roughness_tex_url: Option<String>,
     pub normal_tex_url: Option<String>,
-    pub occlusion_tex_url: Option<String>
+    pub occlusion_tex_url: Option<String>,
+    pub emissive: [f32; 3],
+    /// `KHR_materials_emissive_strength`.
+    pub emissive_strength: f32,
+    pub emissive_tex_url: Option<String>
 }
 
 impl GltfMaterial {
@@ -26,14 +30,15 @@ impl GltfMaterial {
         let material_name = self.name.clone();
         let folder_path = self.folder_path.clone();
 
-        // Load base color texture if available
-        let aldebo_texture_handle = self.base_color_tex_url.as_ref().map(|texture_url| {
+        // Load base color texture if available (sRGB, as per the glTF spec)
+        let albedo_texture_handle = self.base_color_tex_url.as_ref().map(|texture_url| {
             let label = format!("gltf_albedo_{}", material_name);
             let path = format!("{}/{}", folder_path, texture_url);
             load_context
                 .loader()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
+                    settings.format = TextureFormat::Rgba8UnormSrgb;
                 })
                 .load(path)
         });
@@ -75,6 +80,19 @@ impl GltfMaterial {
                 .load(path)
         });
 
+        // Load emissive texture if available (sRGB, as per the glTF spec)
+        let emissive_texture_handle = self.emissive_tex_url.as_ref().map(|texture_url| {
+            let label = format!("gltf_emissive_{}", material_name);
+            let path = format!("{}/{}", folder_path, texture_url);
+            load_context
+                .loader()
+                .with_settings(move |settings: &mut TextureLoaderSettings| {
+                    settings.label = label.clone();
+                    settings.format = TextureFormat::Rgba8UnormSrgb;
+                })
+                .load(path)
+        });
+
         // Create and add the material to the asset server
         let label = format!("gltf_material_{}", self.name);
         load_context.add_labeled_asset(
@@ -87,7 +105,7 @@ impl GltfMaterial {
                     self.base_color[2],
                     self.base_color[3]
                 ),
-                albedo_t: aldebo_texture_handle,
+                albedo_t: albedo_texture_handle,
 
                 metallic: self.metallic,
                 roughness: self.roughness,
@@ -95,6 +113,11 @@ impl GltfMaterial {
 
                 normal_t: normal_texture_handle,
                 occlusion_t: occlusion_texture_handle,
+
+                emissive: (self.emissive[0], self.emissive[1], self.emissive[2]),
+                emissive_strength: self.emissive_strength,
+                emissive_t: emissive_texture_handle,
+
                 alpha_mode: if self.alpha_blend {
                     PbrAlphaMode::Blend
                 } else {
@@ -121,7 +144,11 @@ impl Default for GltfMaterial {
             metallic_roughness_tex_url: None,
 
             normal_tex_url: None,
-            occlusion_tex_url: None
+            occlusion_tex_url: None,
+
+            emissive: [0.0; 3],
+            emissive_strength: 1.0,
+            emissive_tex_url: None
         }
     }
 }

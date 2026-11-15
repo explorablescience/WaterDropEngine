@@ -46,10 +46,11 @@ impl RenderAsset for TerrainRenderPipeline {
                     ],
                     render_targets: Some(vec![
                         // Same order as the PbrDeferredTextures
-                        PbrTextureFormat::DEPTH,  // Depth
-                        PbrTextureFormat::ALBEDO, // Albedo
-                        PbrTextureFormat::NORMAL, // Normal
-                        PbrTextureFormat::AO,     // AO
+                        PbrTextureFormat::DEPTH,    // Depth
+                        PbrTextureFormat::ALBEDO,   // Albedo
+                        PbrTextureFormat::NORMAL,   // Normal
+                        PbrTextureFormat::AO,       // AO
+                        PbrTextureFormat::EMISSIVE, // Emissive
                     ]),
                     depth: DepthDescriptor {
                         enabled: true,

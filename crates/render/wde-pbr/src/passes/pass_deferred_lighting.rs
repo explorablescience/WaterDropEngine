@@ -24,7 +24,8 @@ impl RenderBinding for RenderBindingGBuffer {
             .add_texture_view(deferred_textures, DeferredTextures::DEPTH_IDX)
             .add_texture_view(deferred_textures, DeferredTextures::ALBEDO_IDX)
             .add_texture_view(deferred_textures, DeferredTextures::NORMAL_IDX)
-            .add_texture_view(deferred_textures, DeferredTextures::AO_IDX);
+            .add_texture_view(deferred_textures, DeferredTextures::AO_IDX)
+            .add_texture_view(deferred_textures, DeferredTextures::EMISSIVE_IDX);
     }
 
     fn has_dependencies(&self) -> bool {
