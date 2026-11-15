@@ -74,6 +74,5 @@ fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @locatio
 
     var color = lo + ambient + reflection;
     color = color * in_pbr_params.lighting_params.z;
-    color = color / (color + vec3<f32>(in_pbr_params.lighting_params.w));
     return vec4<f32>(color, alpha);
 }

@@ -6,8 +6,8 @@ use bytemuck::{Pod, Zeroable};
 pub struct PbrSettings {
     pub direct_scale: f32,
     pub ambient_scale: f32,
+    /// Scale of the lit color. The whole image is exposed in [`crate::post_process::ColorGrading`].
     pub exposure: f32,
-    pub tone_map_white: f32,
     pub metallic_scale: f32,
     pub roughness_scale: f32,
     pub min_roughness: f32
@@ -18,7 +18,6 @@ impl Default for PbrSettings {
             direct_scale: 1.0,
             ambient_scale: 0.2,
             exposure: 1.0,
-            tone_map_white: 1.0,
             metallic_scale: 1.0,
             roughness_scale: 1.0,
             min_roughness: 0.0
@@ -29,7 +28,7 @@ impl Default for PbrSettings {
 #[repr(C)]
 #[derive(Resource, Clone, Copy, Debug, Pod, Zeroable)]
 pub struct PbrParamsUniform {
-    /// x=direct_scale, y=ambient_scale, z=exposure, w=tone_map_white
+    /// x=direct_scale, y=ambient_scale, z=exposure
     pub lighting_params: [f32; 4],
     /// x=metallic_scale, y=roughness_scale, z=min_roughness
     pub material_params: [f32; 4]
@@ -48,7 +47,7 @@ impl PbrParamsUniform {
                 settings.direct_scale,
                 settings.ambient_scale,
                 settings.exposure,
-                settings.tone_map_white.max(0.001)
+                0.0
             ],
             material_params: [
                 settings.metallic_scale,

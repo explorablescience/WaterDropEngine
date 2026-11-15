@@ -12,7 +12,7 @@ use wde_renderer::prelude::*;
 
 use crate::{
     deferred::subpass::gbuffer_bindgroup::SsboTransformBinding,
-    prelude::{BatchList, CAMERA_VIEW, LightsData, PbrMaterial, is_batch_blended}
+    prelude::{BatchList, CAMERA_VIEW, LightsData, PbrMaterial, RenderTexture, is_batch_blended}
 };
 
 /// Camera and lighting data in a single group, keeping the pipeline within 4 bind groups.
@@ -86,6 +86,7 @@ impl RenderAsset for TransparentPbrRenderPipeline {
                         offset: 0,
                         size: std::mem::size_of::<PushConstants>() as u32
                     }],
+                    render_targets: Some(vec![RenderTexture::FORMAT]),
                     sample_count: MSAA_SAMPLE_COUNT,
                     vertex_buffer: false,
                     ..default()

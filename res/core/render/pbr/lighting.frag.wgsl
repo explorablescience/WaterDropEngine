@@ -160,9 +160,8 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let irradiance = sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
     let ambient = kd * irradiance * albedo * ao;
 
-    // HDR tone mapping (Reinhard) and final output
+    // Linear HDR output, tonemapped in post-processing
     var color = lo + ambient;
     color = color * in_pbr_params.lighting_params.z;
-    color = color / (color + vec3<f32>(in_pbr_params.lighting_params.w));
     return vec4<f32>(color, 1.0);
 }

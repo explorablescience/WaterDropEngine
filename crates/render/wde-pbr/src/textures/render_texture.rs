@@ -10,24 +10,21 @@ use wde_renderer::prelude::*;
 pub(crate) struct RenderTexturePlugin;
 impl Plugin for RenderTexturePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((
-            RenderDataRegisterPlugin::<RenderTexture>::default(),
-            RenderBindingRegisterPlugin::<RenderTextureBinding>::default()
-        ));
+        app.add_plugins(RenderDataRegisterPlugin::<RenderTexture>::default());
     }
 }
 
-/// The render texture for the pbr renderer.
+/// The HDR render texture of the pbr renderer, in linear color.
 ///
 /// Notes:
-/// - It uses the [`SWAPCHAIN_FORMAT`], as well as the [`MSAA_SAMPLE_COUNT`] for multisampling.
+/// - It uses the [`RenderTexture::FORMAT`], as well as the [`MSAA_SAMPLE_COUNT`] for multisampling. Pipelines drawing into it must declare this format in their `render_targets`.
 /// - It is created and resized automatically based on the window size
-/// - It is extracted and made available in the render world as a bind group for the lighting pass, so it can be sampled as an input texture.
-/// - It is rendered to the swapchain in the final pass.
+/// - It is resolved, tonemapped and post-processed to the swapchain at the end of the frame (see [`crate::post_process`]).
 #[derive(Asset, Clone, TypePath, Default)]
 pub struct RenderTexture;
 impl RenderTexture {
     pub const BINDING: u32 = 0;
+    pub const FORMAT: TextureFormat = TextureFormat::Rgba16Float;
 }
 impl RenderData for RenderTexture {
     type Params = (SQuery<&'static Window>, SRes<Messages<SurfaceResized>>);
@@ -45,7 +42,7 @@ impl RenderData for RenderTexture {
             Texture {
                 label: "pbr-render-texture".to_string(),
                 size,
-                format: SWAPCHAIN_FORMAT,
+                format: RenderTexture::FORMAT,
                 usages: TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING,
                 sample_count: MSAA_SAMPLE_COUNT,
                 filterable: false,
@@ -62,29 +59,5 @@ impl RenderData for RenderTexture {
                 .next()
                 .is_some()
         )
-    }
-}
-
-/// The render binding for the render texture, which makes it available as a bind group in the render world.
-#[derive(Asset, Clone, TypePath, Default)]
-pub(crate) struct RenderTextureBinding;
-impl RenderBinding for RenderTextureBinding {
-    type Params = SRenderData<RenderTexture>;
-
-    fn describe(
-        &mut self,
-        tex: &SystemParamItem<Self::Params>,
-        builder: &mut RenderBindingBuilder
-    ) {
-        builder.add_texture_view(tex, RenderTexture::BINDING);
-        builder.add_texture_sampler(tex, RenderTexture::BINDING);
-    }
-
-    fn has_dependencies(&self) -> bool {
-        true
-    }
-
-    fn label(&self) -> &str {
-        "render_texture_binding"
     }
 }

@@ -39,6 +39,7 @@ pub mod prelude {
 }
 
 pub mod wgpu_utils {
+    pub use wde_wgpu::bind_group::{BindGroup, BindGroupBuilder, BindGroupLayout};
     pub use wde_wgpu::buffer::AsyncReadback;
     pub use wde_wgpu::command_buffer::{
         CommandBuffer, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth

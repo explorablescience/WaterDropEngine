@@ -165,7 +165,7 @@ struct LightData {
 
 /// Runtime parameters controlling deferred PBR lighting.
 struct PbrParams {
-    /// x=direct_scale, y=ambient_scale, z=exposure, w=tone_map_white
+    /// x=direct_scale, y=ambient_scale, z=exposure
     lighting_params: vec4<f32>,
     /// x=metallic_scale, y=roughness_scale, z=min_roughness
     material_params: vec4<f32>

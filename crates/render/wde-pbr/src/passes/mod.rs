@@ -1,12 +1,10 @@
 use bevy::prelude::*;
-use pass_resolve::*;
 use wde_editor::prelude::EngineUiSet;
 use wde_renderer::prelude::*;
 
 mod atmosphere;
 mod pass_deferred_gbuffer;
 mod pass_deferred_lighting;
-mod pass_resolve;
 mod pass_transparent;
 pub mod shadow;
 
@@ -49,10 +47,7 @@ impl Plugin for PassesPlugin {
             .add_pass::<RenderPassDeferredLighting>();
         #[cfg(feature = "atmosphere")]
         render_graph.add_pass::<RenderPassAtmosphere>();
-        render_graph
-            .add_pass::<RenderPassTransparent>()
-            .add_pass::<RenderPassResolve>()
-            .add_sub_pass::<SubRenderPassResolve, RenderPassResolve>();
+        render_graph.add_pass::<RenderPassTransparent>();
         #[cfg(feature = "atmosphere")]
         render_graph.add_sub_pass::<SubRenderPassAtmosphere, RenderPassAtmosphere>();
 
@@ -72,7 +67,6 @@ impl Plugin for PassesPlugin {
             RenderBindingRegisterPlugin::<LightsDataBinding>::default(),
             #[cfg(feature = "atmosphere")]
             RenderBindingRegisterPlugin::<AtmosphereDepthBinding>::default(),
-            RenderPipelineRegisterPlugin::<ResolveRenderPipeline>::default(),
             RenderPipelineRegisterPlugin::<DeferredLightingPipeline>::default(),
             #[cfg(feature = "atmosphere")]
             RenderPipelineRegisterPlugin::<AtmospherePipeline>::default(),

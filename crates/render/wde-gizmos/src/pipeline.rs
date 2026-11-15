@@ -6,6 +6,7 @@ use bevy::{
     prelude::*
 };
 use wde_camera::prelude::*;
+use wde_pbr::prelude::RenderTexture;
 use wde_renderer::prelude::*;
 
 use crate::data::{GizmoLinesBinding, GizmoQuadsBinding};
@@ -48,6 +49,7 @@ impl RenderAsset for GizmoRenderPipeline {
                     fragment_blend: Some(BlendState::ALPHA_BLENDING),
                     cull_mode: None,
                     topology: RenderTopology::LineList,
+                    render_targets: Some(vec![RenderTexture::FORMAT]),
                     sample_count: MSAA_SAMPLE_COUNT,
                     // Vertices are pulled from the gizmo lines storage buffer by index, not read
                     // from a hardware vertex buffer.
@@ -97,6 +99,7 @@ impl RenderAsset for GizmoQuadRenderPipeline {
                     fragment_blend: Some(BlendState::ALPHA_BLENDING),
                     cull_mode: None,
                     topology: RenderTopology::TriangleList,
+                    render_targets: Some(vec![RenderTexture::FORMAT]),
                     sample_count: MSAA_SAMPLE_COUNT,
                     vertex_buffer: false,
                     ..default()

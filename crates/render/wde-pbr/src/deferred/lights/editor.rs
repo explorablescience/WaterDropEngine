@@ -26,15 +26,12 @@ fn edit_pbr_settings(
             });
             ui.columns(2, |cols| {
                 cols[0].add(Slider::new(&mut pbr.exposure, 0.0..=4.0).text("Exposure"));
-                cols[1].add(Slider::new(&mut pbr.tone_map_white, 0.01..=4.0).text("ToneMap White"));
+                cols[1].add(Slider::new(&mut pbr.min_roughness, 0.0..=1.0).text("Min Roughness"));
             });
             ui.columns(2, |cols| {
                 cols[0].add(Slider::new(&mut pbr.metallic_scale, 0.0..=2.0).text("Metallic Scale"));
                 cols[1]
                     .add(Slider::new(&mut pbr.roughness_scale, 0.0..=2.0).text("Roughness Scale"));
-            });
-            ui.columns(2, |cols| {
-                cols[0].add(Slider::new(&mut pbr.min_roughness, 0.0..=1.0).text("Min Roughness"));
             });
         });
 }

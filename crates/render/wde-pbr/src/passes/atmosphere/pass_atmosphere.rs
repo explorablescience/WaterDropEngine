@@ -99,6 +99,7 @@ impl RenderAsset for AtmospherePipeline {
                         enabled: false,
                         ..default()
                     },
+                    render_targets: Some(vec![RenderTexture::FORMAT]),
                     sample_count: MSAA_SAMPLE_COUNT,
                     ..default()
                 },

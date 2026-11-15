@@ -28,43 +28,50 @@ fn hash21(p: vec2<f32>) -> f32 {
     return fract(sin(h) * 43758.5453);
 }
 
-fn sky(ray: vec3<f32>, params: AtmosphereParams) -> vec3<f32> {
-    let t = fract(params.time_params.x);
-    let tau = 6.2831853;
-    let pi = 3.14159265;
-
-    // Sun arc over the day.
-    let sun_elevation = (t - 0.25) * tau;
+// Sun arc over the day.
+fn sky_sun_dir(params: AtmosphereParams) -> vec3<f32> {
+    let sun_elevation = (fract(params.time_params.x) - 0.25) * 6.2831853;
     let sun_azimuth = -0.95;
-    let sun_dir = normalize(vec3<f32>(
+    return normalize(vec3<f32>(
         cos(sun_elevation) * cos(sun_azimuth),
         sin(sun_elevation),
         cos(sun_elevation) * sin(sun_azimuth)
     ));
+}
 
-    let altitude = ray.y;
-    let horizon = clamp(1.0 - max(altitude, 0.0), 0.0, 1.0);
-    let sun_height = sun_dir.y;
-
-    // Smooth day/night and twilight transitions.
+// Smooth day amount in [0, 1] for the sun height.
+fn sky_day(sun_height: f32, params: AtmosphereParams) -> f32 {
     let twilight_w = mix(0.06, 0.20, clamp(params.time_params.z, 0.0, 1.0));
-    let day = smoothstep(-twilight_w, twilight_w, sun_height);
+    return smoothstep(-twilight_w, twilight_w, sun_height);
+}
+
+// Sky color gradient with the twilight tint, without the sun, the stars and the ground.
+fn sky_gradient(ray: vec3<f32>, params: AtmosphereParams) -> vec3<f32> {
+    let horizon = clamp(1.0 - max(ray.y, 0.0), 0.0, 1.0);
+    let sun_height = sky_sun_dir(params).y;
+    let twilight_w = mix(0.06, 0.20, clamp(params.time_params.z, 0.0, 1.0));
+    let day = sky_day(sun_height, params);
     let twilight = 1.0 - smoothstep(twilight_w, 2.6 * twilight_w, abs(sun_height));
-    let night = 1.0 - day;
 
-    let zenith_day = params.day_zenith_color.rgb;
-    let horizon_day = params.day_horizon_color.rgb;
-    let zenith_night = params.night_zenith_color.rgb;
-    let horizon_night = params.night_horizon_color.rgb;
-
-    let day_grad = mix(zenith_day, horizon_day, pow(horizon, params.gradient_params.x));
-    let night_grad = mix(zenith_night, horizon_night, pow(horizon, params.gradient_params.y));
-    var color = mix(night_grad, day_grad, day);
-
-    color += params.twilight_tint_color.rgb
+    let day_grad = mix(params.day_zenith_color.rgb, params.day_horizon_color.rgb, pow(horizon, params.gradient_params.x));
+    let night_grad = mix(params.night_zenith_color.rgb, params.night_horizon_color.rgb, pow(horizon, params.gradient_params.y));
+    return mix(night_grad, day_grad, day)
+        + params.twilight_tint_color.rgb
         * pow(horizon, params.gradient_params.z)
         * twilight
         * params.gradient_params.w;
+}
+
+fn sky(ray: vec3<f32>, params: AtmosphereParams) -> vec3<f32> {
+    let tau = 6.2831853;
+    let pi = 3.14159265;
+
+    let sun_dir = sky_sun_dir(params);
+    let altitude = ray.y;
+    let sun_height = sun_dir.y;
+    let day = sky_day(sun_height, params);
+    let night = 1.0 - day;
+    var color = sky_gradient(ray, params);
 
     let sun_dot = dot(ray, sun_dir);
     let sun_visible = smoothstep(params.sun_params.x, params.sun_params.y, sun_height);
