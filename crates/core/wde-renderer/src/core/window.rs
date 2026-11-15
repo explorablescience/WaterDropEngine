@@ -6,9 +6,13 @@ use bevy::{
     a11y::AccessibilityPlugin,
     app::{PluginGroup, PluginGroupBuilder},
     ecs::{message::Message, system::NonSendMarker},
-    prelude::{Entity, Event, MessageReader, MessageWriter, Query, ResMut, Resource, With},
+    input::{ButtonInput, keyboard::KeyCode},
+    prelude::{Entity, Event, MessageReader, MessageWriter, Query, Res, ResMut, Resource, With},
     utils::default,
-    window::{PresentMode, PrimaryWindow, Window, WindowPlugin, WindowResized, WindowTheme},
+    window::{
+        MonitorSelection, PresentMode, PrimaryWindow, Window, WindowMode, WindowPlugin,
+        WindowResized, WindowTheme
+    },
     winit::{WINIT_WINDOWS, WinitPlugin}
 };
 use wde_wgpu::instance;
@@ -75,6 +79,37 @@ pub(crate) fn apply_window_icon(
     if applied {
         icon.0 = None;
     }
+}
+
+/// Key toggling the primary window between windowed and borderless fullscreen (`None` disables
+/// it). Defaults to F11.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct FullscreenKey(pub Option<KeyCode>);
+impl Default for FullscreenKey {
+    fn default() -> Self {
+        Self(Some(KeyCode::F11))
+    }
+}
+
+pub(crate) fn toggle_fullscreen(
+    key: Res<FullscreenKey>,
+    keys: Option<Res<ButtonInput<KeyCode>>>,
+    mut primary_window: Query<&mut Window, With<PrimaryWindow>>
+) {
+    let pressed = key
+        .0
+        .zip(keys)
+        .is_some_and(|(key, keys)| keys.just_pressed(key));
+    if !pressed {
+        return;
+    }
+    let Ok(mut window) = primary_window.single_mut() else {
+        return;
+    };
+    window.mode = match window.mode {
+        WindowMode::Windowed => WindowMode::BorderlessFullscreen(MonitorSelection::Current),
+        _ => WindowMode::Windowed
+    };
 }
 
 /// An event that is sent when the surface is resized.

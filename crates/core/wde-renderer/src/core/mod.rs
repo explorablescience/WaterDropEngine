@@ -70,7 +70,7 @@ mod render_multithread;
 mod window;
 
 pub use extract_macros::ExtractWorld;
-pub use window::{SurfaceResized, WindowIcon};
+pub use window::{FullscreenKey, SurfaceResized, WindowIcon};
 
 use bevy::{
     app::AppLabel,
@@ -91,7 +91,8 @@ use std::{
 };
 use wde_wgpu::instance::{Limits, RenderTexture, create_instance};
 use window::{
-    PrimaryWindowIcon, WindowPlugins, apply_window_icon, extract_surface_size, send_surface_resized
+    PrimaryWindowIcon, WindowPlugins, apply_window_icon, extract_surface_size,
+    send_surface_resized, toggle_fullscreen
 };
 
 use crate::passes::{PipelineManagerPlugin, RenderGraph};
@@ -186,7 +187,8 @@ impl Plugin for RenderCorePlugin {
             resolution: self.window_resolution
         })
         .insert_resource(PrimaryWindowIcon(self.window_icon.clone()))
-        .add_systems(Update, apply_window_icon)
+        .init_resource::<FullscreenKey>()
+        .add_systems(Update, (apply_window_icon, toggle_fullscreen))
         .add_message::<SurfaceResized>()
         .add_systems(Update, send_surface_resized);
 
