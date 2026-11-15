@@ -14,7 +14,7 @@
 #[doc(hidden)]
 pub mod prelude {
     pub use crate::egui::egui_context::EguiContext;
-    pub use crate::logic::EguiInputSet;
+    pub use crate::logic::{EguiInputSet, EguiPassSet};
     pub mod egui {
         pub use crate::egui::egui_pass::EguiRenderPassHolder;
         pub use egui::*;

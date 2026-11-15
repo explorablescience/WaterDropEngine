@@ -10,7 +10,7 @@ use wde_gizmos::prelude::*;
 use wde_physics::prelude::*;
 use wde_renderer::prelude::WdeColor;
 
-/// Toggles for physics debug visualizations, editable from the "Engine/Physics" editor panel.
+/// Toggles for physics debug visualizations, editable from the "Engine/Physics" editor window.
 #[cfg(feature = "physics")]
 #[derive(Resource, Default, Reflect)]
 #[reflect(Resource)]
@@ -38,8 +38,7 @@ fn edit_physics_debug_settings(
 ) {
     UIWindow::new("Physics")
         .resizable(false)
-        .default_pos([100.0, 260.0])
-        .open(ui_menu.clicked_mut("Debug/Physics"))
+        .open(ui_menu.clicked_mut("Engine/Physics"))
         .show(&ctx.0, |ui| {
             ui.add(Checkbox::new(
                 &mut settings.show_colliders,
@@ -141,7 +140,7 @@ fn draw_shadow_cascade_gizmos(
     }
 }
 
-/// Toggles for camera debug visualizations, editable from the "Debug/Cameras" editor panel.
+/// Toggles for camera debug visualizations, editable from the "Camera/Frustums" editor panel.
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
 pub struct CameraDebugSettings {
@@ -186,10 +185,9 @@ fn edit_camera_debug_settings(
     mut settings: ResMut<CameraDebugSettings>,
     mut ui_menu: ResMut<UIMenu>
 ) {
-    UIWindow::new("Camera Debug")
+    UIWindow::new("Camera Frustums")
         .resizable(false)
-        .default_pos([100.0, 260.0])
-        .open(ui_menu.clicked_mut("Debug/Cameras"))
+        .open(ui_menu.clicked_mut("Camera/Frustums"))
         .show(&ctx.0, |ui| {
             ui.add(Checkbox::new(&mut settings.show_frustums, "Show Frustums"));
             ui.add(

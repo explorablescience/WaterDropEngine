@@ -17,9 +17,8 @@ fn edit_controller_params(
     mut ui_menu: ResMut<UIMenu>
 ) {
     if let Ok(mut controller) = camera_query.single_mut() {
-        UIWindow::new("Camera Controller Properties")
+        UIWindow::new("Camera Controller")
             .resizable(false)
-            .default_pos([100.0, 10.0])
             .open(ui_menu.clicked_mut("Camera/Controller"))
             .show(&ctx.0, |ui| {
                 ui.add(Slider::new(&mut controller.sensitivity, 0.001..=1.0).text("Sensitivity"));

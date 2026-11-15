@@ -18,9 +18,8 @@ fn edit_view_params(
     mut ui_menu: ResMut<UIMenu>
 ) {
     if let Ok(mut view) = camera_query.single_mut() {
-        UIWindow::new("Camera View Properties")
+        UIWindow::new("Camera View")
             .resizable(false)
-            .default_pos([100.0, 10.0])
             .open(ui_menu.clicked_mut("Camera/View"))
             .show(&ctx.0, |ui| {
                 ui.add(
@@ -60,7 +59,6 @@ fn edit_camera_roles(
 ) {
     UIWindow::new("Cameras")
         .resizable(false)
-        .default_pos([100.0, 10.0])
         .open(ui_menu.clicked_mut("Camera/Cameras"))
         .show(&ctx.0, |ui| {
             egui::Grid::new("camera_roles")

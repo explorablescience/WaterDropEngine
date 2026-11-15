@@ -207,8 +207,8 @@ pub(crate) fn params_data_ui(
     camera: Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>,
     window: Query<&Window>
 ) {
-    UIWindow::new("Shadow Settings")
-        .open(ui_menu.clicked_mut("PBR/Shadows"))
+    UIWindow::new("Shadows")
+        .open(ui_menu.clicked_mut("Render/Shadows"))
         .show(&ctx.0, |ui| {
             let mut view = pbr.debug_view;
             ui.horizontal(|ui| {

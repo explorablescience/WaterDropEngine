@@ -80,7 +80,7 @@ pub fn draw_selected_entity_components_panel(world: &mut World) {
     }
 
     let ctx = world.resource::<EguiContext>();
-    egui::Window::new("ECS - Selected Entity Components")
+    egui::Window::new("Entity Components")
         .default_size([420.0, 440.0])
         .show(&ctx.0, |ui| {
             if let Some(entity) = selected {
@@ -135,7 +135,7 @@ pub fn draw_selected_entity_components_panel(world: &mut World) {
                     ui.label("Selected entity no longer exists.");
                 }
             } else {
-                ui.label("Select an entity in the Active Entities panel.");
+                ui.label("Select an entity in the Entities window.");
             }
         });
 

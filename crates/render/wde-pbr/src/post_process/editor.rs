@@ -17,8 +17,7 @@ fn edit_post_process_settings(
 ) {
     UIWindow::new("Post Processing")
         .resizable(false)
-        .default_pos([100.0, 260.0])
-        .open(ui_menu.clicked_mut("PBR/Post Processing"))
+        .open(ui_menu.clicked_mut("Render/Post Processing"))
         .show(&ctx.0, |ui| {
             let s = &mut *settings;
 

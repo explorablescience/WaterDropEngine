@@ -36,10 +36,9 @@ fn edit_culling_settings(
     mut ui_menu: ResMut<UIMenu>
 ) {
     let stats = stats.0.lock().map(|s| *s).unwrap_or_default();
-    UIWindow::new("PBR Culling")
+    UIWindow::new("Culling")
         .resizable(false)
-        .default_pos([100.0, 620.0])
-        .open(ui_menu.clicked_mut("PBR/Culling"))
+        .open(ui_menu.clicked_mut("Render/Culling"))
         .show(&ctx.0, |ui| {
             ui.columns(2, |cols| {
                 cols[0].add(Checkbox::new(&mut settings.enabled, "Enabled"));

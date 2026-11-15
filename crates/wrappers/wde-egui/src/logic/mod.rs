@@ -14,6 +14,10 @@ use crate::egui::{
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EguiInputSet;
 
+/// System set containing the system that begins egui's pass. UI drawn in `PreUpdate` must run after it.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct EguiPassSet;
+
 /// Plugin to add systems for updating egui and tessellating paint jobs
 pub struct EguiRenderPlugin;
 impl Plugin for EguiRenderPlugin {
@@ -22,7 +26,7 @@ impl Plugin for EguiRenderPlugin {
             PreUpdate,
             (
                 handle_input.in_set(EguiInputSet),
-                preupdate,
+                preupdate.in_set(EguiPassSet),
                 clear_egui_inputs
             )
                 .chain()

@@ -1,16 +1,18 @@
 use bevy::prelude::*;
-use puffin_egui::egui::{RichText, Stroke};
-use std::collections::{HashMap, hash_map::Entry};
+use std::collections::{BTreeMap, HashMap};
 use wde_egui::prelude::*;
 
-use crate::ui_textures::UITexturesPlugin;
+use crate::{
+    panels::{FrameDataAverages, FrameDataOverlayConfig},
+    theme::{self, fonts, palette},
+    ui_textures::UITexturesPlugin
+};
 
-/// System set containing the menu bar's draw system.
+/// System set containing the menu bar's draw system, which runs in `PreUpdate` right after egui's pass begins.
 ///
-/// Since the menu bar reserves a top strip of the screen via a [`egui::TopBottomPanel`],
-/// any other plugin that draws a screen-filling panel (e.g. a [`egui::CentralPanel`],
-/// as required by most docking crates) must run its own drawing system after this set,
-/// otherwise both panels will compute their layout before the other has claimed its space.
+/// Since the menu bar reserves a top strip of the screen via a [`egui::TopBottomPanel`], it is drawn before every
+/// `Update` system, so that windows are placed below it and a screen-filling panel (e.g. a [`egui::CentralPanel`],
+/// as required by most docking crates) only gets the remaining space.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct EditorMenuBarSet;
 
@@ -49,65 +51,212 @@ impl Plugin for EditorUIMenu {
             )
             .add_plugins(UITexturesPlugin)
             .init_resource::<UIMenu>()
-            .add_systems(Update, draw.in_set(EditorMenuBarSet));
+            .add_systems(PreUpdate, draw.in_set(EditorMenuBarSet).after(EguiPassSet));
     }
 }
 
-/// Callback to draw the ui menu
-fn draw(ctx: Res<EguiContext>, mut menu: ResMut<UIMenu>) {
-    let style = ctx.0.style();
+/// Builder of the editor's windows: an [`egui::Window`] whose content scrolls instead of being cut when it is
+/// taller than the screen. Use [`UIWindow::with`] for the window options that are not forwarded here.
+pub struct UIWindow<'open>(egui::Window<'open>);
+impl<'open> UIWindow<'open> {
+    pub fn new(title: impl Into<egui::WidgetText>) -> Self {
+        Self(egui::Window::new(title))
+    }
+
+    /// Applies any [`egui::Window`] option.
+    pub fn with(self, f: impl FnOnce(egui::Window<'open>) -> egui::Window<'open>) -> Self {
+        Self(f(self.0))
+    }
+    pub fn open(self, open: &'open mut bool) -> Self {
+        Self(self.0.open(open))
+    }
+    pub fn resizable(self, resizable: bool) -> Self {
+        Self(self.0.resizable(resizable))
+    }
+    pub fn collapsible(self, collapsible: bool) -> Self {
+        Self(self.0.collapsible(collapsible))
+    }
+    pub fn default_pos(self, pos: impl Into<egui::Pos2>) -> Self {
+        Self(self.0.default_pos(pos))
+    }
+    pub fn default_width(self, width: f32) -> Self {
+        Self(self.0.default_width(width))
+    }
+    pub fn default_size(self, size: impl Into<egui::Vec2>) -> Self {
+        Self(self.0.default_size(size))
+    }
+
+    pub fn show<R>(
+        self,
+        ctx: &egui::Context,
+        add_contents: impl FnOnce(&mut egui::Ui) -> R
+    ) -> Option<egui::InnerResponse<Option<R>>> {
+        // `Window::vscroll` would cap the content at the window's default height, so the scroll area gets its own
+        // rect, as tall as the space below the menu bar minus the title bar
+        let style = ctx.style();
+        let title_height = style.spacing.interact_size.y.max(fonts::SIZE_HEADING * 1.5);
+        let max_height = (ctx.available_rect().height()
+            - title_height
+            - 2.0 * style.spacing.window_margin.sum().y
+            - 2.0 * style.spacing.item_spacing.y)
+            .max(100.0);
+        self.0.show(ctx, |ui| {
+            let rect = egui::Rect::from_min_size(
+                ui.cursor().min,
+                egui::vec2(ui.available_width(), max_height)
+            );
+            ui.scope_builder(egui::UiBuilder::new().max_rect(rect), |ui| {
+                egui::ScrollArea::vertical()
+                    .max_height(max_height)
+                    .show(ui, add_contents)
+                    .inner
+            })
+            .inner
+        })
+    }
+}
+
+fn draw(
+    ctx: Res<EguiContext>,
+    mut menu: ResMut<UIMenu>,
+    stats_config: Res<FrameDataOverlayConfig>,
+    stats: Res<FrameDataAverages>
+) {
+    let style = menu.style.clone().unwrap_or_else(theme::menu_style);
     let frame = egui::Frame::NONE
         .fill(style.visuals.extreme_bg_color)
-        .stroke(Stroke::NONE)
-        .inner_margin(egui::Margin {
-            left: 8,
-            right: 8,
-            top: 12,
-            bottom: 16
-        });
+        .inner_margin(egui::Margin::symmetric(8, 3));
 
     egui::TopBottomPanel::top("wde_editor_menu_bar")
         .frame(frame)
         .show(&ctx.0, |ui| {
-            let style = menu.style.clone();
-            menu.draw(ui, style);
+            let config = egui::containers::menu::MenuConfig::new().style(style.clone());
+            egui::MenuBar::new()
+                .style(style)
+                .config(config)
+                .ui(ui, |ui| {
+                    menu.draw_bar(ui);
+                    if stats_config.enabled {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            frame_stats(ui, &stats);
+                        });
+                    }
+                });
         });
 }
 
-/// Store the menu structure of a UI menu.
-/// Note that this item is not necessarily the root of the menu, it can be a submenu as well.
-///
-/// To add a menu item to the menu, use the `push` method of `UIMenu`, which takes care of creating the intermediate items if necessary.
-#[derive(Clone, Debug)]
-struct MenuItem {
-    /// The title of the menu item
-    title: String,
-    /// Insertion order within its menu level.
-    order: usize,
-    /// Whether this menu item is a leaf (i.e. it has no subitems)
-    leaf: bool,
-    /// The list of subitems, if this item is not a leaf. None if this item is a leaf.
-    items: Option<HashMap<String, MenuItem>>
+fn frame_stats(ui: &mut egui::Ui, stats: &FrameDataAverages) {
+    // Laid out from the right
+    let stat = |ui: &mut egui::Ui, value: Option<String>, unit: &str| {
+        let font = theme::body_font(fonts::SIZE_SMALL);
+        ui.label(
+            egui::RichText::new(unit)
+                .font(font.clone())
+                .color(palette::TEXT_DISABLED)
+        );
+        ui.add_space(-4.0);
+        ui.label(
+            egui::RichText::new(value.unwrap_or_else(|| "-".into()))
+                .font(font)
+                .color(palette::TEXT_MUTED)
+        );
+    };
+    ui.spacing_mut().item_spacing.x = 8.0;
+    stat(ui, stats.frame_ms.map(|v| format!("{v:.1}")), "ms");
+    stat(ui, stats.fps.map(|v| format!("{v:.0}")), "FPS");
 }
 
-#[derive(Resource, Default, Debug)]
-pub struct UIMenu {
-    /// The list of root menu items along with their name. Each item can have subitems, and so on.
-    roots: HashMap<String, MenuItem>,
-    /// The list of menu items (only leafs) that are currently clicked (i.e. their subitems are visible).
-    /// The key is the path of the menu item (e.g. "File/Open/Recent").
-    clicked: HashMap<String, bool>,
-    /// Monotonic counter used to assign insertion order to newly created menu items.
-    next_order: usize,
+/// Root menus and sections created up front, so that they keep this order whatever the order in which plugins
+/// add their items. Other roots and sections follow in alphabetical order.
+const LAYOUT: &[&str] = &[
+    "File",
+    "Engine",
+    "Render",
+    "Render/Pipeline",
+    "Camera",
+    "Terrain",
+    "Game"
+];
 
-    /// Style of the menu bar, used to draw the menu bar with a custom style.
+/// The children of a menu or section, by title.
+type Branch = BTreeMap<String, MenuNode>;
+
+#[derive(Clone, Debug, Default)]
+struct MenuNode {
+    /// Index in [`LAYOUT`], `usize::MAX` for the other nodes.
+    rank: usize,
+    /// The children by title, `None` for an item.
+    children: Option<Branch>
+}
+impl MenuNode {
+    fn branch(rank: usize) -> Self {
+        Self {
+            rank,
+            children: Some(BTreeMap::new())
+        }
+    }
+
+    /// The items in alphabetical order, then the non-empty branches in layout order.
+    fn sorted(children: &Branch) -> (Vec<&String>, Vec<(&String, &Branch)>) {
+        let items = children
+            .iter()
+            .filter(|(_, node)| node.children.is_none())
+            .map(|(name, _)| name)
+            .collect();
+        let mut branches: Vec<_> = children
+            .iter()
+            .filter_map(|(name, node)| Some((name, node.rank, node.children.as_ref()?)))
+            .filter(|(_, _, children)| !children.is_empty())
+            .collect();
+        branches.sort_by_key(|(_, rank, _)| *rank);
+        let branches = branches
+            .into_iter()
+            .map(|(name, _, children)| (name, children))
+            .collect();
+        (items, branches)
+    }
+}
+
+/// The menu bar at the top of the screen, whose items toggle a state, usually whether a window is open.
+///
+/// An item is added the first time its state is requested with its path, e.g. `"Render/Shadows"`:
+/// - the first part is the menu in the bar. Menus are drawn in the order of [`LAYOUT`] (`File`, `Engine`,
+///   `Render`, `Camera`, `Terrain`, `Game`), then alphabetically;
+/// - a 3-part path such as `"Render/Pipeline/Passes"` adds the item to a titled section of the menu, drawn after
+///   the menu's own items. A deeper path opens a submenu inside that section.
+///
+/// Items are sorted alphabetically, and those that are on are marked with a dot.
+#[derive(Resource, Debug)]
+pub struct UIMenu {
+    roots: Branch,
+    /// The state of each item, by path.
+    clicked: HashMap<String, bool>,
+
+    /// Style of the menu bar, [`theme::menu_style`] when unset.
     style: Option<egui::Style>,
-    /// Color of the "WDE" title drawn on the left side of the menu bar. Defaults to the ambient
-    /// text color when unset.
+    /// Color of the "WDE" title drawn on the left side of the menu bar, the theme accent when unset.
     title_color: Option<egui::Color32>
 }
+impl Default for UIMenu {
+    fn default() -> Self {
+        let mut menu = Self {
+            roots: BTreeMap::new(),
+            clicked: HashMap::new(),
+            style: None,
+            title_color: None
+        };
+        for (rank, path) in LAYOUT.iter().enumerate() {
+            let parts: Vec<&str> = path.split('/').collect();
+            let (last, parents) = parts.split_last().unwrap();
+            Self::branch_mut(&mut menu.roots, parents)
+                .entry(last.to_string())
+                .or_insert_with(|| MenuNode::branch(rank));
+        }
+        menu
+    }
+}
 impl UIMenu {
-    /// Set the style of the menu bar, used to draw the menu bar with a custom style.
+    /// Set the style of the menu bar and its menus. Pass `None` for the default [`theme::menu_style`].
     pub fn set_style(&mut self, style: Option<egui::Style>) {
         self.style = style;
     }
@@ -115,149 +264,139 @@ impl UIMenu {
         self.style.as_ref()
     }
 
-    /// Set the color of the "WDE" title drawn on the left side of the menu bar. Pass `None` to
-    /// fall back to the ambient text color.
+    /// Set the color of the "WDE" title drawn on the left side of the menu bar. Pass `None` for the theme accent.
     pub fn set_title_color(&mut self, color: Option<egui::Color32>) {
         self.title_color = color;
     }
 
-    /// Add a menu item to the menu, given its path (e.g. "File/Open/Recent"). The path is split by '/' to determine the hierarchy of the menu items.
-    /// If any of the intermediate items do not exist, they are created as non-leaf items. The final item is created as a leaf item.
+    /// Returns the children of the branch at `path`, creating the missing branches.
+    fn branch_mut<'a>(mut items: &'a mut Branch, path: &[&str]) -> &'a mut Branch {
+        for name in path {
+            let node = items
+                .entry(name.to_string())
+                .or_insert_with(|| MenuNode::branch(usize::MAX));
+            items = node.children.get_or_insert_default();
+        }
+        items
+    }
+
+    /// Adds the item at `path`, e.g. `"Render/Pipeline/Passes"`. A branch at the same path is kept as is.
     fn push(&mut self, path: &str) {
         let parts: Vec<&str> = path.split('/').collect();
-        if parts.is_empty() {
-            return;
-        }
-
-        Self::push_item(&mut self.roots, &parts, &mut self.next_order);
-    }
-    fn push_item(items: &mut HashMap<String, MenuItem>, path: &[&str], next_order: &mut usize) {
-        if path.is_empty() {
-            return;
-        }
-
-        let name = path[0];
-        let is_leaf = path.len() == 1;
-
-        let item = match items.entry(name.to_string()) {
-            Entry::Occupied(entry) => entry.into_mut(),
-            Entry::Vacant(entry) => {
-                let order = *next_order;
-                *next_order += 1;
-                entry.insert(MenuItem {
-                    title: name.to_string(),
-                    order,
-                    leaf: is_leaf,
-                    items: if is_leaf { None } else { Some(HashMap::new()) }
-                })
-            }
-        };
-
-        if !is_leaf && item.items.is_none() {
-            item.leaf = false;
-            item.items = Some(HashMap::new());
-        }
-
-        if !is_leaf {
-            Self::push_item(item.items.as_mut().unwrap(), &path[1..], next_order);
-        }
+        let (last, parents) = parts.split_last().unwrap();
+        Self::branch_mut(&mut self.roots, parents)
+            .entry(last.to_string())
+            .or_insert_with(MenuNode::default);
     }
 
-    /// Return true if the menu item at the given path is clicked (i.e. its subitems are visible). If the item does not exist or is a leaf, return false.
+    /// Return true if the item at the given path is on. If the item does not exist, return false.
     pub fn is_clicked(&self, path: &str) -> bool {
         self.clicked.get(path).cloned().unwrap_or(false)
     }
-    /// Returns a mutable reference to the clicked state of the menu item at the given path
-    /// If the item does not exist, it is created as a leaf item and its clicked state is initialized to false.
+    /// Returns a mutable reference to the state of the item at the given path.
+    /// If the item does not exist, it is created and its state is initialized to false.
     pub fn clicked_mut(&mut self, path: &str) -> &mut bool {
-        if !self.clicked.contains_key(path) {
-            self.push(path);
-            self.clicked.insert(path.to_string(), false);
-        }
-        self.clicked.get_mut(path).unwrap()
+        self.clicked_mut_or(path, false)
     }
-    /// Returns a mutable reference to the clicked state of the menu item at the given path
-    /// If the item does not exist, it is created as a leaf item and its clicked state is initialized to true.
+    /// Returns a mutable reference to the state of the item at the given path.
+    /// If the item does not exist, it is created and its state is initialized to true.
     pub fn clicked_mut_default_open(&mut self, path: &str) -> &mut bool {
+        self.clicked_mut_or(path, true)
+    }
+    fn clicked_mut_or(&mut self, path: &str, default: bool) -> &mut bool {
         if !self.clicked.contains_key(path) {
             self.push(path);
-            self.clicked.insert(path.to_string(), true);
+            self.clicked.insert(path.to_string(), default);
         }
         self.clicked.get_mut(path).unwrap()
     }
 
-    /// Draw the menu using egui
-    fn draw(&mut self, ui: &mut egui::Ui, style: Option<egui::Style>) {
-        // Draw a background for the menu bar
-        let visuals = style
-            .as_ref()
-            .map(|s| &s.visuals)
-            .unwrap_or(&ui.style().visuals);
-        let bg_color = visuals.extreme_bg_color;
-        let rect = ui.available_rect_before_wrap();
-        ui.painter().rect_filled(rect, 0.0, bg_color);
+    fn draw_bar(&mut self, ui: &mut egui::Ui) {
+        let title_color = self.title_color.unwrap_or(palette::ACCENT);
+        ui.label(
+            egui::RichText::new("WDE")
+                .font(theme::heading_font(13.0))
+                .color(title_color)
+        );
+        ui.add_space(8.0);
 
-        // Draw the menu bar
-        ui.scope(|ui| {
-            let button_padding = style
-                .as_ref()
-                .map(|s| s.spacing.button_padding)
-                .unwrap_or(ui.style().spacing.button_padding);
-
-            // Apply the custom style
-            let mut menu_bar = egui::MenuBar::new();
-            if let Some(style) = style.clone() {
-                menu_bar = menu_bar
-                    .style(style.clone())
-                    .config(egui::containers::menu::MenuConfig::new().style(style));
+        let (items, branches) = MenuNode::sorted(&self.roots);
+        for name in items {
+            let open = self.clicked.entry(name.clone()).or_default();
+            if ui.add(egui::Button::selectable(*open, name)).clicked() {
+                *open = !*open;
             }
-
-            menu_bar.ui(ui, |ui| {
-                // Write "WDE" on the left side of the menu bar
-                egui::Frame::NONE
-                    .inner_margin(egui::Margin::symmetric(
-                        button_padding.x as i8,
-                        button_padding.y as i8
-                    ))
-                    .show(ui, |ui| {
-                        let mut title = RichText::new("WDE").heading().strong();
-                        if let Some(color) = self.title_color {
-                            title = title.color(color);
-                        }
-                        ui.label(title);
-                    });
-
-                // Draw the menu items in order of their insertion
-                let mut ordered_roots: Vec<_> = self.roots.iter().collect();
-                ordered_roots.sort_by_key(|(_, item)| item.order);
-                for (name, item) in ordered_roots {
-                    Self::draw_item(ui, item, name, &mut self.clicked);
-                }
+        }
+        for (name, children) in branches {
+            ui.menu_button(name, |ui| {
+                Self::draw_menu(ui, children, name, &mut self.clicked);
             });
-        });
+        }
     }
-    fn draw_item(
+
+    fn draw_menu(
         ui: &mut egui::Ui,
-        item: &MenuItem,
+        children: &Branch,
         path: &str,
         clicked: &mut HashMap<String, bool>
     ) {
-        if item.leaf {
-            if ui.button(&item.title).clicked() {
-                // Toggle the clicked state of the leaf item
-                let is_clicked = clicked.get(path).cloned().unwrap_or(false);
-                clicked.insert(path.to_string(), !is_clicked);
-            }
-        } else {
-            ui.menu_button(&item.title, |ui| {
-                let mut ordered_items: Vec<_> = item.items.as_ref().unwrap().iter().collect();
-                ordered_items.sort_by_key(|(_, subitem)| subitem.order);
+        let (items, sections) = MenuNode::sorted(children);
+        let has_items = !items.is_empty();
+        for name in items {
+            Self::draw_item(
+                ui,
+                name,
+                clicked.entry(format!("{path}/{name}")).or_default()
+            );
+        }
 
-                for (name, subitem) in ordered_items {
-                    let subpath = format!("{}/{}", path, name);
-                    Self::draw_item(ui, subitem, &subpath, clicked);
-                }
-            });
+        for (i, (name, section)) in sections.into_iter().enumerate() {
+            if has_items || i > 0 {
+                ui.separator();
+            }
+            egui::Frame::NONE
+                .inner_margin(egui::Margin {
+                    left: ui.spacing().button_padding.x as i8,
+                    right: 0,
+                    top: 2,
+                    bottom: 1
+                })
+                .show(ui, |ui| {
+                    ui.add(
+                        egui::Label::new(
+                            egui::RichText::new(name.to_uppercase())
+                                .font(theme::heading_font(fonts::SIZE_SMALL))
+                                .color(palette::TEXT_DISABLED)
+                        )
+                        .selectable(false)
+                    );
+                });
+
+            let section_path = format!("{path}/{name}");
+            let (items, submenus) = MenuNode::sorted(section);
+            for name in items {
+                let open = clicked.entry(format!("{section_path}/{name}")).or_default();
+                Self::draw_item(ui, name, open);
+            }
+            for (name, children) in submenus {
+                let submenu_path = format!("{section_path}/{name}");
+                ui.menu_button(name, |ui| {
+                    Self::draw_menu(ui, children, &submenu_path, clicked);
+                });
+            }
+        }
+    }
+
+    fn draw_item(ui: &mut egui::Ui, title: &str, open: &mut bool) {
+        let (text_color, mark_color) = match *open {
+            true => (palette::TEXT, palette::ACCENT),
+            false => (palette::TEXT_MUTED, egui::Color32::TRANSPARENT)
+        };
+        let button = egui::Button::new(egui::RichText::new(title).color(text_color))
+            .right_text(egui::RichText::new("●").size(8.0).color(mark_color))
+            .min_size(egui::vec2(150.0, 0.0));
+        if ui.add(button).clicked() {
+            *open = !*open;
         }
     }
 }

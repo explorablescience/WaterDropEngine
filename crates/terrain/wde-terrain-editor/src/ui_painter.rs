@@ -28,8 +28,7 @@ fn ui_paint_terrain(
     mut query: Query<&mut PaintBrush>,
     mut ui_menu: ResMut<UIMenu>
 ) {
-    UIWindow::new("Paint Debug")
-        .default_pos([40.0, 20.0])
+    UIWindow::new("Terrain Paint")
         .open(ui_menu.clicked_mut("Terrain/Paint"))
         .show(&ctx.0, |ui| {
             ui.heading("Current Brush");
@@ -79,7 +78,6 @@ fn ui_terrain_settings(
     mut ui_menu: ResMut<UIMenu>
 ) {
     UIWindow::new("Terrain Settings")
-        .default_pos([40.0, 400.0])
         .open(ui_menu.clicked_mut("Terrain/Settings"))
         .show(&ctx.0, |ui| {
             ui.heading("Tiling (world size of one texture repeat)");
@@ -132,9 +130,8 @@ fn ui_terrain_debug(
     cursor: Res<TerrainCursorPos>,
     mut ui_menu: ResMut<UIMenu>
 ) {
-    UIWindow::new("Terrain")
-        .default_pos([100.0, 260.0])
-        .open(ui_menu.clicked_mut("Debug/Terrain"))
+    UIWindow::new("Terrain Debug")
+        .open(ui_menu.clicked_mut("Terrain/Debug"))
         .show(&ctx.0, |ui| {
             let materials = terrain
                 .single()
@@ -266,7 +263,6 @@ fn ui_save_terrain(
     mut ui_menu: ResMut<UIMenu>
 ) {
     UIWindow::new("Save Terrain")
-        .default_pos([40.0, 200.0])
         .open(ui_menu.clicked_mut("Terrain/Save"))
         .show(&ctx.0, |ui| {
             ui.heading("Save");

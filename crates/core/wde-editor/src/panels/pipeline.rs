@@ -1,4 +1,4 @@
-//! `Debug/Pipeline` window: the passes of the last frame with their timings, and the textures they write at each
+//! `Render/Pipeline/Passes` window: the passes of the last frame with their timings, and the textures they write at each
 //! of their points (see [`RenderGraphDebugView`]).
 use bevy::prelude::*;
 use wde_egui::prelude::*;
@@ -37,7 +37,7 @@ fn draw_ui(
     mut ui_textures: ResMut<UITextures>,
     asset_server: Res<AssetServer>
 ) {
-    let open = ui_menu.clicked_mut("Debug/Pipeline");
+    let open = ui_menu.clicked_mut("Render/Pipeline/Passes");
     if view.enabled != *open {
         view.enabled = *open;
     }
@@ -52,7 +52,7 @@ fn draw_ui(
 
     let report = view.report.clone();
     let timings = view.timings.clone();
-    egui::Window::new("Pipeline")
+    egui::Window::new("Pipeline Passes")
         .default_size([1100.0, 650.0])
         .resizable(true)
         .open(open)

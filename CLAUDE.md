@@ -128,6 +128,10 @@ GPU assets implement the `RenderAsset` trait (`prepare()` creates the GPU object
 
 `wde-physics` wraps Rapier. Attach a `Collider` component (cuboid, sphere, heightfield, etc.) with a `ColliderGroup` to any entity with a `Transform`. Use `PhysicsWorld` resource for raycasting. The terrain uses `HEIGHTMAP_COLLIDER_GROUP` (GROUP_1); the other groups are left to the games.
 
+### Editor UI
+
+Debug windows are `UIWindow`s (an `egui::Window` whose content scrolls past the screen height) opened from the `UIMenu` bar, drawn in `PreUpdate` so every window is placed below it. Leave out `default_pos`: egui places new windows in free space. Menu paths group windows by topic: `Engine/` (entities, assets, logs, profiler, physics), `Render/` (render settings, and the `Render/Pipeline/` section for render graph tools), `Camera/`, `Terrain/`, and `Game/` for a game's own windows; a 3-part path adds the item to a titled section. The theme (palette, Inter font, compact spacing) is in [crates/core/wde-editor/src/theme.rs](crates/core/wde-editor/src/theme.rs), exported as `ui_theme`.
+
 ## Code style
 
 - Edition 2024, formatted with `cargo +nightly fmt` (config in [rustfmt.toml](rustfmt.toml): trailing commas off, Unix newlines, field init shorthand).

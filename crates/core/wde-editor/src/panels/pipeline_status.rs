@@ -1,4 +1,4 @@
-//! `Debug/Pipeline Status` window: every pipeline with its status and shaders, and the parts of passes skipped in
+//! `Render/Pipeline/Status` window: every pipeline with its status and shaders, and the parts of passes skipped in
 //! the last frame (see [`PipelineStatusView`]).
 use bevy::prelude::*;
 use wde_egui::prelude::*;
@@ -30,7 +30,7 @@ fn draw_ui(
     mut view: ResMut<PipelineStatusView>,
     mut state: ResMut<PipelineStatusPanelState>
 ) {
-    let open = ui_menu.clicked_mut("Debug/Pipeline Status");
+    let open = ui_menu.clicked_mut("Render/Pipeline/Status");
     if view.enabled != *open {
         view.enabled = *open;
     }

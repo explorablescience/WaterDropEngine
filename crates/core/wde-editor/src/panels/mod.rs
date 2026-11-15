@@ -9,7 +9,7 @@ mod pipeline_plot;
 mod pipeline_status;
 mod profiler;
 
-pub use framedata::FrameDataOverlayConfig;
+pub use framedata::{FrameDataAverages, FrameDataOverlayConfig};
 
 pub struct PanelsPlugin;
 impl Plugin for PanelsPlugin {

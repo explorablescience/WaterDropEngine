@@ -558,8 +558,7 @@ fn edit_settings(
 
     UIWindow::new("Ambient Occlusion")
         .resizable(false)
-        .default_pos([100.0, 820.0])
-        .open(ui_menu.clicked_mut("PBR/Ambient Occlusion"))
+        .open(ui_menu.clicked_mut("Render/Ambient Occlusion"))
         .show(&ctx.0, |ui| {
             let s = &mut *settings;
             ui.columns(2, |cols| {

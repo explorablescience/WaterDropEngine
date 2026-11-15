@@ -17,8 +17,7 @@ fn edit_atmosphere_settings(
 ) {
     UIWindow::new("Atmosphere")
         .resizable(false)
-        .default_pos([100.0, 260.0])
-        .open(ui_menu.clicked_mut("PBR/Atmosphere"))
+        .open(ui_menu.clicked_mut("Render/Atmosphere"))
         .show(&ctx.0, |ui| {
             ui.add(Checkbox::new(&mut atmosphere.animate_time, "Animate Time"));
             ui.columns(2, |cols| {

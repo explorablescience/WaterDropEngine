@@ -15,10 +15,9 @@ fn edit_pbr_settings(
     mut pbr: ResMut<PbrSettings>,
     mut ui_menu: ResMut<UIMenu>
 ) {
-    UIWindow::new("PBR Lighting")
+    UIWindow::new("Lighting")
         .resizable(false)
-        .default_pos([100.0, 620.0])
-        .open(ui_menu.clicked_mut("PBR/Lighting"))
+        .open(ui_menu.clicked_mut("Render/Lighting"))
         .show(&ctx.0, |ui| {
             ui.columns(2, |cols| {
                 cols[0].add(Slider::new(&mut pbr.direct_scale, 0.0..=4.0).text("Direct Scale"));
