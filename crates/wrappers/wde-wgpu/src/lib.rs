@@ -54,7 +54,7 @@ pub mod utils;
 
 // Re-exports to provide `wde_wgpu::buffer`, `wde_wgpu::command_buffer`, etc.
 pub use instance::RenderInstanceData;
-pub use passes::{command_buffer, compute_pass, render_pass};
+pub use passes::{command_buffer, compute_pass, render_pass, timestamps};
 pub use pipelines::{bind_group, compute_pipeline, render_pipeline};
 pub use resources::{buffer, texture};
 pub use utils::vertex;

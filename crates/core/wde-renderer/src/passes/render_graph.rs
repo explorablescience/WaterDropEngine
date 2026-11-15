@@ -285,90 +285,104 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
     };
 
     // Execute passes in order of their IDs
-    for pass_id in &graph.sorted_ids {
-        // Get pass description
-        let pass_index = *graph.render_passes_by_id.get(pass_id).unwrap();
-        let pass = &mut graph.passes[pass_index];
-        let pass_label = pass.label();
-        let mut pass_desc = pass.describe(world);
-        RenderGraphDebug::begin_pass(world, *pass_id, pass_label);
-
-        // Try custom rendering logic for this pass
-        if let Some(custom_render_result) = pass.custom_render(world, &mut command_buffer) {
-            RenderGraphDebug::end_custom_pass(world);
-            // If it was Some(true or false), it means the pass used custom rendering logic.
-            if !custom_render_result {
-                trace!(
-                    "Custom rendering for pass '{}' could not be completed. Skipping this pass for this frame.",
-                    pass_label
-                );
-            }
-            continue;
-        }
-
-        // Precompute sub-pass descriptions before creating the render pass to avoid borrow conflicts with the world
-        let mut sub_passes = Vec::new();
-        if let Some(sub_pass_indices) = graph.sub_passes_by_renderpass.get(&pass_index) {
-            for sub_pass_index in sub_pass_indices {
-                let sub_pass = &mut graph.sub_passes[*sub_pass_index];
-                let sub_pass_label = sub_pass.label();
-                let sub_pass_desc = sub_pass.describe(world);
-                sub_passes.push((sub_pass_label, sub_pass_desc));
-            }
-        }
-        let sub_pass_labels: Vec<&str> = sub_passes.iter().map(|(label, _)| *label).collect();
-        let capture = RenderGraphDebug::graph_pass(world, &pass_desc, &sub_pass_labels);
-
-        // Create the render pass from its description
-        let _pass_span = debug_span!("render_pass", pass_id = *pass_id, pass_label).entered();
-        let mut render_pass =
-            match create_render_pass(world, &mut command_buffer, pass_label, &pass_desc) {
-                Ok(pass) => Some(pass),
-                Err(e) => {
-                    trace!(
-                        "Failed to create render pass: '{}'. Skipping this frame.",
-                        e
-                    );
-                    continue;
-                }
-            };
-
-        // Execute sub-passes in order of addition. The debug capture ends the render pass after the selected one,
-        // and the following ones continue in a new render pass, loading the attachments.
-        let last = sub_passes.len().saturating_sub(1);
-        for (i, (sub_pass_label, sub_pass_desc)) in sub_passes.iter().enumerate() {
-            let _sub_pass_span =
-                debug_span!("render_sub_pass", sub_pass_label = *sub_pass_label).entered();
-            if let Some(render_pass) = render_pass.as_mut() {
-                render_sub_pass(world, render_pass, sub_pass_desc);
-            }
-            if let Some((point, texture)) = capture
-                && point == i
-            {
-                render_pass = None;
-                if let Some(texture) = texture {
-                    RenderGraphDebug::draw_selected(world, &mut command_buffer, texture);
-                }
-                if i < last {
-                    load_attachments(&mut pass_desc);
-                    render_pass =
-                        create_render_pass(world, &mut command_buffer, pass_label, &pass_desc).ok();
-                }
-            }
-        }
-        if sub_passes.is_empty()
-            && let Some((_, Some(texture))) = capture
-        {
-            drop(render_pass);
-            RenderGraphDebug::draw_selected(world, &mut command_buffer, texture);
-        }
+    RenderGraphDebug::begin_graph(world);
+    for i in 0..graph.sorted_ids.len() {
+        let pass_id = graph.sorted_ids[i];
+        RenderGraphDebug::begin_pass_timing(world, &mut command_buffer, pass_id);
+        render_pass(graph, world, &mut command_buffer, pass_id);
+        RenderGraphDebug::end_pass_timing(world, &mut command_buffer);
     }
+    RenderGraphDebug::end_graph(world, &mut command_buffer);
     RenderGraphDebug::final_pass(world, &mut command_buffer);
     RenderGraphDebug::end_frame(world);
 
     // Submit commands
     let render_instance = world.get_resource::<RenderInstance>().unwrap();
     command_buffer.submit(&render_instance.0.read().unwrap());
+    RenderGraphDebug::submitted(world);
+}
+
+fn render_pass(
+    graph: &mut RenderGraph,
+    world: &mut World,
+    command_buffer: &mut CommandBuffer,
+    pass_id: RenderPassId
+) {
+    // Get pass description
+    let pass_index = *graph.render_passes_by_id.get(&pass_id).unwrap();
+    let pass = &mut graph.passes[pass_index];
+    let pass_label = pass.label();
+    let mut pass_desc = pass.describe(world);
+    RenderGraphDebug::begin_pass(world, pass_id, pass_label);
+
+    // Try custom rendering logic for this pass
+    if let Some(custom_render_result) = pass.custom_render(world, command_buffer) {
+        RenderGraphDebug::end_custom_pass(world);
+        // If it was Some(true or false), it means the pass used custom rendering logic.
+        if !custom_render_result {
+            trace!(
+                "Custom rendering for pass '{}' could not be completed. Skipping this pass for this frame.",
+                pass_label
+            );
+        }
+        return;
+    }
+
+    // Precompute sub-pass descriptions before creating the render pass to avoid borrow conflicts with the world
+    let mut sub_passes = Vec::new();
+    if let Some(sub_pass_indices) = graph.sub_passes_by_renderpass.get(&pass_index) {
+        for sub_pass_index in sub_pass_indices {
+            let sub_pass = &mut graph.sub_passes[*sub_pass_index];
+            let sub_pass_label = sub_pass.label();
+            let sub_pass_desc = sub_pass.describe(world);
+            sub_passes.push((sub_pass_label, sub_pass_desc));
+        }
+    }
+    let sub_pass_labels: Vec<&str> = sub_passes.iter().map(|(label, _)| *label).collect();
+    let capture = RenderGraphDebug::graph_pass(world, &pass_desc, &sub_pass_labels);
+
+    // Create the render pass from its description
+    let _pass_span = debug_span!("render_pass", pass_id, pass_label).entered();
+    let mut render_pass = match create_render_pass(world, command_buffer, pass_label, &pass_desc) {
+        Ok(pass) => Some(pass),
+        Err(e) => {
+            trace!(
+                "Failed to create render pass: '{}'. Skipping this frame.",
+                e
+            );
+            return;
+        }
+    };
+
+    // Execute sub-passes in order of addition. The debug capture ends the render pass after the selected one,
+    // and the following ones continue in a new render pass, loading the attachments.
+    let last = sub_passes.len().saturating_sub(1);
+    for (i, (sub_pass_label, sub_pass_desc)) in sub_passes.iter().enumerate() {
+        let _sub_pass_span =
+            debug_span!("render_sub_pass", sub_pass_label = *sub_pass_label).entered();
+        if let Some(render_pass) = render_pass.as_mut() {
+            render_sub_pass(world, render_pass, sub_pass_desc);
+        }
+        if let Some((point, texture)) = capture
+            && point == i
+        {
+            render_pass = None;
+            if let Some(texture) = texture {
+                RenderGraphDebug::draw_selected(world, command_buffer, texture);
+            }
+            if i < last {
+                load_attachments(&mut pass_desc);
+                render_pass =
+                    create_render_pass(world, command_buffer, pass_label, &pass_desc).ok();
+            }
+        }
+    }
+    if sub_passes.is_empty()
+        && let Some((_, Some(texture))) = capture
+    {
+        drop(render_pass);
+        RenderGraphDebug::draw_selected(world, command_buffer, texture);
+    }
 }
 
 /// Makes the attachments of a pass keep their content, to continue it in a new render pass.

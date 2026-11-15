@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy::window::{PresentMode, PrimaryWindow, RawHandleWrapperHolder};
 use wde_wgpu::instance::{self, PresentMode as WPresentMode, RenderEvent, setup_surface};
 
-use crate::core::RenderInstance;
+use crate::{core::RenderInstance, passes::RenderGraphDebug};
 
 use super::SwapchainFrame;
 use super::{EmptyWorld, extract_macros::ExtractWorld};
@@ -83,7 +83,8 @@ pub(crate) fn init_surface(
 /// Prepare the rendering frame.
 pub(crate) fn prepare(
     mut swapchain_frame: ResMut<SwapchainFrame>,
-    render_instance: Res<RenderInstance>
+    render_instance: Res<RenderInstance>,
+    debug: Res<RenderGraphDebug>
 ) {
     let _ = debug_span!("prepare_swapchain_frame").entered();
 
@@ -95,10 +96,16 @@ pub(crate) fn prepare(
 
     // Retrieve the current texture
     let render_data = render_instance.0.read().unwrap();
-    match instance::get_current_texture(
-        render_data.surface.as_ref().unwrap(),
-        render_data.surface_config.as_ref().unwrap()
-    ) {
+    let get_current_texture = || {
+        let start = std::time::Instant::now();
+        let event = instance::get_current_texture(
+            render_data.surface.as_ref().unwrap(),
+            render_data.surface_config.as_ref().unwrap()
+        );
+        debug.add_swapchain_wait(start.elapsed());
+        event
+    };
+    match get_current_texture() {
         RenderEvent::Redraw(render_texture) => {
             swapchain_frame.data = Some(render_texture);
         }
@@ -123,10 +130,7 @@ pub(crate) fn prepare(
             );
 
             // Retry immediately to get the next texture
-            match instance::get_current_texture(
-                render_data.surface.as_ref().unwrap(),
-                render_data.surface_config.as_ref().unwrap()
-            ) {
+            match get_current_texture() {
                 RenderEvent::Redraw(render_texture) => {
                     swapchain_frame.data = Some(render_texture);
                 }
@@ -142,14 +146,14 @@ pub(crate) fn prepare(
 }
 
 /// Present the rendered frame to the screen.
-pub(crate) fn present(mut swapchain_frame: ResMut<SwapchainFrame>) {
+pub(crate) fn present(mut swapchain_frame: ResMut<SwapchainFrame>, debug: Res<RenderGraphDebug>) {
     let _ = debug_span!("present_swapchain_frame").entered();
 
-    let _ = instance::present(match swapchain_frame.data.take() {
-        Some(render_texture) => render_texture.texture,
-        None => {
-            trace!("Skipping frame presentation: no swapchain texture was acquired.");
-            return;
-        }
-    });
+    let Some(render_texture) = swapchain_frame.data.take() else {
+        trace!("Skipping frame presentation: no swapchain texture was acquired.");
+        return;
+    };
+    let start = std::time::Instant::now();
+    let _ = instance::present(render_texture.texture);
+    debug.presented(start.elapsed());
 }

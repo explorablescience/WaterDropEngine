@@ -1,13 +1,16 @@
-//! `Debug/Pipeline` window: the passes of the last frame, and the textures they write at each of their points
-//! (see [`RenderGraphDebugView`]).
+//! `Debug/Pipeline` window: the passes of the last frame with their timings, and the textures they write at each
+//! of their points (see [`RenderGraphDebugView`]).
 use bevy::prelude::*;
 use wde_egui::prelude::*;
 use wde_renderer::prelude::*;
 
+use super::pipeline_plot::{PlotState, pass_color, swatch, timing_plot};
 use crate::{prelude::*, ui_textures::UITextures};
 
 /// Largest side of the texture the selected texture is drawn into.
 const MAX_TARGET_SIZE: u32 = 2048;
+/// Width of a timing column.
+const TIMING_WIDTH: f32 = 48.0;
 
 pub struct PipelinePanelPlugin;
 impl Plugin for PipelinePanelPlugin {
@@ -22,7 +25,8 @@ struct PipelinePanelState {
     target: Option<(Handle<Texture>, (u32, u32))>,
     /// Label and format of the texture whose default view settings were applied.
     viewed: Option<(String, Option<TextureFormat>)>,
-    fullscreen: bool
+    fullscreen: bool,
+    plot: PlotState
 }
 
 fn draw_ui(
@@ -47,6 +51,7 @@ fn draw_ui(
         .and_then(|(handle, size)| Some((ui_textures.get_texture_index(handle.id())?, *size)));
 
     let report = view.report.clone();
+    let timings = view.timings.clone();
     egui::Window::new("Pipeline")
         .default_size([1100.0, 650.0])
         .resizable(true)
@@ -54,8 +59,16 @@ fn draw_ui(
         .show(&ctx.0, |ui| {
             egui::SidePanel::left("pipeline-passes")
                 .resizable(true)
-                .default_width(260.0)
+                .default_width(380.0)
                 .show_inside(ui, |ui| {
+                    egui::CollapsingHeader::new("Timings")
+                        .default_open(true)
+                        .show(ui, |ui| {
+                            frame_timings(ui, &timings, &mut view.timing_window);
+                            timing_plot(ui, &timings, &report, view.timing_window, &mut state.plot);
+                        });
+                    ui.separator();
+                    timing_columns(ui, "Pass", "GPU", "CPU");
                     egui::ScrollArea::vertical().show(ui, |ui| {
                         if let Some(selection) = pass_list(ui, &report, view.selection) {
                             view.selection = Some(selection);
@@ -108,34 +121,169 @@ fn pass_list(
         if in_pass.is_some() {
             title = title.strong();
         }
-        egui::CollapsingHeader::new(title)
-            .id_salt(pass.id)
-            .show(ui, |ui| {
-                if pass.points.is_empty() {
-                    ui.weak("Nothing rendered this frame");
-                }
-                for (i, point) in pass.points.iter().enumerate() {
-                    let selected = in_pass.is_some_and(|s| s.point == i);
-                    if ui
-                        .selectable_label(selected, format!("{i}: {}", point.label))
-                        .clicked()
-                    {
-                        // Keeps the texture of the previous point of this pass, if any
-                        let texture = in_pass
-                            .map(|s| s.texture)
-                            .filter(|t| point.textures.get(*t).is_some_and(|t| t.viewable))
-                            .or_else(|| point.textures.iter().position(|t| t.viewable))
-                            .unwrap_or(0);
-                        clicked = Some(DebugSelection {
-                            pass: pass.id,
-                            point: i,
-                            texture
+        let id = ui.make_persistent_id(("pipeline-pass", pass.id));
+        let mut title_clicked = false;
+        let mut header =
+            egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
+                .show_header(ui, |ui| {
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        timing_label(ui, pass.cpu_time, "Time to record the commands of the pass");
+                        timing_label(ui, pass.gpu_time, "Time of the pass on the GPU");
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                            if pass.id != RenderGraphDebugView::FINAL_PASS {
+                                swatch(ui, pass_color(pass.id));
+                            }
+                            title_clicked = ui
+                                .add(
+                                    egui::Label::new(title)
+                                        .sense(egui::Sense::click())
+                                        .truncate()
+                                )
+                                .clicked();
                         });
-                    }
+                    });
+                });
+        if title_clicked {
+            header.toggle();
+        }
+        header.body(|ui| {
+            if pass.points.is_empty() {
+                ui.weak("Nothing rendered this frame");
+            }
+            for (i, point) in pass.points.iter().enumerate() {
+                let selected = in_pass.is_some_and(|s| s.point == i);
+                if ui
+                    .selectable_label(selected, format!("{i}: {}", point.label))
+                    .clicked()
+                {
+                    // Keeps the texture of the previous point of this pass, if any
+                    let texture = in_pass
+                        .map(|s| s.texture)
+                        .filter(|t| point.textures.get(*t).is_some_and(|t| t.viewable))
+                        .or_else(|| point.textures.iter().position(|t| t.viewable))
+                        .unwrap_or(0);
+                    clicked = Some(DebugSelection {
+                        pass: pass.id,
+                        point: i,
+                        texture
+                    });
                 }
-            });
+            }
+        });
     }
     clicked
+}
+
+/// Frame timings, averaged over the `window`, with their range.
+fn frame_timings(ui: &mut egui::Ui, timings: &DebugFrameTimings, window: &mut usize) {
+    egui::Grid::new("pipeline-timings")
+        .num_columns(4)
+        .striped(true)
+        .show(ui, |ui| {
+            ui.weak("ms");
+            for column in ["avg", "min", "max"] {
+                ui.weak(column);
+            }
+            ui.end_row();
+            let gpu = if timings.gpu_supported {
+                "Render graph on the GPU, from the start of its first pass to the end of its last"
+            } else {
+                "The device does not support timestamp queries"
+            };
+            for (label, timing, hover) in [
+                (
+                    "Frame",
+                    timings.frame,
+                    "Interval between two presented frames, every wait included"
+                ),
+                (
+                    "Render",
+                    timings.render,
+                    "Render thread, waits for the swapchain (present mode, GPU) included"
+                ),
+                (
+                    "Render busy",
+                    timings.render_busy,
+                    "Render thread, waits for the swapchain excluded"
+                ),
+                (
+                    "Swapchain wait",
+                    timings.swapchain_wait,
+                    "Time blocked acquiring and presenting the swapchain texture, waiting for the present mode \
+                     (vsync) or the GPU"
+                ),
+                (
+                    "Graph CPU",
+                    timings.graph_cpu,
+                    "Recording of the render graph commands"
+                ),
+                ("Graph GPU", timings.graph_gpu, gpu)
+            ] {
+                ui.label(label).on_hover_text(hover);
+                match timing {
+                    Some(t) => {
+                        ui.monospace(format!("{:.2}", t.avg));
+                        ui.monospace(format!("{:.2}", t.min));
+                        ui.monospace(format!("{:.2}", t.max));
+                    }
+                    None => {
+                        for _ in 0..3 {
+                            ui.weak("-");
+                        }
+                    }
+                }
+                ui.end_row();
+            }
+        });
+    ui.horizontal(|ui| {
+        if let Some(frame) = timings.frame.filter(|f| f.avg > 0.0) {
+            ui.strong(format!("{:.0} fps", 1000.0 / frame.avg));
+        }
+        if let Some(mode) = timings.present_mode {
+            ui.weak(format!("{mode:?}"));
+        }
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            ui.add(
+                egui::DragValue::new(window)
+                    .range(1..=1000)
+                    .suffix(" frames")
+            )
+            .on_hover_text("Number of frames the timings are computed over");
+        });
+    });
+}
+
+/// Header of the pass list, aligned with its timings.
+fn timing_columns(ui: &mut egui::Ui, title: &str, gpu: &str, cpu: &str) {
+    ui.horizontal(|ui| {
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            for column in [cpu, gpu] {
+                ui.add_sized(
+                    [TIMING_WIDTH, ui.available_height()],
+                    egui::Label::new(egui::RichText::new(column).weak())
+                );
+            }
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                ui.weak(title);
+            });
+        });
+    });
+}
+
+/// Average of a timing, in milliseconds, with its range on hover.
+fn timing_label(ui: &mut egui::Ui, timing: Option<DebugTiming>, hover: &str) {
+    let text = timing.map_or("-".to_string(), |t| format!("{:.2}", t.avg));
+    let response = ui.add_sized(
+        [TIMING_WIDTH, ui.available_height()],
+        egui::Label::new(egui::RichText::new(text).monospace())
+    );
+    match timing {
+        Some(t) => response.on_hover_text(format!(
+            "{hover}, in ms.\navg {:.3}, min {:.3}, max {:.3}",
+            t.avg, t.min, t.max
+        )),
+        None => response.on_hover_text(hover)
+    };
 }
 
 fn texture_view(

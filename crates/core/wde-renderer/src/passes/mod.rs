@@ -123,6 +123,7 @@ mod pipeline_register_plugin;
 mod pipeline_types;
 mod render_graph;
 mod render_graph_debug;
+mod render_graph_timings;
 
 // Reexport wgpu types
 pub use wde_wgpu::pipelines::{
@@ -141,3 +142,4 @@ pub use render_graph_debug::{
     DebugChannels, DebugPassReport, DebugPointReport, DebugSelection, DebugTextureReport,
     DebugViewMode, DebugViewSettings, RenderGraphDebug, RenderGraphDebugView
 };
+pub use render_graph_timings::{DebugFrameTimings, DebugTiming};

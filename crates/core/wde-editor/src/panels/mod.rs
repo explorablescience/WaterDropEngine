@@ -4,6 +4,7 @@ mod ecs;
 mod framedata;
 mod logs;
 mod pipeline;
+mod pipeline_plot;
 mod profiler;
 
 pub use framedata::FrameDataOverlayConfig;

@@ -236,9 +236,10 @@ pub async fn create_instance(
         );
     }
 
-    // Set required features
-    let required_features =
-        wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES | Features::PUSH_CONSTANTS;
+    // Set required features, and the optional ones the adapter supports
+    let required_features = wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
+        | Features::PUSH_CONSTANTS
+        | (adapter.features() & crate::timestamps::timestamp_features());
 
     // Set limits
     let required_limits = Limits {

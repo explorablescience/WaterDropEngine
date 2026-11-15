@@ -1,5 +1,5 @@
 //! Debug views of the render graph (see [`RenderGraphDebugView`]).
-use std::sync::Mutex;
+use std::{sync::Mutex, time::Duration};
 
 use bevy::{
     ecs::system::{
@@ -18,14 +18,15 @@ use wde_wgpu::{
 
 use crate::{
     assets::{GpuTexture, PrepareAssetError, RenderAsset, RenderAssets, Shader, Texture},
-    core::{Extract, MainWorld, RenderApp, RenderInstance, SwapchainFrame},
+    core::{Extract, MainWorld, Render, RenderApp, RenderInstance, RenderSet, SwapchainFrame},
     prelude::{TextureFormat, TextureSampleType, TextureUsages, WdeColor}
 };
 
 use super::{
-    CachedPipelineIndex, CachedPipelineStatus, DepthDescriptor, LoadOp, PipelineManager,
-    PushConstantDescriptor, RenderPassDesc, RenderPassId, RenderPipelineAsset,
-    RenderPipelineDescriptor, RenderPipelineRegisterPlugin, ShaderStages, StoreOp
+    CachedPipelineIndex, CachedPipelineStatus, DebugFrameTimings, DebugTiming, DepthDescriptor,
+    LoadOp, PipelineManager, PushConstantDescriptor, RenderPassDesc, RenderPassId,
+    RenderPipelineAsset, RenderPipelineDescriptor, RenderPipelineRegisterPlugin, ShaderStages,
+    StoreOp, render_graph_timings::Timings
 };
 
 pub(crate) struct RenderGraphDebugPlugin;
@@ -39,7 +40,14 @@ impl Plugin for RenderGraphDebugPlugin {
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<RenderGraphDebug>()
-            .add_systems(Extract, extract);
+            .add_systems(Extract, extract)
+            .add_systems(
+                Render,
+                (
+                    begin_frame.before(RenderSet::ExtractAuto),
+                    end_frame.after(RenderSet::Submit)
+                )
+            );
     }
 }
 
@@ -52,7 +60,10 @@ impl Plugin for RenderGraphDebugPlugin {
 /// Passes rendered by the render graph are recorded automatically, with one point after each of their sub-passes
 /// showing their attachments. A pass with a [`RenderPass::custom_render`](super::RenderPass::custom_render)
 /// reports its own steps with [`RenderGraphDebug::capture`].
-#[derive(Resource, Default, Clone)]
+///
+/// Each pass is also timed, on the CPU while recording its commands and on the GPU with timestamps when the device
+/// supports them, along with the whole frame.
+#[derive(Resource, Clone)]
 pub struct RenderGraphDebugView {
     /// Records the passes of each frame into the `report`, and draws the selected texture. Disable it when unused.
     pub enabled: bool,
@@ -62,7 +73,23 @@ pub struct RenderGraphDebugView {
     /// `RENDER_ATTACHMENT` usage. It keeps its content while the selected point is not reached.
     pub target: Option<AssetId<Texture>>,
     /// Passes of the last rendered frame, in their execution order.
-    pub report: Vec<DebugPassReport>
+    pub report: Vec<DebugPassReport>,
+    /// Number of frames the timings are computed over.
+    pub timing_window: usize,
+    pub timings: DebugFrameTimings
+}
+impl Default for RenderGraphDebugView {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            selection: None,
+            settings: DebugViewSettings::default(),
+            target: None,
+            report: vec![],
+            timing_window: 120,
+            timings: DebugFrameTimings::default()
+        }
+    }
 }
 impl RenderGraphDebugView {
     pub const TARGET_FORMAT: TextureFormat = TextureFormat::Rgba8UnormSrgb;
@@ -178,7 +205,11 @@ pub struct DebugPassReport {
     /// Rendered by [`RenderPass::custom_render`](super::RenderPass::custom_render), its points being the steps it reported.
     pub custom: bool,
     /// Points of the pass where its textures can be viewed: after each sub-pass, or each step of a custom pass.
-    pub points: Vec<DebugPointReport>
+    pub points: Vec<DebugPointReport>,
+    /// Time to record the commands of the pass, its sub-passes described.
+    pub cpu_time: Option<DebugTiming>,
+    /// Time of the pass on the GPU, including the debug view drawn in it.
+    pub gpu_time: Option<DebugTiming>
 }
 
 #[derive(Clone, Debug)]
@@ -260,7 +291,10 @@ struct DebugState {
     /// Passes of the last rendered frame, sent to the main world.
     finished: Vec<DebugPassReport>,
     /// Copy of the swapchain texture, which can't be read by a shader.
-    swapchain_copy: Option<wde_wgpu::texture::Texture>
+    swapchain_copy: Option<wde_wgpu::texture::Texture>,
+    timings: Timings,
+    /// Timings of the last rendered frame, sent to the main world.
+    finished_timings: Option<DebugFrameTimings>
 }
 
 fn extract(mut main_world: ResMut<MainWorld>, debug: Res<RenderGraphDebug>) {
@@ -270,9 +304,39 @@ fn extract(mut main_world: ResMut<MainWorld>, debug: Res<RenderGraphDebug>) {
     state.selection = view.selection;
     state.settings = view.settings;
     state.target = view.target;
+    if !state.enabled {
+        state.timings = Timings::default();
+    }
+    state.timings.window = view.timing_window;
     if !state.finished.is_empty() {
         view.report = std::mem::take(&mut state.finished);
     }
+    if let Some(timings) = state.finished_timings.take() {
+        view.timings = timings;
+    }
+}
+
+fn begin_frame(debug: Res<RenderGraphDebug>, instance: Res<RenderInstance>) {
+    let mut state = debug.0.lock().unwrap();
+    if state.enabled {
+        state.timings.begin_frame(&instance.0.read().unwrap());
+    }
+}
+
+fn end_frame(debug: Res<RenderGraphDebug>, instance: Res<RenderInstance>) {
+    let mut state = debug.0.lock().unwrap();
+    if !state.enabled {
+        return;
+    }
+    state.timings.end_frame();
+    let present_mode = instance
+        .0
+        .read()
+        .unwrap()
+        .surface_config
+        .as_ref()
+        .map(|c| c.present_mode);
+    state.finished_timings = Some(state.timings.summary(present_mode));
 }
 
 impl RenderGraphDebug {
@@ -319,8 +383,67 @@ impl RenderGraphDebug {
                 id,
                 label,
                 custom: false,
-                points: vec![]
+                points: vec![],
+                cpu_time: None,
+                gpu_time: None
             });
+        }
+    }
+
+    pub(crate) fn begin_graph(world: &World) {
+        let mut state = world.resource::<RenderGraphDebug>().0.lock().unwrap();
+        if state.enabled {
+            state.timings.begin_graph();
+        }
+    }
+
+    pub(crate) fn begin_pass_timing(
+        world: &World,
+        command_buffer: &mut CommandBuffer,
+        id: RenderPassId
+    ) {
+        let mut state = world.resource::<RenderGraphDebug>().0.lock().unwrap();
+        if state.enabled {
+            state.timings.begin_pass(command_buffer, id);
+        }
+    }
+
+    pub(crate) fn end_pass_timing(world: &World, command_buffer: &mut CommandBuffer) {
+        let mut state = world.resource::<RenderGraphDebug>().0.lock().unwrap();
+        if state.enabled {
+            state.timings.end_pass(command_buffer);
+        }
+    }
+
+    pub(crate) fn end_graph(world: &World, command_buffer: &mut CommandBuffer) {
+        let mut state = world.resource::<RenderGraphDebug>().0.lock().unwrap();
+        if state.enabled {
+            let instance = world.resource::<RenderInstance>().0.read().unwrap();
+            state.timings.end_graph(&instance, command_buffer);
+        }
+    }
+
+    /// Reads back the GPU timings, once the render graph commands are submitted.
+    pub(crate) fn submitted(world: &World) {
+        let mut state = world.resource::<RenderGraphDebug>().0.lock().unwrap();
+        if state.enabled {
+            state.timings.submitted();
+        }
+    }
+
+    /// Time blocked acquiring the swapchain texture.
+    pub(crate) fn add_swapchain_wait(&self, wait: Duration) {
+        let mut state = self.0.lock().unwrap();
+        if state.enabled {
+            state.timings.add_swapchain_wait(wait);
+        }
+    }
+
+    /// A frame was presented, after blocking for `wait`.
+    pub(crate) fn presented(&self, wait: Duration) {
+        let mut state = self.0.lock().unwrap();
+        if state.enabled {
+            state.timings.presented(wait);
         }
     }
 
@@ -401,7 +524,9 @@ impl RenderGraphDebug {
             points: vec![DebugPointReport {
                 label: "presented frame".to_string(),
                 textures: vec![DebugTextureReport::new(world, None)]
-            }]
+            }],
+            cpu_time: None,
+            gpu_time: None
         });
         if state
             .selection
@@ -414,6 +539,10 @@ impl RenderGraphDebug {
     pub(crate) fn end_frame(world: &World) {
         let mut state = world.resource::<RenderGraphDebug>().0.lock().unwrap();
         if state.enabled {
+            let DebugState {
+                report, timings, ..
+            } = &mut *state;
+            timings.fill_reports(report);
             state.finished = std::mem::take(&mut state.report);
         } else {
             state.report.clear();

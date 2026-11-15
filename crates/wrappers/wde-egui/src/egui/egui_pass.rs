@@ -72,18 +72,9 @@ impl RenderPass for EguiRenderPass {
     }
 
     fn custom_render(world: &mut World, command_buffer: &mut CommandBuffer) -> Option<bool> {
-        // Get the render instance and swapchain frame
+        // Get the render instance
         let render_instance = world.get_resource::<RenderInstance>().unwrap();
         let render_instance = render_instance.0.read().unwrap();
-        let swapchain_frame = match world
-            .get_resource::<SwapchainFrame>()
-            .unwrap()
-            .data
-            .as_ref()
-        {
-            Some(frame) => frame,
-            None => return Some(false)
-        };
 
         // Get renderer
         let egui_renderer = match world
@@ -114,6 +105,29 @@ impl RenderPass for EguiRenderPass {
             None => return Some(false)
         };
 
+        // Update egui textures, even without a frame to draw into, as their later updates build on them
+        for (id, image_delta) in &textures_delta.set {
+            egui_renderer.write().unwrap().update_texture(
+                &render_instance.device,
+                &render_instance.queue,
+                *id,
+                image_delta
+            );
+        }
+        for id in &textures_delta.free {
+            egui_renderer.write().unwrap().free_texture(id);
+        }
+
+        let swapchain_frame = match world
+            .get_resource::<SwapchainFrame>()
+            .unwrap()
+            .data
+            .as_ref()
+        {
+            Some(frame) => frame,
+            None => return Some(false)
+        };
+
         // Create the render pass
         let render_pass = command_buffer
             .create_render_pass("egui", |builder: &mut RenderPassBuilder| {
@@ -126,19 +140,6 @@ impl RenderPass for EguiRenderPass {
             })
             .unwrap()
             .forget_lifetime();
-
-        // Update egui textures
-        for (id, image_delta) in &textures_delta.set {
-            egui_renderer.write().unwrap().update_texture(
-                &render_instance.device,
-                &render_instance.queue,
-                *id,
-                image_delta
-            );
-        }
-        for id in &textures_delta.free {
-            egui_renderer.write().unwrap().free_texture(id);
-        }
 
         // Draw egui
         egui_renderer.write().unwrap().update_buffers(
