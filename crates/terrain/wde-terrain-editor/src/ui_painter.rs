@@ -99,10 +99,36 @@ fn ui_terrain_settings(
         });
 }
 
+fn debug_view_label(view: TerrainDebugView, materials: &[TerrainMaterial]) -> String {
+    match view {
+        TerrainDebugView::Lod => "Levels of Detail".to_string(),
+        TerrainDebugView::Materials => "Material Weights".to_string(),
+        TerrainDebugView::MaterialWeight(m) => {
+            format!("Weight: {}", material_label(m as usize, materials))
+        }
+        view => format!("{view:?}")
+    }
+}
+
+fn material_label(m: usize, materials: &[TerrainMaterial]) -> String {
+    match materials.get(m) {
+        Some(material) => {
+            let name = material.path.trim_end_matches('/');
+            format!("{m} {}", name.rsplit('/').next().unwrap_or(name))
+        }
+        None => format!("Material {m}")
+    }
+}
+
+fn color([r, g, b]: [u8; 3]) -> Color32 {
+    Color32::from_rgb(r, g, b)
+}
+
 fn ui_terrain_debug(
     ctx: Res<UIContext>,
     mut settings: ResMut<TerrainRenderSettings>,
     terrain: Query<&Terrain>,
+    renderer: Query<&TerrainRenderer>,
     cursor: Res<TerrainCursorPos>,
     mut ui_menu: ResMut<UIMenu>
 ) {
@@ -110,25 +136,39 @@ fn ui_terrain_debug(
         .default_pos([100.0, 260.0])
         .open(ui_menu.clicked_mut("Debug/Terrain"))
         .show(&ctx.0, |ui| {
+            let materials = terrain
+                .single()
+                .map_or(&[][..], |t| t.config.materials.as_slice());
             let view = settings.debug_view;
             let mut selected = view;
             ui.horizontal(|ui| {
                 ui.label("View:");
                 ComboBox::from_id_salt("terrain_debug_view")
-                    .selected_text(format!("{view:?}"))
+                    .selected_text(debug_view_label(view, materials))
                     .show_ui(ui, |ui| {
-                        ui.selectable_value(&mut selected, TerrainDebugView::Off, "Off");
-                        ui.selectable_value(
-                            &mut selected,
+                        let views = [
+                            TerrainDebugView::Off,
                             TerrainDebugView::Buildable,
-                            "Buildable"
-                        );
-                        ui.selectable_value(&mut selected, TerrainDebugView::Slope, "Slope");
+                            TerrainDebugView::Slope,
+                            TerrainDebugView::Lod,
+                            TerrainDebugView::Chunks,
+                            TerrainDebugView::Materials
+                        ]
+                        .into_iter()
+                        .chain((0..materials.len() as u32).map(TerrainDebugView::MaterialWeight));
+                        for option in views {
+                            ui.selectable_value(
+                                &mut selected,
+                                option,
+                                debug_view_label(option, materials)
+                            );
+                        }
                     });
             });
             if selected != view {
                 settings.debug_view = selected;
             }
+            let draw_list = renderer.single().ok().map(|r| &r.draw_list);
             match view {
                 TerrainDebugView::Off => {}
                 TerrainDebugView::Buildable => {
@@ -137,6 +177,51 @@ fn ui_terrain_debug(
                 TerrainDebugView::Slope => {
                     ui.label("Blue: flat, to yellow: steepest walkable. Red: too steep to walk.");
                     ui.label("A contour line every 5°.");
+                }
+                TerrainDebugView::Lod => {
+                    ui.label("Chunks by level of detail, with the quads of their mesh.");
+                    ui.horizontal(|ui| {
+                        ui.label("Chunks drawn by level:");
+                        for (level, rgb) in TERRAIN_LOD_DEBUG_COLORS.into_iter().enumerate() {
+                            let count = draw_list.map_or(0, |d| d.lod_ranges[level].len());
+                            ui.colored_label(color(rgb), format!("{level}: {count}"));
+                        }
+                    });
+                }
+                TerrainDebugView::Chunks => {
+                    ui.label("White: chunk borders.");
+                    ui.colored_label(
+                        Color32::from_rgb(255, 0, 255),
+                        "Magenta: edges stitched to a coarser neighbor."
+                    );
+                    if let Some(draw_list) = draw_list {
+                        let stitched: usize = draw_list
+                            .tiles
+                            .iter()
+                            .map(|t| t.neighbor_lods.iter().filter(|&&n| n > t.lod).count())
+                            .sum();
+                        ui.label(format!(
+                            "{} chunks drawn, {stitched} stitched edges",
+                            draw_list.tiles.len()
+                        ));
+                    }
+                }
+                TerrainDebugView::Materials => {
+                    ui.label("Splat weights, each material in its color:");
+                    for (m, rgb) in TERRAIN_MATERIAL_DEBUG_COLORS
+                        .into_iter()
+                        .enumerate()
+                        .take(materials.len())
+                    {
+                        ui.colored_label(color(rgb), material_label(m, materials));
+                    }
+                }
+                TerrainDebugView::MaterialWeight(m) => {
+                    ui.label("Black: weight 0, to white: weight 1.");
+                    ui.colored_label(
+                        color(TERRAIN_MATERIAL_DEBUG_COLORS[m as usize % TERRAIN_MATERIAL_COUNT]),
+                        "A contour every 0.25."
+                    );
                 }
             }
 

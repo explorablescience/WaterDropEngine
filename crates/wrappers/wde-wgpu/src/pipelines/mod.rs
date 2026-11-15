@@ -6,6 +6,7 @@
 pub mod bind_group;
 pub mod compute_pipeline;
 pub mod render_pipeline;
+mod shader_module;
 
 pub use bind_group::*;
 pub use compute_pipeline::*;

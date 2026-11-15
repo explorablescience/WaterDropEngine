@@ -41,7 +41,9 @@ impl<R: RenderData + TypePath + Sync + Send + Clone + Asset> Plugin
         app.init_asset::<RenderDataHolder<R>>();
 
         // Register render asset
-        app.add_plugins(RenderAssetsPlugin::<GpuRenderData<R>>::default());
+        app.add_plugins(RenderAssetsPlugin::<GpuRenderData<R>>::with_kind(
+            RenderAssetKind::RenderData
+        ));
     }
 
     fn finish(&self, app: &mut App) {

@@ -1,8 +1,7 @@
 //! Compute pipeline module.
-use futures_lite::future;
-use wde_logger::prelude::*;
-use wgpu::{BindGroupLayout, ShaderStages, naga};
+use wgpu::{BindGroupLayout, ShaderStages};
 
+use super::shader_module::{create_shader_module, validate_pipeline};
 use crate::instance::{RenderError, RenderInstanceData};
 
 // Compute pipeline configuration
@@ -112,133 +111,43 @@ impl ComputePipeline {
     pub fn init(&mut self, instance: &RenderInstanceData) -> Result<(), RenderError> {
         let d = &self.config;
 
-        // Security checks
         if d.shader.is_empty() {
-            error!(self.label, "Pipeline does not have a compute shader.");
             return Err(RenderError::MissingShader);
         }
-
-        // Load shader
-        let shader_module = match naga::front::wgsl::parse_str(&self.config.shader) {
-            Ok(shader) => {
-                match naga::valid::Validator::new(
-                    naga::valid::ValidationFlags::all(),
-                    naga::valid::Capabilities::all()
-                )
-                .validate(&shader)
-                {
-                    Ok(_) => instance
-                        .device
-                        .create_shader_module(wgpu::ShaderModuleDescriptor {
-                            label: Some(format!("{}-render-pip-comp", self.label).as_str()),
-                            source: wgpu::ShaderSource::Wgsl(self.config.shader.to_owned().into())
-                        }),
-                    Err(e) => {
-                        error!(self.label, "Compute shader validation failed: {:?}.", e);
-                        return Err(RenderError::ShaderCompilationError);
-                    }
-                }
-            }
-            Err(e) => {
-                let mut error = format!("Compute shader parsing failed \"{}\".\n", e);
-                for (span, message) in e.labels() {
-                    let location = span.location(&self.config.shader);
-                    error.push_str(&format!(
-                        " - Error on line {} at position {}: \"{}\"\n",
-                        location.line_number, location.line_position, message
-                    ));
-                }
-                error!(self.label, "{}", error);
-                return Err(RenderError::ShaderCompilationError);
-            }
-        };
-        future::block_on(async {
-            let compil_info = shader_module.get_compilation_info().await;
-            for message in compil_info.messages {
-                match message.message_type {
-                    wgpu::CompilationMessageType::Error => error!(
-                        self.label,
-                        "Compute shader {} compilation error '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    ),
-                    wgpu::CompilationMessageType::Warning => warn!(
-                        self.label,
-                        "Compute shader {} compilation warning '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    ),
-                    wgpu::CompilationMessageType::Info => debug!(
-                        self.label,
-                        "Compute shader {} compilation info '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    )
-                }
-            }
-        });
+        let shader_module = create_shader_module(instance, &self.label, "compute", &d.shader)?;
 
         // Create pipeline layout
-        let layout = instance
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some(format!("{}-compute-pip-layout", self.label).as_str()),
-                bind_group_layouts: &d
-                    .bind_groups
-                    .iter()
-                    .collect::<Vec<&wgpu::BindGroupLayout>>(),
-                push_constant_ranges: &d.push_constants
-            });
+        let layout = validate_pipeline(instance, || {
+            instance
+                .device
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some(format!("{}-compute-pip-layout", self.label).as_str()),
+                    bind_group_layouts: &d
+                        .bind_groups
+                        .iter()
+                        .collect::<Vec<&wgpu::BindGroupLayout>>(),
+                    push_constant_ranges: &d.push_constants
+                })
+        })?;
 
-        // Create a compute pipeline
-        instance
-            .device
-            .push_error_scope(wgpu::ErrorFilter::Validation);
-        let pipeline = instance
-            .device
-            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some(format!("{}-compute-pip", self.label).as_str()),
-                layout: Some(&layout),
-                module: &shader_module,
-                entry_point: Some("main"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                cache: None
-            });
-
-        // Check for errors
-        let mut res: Result<(), RenderError> = Ok(());
-        future::block_on(async {
-            let error = instance.device.pop_error_scope().await;
-            match error {
-                Some(wgpu::Error::Validation {
-                    source,
-                    description
-                }) => {
-                    error!(
-                        self.label,
-                        "Failed to create compute pipeline with source error: {:?}. Description: {}.",
-                        source,
-                        description
-                    );
-                    res = Err(RenderError::ShaderCompilationError);
-                }
-                Some(e) => {
-                    error!(self.label, "Failed to create compute pipeline: {:?}.", e);
-                    res = Err(RenderError::ShaderCompilationError);
-                }
-                None => ()
-            }
-        });
+        let pipeline = validate_pipeline(instance, || {
+            instance
+                .device
+                .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some(format!("{}-compute-pip", self.label).as_str()),
+                    layout: Some(&layout),
+                    module: &shader_module,
+                    entry_point: Some("main"),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    cache: None
+                })
+        })?;
 
         // Set pipeline
         self.pipeline = Some(pipeline);
         self.layout = Some(layout);
         self.is_initialized = true;
-
-        res
+        Ok(())
     }
 
     /// Get the compute pipeline.

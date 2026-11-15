@@ -40,7 +40,9 @@ fn edit_pbr_settings(
                 .selected_text(view.label())
                 .show_ui(ui, |ui| {
                     for (i, option) in PbrDebugView::ALL.into_iter().enumerate() {
-                        if i == 1 || option == PbrDebugView::Albedo {
+                        if i == 1
+                            || matches!(option, PbrDebugView::ShadowCascades | PbrDebugView::Albedo)
+                        {
                             ui.separator();
                         }
                         ui.selectable_value(&mut view, option, option.label());

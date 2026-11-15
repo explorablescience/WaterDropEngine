@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::{
-    assets::{RenderAsset, RenderAssetsPlugin},
+    assets::{RenderAsset, RenderAssetKind, RenderAssetsPlugin},
     core::RenderApp
 };
 
@@ -47,7 +47,9 @@ impl<P: RenderAsset + TypePath + Default> Plugin for RenderPipelineRegisterPlugi
     fn build(&self, app: &mut App) {
         // Add the render pipeline asset and its preparation plugin
         app.init_asset::<RenderPipelineAsset<P>>()
-            .add_plugins(RenderAssetsPlugin::<P>::default());
+            .add_plugins(RenderAssetsPlugin::<P>::with_kind(
+                RenderAssetKind::Pipeline
+            ));
     }
 
     fn finish(&self, app: &mut App) {

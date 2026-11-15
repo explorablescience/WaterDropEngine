@@ -45,33 +45,40 @@ pub enum PbrDebugView {
     AmbientDiffuse = 3,
     AmbientSpecular = 4,
     Emissive = 5,
+    /// Lit surfaces tinted by shadow cascade, striped where two cascades are blended (see
+    /// [`SHADOW_CASCADE_COLORS`](crate::prelude::SHADOW_CASCADE_COLORS)).
+    ShadowCascades = 6,
     /// Linear albedo.
-    Albedo = 6,
+    Albedo = 7,
     /// World normals, from [-1, 1] to [0, 1].
-    Normals = 7,
+    Normals = 8,
     /// Roughness, after the [`PbrSettings::roughness_scale`].
-    Roughness = 8,
+    Roughness = 9,
     /// Metallic, after the [`PbrSettings::metallic_scale`].
-    Metallic = 9,
+    Metallic = 10,
     /// Occlusion of the ambient light: of the material, times the screen-space one.
-    Occlusion = 10,
+    Occlusion = 11,
     /// Visibility of the directional light through the shadow maps.
-    Shadow = 11
+    Shadow = 12,
+    /// Shadow map texels per screen pixel: red under 1/8, orange 1/4, yellow 1/2, green 1, blue over 2.
+    ShadowTexels = 13
 }
 impl PbrDebugView {
-    pub const ALL: [Self; 12] = [
+    pub const ALL: [Self; 14] = [
         Self::Off,
         Self::Clay,
         Self::Direct,
         Self::AmbientDiffuse,
         Self::AmbientSpecular,
         Self::Emissive,
+        Self::ShadowCascades,
         Self::Albedo,
         Self::Normals,
         Self::Roughness,
         Self::Metallic,
         Self::Occlusion,
-        Self::Shadow
+        Self::Shadow,
+        Self::ShadowTexels
     ];
 
     /// Whether it shows a surface property rather than light.
@@ -92,7 +99,9 @@ impl PbrDebugView {
             Self::Roughness => "Roughness",
             Self::Metallic => "Metallic",
             Self::Occlusion => "Occlusion",
-            Self::Shadow => "Shadow"
+            Self::Shadow => "Shadow",
+            Self::ShadowCascades => "Shadow Cascades",
+            Self::ShadowTexels => "Shadow Texels"
         }
     }
 }

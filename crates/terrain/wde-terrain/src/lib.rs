@@ -15,7 +15,8 @@
 //!   walkable ground is not steeper than the config allows
 //!   ([`Terrain::is_walkable`](prelude::Terrain::is_walkable)).
 //! - [`TerrainRenderer`](prelude::TerrainRenderer): draws the visible chunks with levels of detail
-//!   depending on their distance to the camera, optionally tinted by the masks
+//!   depending on their distance to the camera, optionally tinted by a debug view of the masks,
+//!   levels of detail, chunk borders or material weights
 //!   ([`TerrainDebugView`](prelude::TerrainDebugView)).
 //! - [`TerrainPhysics`](prelude::TerrainPhysics): one heightfield collider per chunk, in
 //!   [`HEIGHTMAP_COLLIDER_GROUP`].
@@ -73,7 +74,8 @@ pub mod prelude {
     pub use crate::physics::terrain_physics::TerrainPhysics;
     pub use crate::render::dependencies::materials::TerrainMaterialSet;
     pub use crate::render::dependencies::terrain_buffer::{
-        TERRAIN_MATERIAL_COUNT, TerrainDebugView, TerrainRenderSettings
+        TERRAIN_LOD_DEBUG_COLORS, TERRAIN_MATERIAL_COUNT, TERRAIN_MATERIAL_DEBUG_COLORS,
+        TerrainDebugView, TerrainRenderSettings
     };
     pub use crate::render::extractor::*;
     pub use crate::render::renderer::TERRAIN_LOD_COUNT;

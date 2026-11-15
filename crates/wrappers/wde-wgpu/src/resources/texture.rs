@@ -1,6 +1,9 @@
 //! Texture creation and copy helpers built on `wgpu::Texture`.
 
-use crate::RenderInstanceData;
+use crate::{
+    RenderInstanceData,
+    memory::{GpuAllocation, GpuMemoryCategory}
+};
 
 /// Surface texture.
 pub type SurfaceTexture = wgpu::SurfaceTexture;
@@ -84,7 +87,8 @@ pub struct Texture {
     /// Whether the 6 layers are the faces of a cube map, viewed as `texture_cube` in WGSL.
     pub cube: bool,
     /// Comparison function of the sampler, making it a comparison sampler (`sampler_comparison` in WGSL).
-    pub compare: Option<wgpu::CompareFunction>
+    pub compare: Option<wgpu::CompareFunction>,
+    _memory: GpuAllocation
 }
 
 impl std::fmt::Debug for Texture {
@@ -221,6 +225,7 @@ impl Texture {
         // Return texture
         Self {
             label: label.to_string(),
+            _memory: GpuAllocation::texture(label, &texture),
             texture,
             format,
             view,
@@ -233,6 +238,12 @@ impl Texture {
             cube,
             compare
         }
+    }
+
+    /// Overrides the category of the texture in the [`GpuMemory`](crate::memory::GpuMemory), deduced from its
+    /// usages.
+    pub fn set_memory_category(&self, category: GpuMemoryCategory) {
+        self._memory.set_category(category);
     }
 
     /// `D2` view of a single layer and mip level, of the depth aspect for depth formats, so that any texture can be

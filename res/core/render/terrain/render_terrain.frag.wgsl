@@ -6,7 +6,10 @@ struct VertexOutput {
     @location(0) tex_coord: vec2<f32>,
     @location(1) world_pos: vec3<f32>,
     @location(2) ndc_z:     f32,
-    @location(3) @interpolate(flat) tile_layer: u32
+    @location(3) @interpolate(flat) tile_layer: u32,
+    @location(4) @interpolate(flat) tile_pos: vec2<f32>,
+    @location(5) @interpolate(flat) lod: f32,
+    @location(6) @interpolate(flat) neighbor_lods: vec4<f32>
 };
 
 @group(1) @binding(0) var material_albedo:               texture_2d_array<f32>;
@@ -99,11 +102,58 @@ fn macro_variation(xz: vec2<f32>) -> f32 {
 
 // ── DEBUG VIEWS ─────────────────────────────────────────────────
 
-fn debug_tint(masks: vec2<f32>) -> vec3<f32> {
+// Must match `TerrainDebugView::gpu_index`
+const DEBUG_OFF:             u32 = 0u;
+const DEBUG_BUILDABLE:       u32 = 1u;
+const DEBUG_SLOPE:           u32 = 2u;
+const DEBUG_LOD:             u32 = 3u;
+const DEBUG_CHUNKS:          u32 = 4u;
+const DEBUG_MATERIALS:       u32 = 5u;
+const DEBUG_MATERIAL_WEIGHT: u32 = 6u;  // + material index
+
+// Must match `TERRAIN_LOD_DEBUG_COLORS` and `TERRAIN_MATERIAL_DEBUG_COLORS`
+const LOD_COLORS = array<vec3<f32>, 5>(
+    vec3<f32>(0.1, 0.8, 0.1),
+    vec3<f32>(0.9, 0.85, 0.1),
+    vec3<f32>(1.0, 0.45, 0.05),
+    vec3<f32>(0.9, 0.05, 0.05),
+    vec3<f32>(0.6, 0.1, 0.8)
+);
+const MATERIAL_COLORS = array<vec3<f32>, 8>(
+    vec3<f32>(0.9, 0.2, 0.15),
+    vec3<f32>(0.2, 0.75, 0.25),
+    vec3<f32>(0.2, 0.35, 0.9),
+    vec3<f32>(0.95, 0.8, 0.1),
+    vec3<f32>(0.85, 0.25, 0.85),
+    vec3<f32>(0.15, 0.8, 0.85),
+    vec3<f32>(0.95, 0.55, 0.15),
+    vec3<f32>(0.95, 0.95, 0.95)
+);
+const SEAM_COLOR: vec3<f32> = vec3<f32>(1.0, 0.0, 1.0);
+
+// Coverage of the lines at the integer values of `coord`, `width` pixels wide
+fn grid_lines(coord: vec2<f32>, width: f32) -> f32 {
+    let d = abs(fract(coord + 0.5) - 0.5) / max(fwidth(coord), vec2<f32>(1e-5));
+    let l = 1.0 - smoothstep(vec2<f32>(width * 0.5), vec2<f32>(width * 0.5 + 1.0), d);
+    return max(l.x, l.y);
+}
+
+// Coverage of the -X, +X, -Z and +Z chunk edges, `width` pixels wide
+fn chunk_edges(tex_coord: vec2<f32>, width: f32) -> vec4<f32> {
+    let fw = max(fwidth(tex_coord), vec2<f32>(1e-5));
+    let d = vec4<f32>(tex_coord.x / fw.x, (1.0 - tex_coord.x) / fw.x, tex_coord.y / fw.y, (1.0 - tex_coord.y) / fw.y);
+    return 1.0 - smoothstep(vec4<f32>(width), vec4<f32>(width + 1.0), d);
+}
+
+fn max4(v: vec4<f32>) -> f32 {
+    return max(max(v.x, v.y), max(v.z, v.w));
+}
+
+fn mask_tint(masks: vec2<f32>) -> vec3<f32> {
     let angle = masks.r;
     let walk  = in_terrain.walk_max_angle;
     let steep = step(walk, angle);
-    if in_terrain.debug_view < 1.5 {
+    if in_terrain.debug_view == DEBUG_BUILDABLE {
         // Buildable: green, outlined; walkable: sand; too steep to walk: red
         let buildable = smoothstep(0.45, 0.55, masks.g);
         let outline = 1.0 - smoothstep(0.0, fwidth(masks.g) * 1.5, abs(masks.g - 0.5));
@@ -118,6 +168,47 @@ fn debug_tint(masks: vec2<f32>) -> vec3<f32> {
     color = mix(color, vec3<f32>(0.85, 0.1, 0.08), steep);
     let contour = abs(fract(angle * 18.0 + 0.5) - 0.5) / max(fwidth(angle * 18.0), 1e-4);
     return color * mix(0.6, 1.0, smoothstep(0.5, 1.5, contour));
+}
+
+// Albedo of the debug view; `weights` are the normalized splat weights
+fn debug_albedo(in: VertexOutput, albedo: vec3<f32>, masks: vec2<f32>, weights: array<f32, 8>) -> vec3<f32> {
+    let view = in_terrain.debug_view;
+    if view == DEBUG_BUILDABLE || view == DEBUG_SLOPE {
+        return mix(albedo, mask_tint(masks), DEBUG_MIX);
+    }
+    if view == DEBUG_LOD {
+        // Level tint, the quads of the chunk mesh (faded out when too dense), and the chunk borders
+        var lod_colors = LOD_COLORS;
+        var color = mix(albedo, lod_colors[min(u32(in.lod), 4u)], DEBUG_MIX);
+        let cells = in.tex_coord * in_terrain.tile_subdivisions / exp2(in.lod);
+        let cell_px = 1.0 / max(max(fwidth(cells).x, fwidth(cells).y), 1e-5);
+        color *= 1.0 - grid_lines(cells, 1.0) * 0.5 * smoothstep(3.0, 8.0, cell_px);
+        return mix(color, vec3<f32>(0.02), max4(chunk_edges(in.tex_coord, 1.5)));
+    }
+    if view == DEBUG_CHUNKS {
+        // A random tint per chunk, white borders, and magenta edges stitched to a coarser neighbor
+        let p = in.tile_pos;
+        let tint = 0.35 + 0.6 * vec3<f32>(hash(p), hash(p + vec2<f32>(17.3, 5.1)), hash(p + vec2<f32>(3.7, 41.9)));
+        var color = mix(albedo, tint, 0.4);
+        color = mix(color, vec3<f32>(1.0), max4(chunk_edges(in.tex_coord, 1.0)));
+        let stitched = step(vec4<f32>(in.lod + 0.5), in.neighbor_lods);
+        return mix(color, SEAM_COLOR, max4(chunk_edges(in.tex_coord, 3.0) * stitched));
+    }
+    var material_colors = MATERIAL_COLORS;
+    var w = weights;
+    if view == DEBUG_MATERIALS {
+        var color = vec3<f32>(0.0);
+        for (var m = 0u; m < TERRAIN_MATERIALS; m++) {
+            color += material_colors[m] * w[m];
+        }
+        return color;
+    }
+    // Single material weight, with a contour of its color every 0.25
+    let m = min(view - DEBUG_MATERIAL_WEIGHT, TERRAIN_MATERIALS - 1u);
+    let weight = w[m];
+    let contour = abs(fract(weight * 4.0 + 0.5) - 0.5) / max(fwidth(weight * 4.0), 1e-4);
+    let on_contour = (1.0 - smoothstep(0.5, 1.5, contour)) * step(0.01, weight) * step(weight, 0.99);
+    return mix(vec3<f32>(weight), material_colors[m], on_contour);
 }
 
 // ── MATERIALS ───────────────────────────────────────────────────
@@ -258,8 +349,8 @@ fn main(in: VertexOutput) -> FragOutput {
     albedo = albedo / sum;
 
     let masks = textureSample(in_masks, in_masks_sampler, splat_uv, layer).rg;
-    if in_terrain.debug_view > 0.5 {
-        albedo = mix(albedo, debug_tint(masks), DEBUG_MIX);
+    if in_terrain.debug_view != DEBUG_OFF {
+        albedo = debug_albedo(in, albedo, masks, weights);
     }
     out.albedo_metallic  = vec4<f32>(albedo, 0.0);
     // Martian dust and rock are matte

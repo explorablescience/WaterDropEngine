@@ -241,6 +241,15 @@ const MESH_DEBUG_COLORS = array<vec3<f32>, 5>(
     vec3<f32>(0.2, 0.4, 0.95)
 );
 
+/// Red, orange, yellow, green then blue from `t` = 0 to 4, clamped.
+fn debug_ramp(t: f32) -> vec3<f32> {
+    var colors = MESH_DEBUG_COLORS;
+    var ramp = array<u32, 5>(3u, 2u, 1u, 0u, 4u);
+    let x = clamp(t, 0.0, 3.999);
+    let i = u32(x);
+    return mix(colors[ramp[i]], colors[ramp[i + 1u]], fract(x));
+}
+
 /// Barycentric coordinates of the corner `vertex_index` of its triangle, in a draw without index buffer.
 /// To be interpolated linearly in screen space, for `triangle_coverage`.
 fn triangle_corner(vertex_index: u32) -> vec3<f32> {
@@ -277,11 +286,8 @@ fn mesh_debug_albedo(albedo: vec3<f32>, debug: u32, coverage: TriangleCoverage) 
         color = colors[min(level - 1u, 4u)] * (0.4 + 0.6 * luma);
     }
     if (debug & MESH_DEBUG_DENSITY) != 0u {
-        // Red, orange, yellow, green then blue every 4 times more pixels per triangle
-        let t = clamp(log2(coverage.area) * 0.5, 0.0, 3.999);
-        let i = u32(t);
-        var ramp = array<u32, 5>(3u, 2u, 1u, 0u, 4u);
-        color = mix(colors[ramp[i]], colors[ramp[i + 1u]], fract(t));
+        // Every 4 times more pixels per triangle
+        color = debug_ramp(log2(coverage.area) * 0.5);
     }
     return color * (1.0 - mesh_debug_wireframe(debug, coverage));
 }

@@ -210,7 +210,8 @@ impl Plugin for AssetsPlugin {
             .add_plugins(RenderAssetsPlugin::<GpuBuffer>::default());
         app.get_sub_app_mut(crate::core::RenderApp)
             .unwrap()
-            .init_resource::<MeshSsboAllocations>();
+            .init_resource::<MeshSsboAllocations>()
+            .add_systems(crate::core::Extract, asset::extract_driver_memory);
 
         // Register the components to the reflect system
         app.register_type::<Mesh3d>();

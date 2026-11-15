@@ -13,7 +13,7 @@ use wde_wgpu::pipelines::BindGroup;
 use crate::{
     assets::{Mesh, Texture},
     core::SwapchainFrame,
-    passes::RenderGraphDebug
+    passes::{PipelineStatus, RenderGraphDebug}
 };
 
 pub use wde_wgpu::command_buffer::{LoadOp, Operations, StoreOp};
@@ -290,11 +290,13 @@ fn render(graph: &mut RenderGraph, world: &mut World) {
         let pass_id = graph.sorted_ids[i];
         RenderGraphDebug::begin_pass_timing(world, &mut command_buffer, pass_id);
         render_pass(graph, world, &mut command_buffer, pass_id);
+        PipelineStatus::end_pass(world);
         RenderGraphDebug::end_pass_timing(world, &mut command_buffer);
     }
     RenderGraphDebug::end_graph(world, &mut command_buffer);
     RenderGraphDebug::final_pass(world, &mut command_buffer);
     RenderGraphDebug::end_frame(world);
+    PipelineStatus::end_frame(world);
 
     // Submit commands
     let render_instance = world.get_resource::<RenderInstance>().unwrap();
@@ -314,12 +316,14 @@ fn render_pass(
     let pass_label = pass.label();
     let mut pass_desc = pass.describe(world);
     RenderGraphDebug::begin_pass(world, pass_id, pass_label);
+    PipelineStatus::begin_pass(world, pass_id, pass_label);
 
     // Try custom rendering logic for this pass
     if let Some(custom_render_result) = pass.custom_render(world, command_buffer) {
         RenderGraphDebug::end_custom_pass(world);
         // If it was Some(true or false), it means the pass used custom rendering logic.
         if !custom_render_result {
+            PipelineStatus::skip(world, None, DebugSkipReason::CustomRender);
             trace!(
                 "Custom rendering for pass '{}' could not be completed. Skipping this pass for this frame.",
                 pass_label
@@ -350,6 +354,7 @@ fn render_pass(
                 "Failed to create render pass: '{}'. Skipping this frame.",
                 e
             );
+            PipelineStatus::skip(world, None, DebugSkipReason::RenderPass(e));
             return;
         }
     };
@@ -360,8 +365,10 @@ fn render_pass(
     for (i, (sub_pass_label, sub_pass_desc)) in sub_passes.iter().enumerate() {
         let _sub_pass_span =
             debug_span!("render_sub_pass", sub_pass_label = *sub_pass_label).entered();
-        if let Some(render_pass) = render_pass.as_mut() {
-            render_sub_pass(world, render_pass, sub_pass_desc);
+        if let Some(render_pass) = render_pass.as_mut()
+            && let Err(reason) = render_sub_pass(world, render_pass, sub_pass_desc)
+        {
+            PipelineStatus::skip(world, Some(sub_pass_label), reason);
         }
         if let Some((point, texture)) = capture
             && point == i
@@ -485,7 +492,7 @@ fn render_sub_pass<'p>(
     world: &'p World,
     render_pass: &mut RenderPassInstance<'p>,
     sub_pass_desc: &'p RenderSubPassDesc
-) {
+) -> Result<(), DebugSkipReason> {
     // Get generic handlers
     let pipeline_manager = world.get_resource::<PipelineManager>().unwrap();
     let meshes = world.get_resource::<RenderAssets<GpuMesh>>().unwrap();
@@ -495,26 +502,23 @@ fn render_sub_pass<'p>(
         match stage_command {
             // Set pipeline
             SubPassCommand::Pipeline(pipeline) => {
-                if let Some(pipeline) = pipeline
-                    && let CachedPipelineStatus::OkRender(pipeline) =
-                        pipeline_manager.get_pipeline(*pipeline)
-                {
-                    if let Err(e) = render_pass.set_pipeline(pipeline) {
-                        error!("Failed to set pipeline: {:?}.", e);
-                        return;
-                    }
-                } else {
-                    return;
+                let id = pipeline.ok_or(DebugSkipReason::NoPipeline)?;
+                let CachedPipelineStatus::OkRender(pipeline) = pipeline_manager.get_pipeline(id)
+                else {
+                    return Err(DebugSkipReason::Pipeline(id));
+                };
+                if let Err(e) = render_pass.set_pipeline(pipeline) {
+                    error!("Failed to set pipeline: {:?}.", e);
+                    return Ok(());
                 }
             }
 
             // Set bind groups at given index
             SubPassCommand::BindGroup(index, bind_group) => {
-                if let Some(bind_group) = bind_group {
-                    render_pass.set_bind_group(*index, bind_group);
-                } else {
-                    return;
-                }
+                let bind_group = bind_group
+                    .as_ref()
+                    .ok_or(DebugSkipReason::NoBindGroup(*index))?;
+                render_pass.set_bind_group(*index, bind_group);
             }
 
             // Bind mesh vertex and index buffers
@@ -527,7 +531,7 @@ fn render_sub_pass<'p>(
                     render_pass.set_vertex_buffer(0, vertex_buffer);
                     render_pass.set_index_buffer(index_buffer);
                 } else {
-                    return;
+                    return Err(DebugSkipReason::NoMesh);
                 }
             }
 
@@ -562,4 +566,5 @@ fn render_sub_pass<'p>(
             }
         }
     }
+    Ok(())
 }

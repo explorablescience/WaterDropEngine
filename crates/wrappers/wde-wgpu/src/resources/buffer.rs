@@ -4,7 +4,7 @@ use std::{fmt::Formatter, sync::mpsc};
 use wde_logger::prelude::*;
 use wgpu::{BufferView, util::DeviceExt};
 
-use crate::{command_buffer::CommandBuffer, instance::RenderInstanceData};
+use crate::{command_buffer::CommandBuffer, instance::RenderInstanceData, memory::GpuAllocation};
 
 /// Buffer usages.
 pub type BufferUsage = wgpu::BufferUsages;
@@ -60,7 +60,8 @@ pub type BufferViewMut = wgpu::BufferViewMut;
 /// ```
 pub struct Buffer {
     pub label: String,
-    pub buffer: wgpu::Buffer
+    pub buffer: wgpu::Buffer,
+    _memory: GpuAllocation
 }
 
 impl std::fmt::Debug for Buffer {
@@ -104,6 +105,7 @@ impl Buffer {
 
                 Buffer {
                     label: label.to_string(),
+                    _memory: GpuAllocation::buffer(label, &buffer),
                     buffer
                 }
             }
@@ -118,6 +120,7 @@ impl Buffer {
 
                 Buffer {
                     label: label.to_string(),
+                    _memory: GpuAllocation::buffer(label, &buffer),
                     buffer
                 }
             }
@@ -304,6 +307,7 @@ impl Buffer {
 /// until it returns `Ok(data)`.
 pub struct AsyncReadback {
     buffer: wgpu::Buffer,
+    _memory: GpuAllocation,
     receiver: mpsc::Receiver<Result<(), wgpu::BufferAsyncError>>
 }
 
@@ -375,6 +379,7 @@ impl AsyncReadback {
         });
 
         AsyncReadback {
+            _memory: GpuAllocation::buffer("async-readback-staging", &staging),
             buffer: staging,
             receiver
         }

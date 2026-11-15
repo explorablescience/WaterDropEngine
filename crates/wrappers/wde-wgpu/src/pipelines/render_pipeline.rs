@@ -1,9 +1,9 @@
 //! Render pipeline module.
 
-use futures_lite::future;
 use wde_logger::prelude::*;
-use wgpu::{BindGroupLayout, naga};
+use wgpu::BindGroupLayout;
 
+use super::shader_module::{create_shader_module, validate_pipeline};
 use crate::{
     instance::{RenderError, RenderInstanceData},
     texture::{DEPTH_FORMAT, SWAPCHAIN_FORMAT, TextureFormat},
@@ -285,156 +285,27 @@ impl RenderPipeline {
     pub fn init(&mut self, instance: &RenderInstanceData<'_>) -> Result<(), RenderError> {
         let d = &self.config;
 
-        // Security checks
         if d.vertex_shader.is_empty() || d.fragment_shader.is_empty() {
-            error!(
-                self.label,
-                "Pipeline does not have a vertex or fragment shader."
-            );
             return Err(RenderError::MissingShader);
         }
-
-        // Load vertex shader
-        let shader_module_vert = match naga::front::wgsl::parse_str(&self.config.vertex_shader) {
-            Ok(shader) => {
-                match naga::valid::Validator::new(
-                    naga::valid::ValidationFlags::all(),
-                    naga::valid::Capabilities::all()
-                )
-                .validate(&shader)
-                {
-                    Ok(_) => instance
-                        .device
-                        .create_shader_module(wgpu::ShaderModuleDescriptor {
-                            label: Some(format!("{}-render-pip-vert", self.label).as_str()),
-                            source: wgpu::ShaderSource::Wgsl(
-                                self.config.vertex_shader.to_owned().into()
-                            )
-                        }),
-                    Err(e) => {
-                        error!(self.label, "Vertex shader validation failed: {:?}.", e);
-                        return Err(RenderError::ShaderCompilationError);
-                    }
-                }
-            }
-            Err(e) => {
-                let mut error = format!("Vertex shader parsing failed \"{}\".\n", e);
-                for (span, message) in e.labels() {
-                    let location = span.location(&self.config.vertex_shader);
-                    error.push_str(&format!(
-                        " - Error on line {} at position {}: \"{}\"\n",
-                        location.line_number, location.line_position, message
-                    ));
-                }
-                error!(self.label, "{}", error);
-                return Err(RenderError::ShaderCompilationError);
-            }
-        };
-        future::block_on(async {
-            let compil_info = shader_module_vert.get_compilation_info().await;
-            for message in compil_info.messages {
-                match message.message_type {
-                    wgpu::CompilationMessageType::Error => error!(
-                        self.label,
-                        "Vertex shader {} compilation error '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    ),
-                    wgpu::CompilationMessageType::Warning => warn!(
-                        self.label,
-                        "Vertex shader {} compilation warning '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    ),
-                    wgpu::CompilationMessageType::Info => debug!(
-                        self.label,
-                        "Vertex shader {} compilation info '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    )
-                }
-            }
-        });
-
-        // Load fragment shader
-        let shader_module_frag = match naga::front::wgsl::parse_str(&self.config.fragment_shader) {
-            Ok(shader) => {
-                match naga::valid::Validator::new(
-                    naga::valid::ValidationFlags::all(),
-                    naga::valid::Capabilities::all()
-                )
-                .validate(&shader)
-                {
-                    Ok(_) => instance
-                        .device
-                        .create_shader_module(wgpu::ShaderModuleDescriptor {
-                            label: Some(format!("{}-render-pip-frag", self.label).as_str()),
-                            source: wgpu::ShaderSource::Wgsl(
-                                self.config.fragment_shader.to_owned().into()
-                            )
-                        }),
-                    Err(e) => {
-                        error!(self.label, "Fragment shader validation failed: {:?}.", e);
-                        return Err(RenderError::ShaderCompilationError);
-                    }
-                }
-            }
-            Err(e) => {
-                let mut error = format!("Fragment shader parsing failed \"{}\".\n", e);
-                for (span, message) in e.labels() {
-                    let location = span.location(&self.config.fragment_shader);
-                    error.push_str(&format!(
-                        " - Error on line {} at position {}: \"{}\"\n",
-                        location.line_number, location.line_position, message
-                    ));
-                }
-                error!(self.label, "{}", error);
-                return Err(RenderError::ShaderCompilationError);
-            }
-        };
-        future::block_on(async {
-            let compil_info = shader_module_frag.get_compilation_info().await;
-            for message in compil_info.messages {
-                match message.message_type {
-                    wgpu::CompilationMessageType::Error => error!(
-                        self.label,
-                        "Fragment shader {} compilation error '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    ),
-                    wgpu::CompilationMessageType::Warning => warn!(
-                        self.label,
-                        "Fragment shader {} compilation warning '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    ),
-                    wgpu::CompilationMessageType::Info => debug!(
-                        self.label,
-                        "Fragment shader {} compilation info '{}' (at {:?}).",
-                        self.label,
-                        message.message,
-                        message.location
-                    )
-                }
-            }
-        });
+        let shader_module_vert =
+            create_shader_module(instance, &self.label, "vertex", &d.vertex_shader)?;
+        let shader_module_frag =
+            create_shader_module(instance, &self.label, "fragment", &d.fragment_shader)?;
 
         // Create pipeline layout
-        let layout = instance
-            .device
-            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some(format!("{}-render-pip-layout", self.label).as_str()),
-                bind_group_layouts: &d
-                    .bind_groups
-                    .iter()
-                    .collect::<Vec<&wgpu::BindGroupLayout>>(),
-                push_constant_ranges: &d.push_constants
-            });
+        let layout = validate_pipeline(instance, || {
+            instance
+                .device
+                .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some(format!("{}-render-pip-layout", self.label).as_str()),
+                    bind_group_layouts: &d
+                        .bind_groups
+                        .iter()
+                        .collect::<Vec<&wgpu::BindGroupLayout>>(),
+                    push_constant_ranges: &d.push_constants
+                })
+        })?;
 
         // Define vertex buffers
         let vertex_buffers: &[wgpu::VertexBufferLayout] = if d.use_vertices_buffer {
@@ -444,98 +315,71 @@ impl RenderPipeline {
         };
 
         // Create pipeline
-        let mut res: Result<(), RenderError> = Ok(());
-        instance
-            .device
-            .push_error_scope(wgpu::ErrorFilter::Validation);
-        let pipeline = instance
-            .device
-            .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some(format!("{}-render-pip", self.label).as_str()),
-                layout: Some(&layout),
-                cache: None,
-                vertex: wgpu::VertexState {
-                    module: &shader_module_vert,
-                    entry_point: Some("main"),
-                    buffers: vertex_buffers,
-                    compilation_options: wgpu::PipelineCompilationOptions::default()
-                },
-                fragment: Some(wgpu::FragmentState {
-                    // Always write to swapchain format
-                    module: &shader_module_frag,
-                    entry_point: Some("main"),
-                    targets: d
-                        .render_targets
-                        .iter()
-                        .map(|format| {
-                            Some(wgpu::ColorTargetState {
-                                format: *format,
-                                blend: d.fragment_blend,
-                                write_mask: d.color_write
+        let pipeline = validate_pipeline(instance, || {
+            instance
+                .device
+                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: Some(format!("{}-render-pip", self.label).as_str()),
+                    layout: Some(&layout),
+                    cache: None,
+                    vertex: wgpu::VertexState {
+                        module: &shader_module_vert,
+                        entry_point: Some("main"),
+                        buffers: vertex_buffers,
+                        compilation_options: wgpu::PipelineCompilationOptions::default()
+                    },
+                    fragment: Some(wgpu::FragmentState {
+                        // Always write to swapchain format
+                        module: &shader_module_frag,
+                        entry_point: Some("main"),
+                        targets: d
+                            .render_targets
+                            .iter()
+                            .map(|format| {
+                                Some(wgpu::ColorTargetState {
+                                    format: *format,
+                                    blend: d.fragment_blend,
+                                    write_mask: d.color_write
+                                })
                             })
+                            .collect::<Vec<Option<wgpu::ColorTargetState>>>()
+                            .as_slice(),
+                        compilation_options: wgpu::PipelineCompilationOptions::default()
+                    }),
+                    primitive: wgpu::PrimitiveState {
+                        topology: d.primitive_topology,
+                        strip_index_format: None,
+                        front_face: wgpu::FrontFace::Ccw,
+                        cull_mode: d.cull_mode,
+                        polygon_mode: wgpu::PolygonMode::Fill,
+                        conservative: false,
+                        unclipped_depth: false
+                    },
+                    depth_stencil: if d.depth.enabled {
+                        Some(wgpu::DepthStencilState {
+                            format: d.depth.format.unwrap_or(DEPTH_FORMAT),
+                            depth_write_enabled: d.depth.write,
+                            depth_compare: d.depth.compare,
+                            stencil: d.depth.stencil.clone(),
+                            bias: wgpu::DepthBiasState::default()
                         })
-                        .collect::<Vec<Option<wgpu::ColorTargetState>>>()
-                        .as_slice(),
-                    compilation_options: wgpu::PipelineCompilationOptions::default()
-                }),
-                primitive: wgpu::PrimitiveState {
-                    topology: d.primitive_topology,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: d.cull_mode,
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    conservative: false,
-                    unclipped_depth: false
-                },
-                depth_stencil: if d.depth.enabled {
-                    Some(wgpu::DepthStencilState {
-                        format: d.depth.format.unwrap_or(DEPTH_FORMAT),
-                        depth_write_enabled: d.depth.write,
-                        depth_compare: d.depth.compare,
-                        stencil: d.depth.stencil.clone(),
-                        bias: wgpu::DepthBiasState::default()
-                    })
-                } else {
-                    None
-                },
-                multisample: wgpu::MultisampleState {
-                    count: d.sample_count,
-                    mask: !0,
-                    alpha_to_coverage_enabled: false
-                },
-                multiview: Default::default()
-            });
-
-        // Check for errors
-        future::block_on(async {
-            let error = instance.device.pop_error_scope().await;
-            match error {
-                Some(wgpu::Error::Validation {
-                    source,
-                    description
-                }) => {
-                    error!(
-                        self.label,
-                        "Failed to create render pipeline with source error: {:?}. Description: {}.",
-                        source,
-                        description
-                    );
-                    res = Err(RenderError::ShaderCompilationError);
-                }
-                Some(e) => {
-                    error!(self.label, "Failed to create render pipeline: {:?}.", e);
-                    res = Err(RenderError::ShaderCompilationError);
-                }
-                None => ()
-            }
-        });
+                    } else {
+                        None
+                    },
+                    multisample: wgpu::MultisampleState {
+                        count: d.sample_count,
+                        mask: !0,
+                        alpha_to_coverage_enabled: false
+                    },
+                    multiview: Default::default()
+                })
+        })?;
 
         // Set pipeline
         self.pipeline = Some(pipeline);
         self.layout = Some(layout);
         self.is_initialized = true;
-
-        res
+        Ok(())
     }
 
     /// Get the render pipeline.

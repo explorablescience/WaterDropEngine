@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 use wde_logger::prelude::*;
 
 use bevy::{
@@ -7,11 +9,12 @@ use bevy::{
         world
     },
     platform::collections::{HashMap, HashSet},
-    prelude::*
+    prelude::*,
+    utils::prelude::ShortName
 };
 use thiserror::Error;
 
-use crate::core::{Extract, MainWorld, Render, RenderApp, RenderSet};
+use crate::core::{Extract, MainWorld, Render, RenderApp, RenderInstance, RenderSet};
 
 #[derive(Debug, Error)]
 pub enum PrepareAssetError<E: Send + Sync + 'static> {
@@ -71,11 +74,19 @@ impl<A: RenderAsset> RenderAssets<A> {
 /// Plugin that adds the systems and resources to extract, prepare and store a given type of GPU [RenderAsset] from their source CPU [bevy::prelude::Asset].
 /// To use, simply add `RenderAssetsPlugin::<YourGpuAssetType>::default()` to your app, and make sure to implement the [RenderAsset] trait for your GPU asset type.
 pub struct RenderAssetsPlugin<A: RenderAsset> {
+    kind: RenderAssetKind,
     _phantom: std::marker::PhantomData<fn() -> A>
 }
 impl<A: RenderAsset> Default for RenderAssetsPlugin<A> {
     fn default() -> Self {
+        Self::with_kind(RenderAssetKind::Asset)
+    }
+}
+impl<A: RenderAsset> RenderAssetsPlugin<A> {
+    /// Kind of the render assets shown in the [`RenderStats`].
+    pub fn with_kind(kind: RenderAssetKind) -> Self {
         Self {
+            kind,
             _phantom: Default::default()
         }
     }
@@ -83,7 +94,21 @@ impl<A: RenderAsset> Default for RenderAssetsPlugin<A> {
 impl<A: RenderAsset> Plugin for RenderAssetsPlugin<A> {
     fn build(&self, app: &mut App) {
         // Create the cached for extracting assets from the main world
-        app.init_resource::<CachedExtractAssetsState<A>>();
+        app.init_resource::<CachedExtractAssetsState<A>>()
+            .init_resource::<RenderStats>();
+        app.world_mut()
+            .resource_mut::<RenderStats>()
+            .render_assets
+            .insert(
+                TypeId::of::<A>(),
+                RenderAssetCount {
+                    name: ShortName::of::<A>().to_string(),
+                    type_path: std::any::type_name::<A>(),
+                    kind: self.kind,
+                    ready: 0,
+                    pending: 0
+                }
+            );
 
         // Add the extract system to the renderer app
         let renderer_app = app.get_sub_app_mut(RenderApp).unwrap();
@@ -91,11 +116,96 @@ impl<A: RenderAsset> Plugin for RenderAssetsPlugin<A> {
             .init_resource::<PrepareNextFrameAssets<A>>()
             .init_resource::<ExtractedAssets<A>>()
             .init_resource::<RenderAssets<A>>()
-            .add_systems(Extract, extract_render_assets::<A>);
+            .add_systems(
+                Extract,
+                (extract_render_assets::<A>, extract_render_asset_stats::<A>)
+            );
 
         // Add the prepare system to the renderer app
         renderer_app.add_systems(Render, prepare_assets::<A>.in_set(RenderSet::Prepare));
     }
+}
+
+/// Statistics of the render world, sent to the main world every frame.
+#[derive(Resource, Default, Clone, Debug)]
+pub struct RenderStats {
+    /// Reads the [`RenderStats::driver_memory`], which walks every allocation. Disable it when unused.
+    pub driver_report: bool,
+    /// Render assets of each [`RenderAsset`] type, by the type id of the render asset.
+    pub render_assets: HashMap<TypeId, RenderAssetCount>,
+    /// Memory reported by the allocator of the driver, if the backend supports it (DX12).
+    pub driver_memory: Option<DriverMemory>
+}
+
+#[derive(Clone, Debug)]
+pub struct RenderAssetCount {
+    pub name: String,
+    pub type_path: &'static str,
+    pub kind: RenderAssetKind,
+    /// Prepared and stored in their [`RenderAssets`].
+    pub ready: usize,
+    /// Waiting to be prepared again next frame.
+    pub pending: usize
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum RenderAssetKind {
+    /// Prepared from a loaded or created asset, such as the meshes and textures.
+    #[default]
+    Asset,
+    /// Registered with a [`RenderPipelineRegisterPlugin`](crate::passes::RenderPipelineRegisterPlugin).
+    Pipeline,
+    /// Registered with a [`RenderDataRegisterPlugin`](crate::assets::RenderDataRegisterPlugin).
+    RenderData,
+    /// Registered with a [`RenderBindingRegisterPlugin`](crate::assets::RenderBindingRegisterPlugin).
+    RenderBinding
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct DriverMemory {
+    pub allocated_bytes: u64,
+    /// Memory blocks reserved, including their unallocated regions.
+    pub reserved_bytes: u64,
+    pub blocks: usize,
+    pub allocations: usize
+}
+
+fn extract_render_asset_stats<A: RenderAsset>(
+    mut main_world: ResMut<MainWorld>,
+    assets: Res<RenderAssets<A>>,
+    pending: Res<PrepareNextFrameAssets<A>>
+) {
+    let mut stats = main_world.resource_mut::<RenderStats>();
+    if let Some(count) = stats.render_assets.get_mut(&TypeId::of::<A>()) {
+        count.ready = assets.0.len();
+        count.pending = pending.assets.len();
+    }
+}
+
+pub(crate) fn extract_driver_memory(
+    mut main_world: ResMut<MainWorld>,
+    instance: Res<RenderInstance>
+) {
+    let mut stats = main_world.resource_mut::<RenderStats>();
+    stats.driver_memory = None;
+    if !stats.driver_report {
+        return;
+    }
+    let Some(report) = instance
+        .0
+        .read()
+        .unwrap()
+        .device
+        .generate_allocator_report()
+    else {
+        return;
+    };
+    stats.driver_memory = Some(DriverMemory {
+        allocated_bytes: report.total_allocated_bytes,
+        reserved_bytes: report.total_reserved_bytes,
+        blocks: report.blocks.len(),
+        allocations: report.allocations.len()
+    });
 }
 
 /// Stores the list of assets extracted from the main world AssetServer for the current frame, with their IDs and added/removed status.

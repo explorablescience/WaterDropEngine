@@ -44,6 +44,9 @@ pub mod wgpu_utils {
     pub use wde_wgpu::command_buffer::{
         CommandBuffer, RenderPassBuilder, RenderPassColorAttachment, RenderPassDepth
     };
+    pub use wde_wgpu::memory::{
+        GpuAllocation, GpuAllocationInfo, GpuMemory, GpuMemoryCategory, GpuMemoryTotal
+    };
 }
 
 pub mod assets;
@@ -93,7 +96,8 @@ impl Plugin for RenderPlugin {
             SyncPlugin,
             UtilsPlugin,
             AssetsPlugin,
-            crate::passes::RenderGraphDebugPlugin
+            crate::passes::RenderGraphDebugPlugin,
+            crate::passes::PipelineStatusPlugin
         ));
     }
 }

@@ -11,7 +11,7 @@ use std::io::{Error, ErrorKind};
 use thiserror::Error;
 
 use crate::core::RenderInstance;
-use wde_wgpu::render_pipeline::CompareFunction;
+use wde_wgpu::{memory::GpuMemoryCategory, render_pipeline::CompareFunction};
 
 use super::asset::{PrepareAssetError, RenderAsset};
 
@@ -111,6 +111,9 @@ impl RenderAsset for GpuTexture {
             asset.cube,
             asset.compare
         );
+
+        // Classified by its requested usages, without the one added for the mips
+        texture.set_memory_category(GpuMemoryCategory::of_texture(asset.format, asset.usages));
 
         // Copy the texture data, and fill its mip chain from it
         if !asset.data.is_empty() {

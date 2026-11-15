@@ -9,7 +9,7 @@ use wde_camera::prelude::*;
 use wde_editor::prelude::*;
 use wde_renderer::prelude::*;
 
-use crate::prelude::DirectionalLight;
+use crate::prelude::{DirectionalLight, PbrDebugView, PbrSettings};
 
 /// Resolution of the shadow map of each cascade.
 pub const SHADOW_MAP_SIZE: u32 = 4096;
@@ -73,7 +73,9 @@ pub struct CascadedShadowSettings {
     pub shadow_intensity: [f32; 3],
 
     /// Enable individual cascades for debugging
-    pub cascade_enabled: [bool; 3]
+    pub cascade_enabled: [bool; 3],
+    /// Draw the bounding sphere and the light box of each cascade (with the `wde` debug gizmos).
+    pub show_bounds: bool
 }
 impl Default for CascadedShadowSettings {
     fn default() -> Self {
@@ -85,19 +87,180 @@ impl Default for CascadedShadowSettings {
             kernel_half_size: [3, 2, 1],
             kernel_scale: [1.0, 1.0, 1.0],
             shadow_intensity: [0.8, 0.8, 0.8],
-            cascade_enabled: [true, true, true]
+            cascade_enabled: [true, true, true],
+            show_bounds: false
         }
     }
+}
+
+/// Debug color of each cascade, in sRGB. Same as `SHADOW_DEBUG_CASCADE_COLORS` in the shaders.
+pub const SHADOW_CASCADE_COLORS: [[f32; 3]; 3] =
+    [[1.0, 0.3, 0.3], [0.3, 1.0, 0.3], [0.35, 0.5, 1.0]];
+
+/// Shadow map of a cascade, as placed for a camera.
+#[derive(Clone, Copy, Debug)]
+pub struct ShadowCascade {
+    /// View depths of the slice of the view frustum covered, including the blend with the previous cascade.
+    pub near: f32,
+    pub far: f32,
+    /// Bounding sphere of the slice, snapped to the texels.
+    pub center: Vec3,
+    pub radius: f32,
+    /// Size of a shadow map texel in world units.
+    pub texel: f32,
+    /// Depth of the light frustum in world units.
+    pub depth_range: f32,
+    pub view: Mat4,
+    pub proj: Mat4
+}
+impl ShadowCascade {
+    /// Box rendered into the shadow map, as the transform of a unit cube.
+    pub fn light_box(&self) -> Transform {
+        let light = Transform::from_matrix(self.view.inverse());
+        light.mul_transform(
+            Transform::from_xyz(0.0, 0.0, -self.depth_range * 0.5).with_scale(Vec3::new(
+                2.0 * self.radius,
+                2.0 * self.radius,
+                self.depth_range
+            ))
+        )
+    }
+}
+
+impl CascadedShadowSettings {
+    /// Shadow maps of the cascades for a camera with the `aspect` ratio, and a light shining along `light_direction`.
+    pub fn cascades(
+        &self,
+        camera_transform: &GlobalTransform,
+        camera_view: &CameraView,
+        aspect: f32,
+        light_direction: Vec3
+    ) -> [ShadowCascade; 3] {
+        let dir = light_direction.normalize();
+        let up = if dir.y.abs() < 0.99 { Vec3::Y } else { Vec3::X };
+        let light_rotation = Mat4::look_at_rh(Vec3::ZERO, dir, up);
+        let tan_y = (camera_view.fov.to_radians() * 0.5).tan();
+        let aspect = aspect.max(1e-3);
+        let k = tan_y * (1.0 + aspect * aspect).sqrt();
+
+        std::array::from_fn(|cascade| {
+            let far = self.split_distances[cascade];
+            let near = match cascade {
+                0 => camera_view.znear,
+                _ => self.split_distances[cascade - 1] * (1.0 - self.blend_fraction)
+            };
+            let far = far.max(near + 0.01);
+            let (center_distance, radius) = frustum_slice_sphere(near, far, k);
+            let radius = (radius * 2.0).ceil() * 0.5;
+            let texel = 2.0 * radius / SHADOW_MAP_SIZE as f32;
+
+            // Snap the center to the texels in light space
+            let center =
+                camera_transform.translation() + camera_transform.forward() * center_distance;
+            let center_ls = light_rotation.transform_point3(center);
+            let snapped = ((center_ls.truncate() / texel).floor() * texel).extend(center_ls.z);
+            let center = light_rotation.inverse().transform_point3(snapped);
+
+            let depth_range = 2.0 * radius + self.caster_distance;
+            let eye = center - dir * (radius + self.caster_distance);
+            ShadowCascade {
+                near,
+                far,
+                center,
+                radius,
+                texel,
+                depth_range,
+                view: Mat4::look_at_rh(eye, eye + dir, up),
+                proj: ortho_rh_wgpu(-radius, radius, -radius, radius, 0.0, depth_range)
+            }
+        })
+    }
+}
+
+/// Debug views of [`PbrDebugView`] about the shadows.
+const SHADOW_DEBUG_VIEWS: [PbrDebugView; 4] = [
+    PbrDebugView::Off,
+    PbrDebugView::Shadow,
+    PbrDebugView::ShadowCascades,
+    PbrDebugView::ShadowTexels
+];
+/// Same ramp as `debug_ramp` in the shaders.
+const TEXEL_LEGEND: [(Color32, &str); 5] = [
+    (Color32::from_rgb(230, 13, 13), "≤1/8"),
+    (Color32::from_rgb(255, 115, 13), "1/4"),
+    (Color32::from_rgb(230, 217, 26), "1/2"),
+    (Color32::from_rgb(26, 204, 26), "1"),
+    (Color32::from_rgb(51, 102, 242), "≥2")
+];
+
+fn cascade_color(cascade: usize) -> Color32 {
+    let [r, g, b] = SHADOW_CASCADE_COLORS[cascade].map(|c| (c * 255.0) as u8);
+    Color32::from_rgb(r, g, b)
 }
 
 pub(crate) fn params_data_ui(
     mut ui_menu: ResMut<UIMenu>,
     ctx: Res<UIContext>,
-    mut cascaded_settings: ResMut<CascadedShadowSettings>
+    mut cascaded_settings: ResMut<CascadedShadowSettings>,
+    mut pbr: ResMut<PbrSettings>,
+    lights: Query<&DirectionalLight>,
+    camera: Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>,
+    window: Query<&Window>
 ) {
     UIWindow::new("Shadow Settings")
         .open(ui_menu.clicked_mut("PBR/Shadows"))
         .show(&ctx.0, |ui| {
+            let mut view = pbr.debug_view;
+            ui.horizontal(|ui| {
+                ComboBox::from_label("Debug View")
+                    .selected_text(view.label())
+                    .show_ui(ui, |ui| {
+                        for option in SHADOW_DEBUG_VIEWS {
+                            ui.selectable_value(&mut view, option, option.label());
+                        }
+                    });
+                ui.add(Checkbox::new(
+                    &mut cascaded_settings.show_bounds,
+                    "Show Bounds"
+                ));
+            });
+            if view != pbr.debug_view {
+                pbr.debug_view = view;
+            }
+            match pbr.debug_view {
+                PbrDebugView::ShadowCascades => {
+                    ui.horizontal(|ui| {
+                        for i in 0..3 {
+                            ui.colored_label(cascade_color(i), format!("Cascade {i}"));
+                        }
+                        ui.label("Striped: blend");
+                    });
+                }
+                PbrDebugView::ShadowTexels => {
+                    ui.horizontal(|ui| {
+                        ui.label("Shadow texels per pixel:");
+                        for (color, label) in TEXEL_LEGEND {
+                            ui.colored_label(color, label);
+                        }
+                    });
+                    ui.label("Checkered by texel when they cover several pixels.");
+                }
+                _ => {}
+            }
+            ui.separator();
+
+            let cascades = match (lights.iter().next(), camera.single(), window.single()) {
+                (Some(light), Ok((transform, camera_view)), Ok(window)) => {
+                    Some(cascaded_settings.cascades(
+                        transform,
+                        camera_view,
+                        window.width() / window.height().max(1.0),
+                        light.direction
+                    ))
+                }
+                _ => None
+            };
+
             let settings = &mut *cascaded_settings;
             ui.columns(2, |cols| {
                 cols[0].add(
@@ -113,7 +276,18 @@ pub(crate) fn params_data_ui(
 
             for i in 0..3 {
                 ui.separator();
-                ui.label(format!("Cascade {}", i));
+                ui.horizontal(|ui| {
+                    ui.colored_label(cascade_color(i), format!("Cascade {i}"));
+                    if let Some(c) = cascades.as_ref().map(|c| c[i]) {
+                        ui.label(format!(
+                            "{:.1} – {:.1} m, sphere {:.1} m, texel {:.1} cm",
+                            c.near,
+                            c.far,
+                            c.radius,
+                            c.texel * 100.0
+                        ));
+                    }
+                });
                 ui.columns(2, |cols| {
                     cols[0].add(Checkbox::new(&mut settings.cascade_enabled[i], "Enabled"));
                     cols[1].add(
@@ -192,42 +366,18 @@ pub(crate) fn extract_cascaded_shadow_params(
         return;
     };
     let (camera_transform, camera_view) = **camera;
-
+    let aspect = window.width() / window.height().max(1.0);
     let dir = light.direction.normalize();
-    let up = if dir.y.abs() < 0.99 { Vec3::Y } else { Vec3::X };
-    let light_rotation = Mat4::look_at_rh(Vec3::ZERO, dir, up);
-    let tan_y = (camera_view.fov.to_radians() * 0.5).tan();
-    let aspect = (window.width() / window.height().max(1.0)).max(1e-3);
-    let k = tan_y * (1.0 + aspect * aspect).sqrt();
 
-    for cascade in 0..3 {
-        let far = settings.split_distances[cascade];
-        let near = match cascade {
-            0 => camera_view.znear,
-            _ => settings.split_distances[cascade - 1] * (1.0 - settings.blend_fraction)
-        };
-        let (center_distance, radius) = frustum_slice_sphere(near, far.max(near + 0.01), k);
-        let radius = (radius * 2.0).ceil() * 0.5;
-        let texel = 2.0 * radius / SHADOW_MAP_SIZE as f32;
-
-        // Snap the center to the texels in light space
-        let center = camera_transform.translation() + camera_transform.forward() * center_distance;
-        let center_ls = light_rotation.transform_point3(center);
-        let snapped = ((center_ls.truncate() / texel).floor() * texel).extend(center_ls.z);
-        let center = light_rotation.inverse().transform_point3(snapped);
-
-        let depth_range = 2.0 * radius + settings.caster_distance;
-        let eye = center - dir * (radius + settings.caster_distance);
-        let view = Mat4::look_at_rh(eye, eye + dir, up);
-        let proj = ortho_rh_wgpu(-radius, radius, -radius, radius, 0.0, depth_range);
-
-        params.0[cascade] = ShadowParamsUniform {
-            view_proj: (proj * view).to_cols_array_2d(),
-            light_dir: [dir.x, dir.y, dir.z, texel],
-            kernel_half_size: settings.kernel_half_size[cascade] as f32,
-            kernel_scale: settings.kernel_scale[cascade],
-            shadow_intensity: settings.shadow_intensity[cascade].clamp(0.0, 1.0),
-            depth_range
+    let cascades = settings.cascades(camera_transform, camera_view, aspect, dir);
+    for (i, cascade) in cascades.iter().enumerate() {
+        params.0[i] = ShadowParamsUniform {
+            view_proj: (cascade.proj * cascade.view).to_cols_array_2d(),
+            light_dir: [dir.x, dir.y, dir.z, cascade.texel],
+            kernel_half_size: settings.kernel_half_size[i] as f32,
+            kernel_scale: settings.kernel_scale[i],
+            shadow_intensity: settings.shadow_intensity[i].clamp(0.0, 1.0),
+            depth_range: cascade.depth_range
         };
     }
 }
@@ -358,5 +508,48 @@ impl RenderData for ShadowMapData {
                 .next()
                 .is_some()
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn cascades() -> [ShadowCascade; 3] {
+        let camera = GlobalTransform::from(
+            Transform::from_xyz(10.0, 40.0, -5.0).looking_at(Vec3::new(30.0, 0.0, 20.0), Vec3::Y)
+        );
+        CascadedShadowSettings::default().cascades(
+            &camera,
+            &CameraView::default(),
+            16.0 / 9.0,
+            Vec3::new(0.4, -1.0, 0.3)
+        )
+    }
+
+    #[test]
+    fn light_box_is_the_shadow_frustum() {
+        for cascade in cascades() {
+            let view_proj = cascade.proj * cascade.view;
+            let light_box = cascade.light_box().to_matrix();
+            for corner in [-0.5f32, 0.5].into_iter().flat_map(|x| {
+                [-0.5f32, 0.5]
+                    .into_iter()
+                    .flat_map(move |y| [-0.5f32, 0.5].map(|z| Vec3::new(x, y, z)))
+            }) {
+                let ndc = view_proj.project_point3(light_box.transform_point3(corner));
+                let expected = Vec3::new(corner.x * 2.0, corner.y * 2.0, 0.5 - corner.z);
+                assert!(ndc.abs_diff_eq(expected, 1e-3), "{ndc} != {expected}");
+            }
+        }
+    }
+
+    #[test]
+    fn sphere_is_inside_the_shadow_map() {
+        for cascade in cascades() {
+            let ndc = (cascade.proj * cascade.view).project_point3(cascade.center);
+            assert!(ndc.truncate().abs_diff_eq(Vec2::ZERO, 1e-3));
+            assert!(ndc.z > 0.0 && ndc.z < 1.0);
+        }
     }
 }

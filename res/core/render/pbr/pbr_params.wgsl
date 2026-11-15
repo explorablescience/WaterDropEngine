@@ -17,12 +17,14 @@ const PBR_DEBUG_DIRECT: u32 = 2u;
 const PBR_DEBUG_AMBIENT_DIFFUSE: u32 = 3u;
 const PBR_DEBUG_AMBIENT_SPECULAR: u32 = 4u;
 const PBR_DEBUG_EMISSIVE: u32 = 5u;
-const PBR_DEBUG_ALBEDO: u32 = 6u;
-const PBR_DEBUG_NORMALS: u32 = 7u;
-const PBR_DEBUG_ROUGHNESS: u32 = 8u;
-const PBR_DEBUG_METALLIC: u32 = 9u;
-const PBR_DEBUG_OCCLUSION: u32 = 10u;
-const PBR_DEBUG_SHADOW: u32 = 11u;
+const PBR_DEBUG_SHADOW_CASCADES: u32 = 6u;
+const PBR_DEBUG_ALBEDO: u32 = 7u;
+const PBR_DEBUG_NORMALS: u32 = 8u;
+const PBR_DEBUG_ROUGHNESS: u32 = 9u;
+const PBR_DEBUG_METALLIC: u32 = 10u;
+const PBR_DEBUG_OCCLUSION: u32 = 11u;
+const PBR_DEBUG_SHADOW: u32 = 12u;
+const PBR_DEBUG_SHADOW_TEXELS: u32 = 13u;
 
 // Linear albedo of every surface in the clay view
 const PBR_DEBUG_CLAY_ALBEDO: f32 = 0.5;

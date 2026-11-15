@@ -12,7 +12,10 @@ struct VertexOutput {
     @location(0) tex_coord: vec2<f32>,
     @location(1) world_pos: vec3<f32>,
     @location(2) ndc_z:     f32,
-    @location(3) @interpolate(flat) tile_layer: u32
+    @location(3) @interpolate(flat) tile_layer: u32,
+    @location(4) @interpolate(flat) tile_pos: vec2<f32>,
+    @location(5) @interpolate(flat) lod: f32,
+    @location(6) @interpolate(flat) neighbor_lods: vec4<f32>
 };
 
 @group(0) @binding(0) var<uniform> in_camera: Camera;
@@ -80,5 +83,8 @@ fn main(@builtin(instance_index) instance: u32, model: ModelInput) -> VertexOutp
     out.tex_coord  = model.tex_coord;
     out.world_pos  = world_pos;
     out.tile_layer = tile.tile_layer;
+    out.tile_pos   = tile.pos;
+    out.lod        = lod;
+    out.neighbor_lods = nl;
     return out;
 }

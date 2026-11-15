@@ -79,6 +79,26 @@ impl Gizmos {
         }
     }
 
+    /// Records a circle around `normal`.
+    pub fn circle(&mut self, center: Vec3, normal: Vec3, radius: f32, color: WdeColor) {
+        const SEGMENTS: usize = 64;
+        let (u, v) = normal.normalize().any_orthonormal_pair();
+        let point = |i: usize| {
+            let (sin, cos) = (i as f32 / SEGMENTS as f32 * std::f32::consts::TAU).sin_cos();
+            center + (u * cos + v * sin) * radius
+        };
+        for i in 0..SEGMENTS {
+            self.line(point(i), point(i + 1), color);
+        }
+    }
+
+    /// Records a sphere as its 3 great circles around the axes of `rotation`.
+    pub fn sphere(&mut self, center: Vec3, rotation: Quat, radius: f32, color: WdeColor) {
+        for axis in [Vec3::X, Vec3::Y, Vec3::Z] {
+            self.circle(center, rotation * axis, radius, color);
+        }
+    }
+
     /// Takes the recorded lines, leaving this resource empty for the next frame.
     fn take_lines(&mut self) -> Vec<(Vec3, Vec3, WdeColor)> {
         std::mem::take(&mut self.lines)

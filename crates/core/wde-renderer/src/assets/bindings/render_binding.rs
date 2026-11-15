@@ -71,7 +71,7 @@ impl<R: RenderBinding + TypePath + Sync + Send + Clone + Asset + Default> Plugin
     fn build(&self, app: &mut App) {
         let default_res = R::default();
         app.init_asset::<R>().add_plugins((
-            RenderAssetsPlugin::<GpuRenderBinding<R>>::default(),
+            RenderAssetsPlugin::<GpuRenderBinding<R>>::with_kind(RenderAssetKind::RenderBinding),
             ExtractResourcePlugin::<RenderBindingHolder<R>>::default()
         ));
 

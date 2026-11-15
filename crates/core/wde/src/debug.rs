@@ -1,7 +1,7 @@
 //! Debug visualization for engine systems that don't have their own dedicated editor panel.
 //! Exposes a "Show Colliders" toggle that draws box colliders as gizmo cubes, a "Show Frustums"
-//! toggle that draws the frustum of the cameras, and draws the PBR cull groups when their
-//! "Show Groups" culling setting is enabled.
+//! toggle that draws the frustum of the cameras, and draws the PBR cull groups and shadow cascades
+//! when their "Show Groups" and "Show Bounds" settings are enabled.
 use bevy::{prelude::*, window::PrimaryWindow};
 use wde_camera::prelude::*;
 use wde_editor::prelude::*;
@@ -106,6 +106,41 @@ fn draw_cull_group_gizmos(
     }
 }
 
+/// Draws the bounding sphere of each enabled shadow cascade, around the axes of the light (its
+/// circle facing the light is the one inscribed in the shadow map), and the box rendered into it.
+fn draw_shadow_cascade_gizmos(
+    settings: Res<wde_pbr::prelude::CascadedShadowSettings>,
+    lights: Query<&wde_pbr::prelude::DirectionalLight>,
+    camera: Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>,
+    window: Query<&Window>,
+    mut gizmos: ResMut<Gizmos>
+) {
+    if !settings.show_bounds {
+        return;
+    }
+    let (Some(light), Ok((transform, view)), Ok(window)) =
+        (lights.iter().next(), camera.single(), window.single())
+    else {
+        return;
+    };
+    let aspect = window.width() / window.height().max(1.0);
+    let cascades = settings.cascades(transform, view, aspect, light.direction);
+    for (i, cascade) in cascades.iter().enumerate() {
+        if !settings.cascade_enabled[i] {
+            continue;
+        }
+        let [r, g, b] = wde_pbr::prelude::SHADOW_CASCADE_COLORS[i];
+        let light_box = cascade.light_box();
+        gizmos.sphere(
+            cascade.center,
+            light_box.rotation,
+            cascade.radius,
+            WdeColor::from_srgba(r, g, b, 1.0)
+        );
+        gizmos.cube(light_box, WdeColor::from_srgba(r, g, b, 0.5));
+    }
+}
+
 /// Toggles for camera debug visualizations, editable from the "Debug/Cameras" editor panel.
 #[derive(Resource, Reflect)]
 #[reflect(Resource)]
@@ -135,6 +170,10 @@ impl Plugin for CameraDebugPlugin {
                     draw_camera_frustums,
                     draw_cull_group_gizmos
                 )
+            )
+            .add_systems(
+                PostUpdate,
+                draw_shadow_cascade_gizmos.after(TransformSystems::Propagate)
             );
     }
 }

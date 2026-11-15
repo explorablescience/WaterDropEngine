@@ -120,6 +120,7 @@
 
 mod pipeline_manager;
 mod pipeline_register_plugin;
+mod pipeline_status;
 mod pipeline_types;
 mod render_graph;
 mod render_graph_debug;
@@ -135,6 +136,11 @@ pub use wde_wgpu::vertex::Vertex;
 
 pub use pipeline_manager::*;
 pub use pipeline_register_plugin::*;
+pub use pipeline_status::{
+    DebugPipelineReport, DebugPipelineStatus, DebugShaderReport, DebugShaderStatus, DebugSkip,
+    DebugSkipReason, PipelineStatusView
+};
+pub(crate) use pipeline_status::{PipelineStatus, PipelineStatusPlugin};
 pub use pipeline_types::*;
 pub use render_graph::*;
 pub(crate) use render_graph_debug::RenderGraphDebugPlugin;

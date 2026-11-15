@@ -6,7 +6,7 @@ use crate::{
     manager::{
         CHUNK_MAP_SIZE, CHUNK_RENDER_SUBDIVISIONS, CHUNK_SIZE, SPLAT_MAP_COUNT, SPLAT_MAPS, Terrain
     },
-    render::renderer_gpu::TerrainRendererGPU
+    render::{renderer::TERRAIN_LOD_COUNT, renderer_gpu::TerrainRendererGPU}
 };
 
 const MAX_TERRAIN_TILES: usize = 1024;
@@ -53,7 +53,7 @@ pub(crate) fn apply_terrain_config(
     }
 }
 
-/// Tint of the terrain showing its masks.
+/// Tint of the terrain showing its masks, chunks or materials.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Reflect)]
 pub enum TerrainDebugView {
     #[default]
@@ -61,8 +61,51 @@ pub enum TerrainDebugView {
     /// Green where buildable, neutral where walkable, red where too steep to walk.
     Buildable,
     /// Slope angle, from blue (flat) to yellow (steepest walkable), then red.
-    Slope
+    Slope,
+    /// Chunks tinted by level of detail (see [`TERRAIN_LOD_DEBUG_COLORS`]), with the quads of
+    /// their mesh.
+    Lod,
+    /// Chunk borders, in magenta where an edge is stitched to a coarser neighbor.
+    Chunks,
+    /// Splat weights, each material in its color of [`TERRAIN_MATERIAL_DEBUG_COLORS`].
+    Materials,
+    /// Splat weight of one material, from black (0) to white (1).
+    MaterialWeight(u32)
 }
+impl TerrainDebugView {
+    fn gpu_index(self) -> u32 {
+        match self {
+            Self::Off => 0,
+            Self::Buildable => 1,
+            Self::Slope => 2,
+            Self::Lod => 3,
+            Self::Chunks => 4,
+            Self::Materials => 5,
+            Self::MaterialWeight(m) => 6 + m.min(TERRAIN_MATERIAL_COUNT as u32 - 1)
+        }
+    }
+}
+
+// Must match `LOD_COLORS` and `MATERIAL_COLORS` in render_terrain.frag.wgsl
+/// Tint of each terrain level of detail in [`TerrainDebugView::Lod`].
+pub const TERRAIN_LOD_DEBUG_COLORS: [[u8; 3]; TERRAIN_LOD_COUNT] = [
+    [26, 204, 26],
+    [230, 217, 26],
+    [255, 115, 13],
+    [230, 13, 13],
+    [153, 26, 204]
+];
+/// Color of each material in [`TerrainDebugView::Materials`].
+pub const TERRAIN_MATERIAL_DEBUG_COLORS: [[u8; 3]; TERRAIN_MATERIAL_COUNT] = [
+    [230, 51, 38],
+    [51, 191, 64],
+    [51, 89, 230],
+    [242, 204, 26],
+    [217, 64, 217],
+    [38, 204, 217],
+    [242, 140, 38],
+    [242, 242, 242]
+];
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -71,8 +114,8 @@ pub struct TerrainDescription {
     pub tile_subdivisions: f32,
     pub min_height: f32,
     pub map_size: f32,
-    /// 0 off, 1 buildable, 2 slope (see [`TerrainDebugView`]).
-    pub debug_view: f32,
+    /// See [`TerrainDebugView::gpu_index`].
+    pub debug_view: u32,
     /// Slope angle of the steepest walkable ground, over 90°.
     pub walk_max_angle: f32,
     pub tiling: [[f32; 4]; SPLAT_MAPS as usize],
@@ -88,11 +131,7 @@ impl TerrainDescription {
             tile_subdivisions: CHUNK_RENDER_SUBDIVISIONS as f32,
             min_height: config.min_height,
             map_size: CHUNK_MAP_SIZE as f32,
-            debug_view: match settings.debug_view {
-                TerrainDebugView::Off => 0.0,
-                TerrainDebugView::Buildable => 1.0,
-                TerrainDebugView::Slope => 2.0
-            },
+            debug_view: settings.debug_view.gpu_index(),
             walk_max_angle: config.masks.walk_max_slope.atan() / std::f32::consts::FRAC_PI_2,
             tiling: pack(&settings.tiling),
             height_blend: pack(&settings.height_blend)

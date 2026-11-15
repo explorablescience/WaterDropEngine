@@ -112,33 +112,94 @@ fn cascade_visibility(idx: u32, world_pos: vec3<f32>, geo_normal: vec3<f32>) -> 
     return mix(1.0, lit / taps, params.shadow_intensity);
 }
 
+// Cascade of a point: idx 3 beyond the last one, and blend = weight of the next one (or of no shadow after the
+// last one) in the cross-fade at its end
+struct CascadeSelection {
+    idx: u32,
+    blend: f32
+}
+fn select_cascade(world_pos: vec3<f32>) -> CascadeSelection {
+    let view_depth = -(in_camera.world_to_view * vec4<f32>(world_pos, 1.0)).z;
+    let splits = in_shadow_cascades.splits;
+    var out = CascadeSelection(0u, 0.0);
+    var split = splits.x;
+    if view_depth >= splits.z {
+        out.idx = 3u;
+        return out;
+    } else if view_depth >= splits.y {
+        out.idx = 2u;
+        split = splits.z;
+    } else if view_depth >= splits.x {
+        out.idx = 1u;
+        split = splits.y;
+    }
+    let blend_start = split * (1.0 - splits.w);
+    if view_depth > blend_start {
+        out.blend = smoothstep(blend_start, split, view_depth);
+    }
+    return out;
+}
+
 // Light reaching a point from the directional light: 1 when lit, 0 when in shadow.
 // Each cascade is cross-faded with the next one at its end, and the last one with no shadow.
 fn sample_cascaded_shadow(world_pos: vec3<f32>, geo_normal: vec3<f32>) -> f32 {
-    let view_depth = -(in_camera.world_to_view * vec4<f32>(world_pos, 1.0)).z;
-    let splits = in_shadow_cascades.splits;
-    var idx = 0u;
-    var split = splits.x;
-    if view_depth >= splits.z {
+    let cascade = select_cascade(world_pos);
+    if cascade.idx > 2u {
         return 1.0;
-    } else if view_depth >= splits.y {
-        idx = 2u;
-        split = splits.z;
-    } else if view_depth >= splits.x {
-        idx = 1u;
-        split = splits.y;
     }
-
-    var visibility = cascade_visibility(idx, world_pos, geo_normal);
-    let blend_start = split * (1.0 - splits.w);
-    if view_depth > blend_start {
+    var visibility = cascade_visibility(cascade.idx, world_pos, geo_normal);
+    if cascade.blend > 0.0 {
         var next = 1.0;
-        if idx < 2u {
-            next = cascade_visibility(idx + 1u, world_pos, geo_normal);
+        if cascade.idx < 2u {
+            next = cascade_visibility(cascade.idx + 1u, world_pos, geo_normal);
         }
-        visibility = mix(visibility, next, smoothstep(blend_start, split, view_depth));
+        visibility = mix(visibility, next, cascade.blend);
     }
     return visibility;
+}
+
+// Same as SHADOW_CASCADE_COLORS, then no cascade
+const SHADOW_DEBUG_CASCADE_COLORS = array<vec3<f32>, 4>(
+    vec3<f32>(1.0, 0.3, 0.3),
+    vec3<f32>(0.3, 1.0, 0.3),
+    vec3<f32>(0.35, 0.5, 1.0),
+    vec3<f32>(1.0)
+);
+
+// Tint of the shadow cascades view: the color of the cascade, faded to the next one with stripes over the blend
+fn shadow_debug_cascade_tint(world_pos: vec3<f32>, pixel: vec2<f32>) -> vec3<f32> {
+    var colors = SHADOW_DEBUG_CASCADE_COLORS;
+    let cascade = select_cascade(world_pos);
+    let color = pow(colors[cascade.idx], vec3<f32>(2.2));
+    if cascade.blend <= 0.0 {
+        return color;
+    }
+    let next = pow(colors[cascade.idx + 1u], vec3<f32>(2.2));
+    let stripe = fract((pixel.x + pixel.y) / 12.0) < 0.25;
+    return mix(color, next, cascade.blend) * select(1.0, 0.35, stripe);
+}
+
+// Color of the shadow texels view: shadow map texels per screen pixel, checkered by texel when they are large on
+// screen, darkened by the shadow. Takes the screen derivatives of the world position.
+fn shadow_debug_texels(world_pos: vec3<f32>, world_dx: vec3<f32>, world_dy: vec3<f32>, shadow: f32) -> vec3<f32> {
+    let cascade = select_cascade(world_pos);
+    if cascade.idx > 2u {
+        return vec3<f32>(0.2);
+    }
+    // Orthographic light projection: the derivatives map linearly to the shadow map
+    let m = in_shadow_params[cascade.idx].view_proj;
+    let map_size = f32(textureDimensions(in_shadow_map_0).x);
+    let to_texels = 0.5 * map_size;
+    let texels_per_pixel = max(
+        length((m * vec4<f32>(world_dx, 0.0)).xy),
+        length((m * vec4<f32>(world_dy, 0.0)).xy)
+    ) * to_texels;
+    var color = debug_ramp(log2(max(texels_per_pixel, 1e-6)) + 3.0);
+
+    let texel = vec2<i32>(floor(((m * vec4<f32>(world_pos, 1.0)).xy + 1.0) * to_texels));
+    let checker = f32((texel.x + texel.y) & 1);
+    color *= 1.0 - 0.3 * checker * (1.0 - smoothstep(0.25, 0.5, texels_per_pixel));
+    return color * (0.5 + 0.5 * shadow);
 }
 
 @fragment
@@ -149,7 +210,9 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let world_position = get_depth_world_position(in.tex_coord, depth_z, in_camera);
 
     // Geometric normal (without normal mapping), from the screen derivatives (before the discard, in uniform control flow)
-    let geo_normal_raw = cross(dpdy(world_position), dpdx(world_position));
+    let world_dx = dpdx(world_position);
+    let world_dy = dpdy(world_position);
+    let geo_normal_raw = cross(world_dy, world_dx);
     let depth_discontinuity = abs(dpdx(depth_z)) + abs(dpdy(depth_z)) > 0.05 * depth_z;
 
     // Discard background pixels (no geometry written to G-buffer)
@@ -206,6 +269,8 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let shadow = sample_cascaded_shadow(world_position, geo_normal);
     if debug_view == PBR_DEBUG_SHADOW {
         return pbr_debug_data(vec3<f32>(shadow));
+    } else if debug_view == PBR_DEBUG_SHADOW_TEXELS {
+        return pbr_debug_data(shadow_debug_texels(world_position, world_dx, world_dy, shadow));
     }
 
     // Accumulate lighting from each light source
@@ -239,6 +304,9 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
 
     // Linear HDR output, tonemapped in post-processing
     var color = pbr_debug_light(debug_view, lo, ambient.diffuse * ambient_scale, ambient.specular * ambient_scale, emissive);
+    if debug_view == PBR_DEBUG_SHADOW_CASCADES {
+        color *= shadow_debug_cascade_tint(world_position, in.clip_position.xy);
+    }
     color = color * in_pbr_params.lighting_params.z;
     return vec4<f32>(color, 1.0);
 }

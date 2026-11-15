@@ -46,8 +46,10 @@ pub enum RenderError {
     UnsupportedSwapchainFormat,
     /// Depth format not supported.
     UnsupportedDepthFormat,
-    /// Shader compilation error.
-    ShaderCompilationError,
+    /// Shader compilation error, with its messages.
+    ShaderCompilationError(String),
+    /// Pipeline creation error, with its message.
+    PipelineCreationError(String),
     /// Missing a bind group required by the shader.
     MissingBindGroup,
     /// Cannot create bind group layout.
@@ -55,6 +57,17 @@ pub enum RenderError {
     /// Cannot create bind group.
     CannotCreateBindGroup
 }
+impl std::fmt::Display for RenderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ShaderCompilationError(message) | Self::PipelineCreationError(message) => {
+                f.write_str(message)
+            }
+            _ => write!(f, "{self:?}")
+        }
+    }
+}
+impl std::error::Error for RenderError {}
 
 /// Swapchain image plus an already-created view.
 #[derive(Debug)]

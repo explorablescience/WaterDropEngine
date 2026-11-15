@@ -4,7 +4,7 @@ use std::{
     sync::mpsc::{self, TryRecvError}
 };
 
-use crate::{command_buffer::CommandBuffer, instance::RenderInstanceData};
+use crate::{command_buffer::CommandBuffer, instance::RenderInstanceData, memory::GpuAllocation};
 
 /// Resolved frames waiting to be read back, beyond which new frames are dropped.
 const MAX_PENDING: usize = 4;
@@ -20,17 +20,19 @@ pub fn timestamp_features() -> wgpu::Features {
 pub struct GpuTimestamps<T> {
     query_set: wgpu::QuerySet,
     resolve_buffer: wgpu::Buffer,
+    _resolve_memory: GpuAllocation,
     capacity: u32,
     /// Timestamps written in the current frame.
     count: u32,
     /// Nanoseconds per tick.
     period: f64,
-    free: Vec<wgpu::Buffer>,
+    free: Vec<(wgpu::Buffer, GpuAllocation)>,
     pending: VecDeque<PendingFrame<T>>
 }
 
 struct PendingFrame<T> {
     buffer: wgpu::Buffer,
+    memory: GpuAllocation,
     count: u32,
     data: T,
     /// Set once the buffer mapping is requested.
@@ -56,6 +58,7 @@ impl<T> GpuTimestamps<T> {
         });
         Some(Self {
             query_set,
+            _resolve_memory: GpuAllocation::buffer(&format!("{label}-resolve"), &resolve_buffer),
             resolve_buffer,
             capacity,
             count: 0,
@@ -94,19 +97,22 @@ impl<T> GpuTimestamps<T> {
         if count == 0 || self.pending.len() >= MAX_PENDING {
             return;
         }
-        let buffer = self.free.pop().unwrap_or_else(|| {
-            instance.device.create_buffer(&wgpu::BufferDescriptor {
+        let (buffer, memory) = self.free.pop().unwrap_or_else(|| {
+            let buffer = instance.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("timestamps-readback"),
                 size: Self::size(self.capacity),
                 usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
                 mapped_at_creation: false
-            })
+            });
+            let memory = GpuAllocation::buffer("timestamps-readback", &buffer);
+            (buffer, memory)
         });
         let encoder = command_buffer.encoder();
         encoder.resolve_query_set(&self.query_set, 0..count, &self.resolve_buffer, 0);
         encoder.copy_buffer_to_buffer(&self.resolve_buffer, 0, &buffer, 0, Self::size(count));
         self.pending.push_back(PendingFrame {
             buffer,
+            memory,
             count,
             data,
             mapped: None
@@ -153,7 +159,7 @@ impl<T> GpuTimestamps<T> {
                 .collect();
             frame.buffer.unmap();
             frames.push((frame.data, timestamps));
-            self.free.push(frame.buffer);
+            self.free.push((frame.buffer, frame.memory));
         }
         frames
     }
