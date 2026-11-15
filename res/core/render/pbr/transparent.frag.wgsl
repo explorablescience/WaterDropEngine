@@ -1,5 +1,5 @@
 #include "core/render/pbr/pbr_functions.wgsl"
-#include "core/render/atmosphere/sky.wgsl"
+#include "core/render/pbr/environment.wgsl"
 
 // Forward lighting for alpha-blended PBR materials. Mirrors lighting.frag.wgsl (without shadows)
 // so glass matches the deferred opaque surfaces.
@@ -25,8 +25,11 @@ struct Material3dUniform {
 @group(3) @binding(2) var in_albedo_sampler: sampler;
 
 @group(1) @binding(1) var<storage, read> in_lights: array<Light>;
-@group(1) @binding(2) var<uniform> in_atmosphere: AtmosphereParams;
 @group(1) @binding(3) var<uniform> in_pbr_params: PbrParams;
+@group(1) @binding(4) var<uniform> in_environment_sh: EnvironmentSH;
+@group(1) @binding(5) var in_environment_map: texture_cube<f32>;
+@group(1) @binding(6) var in_environment_sampler: sampler;
+@group(1) @binding(7) var in_environment_brdf: texture_2d<f32>;
 
 @fragment
 fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @location(0) vec4<f32> {
@@ -62,17 +65,18 @@ fn main(in: VertexOutput, @builtin(front_facing) front_facing: bool) -> @locatio
             * in_pbr_params.lighting_params.x;
     }
 
-    let irradiance = sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
-    let ambient = 0.2 * irradiance * albedo.rgb;
+    // Ambient light of the environment, with its reflection
+    let ambient = environment_lighting(
+        in_environment_sh, in_environment_map, in_environment_sampler, in_environment_brdf,
+        normal, view_dir, albedo.rgb, metallic, roughness, f0, 1.0
+    ) * in_pbr_params.lighting_params.y;
 
-    // Glass reflects more at grazing angles: raise opacity and add a sky reflection there
+    // Glass reflects more at grazing angles: raise opacity there
     let n_dot_v = clamp(dot(normal, view_dir), 0.0, 1.0);
     let fresnel = pow(1.0 - n_dot_v, 5.0);
-    let reflection = sky(reflect(-view_dir, normal), in_atmosphere) * in_pbr_params.lighting_params.y
-        * fresnel * (1.0 - roughness) * 0.2;
     let alpha = clamp(albedo.a + fresnel * (1.0 - albedo.a) * 0.6, 0.0, 1.0);
 
-    var color = lo + ambient + reflection;
+    var color = lo + ambient;
     color = color * in_pbr_params.lighting_params.z;
     return vec4<f32>(color, alpha);
 }

@@ -32,6 +32,9 @@ impl Plugin for PassesPlugin {
                 shadow::update_cascaded_shadow_params_buffer.in_set(RenderSet::Prepare)
             );
 
+        #[cfg(feature = "atmosphere")]
+        render_world.init_resource::<EnvironmentBake>();
+
         let mut render_graph = render_world
             .world_mut()
             .get_resource_mut::<RenderGraph>()
@@ -46,7 +49,9 @@ impl Plugin for PassesPlugin {
             .add_pass::<RenderPassDeferredGBuffer>()
             .add_pass::<RenderPassDeferredLighting>();
         #[cfg(feature = "atmosphere")]
-        render_graph.add_pass::<RenderPassAtmosphere>();
+        render_graph
+            .add_pass::<RenderPassEnvironment>()
+            .add_pass::<RenderPassAtmosphere>();
         render_graph.add_pass::<RenderPassTransparent>();
         #[cfg(feature = "atmosphere")]
         render_graph.add_sub_pass::<SubRenderPassAtmosphere, RenderPassAtmosphere>();
@@ -75,6 +80,11 @@ impl Plugin for PassesPlugin {
             #[cfg(feature = "atmosphere")]
             AtmosphereSunLightPlugin,
             ExtractResourcePlugin::<CascadedShadowSettings>::default()
+        ));
+        #[cfg(feature = "atmosphere")]
+        app.add_plugins((
+            RenderPipelineRegisterPlugin::<EnvironmentShPipeline>::default(),
+            RenderPipelineRegisterPlugin::<EnvironmentPrefilterPipeline>::default()
         ));
     }
 }

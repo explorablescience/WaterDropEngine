@@ -2,10 +2,12 @@ use bevy::prelude::*;
 
 #[cfg(debug_assertions)]
 mod editor;
+mod environment;
 mod lights_binding;
 mod lights_types;
 mod pbr_params;
 
+pub use environment::*;
 pub use lights_binding::*;
 pub use lights_types::*;
 pub use pbr_params::*;

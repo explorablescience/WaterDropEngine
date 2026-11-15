@@ -22,7 +22,10 @@ impl Plugin for LightsBindingPlugin {
 
         app.init_resource::<PbrSettings>()
             .register_type::<PbrSettings>()
-            .add_plugins(RenderDataRegisterPlugin::<LightsData>::default());
+            .add_plugins((
+                RenderDataRegisterPlugin::<LightsData>::default(),
+                RenderDataRegisterPlugin::<EnvironmentData>::default()
+            ));
 
         // Add the systems to extract the lights from the world, and to update the lights buffer
         app.get_sub_app_mut(RenderApp)

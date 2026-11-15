@@ -224,6 +224,41 @@ impl BindGroupLayoutBuilder {
         self
     }
 
+    /// Add a write-only storage texture array view to the bind group (`texture_storage_2d_array<format, write>`),
+    /// for formats without read-write storage support such as `Rgba16Float`.
+    pub fn add_write_storage_texture_array_view(
+        &mut self,
+        binding: u32,
+        format: TextureFormat
+    ) -> &mut Self {
+        self.layout_entries.push(wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::StorageTexture {
+                access: wgpu::StorageTextureAccess::WriteOnly,
+                view_dimension: wgpu::TextureViewDimension::D2Array,
+                format
+            },
+            count: None
+        });
+        self
+    }
+
+    /// Add a cube texture to the bind group (`texture_cube<f32>` in WGSL).
+    pub fn add_cube_texture_view(&mut self, binding: u32, visibility: ShaderStages) -> &mut Self {
+        self.layout_entries.push(wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility,
+            ty: wgpu::BindingType::Texture {
+                multisampled: false,
+                view_dimension: wgpu::TextureViewDimension::Cube,
+                sample_type: wgpu::TextureSampleType::Float { filterable: true }
+            },
+            count: None
+        });
+        self
+    }
+
     /// Add a texture array to the bind group.
     ///
     /// # Arguments
@@ -505,6 +540,14 @@ impl BindGroupBuilder {
         wgpu::BindGroupEntry {
             binding,
             resource: wgpu::BindingResource::TextureView(&texture.view)
+        }
+    }
+
+    /// Add a custom view of a texture to the bind group, such as one of its [`Texture::mip_view`].
+    pub fn view(binding: u32, view: &'_ wgpu::TextureView) -> wgpu::BindGroupEntry<'_> {
+        wgpu::BindGroupEntry {
+            binding,
+            resource: wgpu::BindingResource::TextureView(view)
         }
     }
 

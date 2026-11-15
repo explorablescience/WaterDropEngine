@@ -62,7 +62,18 @@ fn sky_gradient(ray: vec3<f32>, params: AtmosphereParams) -> vec3<f32> {
         * params.gradient_params.w;
 }
 
+// Sky seen along a ray, with the sun disk and the stars.
 fn sky(ray: vec3<f32>, params: AtmosphereParams) -> vec3<f32> {
+    return sky_radiance(ray, params, true);
+}
+
+// Light of the sky reaching the scene along a ray, for the ambient lighting: without the sun disk, which is the
+// directional light, nor the stars, too small to light anything.
+fn sky_environment(ray: vec3<f32>, params: AtmosphereParams) -> vec3<f32> {
+    return sky_radiance(ray, params, false);
+}
+
+fn sky_radiance(ray: vec3<f32>, params: AtmosphereParams, with_sources: bool) -> vec3<f32> {
     let tau = 6.2831853;
     let pi = 3.14159265;
 
@@ -78,7 +89,12 @@ fn sky(ray: vec3<f32>, params: AtmosphereParams) -> vec3<f32> {
     let sun_disk = smoothstep(params.sun_params.z, params.sun_params.w, sun_dot) * sun_visible;
     let sun_corona = pow(max(sun_dot, 0.0), params.sun_star_params.x) * sun_visible;
     let sun_color = mix(params.sun_day_color.rgb, params.sun_night_color.rgb, day);
-    color += sun_color * params.time_params.y * (2.1 * sun_disk + params.sun_star_params.y * sun_corona);
+    let disk = select(0.0, 2.1 * sun_disk, with_sources);
+    color += sun_color * params.time_params.y * (disk + params.sun_star_params.y * sun_corona);
+
+    if !with_sources {
+        return sky_ground(color, altitude, day, params);
+    }
 
     // Stable sparse stars in lat-long cell space.
     let ray_n = normalize(ray);
@@ -97,11 +113,15 @@ fn sky(ray: vec3<f32>, params: AtmosphereParams) -> vec3<f32> {
         * night
         * smoothstep(params.star_ground_params.x, params.star_ground_params.y, altitude);
     color += params.star_color.rgb * star * params.time_params.w;
+    return sky_ground(color, altitude, day, params);
+}
 
+// Fades the sky below the horizon to the ground.
+fn sky_ground(sky_color: vec3<f32>, altitude: f32, day: f32, params: AtmosphereParams) -> vec3<f32> {
+    var color = sky_color;
     if altitude < 0.0 {
         let g = clamp(-altitude * params.star_ground_params.z, 0.0, 1.0);
         color = mix(color, mix(params.ground_night_color.rgb, params.ground_day_color.rgb, day), g);
     }
-
     return max(color, vec3<f32>(0.0));
 }

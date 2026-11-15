@@ -39,17 +39,18 @@ impl RenderBinding for RenderBindingGBuffer {
 #[derive(TypePath, Default, Clone, Asset)]
 pub struct LightsDataBinding;
 impl RenderBinding for LightsDataBinding {
-    type Params = SRenderData<LightsData>;
+    type Params = (SRenderData<LightsData>, SRenderData<EnvironmentData>);
 
     fn describe(
         &mut self,
-        lights_data: &SystemParamItem<Self::Params>,
+        (lights_data, environment): &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
         builder.add_buffer(lights_data, LightsData::LIGHTS_BUFFER_IDX);
         #[cfg(feature = "atmosphere")]
         builder.add_buffer(lights_data, LightsData::ATMOSPHERE_PARAMS_BUFFER_IDX);
         builder.add_buffer(lights_data, LightsData::PBR_PARAMS_BUFFER_IDX);
+        EnvironmentData::add_bindings(builder, environment);
     }
 
     fn label(&self) -> &str {

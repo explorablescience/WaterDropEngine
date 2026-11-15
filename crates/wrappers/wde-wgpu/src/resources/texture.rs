@@ -80,6 +80,8 @@ pub struct Texture {
     pub layer_count: u32,
     pub mip_level_count: u32,
     pub filterable: bool,
+    /// Whether the 6 layers are the faces of a cube map, viewed as `texture_cube` in WGSL.
+    pub cube: bool,
     /// Comparison function of the sampler, making it a comparison sampler (`sampler_comparison` in WGSL).
     pub compare: Option<wgpu::CompareFunction>
 }
@@ -94,6 +96,7 @@ impl std::fmt::Debug for Texture {
             .field("layer_count", &self.layer_count)
             .field("mip_level_count", &self.mip_level_count)
             .field("filterable", &self.filterable)
+            .field("cube", &self.cube)
             .field("compare", &self.compare)
             .finish()
     }
@@ -112,6 +115,7 @@ impl Texture {
     /// * `sample_count` - Sample count of the texture (e.g. 1 for no MSAA, 4 for 4x MSAA, etc.).
     /// * `layer_count` - Number of layers in the texture array. Default is 1 (for non-array textures).
     /// * `mip_level_count` - Number of mip levels. Default is 1 (no mipmaps). If set to 0, it will be auto-calculated based on the texture size.
+    /// * `cube` - Whether the layers are the faces of a cube map (`layer_count` must be 6).
     /// * `compare` - If set, the sampler is a comparison sampler using this function (for depth textures).
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -125,9 +129,14 @@ impl Texture {
         mip_level_count: u32,
         filterable: bool,
         tiling: bool,
+        cube: bool,
         compare: Option<wgpu::CompareFunction>
     ) -> Self {
         event!(LogLevel::TRACE, "Creating wgpu texture {}.", label);
+        debug_assert!(
+            !cube || layer_count == 6,
+            "Cube texture {label} must have 6 layers."
+        );
 
         // Calculate max mip levels if requested
         let mip_level_count = if mip_level_count == 0 {
@@ -162,6 +171,8 @@ impl Texture {
             },
             dimension: if format == DEPTH_FORMAT {
                 None
+            } else if cube {
+                Some(wgpu::TextureViewDimension::Cube)
             } else if layer_count > 1 {
                 Some(wgpu::TextureViewDimension::D2Array)
             } else {
@@ -215,8 +226,29 @@ impl Texture {
             layer_count,
             mip_level_count,
             filterable,
+            cube,
             compare
         }
+    }
+
+    /// View of a single mip level of every layer, such as to write it from a compute shader.
+    /// It is a `D2Array` view for layered textures (including cube maps), and a `D2` view otherwise.
+    pub fn mip_view(&self, mip_level: u32) -> TextureView {
+        self.texture.create_view(&wgpu::TextureViewDescriptor {
+            label: Some(format!("{}-mip-{}-view", self.label, mip_level).as_str()),
+            format: Some(self.format),
+            dimension: Some(if self.layer_count > 1 {
+                wgpu::TextureViewDimension::D2Array
+            } else {
+                wgpu::TextureViewDimension::D2
+            }),
+            aspect: wgpu::TextureAspect::All,
+            base_mip_level: mip_level,
+            mip_level_count: Some(1),
+            base_array_layer: 0,
+            array_layer_count: Some(self.layer_count),
+            usage: None
+        })
     }
 
     /// Copy buffer to texture.

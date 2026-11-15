@@ -5,6 +5,8 @@ use bytemuck::{Pod, Zeroable};
 #[reflect(Resource)]
 pub struct PbrSettings {
     pub direct_scale: f32,
+    /// Scale of the ambient light of the environment (diffuse and specular), see [`crate::prelude::EnvironmentData`].
+    /// At 1, it is the light of the sky as rendered.
     pub ambient_scale: f32,
     /// Scale of the lit color. The whole image is exposed in [`crate::post_process::ColorGrading`].
     pub exposure: f32,

@@ -142,6 +142,7 @@ enum RenderBindingType {
     Buffer,
     TextureView,
     TextureArrayView,
+    TextureCubeView,
     TextureSampler,
     StorageTexture,
     StorageTextureArray,
@@ -232,6 +233,22 @@ impl RenderBindingBuilder {
         texture: Option<AssetId<Texture>>
     ) -> &mut Self {
         self.add_texture_from_id(texture, RenderBindingType::TextureArrayView)
+    }
+    /// Adds a cube texture view to the render binding (for `texture_cube` in WGSL). The texture must be a
+    /// [`Texture::cube`](crate::prelude::Texture::cube) map.
+    pub fn add_texture_cube_view<R>(
+        &mut self,
+        render_data: &RenderAssets<GpuRenderData<R>>,
+        render_data_idx: u32
+    ) -> &mut Self
+    where
+        R: RenderData + Clone + Asset + 'static
+    {
+        self.add_texture(
+            render_data,
+            render_data_idx,
+            RenderBindingType::TextureCubeView
+        )
     }
     /// Adds a texture sampler to the render binding. The `render_data` parameter is the [`RenderData`](RenderData) that contains the texture, and the `render_data_idx` parameter is the index of the texture in this render data.
     pub fn add_texture_sampler<R>(
@@ -423,6 +440,7 @@ where
                 }
                 RenderBindingType::TextureView
                 | RenderBindingType::TextureArrayView
+                | RenderBindingType::TextureCubeView
                 | RenderBindingType::TextureSampler
                 | RenderBindingType::StorageTexture
                 | RenderBindingType::StorageTextureArray
@@ -515,6 +533,9 @@ where
                             texture.texture.filterable
                         )
                     }
+                    RenderBindingType::TextureCubeView => {
+                        builder.add_cube_texture_view(binding as u32, vis)
+                    }
                     RenderBindingType::TextureSampler => {
                         let Some(texture) =
                             gpu_textures.get(asset_builder.textures[*idx as usize].unwrap())
@@ -590,6 +611,7 @@ where
                 }
                 RenderBindingType::TextureView
                 | RenderBindingType::TextureArrayView
+                | RenderBindingType::TextureCubeView
                 | RenderBindingType::StorageTexture
                 | RenderBindingType::StorageTextureArray
                 | RenderBindingType::DepthTextureView => {

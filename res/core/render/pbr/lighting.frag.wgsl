@@ -1,5 +1,5 @@
 #include "core/render/pbr/pbr_functions.wgsl"
-#include "core/render/atmosphere/sky.wgsl"
+#include "core/render/pbr/environment.wgsl"
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -18,8 +18,11 @@ struct VertexOutput {
 
 // Light storage buffer (Light type comes from pbr_functions.wgsl)
 @group(2) @binding(0) var<storage, read> in_lights: array<Light>;
-@group(2) @binding(1) var<uniform> in_atmosphere: AtmosphereParams;
 @group(2) @binding(2) var<uniform> in_pbr_params: PbrParams;
+@group(2) @binding(3) var<uniform> in_environment_sh: EnvironmentSH;
+@group(2) @binding(4) var in_environment_map: texture_cube<f32>;
+@group(2) @binding(5) var in_environment_sampler: sampler;
+@group(2) @binding(6) var in_environment_brdf: texture_2d<f32>;
 
 // Shadow maps of the directional light (3 cascades), comparison sampler, and parameters
 struct ShadowCascades {
@@ -195,10 +198,11 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
         lo += light_contribution * attenuation;
     }
 
-    // Ambient term: sample the sky
-    let kd = 0.2;
-    let irradiance = sky(normal, in_atmosphere) * in_pbr_params.lighting_params.y;
-    let ambient = kd * irradiance * albedo * ao;
+    // Ambient light of the environment
+    let ambient = environment_lighting(
+        in_environment_sh, in_environment_map, in_environment_sampler, in_environment_brdf,
+        normal, view_dir, albedo, metallic, roughness, f0, ao
+    ) * in_pbr_params.lighting_params.y;
 
     // Linear HDR output, tonemapped in post-processing
     var color = lo + ambient;

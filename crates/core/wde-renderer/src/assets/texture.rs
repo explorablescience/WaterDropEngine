@@ -45,6 +45,8 @@ pub struct Texture {
     /// Whether sampling repeats the texture (UVs wrap around), with anisotropic filtering when
     /// mipmapped. Defaults to false (UVs clamped to the edges).
     pub tiling: bool,
+    /// Whether the 6 layers are the faces of a cube map, bound as `texture_cube` in WGSL. Defaults to false.
+    pub cube: bool,
     /// If set, the sampler of the texture is a comparison sampler (`sampler_comparison` in WGSL) using this
     /// function, such as for shadow maps. Defaults to None.
     pub compare: Option<CompareFunction>,
@@ -64,6 +66,7 @@ impl Default for Texture {
             mip_level_count: 1,
             filterable: true,
             tiling: false,
+            cube: false,
             compare: None,
             data: Vec::new()
         }
@@ -102,6 +105,7 @@ impl RenderAsset for GpuTexture {
             asset.mip_level_count,
             asset.filterable,
             asset.tiling,
+            asset.cube,
             asset.compare
         );
 
@@ -198,6 +202,7 @@ impl AssetLoader for TextureLoader {
             mip_level_count: 1,
             filterable: true,
             tiling: false,
+            cube: false,
             compare: None,
             data
         })

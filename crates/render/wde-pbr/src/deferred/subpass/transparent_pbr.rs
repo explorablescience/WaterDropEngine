@@ -12,18 +12,25 @@ use wde_renderer::prelude::*;
 
 use crate::{
     deferred::subpass::gbuffer_bindgroup::SsboTransformBinding,
-    prelude::{BatchList, CAMERA_VIEW, LightsData, PbrMaterial, RenderTexture, is_batch_blended}
+    prelude::{
+        BatchList, CAMERA_VIEW, EnvironmentData, LightsData, PbrMaterial, RenderTexture,
+        is_batch_blended
+    }
 };
 
 /// Camera and lighting data in a single group, keeping the pipeline within 4 bind groups.
 #[derive(Asset, Clone, TypePath, Default)]
 pub(crate) struct TransparentSceneBinding;
 impl RenderBinding for TransparentSceneBinding {
-    type Params = (SRenderData<CameraRender>, SRenderData<LightsData>);
+    type Params = (
+        SRenderData<CameraRender>,
+        SRenderData<LightsData>,
+        SRenderData<EnvironmentData>
+    );
 
     fn describe(
         &mut self,
-        (camera, lights): &SystemParamItem<Self::Params>,
+        (camera, lights, environment): &SystemParamItem<Self::Params>,
         builder: &mut RenderBindingBuilder
     ) {
         builder
@@ -32,6 +39,7 @@ impl RenderBinding for TransparentSceneBinding {
         #[cfg(feature = "atmosphere")]
         builder.add_buffer(lights, LightsData::ATMOSPHERE_PARAMS_BUFFER_IDX);
         builder.add_buffer(lights, LightsData::PBR_PARAMS_BUFFER_IDX);
+        EnvironmentData::add_bindings(builder, environment);
     }
 
     fn label(&self) -> &str {
