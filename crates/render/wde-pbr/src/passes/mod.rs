@@ -30,8 +30,8 @@ impl Plugin for PassesPlugin {
         render_world
             .init_resource::<ExtractedCascadedShadowParams>()
             .init_resource::<CascadeEnabledFlags>()
-            .add_systems(Extract, shadow::extract_cascaded_shadow_params)
-            .add_systems(Extract, shadow::extract_cascade_enabled_flags)
+            .add_systems(ExtractSchedule, shadow::extract_cascaded_shadow_params)
+            .add_systems(ExtractSchedule, shadow::extract_cascade_enabled_flags)
             .add_systems(
                 Render,
                 shadow::update_cascaded_shadow_params_buffer.in_set(RenderSet::Prepare)

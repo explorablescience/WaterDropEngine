@@ -38,7 +38,7 @@ impl Plugin for TerrainExtractorPlugin {
                 TerrainRenderSets::TextureWrite.before(initiate_tile_readbacks)
             )
             // Poll pending readbacks and forward completions to the main world.
-            .add_systems(Extract, flush_completed_readbacks)
+            .add_systems(ExtractSchedule, flush_completed_readbacks)
             // Kick off GPU copies for the tiles queued this frame.
             .add_systems(Render, initiate_tile_readbacks.in_set(RenderSet::Render));
     }

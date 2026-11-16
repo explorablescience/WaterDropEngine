@@ -96,18 +96,18 @@ Everything is a Bevy `Plugin`. The entry point is `WdeDefaultPlugins` ([crates/c
 
 The renderer runs in a **separate thread** via `PipelinedRenderingPlugin`. There are two Bevy worlds:
 - **Main world** — runs game logic.
-- **Render world** (in `RenderApp`) — runs the `Extract` then `Render` schedules concurrently with the next main-world frame.
+- **Render world** (in `RenderApp`) — runs the `ExtractSchedule` then `Render` schedules concurrently with the next main-world frame.
 
-The `Render` schedule has four ordered sets: `ExtractAuto → Prepare → Render → Submit`.
+The `Render` schedule has five ordered sets: `ExtractAuto → Prepare → Render → Submit → Cleanup`.
 
 ### Sync / Extract
 
-Data flows from the main world to the render world through two mechanisms in `wde-renderer/src/sync/`:
+The render world is set up by Bevy's `bevy::extract::ExtractPlugin<RenderApp>`, which syncs entities and runs the extraction. `wde-renderer/src/sync/` re-exports `bevy::extract` and aliases its generic types for `RenderApp` (`RenderEntity`, `SyncToRenderWorld`, `ExtractComponentPlugin`, …). Data flows from the main world to the render world through two mechanisms:
 
-1. **Resources**: Implement `ExtractResource` and add `ExtractResourcePlugin::<T>` to auto-clone a resource each frame.
-2. **Entities/components**: Add `SyncComponentPlugin::<C>` to tag entities that have `C` with `SyncToRenderWorld`, which mirrors them in the render world. Then implement `ExtractComponent` + `SyncComponent` to copy component data across, or use the `#[derive(ExtractComponent)]` macro for simple clone-based extraction. `RenderEntity` (on main world entity) and `MainEntity` (on render world entity) link the two.
+1. **Resources**: Implement `ExtractResource<RenderApp>` and add `ExtractResourcePlugin::<T>` to auto-clone a resource each frame.
+2. **Entities/components**: Add `SyncComponentPlugin::<C>` to tag entities that have `C` with `SyncToRenderWorld`, which mirrors them in the render world. Then implement `ExtractComponent<RenderApp>` + `SyncComponent<RenderApp>` to copy component data across, or use the `#[derive(ExtractComponent)]` macro with `#[extract_app(RenderApp)]` for simple clone-based extraction (same for `#[derive(ExtractResource)]`). `RenderEntity` (on main world entity) and `MainEntity` (on render world entity) link the two.
 
-Use `ExtractWorld<Query<...>>` as a system param inside `Extract` schedule systems to read the main world from the render thread.
+Use `Extract<Query<...>>` as a system param inside `ExtractSchedule` systems to read the main world from the render thread.
 
 ### Render graph
 

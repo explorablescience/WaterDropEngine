@@ -16,7 +16,7 @@ pub(crate) struct ExtractedSelectionAreaInstance {
 pub(crate) struct ExtractedSelectionAreaInstances(pub Vec<ExtractedSelectionAreaInstance>);
 
 pub(crate) fn extract_selection_area_instances(
-    selection_area: ExtractWorld<
+    selection_area: Extract<
         Query<(
             &Mesh3d,
             &PbrSsboTransformUuid,

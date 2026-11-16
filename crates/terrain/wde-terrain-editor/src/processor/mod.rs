@@ -29,7 +29,7 @@ impl Plugin for PaintProcessorPlugin {
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<ExtractedPaintCommands>()
-            .add_systems(Extract, extract_paint_commands);
+            .add_systems(ExtractSchedule, extract_paint_commands);
 
         app.add_plugins(ComputeCommandsBufferPlugin)
             .add_plugins(RenderPipelineRegisterPlugin::<PaintComputePipeline>::default())
@@ -49,7 +49,7 @@ impl Plugin for PaintProcessorPlugin {
 }
 
 fn extract_paint_commands(
-    paint_manager: ExtractWorld<Res<PaintManager>>,
+    paint_manager: Extract<Res<PaintManager>>,
     mut extracted: ResMut<ExtractedPaintCommands>
 ) {
     let Some((commands, chunks)) = paint_manager.to_extract.clone() else {

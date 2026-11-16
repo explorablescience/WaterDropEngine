@@ -32,8 +32,8 @@ pub(crate) struct WorldBounds {
 }
 
 pub(super) fn extract_camera_frustum(
-    camera: ExtractWorld<Query<(&GlobalTransform, &CameraView), With<CullingCamera>>>,
-    window: ExtractWorld<Query<&Window>>,
+    camera: Extract<Query<(&GlobalTransform, &CameraView), With<CullingCamera>>>,
+    window: Extract<Query<&Window>>,
     mut frustum: ResMut<CameraFrustum>
 ) {
     frustum.0 = match (camera.single(), window.single()) {
@@ -45,7 +45,7 @@ pub(super) fn extract_camera_frustum(
 }
 
 pub(super) fn extract_cull_groups(
-    groups: ExtractWorld<Query<(Entity, &CullGroup)>>,
+    groups: Extract<Query<(Entity, &CullGroup)>>,
     mut extracted: ResMut<ExtractedCullGroups>
 ) {
     extracted.0.clear();

@@ -37,10 +37,10 @@ impl Default for PbrSsboTransformUuid {
         PbrSsboTransformUuid(Uuid::new_v4())
     }
 }
-impl SyncComponent for PbrSsboTransformUuid {
+impl SyncComponent<RenderApp> for PbrSsboTransformUuid {
     type Target = Self;
 }
-impl ExtractComponent for PbrSsboTransformUuid {
+impl ExtractComponent<RenderApp> for PbrSsboTransformUuid {
     type QueryData = (&'static GlobalTransform, &'static Self);
     type QueryFilter = Changed<GlobalTransform>;
     type Out = (GlobalTransform, Self);
@@ -54,6 +54,7 @@ impl ExtractComponent for PbrSsboTransformUuid {
 
 /// Similar to `PbrSsboTransformUuid`, but tracks the entity that were removed last frame
 #[derive(Resource, Default, Clone, ExtractResource)]
+#[extract_app(RenderApp)]
 struct PbrSsboTransformPendingRemovals(pub Vec<Uuid>);
 #[derive(Resource, Default)]
 struct MainWorldEntityUuidMap(HashMap<Entity, Uuid>);

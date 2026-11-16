@@ -213,7 +213,7 @@ impl Plugin for AssetsPlugin {
         app.get_sub_app_mut(crate::core::RenderApp)
             .unwrap()
             .init_resource::<MeshSsboAllocations>()
-            .add_systems(crate::core::Extract, asset::extract_driver_memory);
+            .add_systems(crate::sync::ExtractSchedule, asset::extract_driver_memory);
 
         // Register the components to the reflect system
         app.register_type::<Mesh3d>();

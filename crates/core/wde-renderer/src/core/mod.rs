@@ -1,7 +1,7 @@
 //! The renderer module is responsible for rendering the scene.
 //!
 //! It extracts the main world into the render world and runs the render schedule.
-//! It provides the [`Render`] and the [`Extract`] schedule, of the [`RenderApp`] (see [`RenderSet`] for the sets of the render schedule).
+//! It provides the [`Render`] schedule of the [`RenderApp`], whose main world extraction runs in the [`ExtractSchedule`] (see [`RenderSet`] for the sets of the render schedule).
 //! It also provides multiple resources, such as the [`RenderInstance`] and the [`SwapchainFrame`], which are used by the render graph and the render pipelines.
 //! Lastly, it also handles window events, such as resizing, and sends the corresponding events to the render app.
 //!
@@ -22,12 +22,12 @@
 //!
 //! # Extract phase
 //! ## Extracting data from the main world
-//! As the render app runs in a separate thread from the main app, it cannot access the main world directly. To extract data from the main world, you can use the extract schedule and the [`ExtractWorld`] system parameter. For example, to extract the camera data from the main world, you can add a system to the extract schedule:
+//! As the render app runs in a separate thread from the main app, it cannot access the main world directly. To extract data from the main world, you can use the [`ExtractSchedule`] and the [`Extract`](crate::sync::Extract) system parameter. For example, to extract the camera data from the main world, you can add a system to the extract schedule:
 //! ```
 //! app.get_sub_app_mut(RenderApp).unwrap()
-//!     .add_systems(Extract, extract_camera_data);
+//!     .add_systems(ExtractSchedule, extract_camera_data);
 //!
-//! fn extract_camera_data(mut commands: Commands, camera_query: ExtractWorld<Query<&Camera>>) {
+//! fn extract_camera_data(mut commands: Commands, camera_query: Extract<Query<&Camera>>) {
 //!     let camera = camera_query.single();
 //!     commands.insert_resource(ExtractedCameraData {
 //!         // ...
@@ -36,7 +36,7 @@
 //! ```
 //!
 //! ## Extracting while mutating the main world
-//! If you need to extract data from the main world while also mutating it, you can use the [`MainWorld`] resource:
+//! If you need to extract data from the main world while also mutating it, you can use the [`MainWorld`](crate::sync::MainWorld) resource:
 //! ```
 //! pub fn extract_messages(
 //!   mut render_test_resource: ResMut<TestResource>,
@@ -63,32 +63,23 @@
 //! }
 //! ```
 
-mod extract;
-mod extract_macros;
 mod render_manager;
 mod render_multithread;
 mod window;
 
-pub use extract_macros::ExtractWorld;
 pub use window::{FullscreenKey, SurfaceResized, WindowIcon, WindowShortcutSet};
 
 use bevy::{
     app::AppLabel,
-    ecs::{
-        schedule::{ScheduleBuildSettings, ScheduleLabel},
-        system::SystemState
-    },
+    ecs::{schedule::ScheduleLabel, system::SystemState},
+    extract::{ExtractPlugin, ExtractSchedule},
     prelude::*,
     tasks::futures_lite,
     window::{PrimaryWindow, RawHandleWrapperHolder}
 };
-use extract::{apply_extract_commands, main_extract};
-use render_manager::{init_main_world, init_surface, prepare, present};
+use render_manager::{init_surface, prepare, present};
 use render_multithread::PipelinedRenderingPlugin;
-use std::{
-    ops::{Deref, DerefMut},
-    sync::{Arc, RwLock}
-};
+use std::sync::{Arc, RwLock};
 use wde_wgpu::instance::{Limits, RenderTexture, create_instance};
 use window::{
     PrimaryWindowIcon, WindowPlugins, apply_window_icon, extract_surface_size,
@@ -97,45 +88,20 @@ use window::{
 
 use crate::passes::{PipelineManagerPlugin, RenderGraph};
 
-/// Stores the main world for rendering as a resource.
-/// This resource is only available during the extract schedule and is used to move data from the main world to the render world.
-/// It is wrapped in a resource to avoid borrowing issues when extracting data from the main world.
-#[derive(Resource, Default)]
-pub struct MainWorld(World);
-impl Deref for MainWorld {
-    type Target = World;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl DerefMut for MainWorld {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-/// Used to avoid allocating new worlds every frame when swapping out worlds.
-#[derive(Resource, Default)]
-struct EmptyWorld(World);
-
-/// The schedule that is used to extract the main world into the render world.
-/// Configure it such that it skips applying commands during the extract schedule.
-/// The extract schedule will be executed when sync is called between the main app and the sub app.
-#[derive(ScheduleLabel, Hash, PartialEq, Eq, Clone, Copy, Debug)]
-pub struct Extract;
-
 /// The renderer schedule set.
 /// The render schedule will be executed by the renderer app.
 #[derive(SystemSet, Hash, PartialEq, Eq, Clone, Copy, Debug)]
 pub enum RenderSet {
-    /// Run the extract commands registered during the extract schedule. This set is executed automatically and should not be used directly. Instead, use the Extract schedule.
+    /// Run the extract commands registered during the extract schedule. This set is executed automatically and should not be used directly. Instead, use the [`ExtractSchedule`].
     ExtractAuto,
     /// Prepare resources before rendering. This includes updating buffers, textures, assets, bind groups, etc.
     Prepare,
     /// Render commands.
     Render,
     /// Submit commands.
-    Submit
+    Submit,
+    /// Despawn the temporary render world entities.
+    Cleanup
 }
 
 /// The renderer schedule.
@@ -147,14 +113,14 @@ impl Render {
         use RenderSet::*;
 
         let mut schedule = Schedule::new(Self);
-        schedule.configure_sets((ExtractAuto, Prepare, Render, Submit).chain());
+        schedule.configure_sets((ExtractAuto, Prepare, Render, Submit, Cleanup).chain());
 
         schedule
     }
 }
 
 /// The render app. This is the app that is responsible for rendering the scene. It runs in a separate thread from the main app and has its own schedule and resources. It is used to extract the main world into the render world and run the render schedule. It is also used to manage the swap chain and present the rendered frame to the window.
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, AppLabel)]
+#[derive(Debug, Clone, Copy, Default, Hash, PartialEq, Eq, AppLabel)]
 pub struct RenderApp;
 
 /// The wgpu render instance resource.
@@ -202,85 +168,46 @@ impl Plugin for RenderCorePlugin {
         .add_message::<SurfaceResized>()
         .add_systems(Update, send_surface_resized);
 
-        // Add empty world component
-        app.add_systems(Startup, init_main_world);
-
         // === RENDER APP ===
-        let mut render_app = SubApp::new();
-        let mut gpu_limits = None;
-        {
-            // Create the wgpu instance
-            render_app.insert_resource(futures_lite::future::block_on(async {
-                let mut system_state: SystemState<
-                    Query<&RawHandleWrapperHolder, With<PrimaryWindow>>
-                > = SystemState::new(app.world_mut());
-                let primary_window = system_state
-                    .get(app.world())
-                    .ok()
-                    .and_then(|query| query.single().ok().cloned());
+        app.add_plugins(ExtractPlugin::<RenderApp>::new(
+            |_, _| {},
+            Render::base,
+            Render.intern(),
+            RenderSet::ExtractAuto.intern(),
+            RenderSet::Cleanup.intern()
+        ));
 
-                // Create the instance
-                let instance = create_instance("wde_renderer", primary_window.as_ref()).await;
+        // Create the wgpu instance
+        let instance = futures_lite::future::block_on(async {
+            let mut system_state: SystemState<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>> =
+                SystemState::new(app.world_mut());
+            let primary_window = system_state
+                .get(app.world())
+                .ok()
+                .and_then(|query| query.single().ok().cloned());
+            create_instance("wde_renderer", primary_window.as_ref()).await
+        });
+        let gpu_limits = instance.device.limits();
+        let asset_server = app.world().resource::<AssetServer>().clone();
+        app.insert_resource(DeviceLimits(gpu_limits.clone()));
 
-                // Get the GPU limits
-                gpu_limits = Some(instance.device.limits());
-
-                // Wrap the instance in an Arc<RwLock<>>
-                RenderInstance(Arc::new(RwLock::new(instance)))
-            }));
-
-            // Copy the asset server from the main app
-            render_app.insert_resource(app.world().resource::<AssetServer>().clone());
-
-            // Register the extract schedule
-            let mut extract_schedule = Schedule::new(Extract);
-            extract_schedule.set_build_settings(ScheduleBuildSettings {
-                auto_insert_apply_deferred: false,
-                ..Default::default()
-            });
-            extract_schedule.set_apply_final_deferred(false);
-            render_app.add_schedule(extract_schedule);
-
-            // Register the render schedule that executed in parallel with the extract schedule.
-            render_app.update_schedule = Some(Render.intern());
-            render_app.add_schedule(Render::base());
-
-            // Add extract command systems
-            render_app
-                .add_systems(
-                    Render,
-                    apply_extract_commands.in_set(RenderSet::ExtractAuto)
-                ) // Apply the extract commands
-                .set_extract(main_extract); // Register the extract commands
-
-            // Add render graph system
-            render_app
-                .init_resource::<RenderGraph>()
-                .add_systems(Render, RenderGraph::render.in_set(RenderSet::Render));
-
-            // Init wgpu instance
-            render_app.add_systems(
-                Extract,
+        let render_app = app.sub_app_mut(RenderApp);
+        render_app.update_schedule = Some(Render.intern());
+        render_app
+            .insert_resource(RenderInstance(Arc::new(RwLock::new(instance))))
+            .insert_resource(asset_server)
+            .insert_resource(DeviceLimits(gpu_limits))
+            // Render graph
+            .init_resource::<RenderGraph>()
+            .add_systems(Render, RenderGraph::render.in_set(RenderSet::Render))
+            // Surface
+            .add_systems(
+                ExtractSchedule,
                 (init_surface.run_if(run_once), extract_surface_size).chain()
-            );
-
-            // Add present system
-            render_app
-                .add_systems(Render, prepare.in_set(RenderSet::Prepare))
-                .add_systems(Render, present.in_set(RenderSet::Submit));
-
-            // Add render plugins
-            render_app.add_plugins(PipelineManagerPlugin);
-        }
-
-        // Register the render app
-        app.insert_sub_app(RenderApp, render_app);
-
-        // Add the GPU limits
-        app.insert_resource(DeviceLimits(gpu_limits.as_ref().unwrap().clone()));
-        app.get_sub_app_mut(RenderApp)
-            .unwrap()
-            .insert_resource(DeviceLimits(gpu_limits.unwrap()));
+            )
+            .add_systems(Render, prepare.in_set(RenderSet::Prepare))
+            .add_systems(Render, present.in_set(RenderSet::Submit))
+            .add_plugins(PipelineManagerPlugin);
 
         // Add the render pipeline plugins
         app.add_plugins(PipelinedRenderingPlugin);

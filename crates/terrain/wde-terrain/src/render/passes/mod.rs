@@ -19,7 +19,7 @@ impl Plugin for TerrainPassesPlugin {
         // Add the extract system for the render pass
         app.get_sub_app_mut(RenderApp)
             .unwrap()
-            .add_systems(Extract, SubRenderPassTerrainGround::extract);
+            .add_systems(ExtractSchedule, SubRenderPassTerrainGround::extract);
     }
 
     fn finish(&self, app: &mut App) {

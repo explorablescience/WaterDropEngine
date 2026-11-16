@@ -130,7 +130,7 @@ impl Plugin for GizmosPlugin {
             .init_resource::<ExtractedGizmoQuads>()
             .init_resource::<GizmoDrawCount>()
             .init_resource::<GizmoQuadDrawCount>()
-            .add_systems(Extract, extract_gizmo_lines)
+            .add_systems(ExtractSchedule, extract_gizmo_lines)
             .add_systems(
                 Render,
                 (update_gizmo_quad_buffer, update_gizmo_buffer).in_set(RenderSet::Prepare)

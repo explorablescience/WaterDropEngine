@@ -18,8 +18,9 @@ use wde_wgpu::{
 
 use crate::{
     assets::{GpuTexture, PrepareAssetError, RenderAsset, RenderAssets, Shader, Texture},
-    core::{Extract, MainWorld, Render, RenderApp, RenderInstance, RenderSet, SwapchainFrame},
-    prelude::{TextureFormat, TextureSampleType, TextureUsages, WdeColor}
+    core::{Render, RenderApp, RenderInstance, RenderSet, SwapchainFrame},
+    prelude::{TextureFormat, TextureSampleType, TextureUsages, WdeColor},
+    sync::{ExtractSchedule, MainWorld}
 };
 
 use super::{
@@ -40,7 +41,7 @@ impl Plugin for RenderGraphDebugPlugin {
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<RenderGraphDebug>()
-            .add_systems(Extract, extract)
+            .add_systems(ExtractSchedule, extract)
             .add_systems(
                 Render,
                 (

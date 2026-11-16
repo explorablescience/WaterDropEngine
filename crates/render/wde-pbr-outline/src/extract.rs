@@ -16,7 +16,7 @@ pub(crate) struct ExtractedOutlineInstance {
 pub(crate) struct ExtractedOutlineInstances(pub Vec<ExtractedOutlineInstance>);
 
 pub(crate) fn extract_outline_instances(
-    selected: ExtractWorld<
+    selected: Extract<
         Query<(
             &Mesh3d,
             &PbrSsboTransformUuid,

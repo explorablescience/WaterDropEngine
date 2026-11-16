@@ -16,6 +16,7 @@ pub const TERRAIN_MATERIAL_COUNT: usize = (SPLAT_MAPS * SPLAT_MAP_COUNT) as usiz
 /// Runtime-editable terrain rendering parameters synced to the render world each frame. The
 /// material parameters are reset from the [`TerrainConfig`] of each spawned terrain.
 #[derive(Resource, ExtractResource, Clone, Debug)]
+#[extract_app(RenderApp)]
 pub struct TerrainRenderSettings {
     /// World size covered by one repeat of each material's textures.
     pub tiling: [f32; TERRAIN_MATERIAL_COUNT],

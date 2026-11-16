@@ -24,7 +24,7 @@ use wde_wgpu::instance;
 
 use crate::core::RenderInstance;
 
-use super::extract_macros::ExtractWorld;
+use crate::sync::Extract;
 
 /// Raw RGBA8 icon data used for the window icon shown in the OS taskbar/title bar.
 /// Not supported on all platforms (e.g. Wayland ignores it; use a `.desktop` file there instead).
@@ -201,7 +201,7 @@ pub(crate) fn send_surface_resized(
 /// Extract the window size from the primary window and update the surface configuration.
 pub(crate) fn extract_surface_size(
     render_instance: ResMut<RenderInstance>,
-    windows: ExtractWorld<Query<&Window>>
+    windows: Extract<Query<&Window>>
 ) {
     // Check if there is a window
     if windows.iter().count() == 0 {

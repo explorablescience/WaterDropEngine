@@ -36,13 +36,13 @@ impl Plugin for LightsBindingPlugin {
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<AtmosphereParamsUniform>()
-            .add_systems(Extract, extract_atmosphere_params);
+            .add_systems(ExtractSchedule, extract_atmosphere_params);
 
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<PbrParamsUniform>()
-            .add_systems(Extract, extract)
-            .add_systems(Extract, extract_pbr_params)
+            .add_systems(ExtractSchedule, extract)
+            .add_systems(ExtractSchedule, extract_pbr_params)
             .add_systems(Render, update_lights_buffer.in_set(RenderSet::Prepare));
     }
 }
@@ -110,10 +110,10 @@ struct ExtractedLights {
 /// Extracts the lights in world space (lights on entities with a transform follow it), keeping
 /// the [`MAX_LIGHTS`] most relevant: directional lights, then the closest to the camera.
 fn extract(
-    lights_directional: ExtractWorld<Query<&DirectionalLight>>,
-    lights_point: ExtractWorld<Query<(&PointLight, Option<&GlobalTransform>)>>,
-    lights_spot: ExtractWorld<Query<(&SpotLight, Option<&GlobalTransform>)>>,
-    camera: ExtractWorld<Query<&GlobalTransform, With<ActiveCamera>>>,
+    lights_directional: Extract<Query<&DirectionalLight>>,
+    lights_point: Extract<Query<(&PointLight, Option<&GlobalTransform>)>>,
+    lights_spot: Extract<Query<(&SpotLight, Option<&GlobalTransform>)>>,
+    camera: Extract<Query<&GlobalTransform, With<ActiveCamera>>>,
     mut extracted_lights: ResMut<ExtractedLights>
 ) {
     extracted_lights.directional_lights = lights_directional.iter().copied().collect();
@@ -177,8 +177,8 @@ fn extract(
 
 #[cfg(feature = "atmosphere")]
 fn extract_atmosphere_params(
-    settings: ExtractWorld<Res<AtmosphereSettings>>,
-    time: ExtractWorld<Res<Time>>,
+    settings: Extract<Res<AtmosphereSettings>>,
+    time: Extract<Res<Time>>,
     mut uniform: ResMut<AtmosphereParamsUniform>
 ) {
     *uniform = AtmosphereParamsUniform::from_settings(
@@ -187,10 +187,7 @@ fn extract_atmosphere_params(
     );
 }
 
-fn extract_pbr_params(
-    settings: ExtractWorld<Res<PbrSettings>>,
-    mut uniform: ResMut<PbrParamsUniform>
-) {
+fn extract_pbr_params(settings: Extract<Res<PbrSettings>>, mut uniform: ResMut<PbrParamsUniform>) {
     *uniform = PbrParamsUniform::from_settings(&settings);
 }
 

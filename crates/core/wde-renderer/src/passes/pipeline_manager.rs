@@ -6,7 +6,8 @@ use crate::assets::PrepareAssetError;
 use crate::core::RenderInstance;
 use crate::{
     assets::Shader,
-    core::{Extract, ExtractWorld, Render, RenderSet}
+    core::{Render, RenderSet},
+    sync::{Extract, ExtractSchedule}
 };
 use bevy::{
     app::{App, Plugin},
@@ -28,7 +29,7 @@ pub(crate) struct PipelineManagerPlugin;
 impl Plugin for PipelineManagerPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PipelineManager>()
-            .add_systems(Extract, extract_shaders)
+            .add_systems(ExtractSchedule, extract_shaders)
             .add_systems(
                 Render,
                 (load_render_pipelines, load_compute_pipelines).in_set(RenderSet::Prepare)
@@ -251,8 +252,8 @@ impl PipelineManager {
 /// Extract the shaders from the asset server and store them in the pipeline manager.
 fn extract_shaders(
     mut pipeline_manager: ResMut<PipelineManager>,
-    shaders: ExtractWorld<Res<Assets<Shader>>>,
-    mut shader_events: ExtractWorld<MessageReader<AssetEvent<Shader>>>
+    shaders: Extract<Res<Assets<Shader>>>,
+    mut shader_events: Extract<MessageReader<AssetEvent<Shader>>>
 ) {
     let cache = &mut pipeline_manager.shader_cache;
     let mut updated_ids = Vec::new();

@@ -8,20 +8,14 @@ use wde_wgpu::instance::{self, PresentMode as WPresentMode, RenderEvent, setup_s
 use crate::{core::RenderInstance, passes::RenderGraphDebug};
 
 use super::SwapchainFrame;
-use super::{EmptyWorld, extract_macros::ExtractWorld};
-
-/// Initialize the main world empty resource.
-pub(crate) fn init_main_world(mut commands: Commands) {
-    // Initialize the empty world resource
-    commands.init_resource::<EmptyWorld>();
-}
+use crate::sync::Extract;
 
 /// Initialize the wgpu surface.
 pub(crate) fn init_surface(
     mut commands: Commands,
     mut render_instance: ResMut<RenderInstance>,
-    primary_window: ExtractWorld<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>>,
-    windows: ExtractWorld<Query<&Window>>
+    primary_window: Extract<Query<&RawHandleWrapperHolder, With<PrimaryWindow>>>,
+    windows: Extract<Query<&Window>>
 ) {
     trace!("Initializing the wgpu surface.");
 

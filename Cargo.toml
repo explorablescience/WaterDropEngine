@@ -21,5 +21,5 @@ debug = false
 [workspace.dependencies]
 serde = { version = "1.0" }
 bytemuck = { version = "1.25" }
-bevy = { version = "0.20", default-features = false, features = [ "multi_threaded", "bevy_winit", "x11", "wayland", "reflect_auto_register" ]}
+bevy = { version = "0.20", default-features = false, features = [ "multi_threaded", "bevy_winit", "x11", "wayland", "reflect_auto_register", "bevy_extract" ]}
 png = "0.18"

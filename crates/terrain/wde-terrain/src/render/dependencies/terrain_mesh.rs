@@ -37,7 +37,7 @@ impl TerrainRenderPassMesh {
 
     // Extracts the mesh handles to the render world.
     pub fn extract_terrain_mesh(
-        mesh_cpu: ExtractWorld<Res<TerrainRenderPassMesh>>,
+        mesh_cpu: Extract<Res<TerrainRenderPassMesh>>,
         mut mesh: ResMut<TerrainRenderPassMesh>
     ) {
         if mesh.lod_meshes.is_empty() && !mesh_cpu.lod_meshes.is_empty() {

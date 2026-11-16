@@ -23,10 +23,10 @@ pub(crate) struct ExtractedPbrInstanceToRetryMarker;
 #[reflect(Component)]
 #[require(PbrSsboTransformUuid)]
 pub struct PbrBatchesMarker;
-impl SyncComponent for PbrBatchesMarker {
+impl SyncComponent<RenderApp> for PbrBatchesMarker {
     type Target = Self;
 }
-impl ExtractComponent for PbrBatchesMarker {
+impl ExtractComponent<RenderApp> for PbrBatchesMarker {
     type QueryData = (&'static Mesh3d, &'static PbrMaterial3d<PbrMaterial>);
     type QueryFilter = (
         With<PbrBatchesMarker>,

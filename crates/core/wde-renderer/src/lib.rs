@@ -23,8 +23,6 @@
 //! - The [`sync`](crate::sync) module that provides utilities to automatically extract resources, query and entities from the main to the render world.
 //! - The [`utils`](crate::utils) module that provides utility resources and systems, such as the depth texture and meshes for rendering.
 
-extern crate self as wde_renderer;
-
 #[doc(hidden)]
 pub mod prelude {
     pub use crate::assets::*;
@@ -33,9 +31,6 @@ pub mod prelude {
     pub use crate::passes::*;
     pub use crate::sync::*;
     pub use crate::utils::*;
-
-    // Re-export the macros
-    pub use wde_renderer_macros::*;
 }
 
 pub mod wgpu_utils {
@@ -59,7 +54,6 @@ pub mod utils;
 use crate::{
     assets::AssetsPlugin,
     core::{RenderCorePlugin, WindowIcon},
-    sync::SyncPlugin,
     utils::UtilsPlugin
 };
 use bevy::prelude::*;
@@ -93,7 +87,6 @@ impl Plugin for RenderPlugin {
 
         // Finally, add the other plugins
         app.add_plugins((
-            SyncPlugin,
             UtilsPlugin,
             AssetsPlugin,
             crate::passes::RenderGraphDebugPlugin,

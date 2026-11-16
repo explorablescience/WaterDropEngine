@@ -17,7 +17,10 @@ use bevy::{
 };
 use thiserror::Error;
 
-use crate::core::{Extract, MainWorld, Render, RenderApp, RenderInstance, RenderSet};
+use crate::{
+    core::{Render, RenderApp, RenderInstance, RenderSet},
+    sync::{ExtractSchedule, MainWorld}
+};
 
 #[derive(Debug, Error)]
 pub enum PrepareAssetError<E: Send + Sync + 'static> {
@@ -125,7 +128,7 @@ impl<A: RenderAsset> Plugin for RenderAssetsPlugin<A> {
             .init_resource::<ExtractedAssets<A>>()
             .init_resource::<RenderAssets<A>>()
             .add_systems(
-                Extract,
+                ExtractSchedule,
                 (extract_render_assets::<A>, extract_render_asset_stats::<A>)
             );
 

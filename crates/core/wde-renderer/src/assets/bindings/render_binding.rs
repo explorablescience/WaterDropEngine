@@ -26,10 +26,12 @@ impl<R: RenderBinding + TypePath + Sync + Send + Asset> Clone for RenderBindingH
         Self(self.0.clone())
     }
 }
-impl<R: RenderBinding + TypePath + Sync + Send + Asset> ExtractResource for RenderBindingHolder<R> {
+impl<R: RenderBinding + TypePath + Sync + Send + Asset> ExtractResource<RenderApp>
+    for RenderBindingHolder<R>
+{
     type Source = Self;
 
-    fn extract(source: &Self::Source) -> Self {
+    fn extract_resource(source: &Self::Source) -> Self {
         source.clone()
     }
 }

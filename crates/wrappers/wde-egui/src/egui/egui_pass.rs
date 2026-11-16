@@ -13,7 +13,7 @@ impl Plugin for EguiRenderPassPlugin {
         // Register the extract system
         app.get_sub_app_mut(RenderApp)
             .unwrap()
-            .add_systems(Extract, EguiRenderPassHolder::extract);
+            .add_systems(ExtractSchedule, EguiRenderPassHolder::extract);
 
         // Add the render pass to the render graph
         app.get_sub_app_mut(RenderApp)
@@ -55,7 +55,7 @@ impl EguiRenderPassHolder {
     }
 
     fn extract(
-        frame_data_main: ExtractWorld<Res<EguiFrameData>>,
+        frame_data_main: Extract<Res<EguiFrameData>>,
         mut frame_data_render: ResMut<EguiFrameData>
     ) {
         frame_data_render.paint_jobs = frame_data_main.paint_jobs.clone();

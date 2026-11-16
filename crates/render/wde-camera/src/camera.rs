@@ -14,7 +14,7 @@ impl Plugin for CameraFeature {
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<CameraUniform>()
-            .add_systems(Extract, extract)
+            .add_systems(ExtractSchedule, extract)
             .add_systems(Render, update_buffer);
 
         // Register types for reflection
@@ -103,10 +103,10 @@ impl RenderBinding for CameraBinding {
 }
 
 fn extract(
-    cameras: ExtractWorld<Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>>,
-    jitter: ExtractWorld<Res<ProjectionJitter>>,
+    cameras: Extract<Query<(&GlobalTransform, &CameraView), With<ActiveCamera>>>,
+    jitter: Extract<Res<ProjectionJitter>>,
     mut camera_uniform: ResMut<CameraUniform>,
-    window: ExtractWorld<Query<&Window>>,
+    window: Extract<Query<&Window>>,
     mut frame: Local<u32>,
     mut prev_world_to_ndc: Local<Option<Mat4>>
 ) {

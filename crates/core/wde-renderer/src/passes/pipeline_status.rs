@@ -5,7 +5,10 @@ use std::sync::Mutex;
 use bevy::prelude::*;
 
 use super::{CachedPipelineIndex, PipelineManager, RenderPassId};
-use crate::core::{Extract, MainWorld, RenderApp};
+use crate::{
+    core::RenderApp,
+    sync::{ExtractSchedule, MainWorld}
+};
 
 pub(crate) struct PipelineStatusPlugin;
 impl Plugin for PipelineStatusPlugin {
@@ -14,7 +17,7 @@ impl Plugin for PipelineStatusPlugin {
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<PipelineStatus>()
-            .add_systems(Extract, extract);
+            .add_systems(ExtractSchedule, extract);
     }
 }
 

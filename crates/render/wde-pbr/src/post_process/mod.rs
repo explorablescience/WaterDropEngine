@@ -91,7 +91,7 @@ impl Plugin for PostProcessPlugin {
             .init_resource::<BloomBindGroups>()
             .init_resource::<ExposureBindGroup>()
             .init_resource::<TaaState>()
-            .add_systems(Extract, extract_post_process_params)
+            .add_systems(ExtractSchedule, extract_post_process_params)
             .add_systems(
                 Render,
                 update_post_process_buffers.in_set(RenderSet::Prepare)

@@ -18,6 +18,7 @@ pub struct CullGroupMember(pub Entity);
 
 /// Cull group of a mesh, resolved from the [`CullGroupMember`] of itself or of its ancestors.
 #[derive(Component, Clone, Copy, PartialEq, Debug, Reflect, ExtractComponent)]
+#[extract_app(RenderApp)]
 #[reflect(Component)]
 #[extract_component_filter(Changed<Self>)]
 pub struct InCullGroup(pub Entity);

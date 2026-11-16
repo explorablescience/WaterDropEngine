@@ -29,7 +29,7 @@ impl Plugin for UITexturesPlugin {
         app.get_sub_app_mut(RenderApp)
             .unwrap()
             .init_resource::<UITextures>()
-            .add_systems(Extract, extract)
+            .add_systems(ExtractSchedule, extract)
             .add_systems(Render, update_images.in_set(RenderSet::Prepare));
     }
 }

@@ -13,7 +13,7 @@ pub struct RenderPassEntity {
 pub struct DisplayTexturePass;
 impl DisplayTexturePass {
     pub fn extract(
-        query: ExtractWorld<Query<(&DisplayTextureMaterial, &Mesh3d)>>,
+        query: Extract<Query<(&DisplayTextureMaterial, &Mesh3d)>>,
         mut render_pass_entity: ResMut<RenderPassEntity>,
     ) {
         if let Some((material, mesh)) = query.iter().next() {

@@ -16,6 +16,7 @@ pub enum MeshDebugView {
 
 /// Selection of the levels of detail of the meshes (see [`Mesh::lods`]).
 #[derive(Resource, Clone, ExtractResource, Reflect)]
+#[extract_app(RenderApp)]
 #[reflect(Resource)]
 pub struct LodSettings {
     /// Draw far meshes with their simplified levels of detail.
@@ -85,8 +86,8 @@ pub(crate) struct LodView {
 pub(crate) struct LodCamera(pub Option<LodView>);
 
 pub(super) fn extract_lod_camera(
-    camera: ExtractWorld<Query<(&GlobalTransform, &CameraView), With<CullingCamera>>>,
-    window: ExtractWorld<Query<&Window>>,
+    camera: Extract<Query<(&GlobalTransform, &CameraView), With<CullingCamera>>>,
+    window: Extract<Query<&Window>>,
     mut lod_camera: ResMut<LodCamera>
 ) {
     lod_camera.0 = match (camera.single(), window.single()) {

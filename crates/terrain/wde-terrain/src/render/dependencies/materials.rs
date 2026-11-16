@@ -59,6 +59,7 @@ const TEX_FORMATS: [TextureFormat; 5] = [
 ];
 
 #[derive(Resource, Default, ExtractResource, Clone)]
+#[extract_app(RenderApp)]
 pub(crate) struct TerrainMaterialTextures {
     albedo_textures: Vec<Option<Handle<Texture>>>,
     normal_textures: Vec<Option<Handle<Texture>>>,

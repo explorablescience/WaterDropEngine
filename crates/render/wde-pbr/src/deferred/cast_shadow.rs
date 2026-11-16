@@ -6,10 +6,10 @@ use wde_renderer::prelude::*;
 #[derive(Component, Default, Reflect, Clone)]
 #[reflect(Component)]
 pub struct CastShadow;
-impl SyncComponent for CastShadow {
+impl SyncComponent<RenderApp> for CastShadow {
     type Target = Self;
 }
-impl ExtractComponent for CastShadow {
+impl ExtractComponent<RenderApp> for CastShadow {
     type QueryData = ();
     type QueryFilter = With<CastShadow>;
     type Out = Self;

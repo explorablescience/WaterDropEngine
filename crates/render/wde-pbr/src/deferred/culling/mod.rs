@@ -52,6 +52,7 @@ pub(crate) const fn shadow_view(cascade: u32) -> usize {
 }
 
 #[derive(Resource, Clone, ExtractResource, Reflect)]
+#[extract_app(RenderApp)]
 #[reflect(Resource)]
 pub struct CullingSettings {
     /// Draw in each view only what lies in it.
@@ -130,7 +131,7 @@ impl Plugin for CullingPlugin {
             .init_resource::<cull::CameraFrustum>()
             .init_resource::<cull::ExtractedCullGroups>()
             .add_systems(
-                Extract,
+                ExtractSchedule,
                 (
                     cull::extract_camera_frustum,
                     cull::extract_cull_groups,

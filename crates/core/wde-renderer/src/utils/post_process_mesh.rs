@@ -43,10 +43,10 @@ impl PostProcessingMesh {
         mesh.0 = Some(deferred_mesh);
     }
 }
-impl ExtractResource for PostProcessingMesh {
+impl ExtractResource<RenderApp> for PostProcessingMesh {
     type Source = Self;
 
-    fn extract(source: &Self::Source) -> Self {
+    fn extract_resource(source: &Self::Source) -> Self {
         Self(source.0.clone())
     }
 }

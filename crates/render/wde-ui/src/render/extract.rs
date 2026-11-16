@@ -15,6 +15,7 @@ use crate::{
 
 /// The UI quads to draw this frame, in draw order. Built in the main world and cloned to the render world.
 #[derive(Resource, Clone, Default, ExtractResource)]
+#[extract_app(RenderApp)]
 pub(crate) struct UiDrawList {
     pub viewport: Vec2,
     pub quads: Vec<UiQuad>,

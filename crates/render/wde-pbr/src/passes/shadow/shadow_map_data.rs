@@ -54,6 +54,7 @@ pub struct ShadowCascadesUniform {
 /// Each cascade covers a range of view depths, and its shadow map covers the bounding sphere of that slice of the view
 /// frustum: its size does not change when the camera rotates, and it moves by whole texels, so the shadows don't shimmer.
 #[derive(Resource, Reflect, Clone, ExtractResource)]
+#[extract_app(RenderApp)]
 #[reflect(Resource)]
 pub struct CascadedShadowSettings {
     /// View depth where each cascade ends. The shadows fade out at the end of the last one.
@@ -353,10 +354,10 @@ fn frustum_slice_sphere(near: f32, far: f32, k: f32) -> (f32, f32) {
 }
 
 pub(crate) fn extract_cascaded_shadow_params(
-    lights: ExtractWorld<Query<&DirectionalLight>>,
-    settings: ExtractWorld<Res<CascadedShadowSettings>>,
-    camera: ExtractWorld<Single<(&GlobalTransform, &CameraView), With<ActiveCamera>>>,
-    window: ExtractWorld<Query<&Window>>,
+    lights: Extract<Query<&DirectionalLight>>,
+    settings: Extract<Res<CascadedShadowSettings>>,
+    camera: Extract<Single<(&GlobalTransform, &CameraView), With<ActiveCamera>>>,
+    window: Extract<Query<&Window>>,
     mut params: ResMut<ExtractedCascadedShadowParams>
 ) {
     let Some(light) = lights.iter().next() else {
@@ -383,7 +384,7 @@ pub(crate) fn extract_cascaded_shadow_params(
 }
 
 pub(crate) fn extract_cascade_enabled_flags(
-    settings: ExtractWorld<Res<CascadedShadowSettings>>,
+    settings: Extract<Res<CascadedShadowSettings>>,
     mut flags: ResMut<CascadeEnabledFlags>
 ) {
     flags.0 = settings.cascade_enabled;

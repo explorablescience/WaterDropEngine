@@ -24,7 +24,7 @@ impl Plugin for DisplayTextureComponentPlugin {
 
         // Add the extract system
         app.get_sub_app_mut(RenderApp).unwrap()
-            .add_systems(Extract, DisplayTexturePass::extract);
+            .add_systems(ExtractSchedule, DisplayTexturePass::extract);
 
         // Add the render passes
         let _render_graph = app.get_sub_app_mut(RenderApp).unwrap()

@@ -20,7 +20,7 @@ impl Plugin for BuffersPlugin {
         // Add the terrain mesh buffer
         app.get_sub_app_mut(RenderApp)
             .unwrap()
-            .add_systems(Extract, TerrainRenderPassMesh::extract_terrain_mesh);
+            .add_systems(ExtractSchedule, TerrainRenderPassMesh::extract_terrain_mesh);
 
         // Init the terrain material arrays
         app.init_resource::<TerrainRenderSettings>()

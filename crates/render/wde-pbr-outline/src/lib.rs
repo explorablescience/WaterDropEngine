@@ -39,7 +39,7 @@ impl Plugin for PbrOutlinePlugin {
             .init_resource::<ExtractedOutlineInstances>()
             .init_resource::<ExtractedSelectionAreaInstances>()
             .add_systems(
-                Extract,
+                ExtractSchedule,
                 (extract_outline_instances, extract_selection_area_instances)
             );
     }

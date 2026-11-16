@@ -35,7 +35,7 @@ impl Plugin for AmbientOcclusionPlugin {
         let render_app = app.get_sub_app_mut(RenderApp).unwrap();
         render_app
             .init_resource::<AmbientOcclusionUniform>()
-            .add_systems(Extract, extract)
+            .add_systems(ExtractSchedule, extract)
             .add_systems(Render, update_buffer.in_set(RenderSet::Prepare));
         render_app
             .world_mut()
@@ -125,7 +125,7 @@ impl AmbientOcclusionUniform {
 }
 
 fn extract(
-    settings: ExtractWorld<Res<AmbientOcclusionSettings>>,
+    settings: Extract<Res<AmbientOcclusionSettings>>,
     mut uniform: ResMut<AmbientOcclusionUniform>
 ) {
     *uniform = AmbientOcclusionUniform::from_settings(&settings);

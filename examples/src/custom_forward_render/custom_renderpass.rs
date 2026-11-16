@@ -19,7 +19,7 @@ impl CustomRenderPass {
     /// Create the batches with the correct mesh and material.
     pub fn create_batches(
         mut pass: ResMut<CustomRenderPass>, render_instance: Res<RenderInstance>,
-        entities: ExtractWorld<Query<(&Transform, &Mesh3d, &CustomMaterial)>>,
+        entities: Extract<Query<(&Transform, &Mesh3d, &CustomMaterial)>>,
         meshes: Res<RenderAssets<GpuMesh>>, materials: Res<RenderAssets<GpuRenderBinding<CustomMaterialAsset>>>,
         buffers: Res<RenderAssets<GpuBuffer>>, ssbo: Res<CustomSsbo>
     ) {
