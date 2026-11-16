@@ -138,7 +138,7 @@ impl CascadedShadowSettings {
     ) -> [ShadowCascade; 3] {
         let dir = light_direction.normalize();
         let up = if dir.y.abs() < 0.99 { Vec3::Y } else { Vec3::X };
-        let light_rotation = Mat4::look_at_rh(Vec3::ZERO, dir, up);
+        let light_rotation = glam::camera::rh::view::look_at_mat4(Vec3::ZERO, dir, up);
         let tan_y = (camera_view.fov.to_radians() * 0.5).tan();
         let aspect = aspect.max(1e-3);
         let k = tan_y * (1.0 + aspect * aspect).sqrt();
@@ -170,7 +170,7 @@ impl CascadedShadowSettings {
                 radius,
                 texel,
                 depth_range,
-                view: Mat4::look_at_rh(eye, eye + dir, up),
+                view: glam::camera::rh::view::look_at_mat4(eye, eye + dir, up),
                 proj: ortho_rh_wgpu(-radius, radius, -radius, radius, 0.0, depth_range)
             }
         })

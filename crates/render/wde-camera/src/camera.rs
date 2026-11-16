@@ -154,7 +154,7 @@ fn update_buffer(
     let render_instance = render_instance.0.read().unwrap();
     camera_buffer.buffer.write(
         &render_instance,
-        bytemuck::cast_slice(&[camera_uniform.to_owned()]),
+        bytemuck::cast_slice(std::slice::from_ref(&*camera_uniform)),
         0
     );
 }

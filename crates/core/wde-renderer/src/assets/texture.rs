@@ -279,7 +279,9 @@ fn from_channels<T: Copy>(data: &[T], channels: u32) -> Vec<T> {
     if channels == 4 {
         return data.to_vec();
     }
-    data.chunks_exact(4)
+    data.as_chunks::<4>()
+        .0
+        .iter()
         .flat_map(|pixel| pixel[..channels as usize].iter().copied())
         .collect()
 }

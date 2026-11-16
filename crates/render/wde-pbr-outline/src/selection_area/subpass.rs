@@ -62,14 +62,11 @@ fn draw_instances<'pass>(world: &'pass World, render_pass: &mut RenderPassInstan
         else {
             continue;
         };
-        render_pass.set_push_constants(
-            ShaderStages::VERTEX,
-            bytemuck::bytes_of(&PushConstants {
-                first_vertex: mesh.ssbo_first_vertex,
-                first_index: mesh.ssbo_first_index,
-                transform_id
-            })
-        );
+        render_pass.set_push_constants(bytemuck::bytes_of(&PushConstants {
+            first_vertex: mesh.ssbo_first_vertex,
+            first_index: mesh.ssbo_first_index,
+            transform_id
+        }));
         render_pass.set_bind_group(3, &material.bind_group);
         let _ = render_pass.draw(0..mesh.index_count, transform_id..(transform_id + 1));
     }

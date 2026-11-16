@@ -68,7 +68,6 @@ impl RenderAsset for OutlineRenderPipeline {
                     fragment_blend: Some(BlendState::ALPHA_BLENDING),
                     cull_mode: None,
                     push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::VERTEX,
                         offset: 0,
                         size: std::mem::size_of::<PushConstants>() as u32
                     }],

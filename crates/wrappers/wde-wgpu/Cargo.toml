@@ -6,7 +6,7 @@ edition = "2024"
 
 [dependencies]
 wde-logger = { path = "../wde-logger" }
-wgpu = { version = "27", features = [ "serde" ] }
+wgpu = { version = "30", features = [ "serde" ] }
 futures-lite = "2.6"
 bevy = { workspace = true }
 serde = { workspace = true }

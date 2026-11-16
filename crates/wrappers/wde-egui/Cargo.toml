@@ -7,6 +7,6 @@ edition = "2024"
 [dependencies]
 bevy = { workspace = true }
 wde-renderer = { path = "../../core/wde-renderer" }
-egui = "0.33"
-egui-wgpu = "0.33"
-wgpu = "27.0"
+egui = "0.37"
+egui-wgpu = "0.37"
+wgpu = "30.0"

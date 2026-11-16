@@ -7,4 +7,4 @@ edition = "2024"
 wde-logger = { path = "../wde-logger" }
 wde-camera = { path = "../../render/wde-camera" }
 bevy = { workspace = true }
-rapier3d = { version = "0.23", default-features = false, features = [ "dim3", "f32", "parallel", "simd-stable", "serde-serialize" ] }
+rapier3d = { version = "0.36", default-features = false, features = [ "dim3", "f32", "parallel", "serde-serialize" ] }

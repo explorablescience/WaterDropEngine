@@ -4,7 +4,6 @@ use std::ops::Range;
 
 use wde_logger::prelude::*;
 use wgpu::BufferAddress;
-use wgpu::ShaderStages;
 
 use crate::buffer::Buffer;
 use crate::instance::RenderError;
@@ -135,10 +134,9 @@ impl<'a> RenderPassInstance<'a> {
     ///
     /// # Arguments
     ///
-    /// * `stages` - The shader stages to set the push constants for.
     /// * `data` - The data to set.
-    pub fn set_push_constants(&mut self, stages: ShaderStages, data: &[u8]) -> &mut Self {
-        self.render_pass.set_push_constants(stages, 0, data);
+    pub fn set_push_constants(&mut self, data: &[u8]) -> &mut Self {
+        self.render_pass.set_immediates(0, data);
         self
     }
 

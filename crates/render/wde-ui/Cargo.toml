@@ -10,6 +10,5 @@ wde-wgpu = { path = "../../wrappers/wde-wgpu" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
 taffy = "0.15"
-# Last revision on wgpu 27 (glyphon 0.10 moved to wgpu 28)
-glyphon = { git = "https://github.com/grovesNL/glyphon.git", rev = "de4b5b8d4e52310be8df56d82a759593920acc04" }
-wgpu = "27.0"
+glyphon = "0.12"
+wgpu = "30.0"

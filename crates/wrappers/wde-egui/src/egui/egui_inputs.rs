@@ -68,7 +68,7 @@ pub(crate) fn handle_input(
     }
 
     // Track modifiers. Must happen before forwarding wheel/button/key events below, since those
-    // read `raw_input.modifiers` (e.g. Ctrl+scroll-to-zoom depends on it being set correctly).
+    // read the current modifiers (e.g. Ctrl+scroll-to-zoom depends on it being set correctly).
     let modifiers = egui::Modifiers {
         ctrl: keyboard_input.pressed(KeyCode::ControlLeft)
             || keyboard_input.pressed(KeyCode::ControlRight),
@@ -79,7 +79,9 @@ pub(crate) fn handle_input(
         command: keyboard_input.pressed(KeyCode::ControlLeft)
             || keyboard_input.pressed(KeyCode::ControlRight)
     };
-    raw_input.modifiers = modifiers;
+    raw_input
+        .events
+        .push(egui::Event::ModifiersChanged(modifiers));
 
     // Forward wheel scrolling to egui.
     for event in mouse_wheel_messages.read() {
@@ -91,7 +93,9 @@ pub(crate) fn handle_input(
         raw_input.events.push(egui::Event::MouseWheel {
             unit,
             delta: egui::Vec2::new(event.x, event.y),
-            modifiers: raw_input.modifiers
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Unknown,
+            modifiers
         });
     }
 
@@ -170,8 +174,9 @@ pub(crate) fn clear_egui_inputs(
     mut mouse_motion_messages: ResMut<Messages<MouseMotion>>
 ) {
     // Check if egui wants keyboard or pointer input (now accurate since begin_pass was called)
-    let egui_wants_keyboard = egui_ctx.0.wants_keyboard_input();
-    let egui_wants_pointer = egui_ctx.0.wants_pointer_input() || egui_ctx.0.is_pointer_over_area();
+    let egui_wants_keyboard = egui_ctx.0.egui_wants_keyboard_input();
+    let egui_wants_pointer =
+        egui_ctx.0.egui_wants_pointer_input() || egui_ctx.0.is_pointer_over_egui();
 
     // Clear the input events after processing
     let modifiers = [

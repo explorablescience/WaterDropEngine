@@ -4,7 +4,7 @@ use bevy::{ecs::system::SystemParamItem, prelude::*};
 use egui_wgpu::{Renderer, RendererOptions, ScreenDescriptor};
 use wde_renderer::{prelude::*, wgpu_utils::*};
 
-use crate::egui::egui_context::EguiFrameData;
+use crate::egui::egui_context::{EguiFrameData, replace_textures_delta};
 
 /// Plugin to add the egui render pass
 pub(crate) struct EguiRenderPassPlugin;
@@ -59,7 +59,10 @@ impl EguiRenderPassHolder {
         mut frame_data_render: ResMut<EguiFrameData>
     ) {
         frame_data_render.paint_jobs = frame_data_main.paint_jobs.clone();
-        frame_data_render.textures_delta = frame_data_main.textures_delta.clone();
+        replace_textures_delta(
+            &mut frame_data_render.textures_delta,
+            frame_data_main.textures_delta.clone()
+        );
     }
 }
 
@@ -106,13 +109,15 @@ impl RenderPass for EguiRenderPass {
         };
 
         // Update egui textures, even without a frame to draw into, as their later updates build on them
-        for (id, image_delta) in &textures_delta.set {
-            egui_renderer.write().unwrap().update_texture(
-                &render_instance.device,
-                &render_instance.queue,
-                *id,
-                image_delta
-            );
+        for (id, image_deltas) in &textures_delta.set {
+            for image_delta in image_deltas {
+                egui_renderer.write().unwrap().update_texture(
+                    &render_instance.device,
+                    &render_instance.queue,
+                    *id,
+                    image_delta
+                );
+            }
         }
         for id in &textures_delta.free {
             egui_renderer.write().unwrap().free_texture(id);

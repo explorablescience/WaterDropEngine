@@ -356,11 +356,7 @@ fn build_render_pipeline(
     }
     pipeline.set_sample_count(descriptor.sample_count);
     for push_constant in descriptor.push_constants.iter() {
-        pipeline.add_push_constant(
-            push_constant.stages,
-            push_constant.offset,
-            push_constant.size
-        );
+        pipeline.add_push_constant(push_constant.offset, push_constant.size);
     }
     pipeline.set_bind_groups(build_layouts!(instance, descriptor.bind_group_layouts));
     pipeline.init(instance).map_err(|e| e.to_string())?;

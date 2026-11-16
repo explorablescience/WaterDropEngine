@@ -72,7 +72,7 @@ struct RenderPipelineConfig {
     depth: DepthDescriptor,
     render_targets: Vec<TextureFormat>,
     primitive_topology: wgpu::PrimitiveTopology,
-    push_constants: Vec<wgpu::PushConstantRange>,
+    immediate_size: u32,
     bind_groups: Vec<wgpu::BindGroupLayout>,
     vertex_shader: String,
     fragment_shader: String,
@@ -96,7 +96,7 @@ struct RenderPipelineConfig {
 ///     .set_topology(RenderTopology::TriangleList)
 ///     .set_depth(DepthStencilDescriptor { enabled: true, write: true, compare: wgpu::CompareFunction::Less })
 ///     .set_bind_groups(layouts)
-///     .add_push_constant(ShaderStages::VERTEX, 0, 64)
+///     .add_push_constant(0, 64)
 ///     .init(instance)
 ///     .expect("shaders validated");
 /// assert!(pipeline.is_initialized());
@@ -141,7 +141,7 @@ impl RenderPipeline {
                 depth: DepthDescriptor::default(),
                 render_targets: Vec::from([SWAPCHAIN_FORMAT]),
                 primitive_topology: wgpu::PrimitiveTopology::TriangleList,
-                push_constants: Vec::new(),
+                immediate_size: 0,
                 bind_groups: Vec::new(),
                 vertex_shader: String::new(),
                 fragment_shader: String::new(),
@@ -263,14 +263,10 @@ impl RenderPipeline {
     ///
     /// # Arguments
     ///
-    /// * `stages` - The shader stages.
     /// * `offset` - The offset of the push constant.
     /// * `size` - The size of the push constant.
-    pub fn add_push_constant(&mut self, stages: ShaderStages, offset: u32, size: u32) {
-        self.config.push_constants.push(wgpu::PushConstantRange {
-            stages,
-            range: offset..offset + size
-        });
+    pub fn add_push_constant(&mut self, offset: u32, size: u32) {
+        self.config.immediate_size = self.config.immediate_size.max(offset + size);
     }
 
     /// Initialize a new render pipeline.
@@ -299,17 +295,14 @@ impl RenderPipeline {
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some(format!("{}-render-pip-layout", self.label).as_str()),
-                    bind_group_layouts: &d
-                        .bind_groups
-                        .iter()
-                        .collect::<Vec<&wgpu::BindGroupLayout>>(),
-                    push_constant_ranges: &d.push_constants
+                    bind_group_layouts: &d.bind_groups.iter().map(Some).collect::<Vec<_>>(),
+                    immediate_size: d.immediate_size
                 })
         })?;
 
         // Define vertex buffers
-        let vertex_buffers: &[wgpu::VertexBufferLayout] = if d.use_vertices_buffer {
-            &[Vertex::describe()]
+        let vertex_buffers: &[Option<wgpu::VertexBufferLayout>] = if d.use_vertices_buffer {
+            &[Some(Vertex::describe())]
         } else {
             &[]
         };
@@ -358,8 +351,8 @@ impl RenderPipeline {
                     depth_stencil: if d.depth.enabled {
                         Some(wgpu::DepthStencilState {
                             format: d.depth.format.unwrap_or(DEPTH_FORMAT),
-                            depth_write_enabled: d.depth.write,
-                            depth_compare: d.depth.compare,
+                            depth_write_enabled: Some(d.depth.write),
+                            depth_compare: Some(d.depth.compare),
                             stencil: d.depth.stencil.clone(),
                             bias: wgpu::DepthBiasState::default()
                         })
@@ -371,7 +364,7 @@ impl RenderPipeline {
                         mask: !0,
                         alpha_to_coverage_enabled: false
                     },
-                    multiview: Default::default()
+                    multiview_mask: None
                 })
         })?;
 

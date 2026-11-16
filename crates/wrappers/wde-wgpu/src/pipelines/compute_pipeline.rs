@@ -1,12 +1,12 @@
 //! Compute pipeline module.
-use wgpu::{BindGroupLayout, ShaderStages};
+use wgpu::BindGroupLayout;
 
 use super::shader_module::{create_shader_module, validate_pipeline};
 use crate::instance::{RenderError, RenderInstanceData};
 
 // Compute pipeline configuration
 struct ComputePipelineConfig {
-    push_constants: Vec<wgpu::PushConstantRange>,
+    immediate_size: u32,
     bind_groups: Vec<wgpu::BindGroupLayout>,
     shader: String
 }
@@ -54,7 +54,7 @@ impl ComputePipeline {
             layout: None,
             is_initialized: false,
             config: ComputePipelineConfig {
-                push_constants: Vec::new(),
+                immediate_size: 0,
                 bind_groups: Vec::new(),
                 shader: String::new()
             }
@@ -92,10 +92,7 @@ impl ComputePipeline {
     /// * `offset` - The offset of the push constant.
     /// * `size` - The size of the push constant.
     pub fn add_push_constant(&mut self, offset: u32, size: u32) -> &mut Self {
-        self.config.push_constants.push(wgpu::PushConstantRange {
-            stages: ShaderStages::COMPUTE,
-            range: offset..offset + size
-        });
+        self.config.immediate_size = self.config.immediate_size.max(offset + size);
         self
     }
 
@@ -122,11 +119,8 @@ impl ComputePipeline {
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some(format!("{}-compute-pip-layout", self.label).as_str()),
-                    bind_group_layouts: &d
-                        .bind_groups
-                        .iter()
-                        .collect::<Vec<&wgpu::BindGroupLayout>>(),
-                    push_constant_ranges: &d.push_constants
+                    bind_group_layouts: &d.bind_groups.iter().map(Some).collect::<Vec<_>>(),
+                    immediate_size: d.immediate_size
                 })
         })?;
 

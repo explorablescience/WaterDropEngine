@@ -273,7 +273,10 @@ fn extract_render_assets<A: RenderAsset>(
 ) {
     main_world.resource_scope(
         |main_world, mut cached_state: Mut<CachedExtractAssetsState<A>>| {
-            let (mut events, mut assets) = cached_state.state.get_mut(main_world);
+            let (mut events, mut assets) = cached_state
+                .state
+                .get_mut(main_world)
+                .expect("Invalid render asset extraction params");
             let mut changed_assets: HashSet<AssetId<<A as RenderAsset>::SourceAsset>> =
                 HashSet::default();
             let mut removed = HashSet::default();

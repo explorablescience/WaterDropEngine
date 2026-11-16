@@ -125,10 +125,7 @@ impl ModelCondition {
     pub fn from_node_name(name: &str) -> Option<Self> {
         let rest = name.strip_prefix("%V%")?;
         // Blender suffixes duplicate names with `.001`, after the +/- marker
-        let rest = match rest.rfind(['+', '-']) {
-            Some(i) => &rest[..=i],
-            None => return None
-        };
+        let rest = &rest[..=rest.rfind(['+', '-'])?];
         let (anchor, sign) = rest.split_at(rest.len() - 1);
         Some(Self {
             anchor: anchor.to_string(),

@@ -68,7 +68,6 @@ impl RenderAsset for StencilWriteRenderPipeline {
                     cull_mode: None,
                     color_write: ColorWrites::empty(),
                     push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::VERTEX,
                         offset: 0,
                         size: std::mem::size_of::<PushConstants>() as u32
                     }],

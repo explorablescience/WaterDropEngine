@@ -9,7 +9,7 @@
 struct PrefilterParams {
     roughness: f32
 }
-var<push_constant> in_params: PrefilterParams;
+var<immediate> in_params: PrefilterParams;
 
 const SAMPLES: u32 = 256u;
 

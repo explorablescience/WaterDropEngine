@@ -27,7 +27,7 @@ impl CameraView {
 
     /// World to NDC matrix of this view from a camera at `transform`.
     pub fn world_to_ndc(&self, transform: &GlobalTransform, aspect_ratio: f32) -> Mat4 {
-        Mat4::perspective_rh(self.fov.to_radians(), aspect_ratio, self.znear, self.zfar)
+        bevy::math::proj::perspective(self.fov.to_radians(), aspect_ratio, self.znear, self.zfar)
             * TransformUniform::transform_world_to_obj(transform)
     }
 
@@ -116,7 +116,7 @@ impl CameraUniform {
     #[inline]
     fn get_view_to_ndc(camera_view: &CameraView, aspect_ratio: f32) -> Mat4 {
         // Projection from camera to NDC
-        Mat4::perspective_rh(
+        bevy::math::proj::perspective(
             camera_view.fov.to_radians(),
             aspect_ratio,
             camera_view.znear,

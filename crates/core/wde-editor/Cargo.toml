@@ -8,4 +8,4 @@ wde-renderer = { path = "../../core/wde-renderer" }
 wde-logger = { path = "../../wrappers/wde-logger" }
 wde-egui = { path = "../../wrappers/wde-egui" }
 bevy = { workspace = true }
-puffin_egui = { git = "https://github.com/explorablescience/puffin.git", rev = "56ece9e" }
+puffin_egui = { git = "https://github.com/EmbarkStudios/puffin.git", rev = "39c8970" }

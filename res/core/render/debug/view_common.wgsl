@@ -12,7 +12,7 @@ struct DebugViewParams {
     tonemap: u32,
     _pad: vec2<u32>
 };
-var<push_constant> params: DebugViewParams;
+var<immediate> params: DebugViewParams;
 
 fn texel(uv: vec2<f32>, size: vec2<u32>) -> vec2<u32> {
     return min(vec2<u32>(uv * vec2<f32>(size)), size - 1u);

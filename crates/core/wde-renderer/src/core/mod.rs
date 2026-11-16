@@ -214,7 +214,10 @@ impl Plugin for RenderCorePlugin {
                 let mut system_state: SystemState<
                     Query<&RawHandleWrapperHolder, With<PrimaryWindow>>
                 > = SystemState::new(app.world_mut());
-                let primary_window = system_state.get(app.world()).single().ok().cloned();
+                let primary_window = system_state
+                    .get(app.world())
+                    .ok()
+                    .and_then(|query| query.single().ok().cloned());
 
                 // Create the instance
                 let instance = create_instance("wde_renderer", primary_window.as_ref()).await;

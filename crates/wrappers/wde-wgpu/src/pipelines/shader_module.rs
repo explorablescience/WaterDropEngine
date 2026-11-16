@@ -24,7 +24,7 @@ pub(crate) fn create_shader_module(
     .validate(&module)
     .map_err(|e| failed(e.emit_to_string_with_path(source, &path)))?;
 
-    instance
+    let error_scope = instance
         .device
         .push_error_scope(wgpu::ErrorFilter::Validation);
     let shader_module = instance
@@ -43,7 +43,7 @@ pub(crate) fn create_shader_module(
                 wgpu::CompilationMessageType::Info => debug!("{text}.")
             }
         }
-        if let Some(error) = instance.device.pop_error_scope().await {
+        if let Some(error) = error_scope.pop().await {
             errors.push(format!("{path}: {error}"));
         }
     });
@@ -59,11 +59,11 @@ pub(crate) fn validate_pipeline<T>(
     instance: &RenderInstanceData,
     create: impl FnOnce() -> T
 ) -> Result<T, RenderError> {
-    instance
+    let error_scope = instance
         .device
         .push_error_scope(wgpu::ErrorFilter::Validation);
     let pipeline = create();
-    match future::block_on(instance.device.pop_error_scope()) {
+    match future::block_on(error_scope.pop()) {
         Some(error) => Err(RenderError::PipelineCreationError(error.to_string())),
         None => Ok(pipeline)
     }

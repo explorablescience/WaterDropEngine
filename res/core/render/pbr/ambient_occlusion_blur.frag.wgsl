@@ -9,7 +9,7 @@ struct VertexOutput {
 struct BlurPass {
     axis: u32 // 0 = horizontal, 1 = vertical
 };
-var<push_constant> in_pass: BlurPass;
+var<immediate> in_pass: BlurPass;
 
 @group(0) @binding(0) var in_source: texture_2d<f32>;
 @group(0) @binding(1) var<uniform> in_ao: AmbientOcclusionParams;

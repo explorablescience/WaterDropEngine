@@ -11,6 +11,7 @@ wde-camera = { path = "../wde-camera" }
 wde-editor = { path = "../../core/wde-editor" }
 bevy = { workspace = true }
 bytemuck = { workspace = true }
+glam = "0.33"
 half = "2.7"
 uuid = "1.23"
 

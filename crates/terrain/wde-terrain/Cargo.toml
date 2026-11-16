@@ -8,7 +8,6 @@ wde-logger = { path = "../../wrappers/wde-logger" }
 wde-renderer = { path = "../../core/wde-renderer" }
 wde-camera = { path = "../../render/wde-camera" }
 wde-pbr = { path = "../../render/wde-pbr" }
-wde-gizmos = { path = "../../render/wde-gizmos" }
 wde-physics = { path = "../../wrappers/wde-physics" }
 wde-scene = { path = "../../core/wde-scene" }
 bevy = { workspace = true }

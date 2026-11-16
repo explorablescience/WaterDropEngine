@@ -77,7 +77,7 @@ pub fn heading_font(size: f32) -> FontId {
 /// Installs the fonts and style on the context.
 pub fn install(ctx: &egui::Context) {
     ctx.set_fonts(font_definitions());
-    ctx.set_style(style());
+    ctx.set_global_style(style());
 }
 
 fn font_definitions() -> egui::FontDefinitions {

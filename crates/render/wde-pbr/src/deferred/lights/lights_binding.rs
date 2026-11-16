@@ -1,6 +1,6 @@
-use wde_logger::prelude::*;
+use wde_logger::warn;
 
-use bevy::{ecs::system::SystemParamItem, prelude::*};
+use bevy::ecs::system::SystemParamItem;
 use wde_camera::prelude::ActiveCamera;
 use wde_renderer::prelude::*;
 

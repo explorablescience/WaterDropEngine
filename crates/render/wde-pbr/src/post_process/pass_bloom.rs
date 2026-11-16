@@ -220,7 +220,7 @@ fn render_bloom(
             .set_index_buffer(indices);
         if is_downsample {
             let first = u32::from(target == 0);
-            render_pass.set_push_constants(ShaderStages::FRAGMENT, bytemuck::bytes_of(&first));
+            render_pass.set_push_constants(bytemuck::bytes_of(&first));
         }
         if render_pass.draw_indexed(0..6, 0..1).is_err() {
             return false;
@@ -268,11 +268,7 @@ impl RenderAsset for BloomDownsamplePipeline {
                         Some(bloom_source_layout()),
                         params.iter().next().map(|(_, p)| p.layout.clone()),
                     ],
-                    push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::FRAGMENT,
-                        offset: 0,
-                        size: 4
-                    }],
+                    push_constants: vec![PushConstantDescriptor { offset: 0, size: 4 }],
                     depth: DepthDescriptor {
                         enabled: false,
                         ..default()

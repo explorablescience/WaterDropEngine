@@ -64,11 +64,12 @@ pub(crate) fn shape(font_system: &mut FontSystem, text: &UiText) -> UiTextBuffer
         Weight::NORMAL
     };
     buffer.set_text(
-        font_system,
         &text.text,
         &Attrs::new().family(Family::SansSerif).weight(weight),
-        Shaping::Advanced
+        Shaping::Advanced,
+        None
     );
+    buffer.shape_until_scroll(font_system, false);
     UiTextBuffer(Arc::new(buffer))
 }
 
@@ -80,7 +81,9 @@ pub(crate) fn measure(
 ) -> Vec2 {
     // Reshapes on resize only
     if buffer.size().0 != width {
-        Arc::make_mut(buffer).set_size(font_system, width, None);
+        let buffer = Arc::make_mut(buffer);
+        buffer.set_size(width, None);
+        buffer.shape_until_scroll(font_system, false);
     }
     let (width, lines) = buffer
         .layout_runs()

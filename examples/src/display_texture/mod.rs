@@ -46,10 +46,13 @@ impl Plugin for DisplayTextureComponentPlugin {
 
 pub fn load_entity(mut commands: Commands, server: Res<AssetServer>) {
     // Load the texture to display
-    let texture: Handle<Texture> = server.load_with_settings("examples/display_texture/image.jpg", |settings: &mut TextureLoaderSettings| {
-        settings.label = "display-texture".to_string();
-        settings.format = TextureFormat::Rgba8UnormSrgb;
-    });
+    let texture: Handle<Texture> = server
+        .load_builder()
+        .with_settings(|settings: &mut TextureLoaderSettings| {
+            settings.label = "display-texture".to_string();
+            settings.format = TextureFormat::Rgba8UnormSrgb;
+        })
+        .load("examples/display_texture/image.jpg");
 
     // Create the material
     let material: Handle<DisplayTextureMaterialAsset> = server.add(DisplayTextureMaterialAsset {

@@ -33,7 +33,7 @@ struct PushConstants {
     first_index:   u32,
     cascade_index: u32
 }
-var<push_constant> push_constants: PushConstants;
+var<immediate> push_constants: PushConstants;
 
 @vertex
 fn main(

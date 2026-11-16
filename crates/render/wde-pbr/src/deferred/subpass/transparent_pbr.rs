@@ -90,7 +90,6 @@ impl RenderAsset for TransparentPbrRenderPipeline {
                     },
                     fragment_blend: Some(BlendState::ALPHA_BLENDING),
                     push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::VERTEX,
                         offset: 0,
                         size: std::mem::size_of::<PushConstants>() as u32
                     }],
@@ -171,14 +170,11 @@ fn draw_transparent<'pass>(world: &'pass World, render_pass: &mut RenderPassInst
             let Some(lod) = mesh.lods.get(level) else {
                 continue;
             };
-            render_pass.set_push_constants(
-                ShaderStages::VERTEX,
-                bytemuck::bytes_of(&PushConstants {
-                    first_vertex: mesh.ssbo_first_vertex,
-                    first_index: lod.first_index,
-                    debug: LodSettings::debug_flags(lod_settings, level, mesh.lods.len())
-                })
-            );
+            render_pass.set_push_constants(bytemuck::bytes_of(&PushConstants {
+                first_vertex: mesh.ssbo_first_vertex,
+                first_index: lod.first_index,
+                debug: LodSettings::debug_flags(lod_settings, level, mesh.lods.len())
+            }));
             if let Err(e) = render_pass.draw(0..lod.index_count, instances) {
                 error!("Failed to draw transparent batch: {:?}.", e);
             }

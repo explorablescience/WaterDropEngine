@@ -82,7 +82,6 @@ impl RenderAsset for ShadowMapPipeline {
                 cull_mode: None,
                 vertex_buffer: false,
                 push_constants: vec![PushConstantDescriptor {
-                    stages: ShaderStages::VERTEX,
                     offset: 0,
                     size: std::mem::size_of::<ShadowPushConstants>() as u32
                 }],
@@ -199,14 +198,11 @@ fn draw_shadow_cascade<'pass>(
             let Some(lod) = mesh.lods.get(lod) else {
                 continue;
             };
-            render_pass.set_push_constants(
-                ShaderStages::VERTEX,
-                bytemuck::bytes_of(&[ShadowPushConstants {
-                    first_vertex: mesh.ssbo_first_vertex,
-                    first_index: lod.first_index,
-                    cascade_index: cascade_idx
-                }])
-            );
+            render_pass.set_push_constants(bytemuck::bytes_of(&[ShadowPushConstants {
+                first_vertex: mesh.ssbo_first_vertex,
+                first_index: lod.first_index,
+                cascade_index: cascade_idx
+            }]));
             if let Err(e) = render_pass.draw(0..lod.index_count, instances) {
                 error!("Shadow draw failed: {:?}.", e);
             }
@@ -289,7 +285,6 @@ impl RenderAsset for ShadowMapPipeline1 {
                     cull_mode: None,
                     vertex_buffer: false,
                     push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::VERTEX,
                         offset: 0,
                         size: std::mem::size_of::<ShadowPushConstants>() as u32
                     }],
@@ -417,7 +412,6 @@ impl RenderAsset for ShadowMapPipeline2 {
                     cull_mode: None,
                     vertex_buffer: false,
                     push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::VERTEX,
                         offset: 0,
                         size: std::mem::size_of::<ShadowPushConstants>() as u32
                     }],

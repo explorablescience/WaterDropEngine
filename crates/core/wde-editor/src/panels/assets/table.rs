@@ -206,7 +206,7 @@ impl Table<'_> {
             );
             let response = ui.interact(
                 cell_rect,
-                ui.id().with((self.id, "header", i)),
+                ui.scope_id().with((self.id, "header", i)),
                 egui::Sense::click()
             );
             if response.clicked() {

@@ -46,6 +46,8 @@ pub struct SetCameraRole {
     pub camera: Entity
 }
 impl Command for SetCameraRole {
+    type Out = ();
+
     fn apply(self, world: &mut World) {
         match self.role {
             CameraRole::Rendered => move_marker::<ActiveCamera>(world, self.camera),

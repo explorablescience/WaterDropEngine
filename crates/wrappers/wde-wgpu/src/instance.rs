@@ -136,6 +136,7 @@ fn open_vulkan_device(
         unsafe {
             hal_adapter.open_with_callback(
                 desc.required_features,
+                &desc.required_limits,
                 &desc.memory_hints,
                 Some(Box::new(|args| {
                     args.extensions
@@ -190,11 +191,12 @@ pub async fn create_instance(
 
     // Create wgpu instance. GL is left out unless requested with `WGPU_BACKEND`, as probing it only produces warnings.
     let backends = wgpu::Backends::from_env().unwrap_or(wgpu::Backends::PRIMARY);
-    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends,
         flags,
         memory_budget_thresholds: MemoryBudgetThresholds::default(),
-        backend_options: BackendOptions::default()
+        backend_options: BackendOptions::default(),
+        display: None
     });
 
     // Retrieve surface
@@ -218,6 +220,7 @@ pub async fn create_instance(
     // Retrieve adapter
     let adapter = instance
         .enumerate_adapters(backends)
+        .await
         .into_iter()
         .find(|a| a.get_info().backend == wgpu::Backend::Vulkan)
         .or_else(|| {
@@ -254,12 +257,12 @@ pub async fn create_instance(
 
     // Set required features, and the optional ones the adapter supports
     let required_features = wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES
-        | Features::PUSH_CONSTANTS
+        | Features::IMMEDIATES
         | (adapter.features() & crate::timestamps::timestamp_features());
 
     // Set limits
     let required_limits = Limits {
-        max_push_constant_size: 128,
+        max_immediate_size: 128,
         max_compute_invocations_per_workgroup: 1024,
         ..Default::default()
     };
@@ -366,7 +369,8 @@ pub fn setup_surface(
         present_mode,
         alpha_mode: surface_caps.alpha_modes[0],
         view_formats: vec![],
-        desired_maximum_frame_latency: 2
+        desired_maximum_frame_latency: 2,
+        color_space: wgpu::SurfaceColorSpace::Auto
     };
     surface.configure(device, &surface_config);
     debug!(
@@ -408,7 +412,8 @@ pub fn get_current_texture(
 
     // Check if texture is acquired
     match render_texture {
-        Ok(surface_texture) => {
+        wgpu::CurrentSurfaceTexture::Success(surface_texture)
+        | wgpu::CurrentSurfaceTexture::Suboptimal(surface_texture) => {
             // Create render view
             let render_view = surface_texture
                 .texture
@@ -443,20 +448,16 @@ pub fn get_current_texture(
             RenderEvent::Redraw(cur_render)
         }
         // Surface lost or outdated (minimized or moved to another screen)
-        Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => RenderEvent::Resize,
-        // System out of memory
-        Err(wgpu::SurfaceError::OutOfMemory) => {
-            error!("System out of memory.");
-            RenderEvent::None
+        wgpu::CurrentSurfaceTexture::Lost | wgpu::CurrentSurfaceTexture::Outdated => {
+            RenderEvent::Resize
         }
-        // Timeout of the surface
-        Err(wgpu::SurfaceError::Timeout) => {
+        wgpu::CurrentSurfaceTexture::Occluded => RenderEvent::None,
+        wgpu::CurrentSurfaceTexture::Timeout => {
             warn!("Timeout of the surface.");
             RenderEvent::None
         }
-        // Other errors
-        Err(e) => {
-            error!("Failed to acquire next swapchain texture: {:?}.", e);
+        wgpu::CurrentSurfaceTexture::Validation => {
+            error!("Validation error while acquiring the next swapchain texture.");
             RenderEvent::None
         }
     }
@@ -465,8 +466,8 @@ pub fn get_current_texture(
 /// Present the rendered frame to the swapchain.
 ///
 /// Call this after encoding commands that render into the acquired surface texture.
-pub fn present(surface_texture: SurfaceTexture) -> Result<(), RenderError> {
-    surface_texture.present();
+pub fn present(queue: &wgpu::Queue, surface_texture: SurfaceTexture) -> Result<(), RenderError> {
+    queue.present(surface_texture);
     Ok(())
 }
 

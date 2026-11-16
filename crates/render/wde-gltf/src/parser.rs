@@ -608,7 +608,14 @@ fn parse_animations(
             }
 
             let track = clip.tracks.entry(bones[bone].name.clone()).or_default();
-            let vec3s = |values: &[f32]| values.chunks_exact(3).map(Vec3::from_slice).collect();
+            let vec3s = |values: &[f32]| {
+                values
+                    .as_chunks::<3>()
+                    .0
+                    .iter()
+                    .map(|v| Vec3::from_array(*v))
+                    .collect()
+            };
             match path {
                 "translation" => {
                     track.translation = Some(Keyframes {
@@ -621,8 +628,10 @@ fn parse_animations(
                     track.rotation = Some(Keyframes {
                         times,
                         values: values
-                            .chunks_exact(4)
-                            .map(|q| Quat::from_slice(q).normalize())
+                            .as_chunks::<4>()
+                            .0
+                            .iter()
+                            .map(|q| Quat::from_array(*q).normalize())
                             .collect(),
                         interpolation
                     })

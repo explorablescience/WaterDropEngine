@@ -16,12 +16,12 @@ impl Plugin for SyncWorldPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<PendingSyncEntity>()
             .add_observer(
-                |add: On<Add, SyncToRenderWorld>, mut pending: ResMut<PendingSyncEntity>| {
+                |add: On<Add<SyncToRenderWorld>>, mut pending: ResMut<PendingSyncEntity>| {
                     pending.push(EntityRecord::Added(add.entity)); // Push the added main world entity to the pending sync list
                 }
             )
             .add_observer(
-                |remove: On<Remove, SyncToRenderWorld>,
+                |remove: On<Remove<SyncToRenderWorld>>,
                  mut pending: ResMut<PendingSyncEntity>,
                  query: Query<&RenderEntity>| {
                     if let Ok(e) = query.get(remove.entity) {

@@ -10,7 +10,7 @@ use crate::{
 
 /// System set containing the menu bar's draw system, which runs in `PreUpdate` right after egui's pass begins.
 ///
-/// Since the menu bar reserves a top strip of the screen via a [`egui::TopBottomPanel`], it is drawn before every
+/// Since the menu bar reserves a top strip of the screen via a [`egui::Panel`], it is drawn before every
 /// `Update` system, so that windows are placed below it and a screen-filling panel (e.g. a [`egui::CentralPanel`],
 /// as required by most docking crates) only gets the remaining space.
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -130,9 +130,9 @@ impl<'open> UIWindow<'open> {
     ) -> Option<egui::InnerResponse<Option<R>>> {
         // `Window::vscroll` would cap the content at the window's default height, so the scroll area gets its own
         // rect, as tall as the space below the menu bar minus the title bar
-        let style = ctx.style();
+        let style = ctx.global_style();
         let title_height = style.spacing.interact_size.y.max(fonts::SIZE_HEADING * 1.5);
-        let max_height = (ctx.available_rect().height()
+        let max_height = (ctx.root_ui(|ui| ui.available_rect_before_wrap()).height()
             - title_height
             - 2.0 * style.spacing.window_margin.sum().y
             - 2.0 * style.spacing.item_spacing.y)
@@ -164,22 +164,27 @@ fn draw(
         .fill(style.visuals.extreme_bg_color)
         .inner_margin(egui::Margin::symmetric(8, 3));
 
-    egui::TopBottomPanel::top("wde_editor_menu_bar")
-        .frame(frame)
-        .show(&ctx.0, |ui| {
-            let config = egui::containers::menu::MenuConfig::new().style(style.clone());
-            egui::MenuBar::new()
-                .style(style)
-                .config(config)
-                .ui(ui, |ui| {
-                    menu.draw_bar(ui);
-                    if stats_config.enabled {
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            frame_stats(ui, &stats);
-                        });
-                    }
-                });
-        });
+    ctx.0.root_ui(|root| {
+        egui::Panel::top("wde_editor_menu_bar")
+            .frame(frame)
+            .show(root, |ui| {
+                let config = egui::containers::menu::MenuConfig::new().style(style.clone());
+                egui::MenuBar::new()
+                    .style(style)
+                    .config(config)
+                    .ui(ui, |ui| {
+                        menu.draw_bar(ui);
+                        if stats_config.enabled {
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    frame_stats(ui, &stats);
+                                }
+                            );
+                        }
+                    });
+            });
+    });
 }
 
 fn frame_stats(ui: &mut egui::Ui, stats: &FrameDataAverages) {

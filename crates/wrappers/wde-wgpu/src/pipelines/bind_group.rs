@@ -422,7 +422,7 @@ impl BindGroupLayout {
     /// * `instance` - The render instance data.
     pub fn build(&self, instance: &RenderInstanceData) -> Result<WgpuBindGroupLayout, RenderError> {
         // Add validation to intercept potential errors in bind group layout creation
-        instance
+        let error_scope = instance
             .device
             .push_error_scope(wgpu::ErrorFilter::Validation);
 
@@ -437,7 +437,7 @@ impl BindGroupLayout {
         // Check for errors
         let mut res = Ok(layout);
         future::block_on(async {
-            let error = instance.device.pop_error_scope().await;
+            let error = error_scope.pop().await;
             match error {
                 Some(wgpu::Error::Validation {
                     source,
@@ -486,7 +486,7 @@ impl BindGroupBuilder {
         entries: &Vec<wgpu::BindGroupEntry>
     ) -> Result<BindGroup, RenderError> {
         // Add validation to intercept potential errors in bind group creation
-        instance
+        let error_scope = instance
             .device
             .push_error_scope(wgpu::ErrorFilter::Validation);
 
@@ -502,7 +502,7 @@ impl BindGroupBuilder {
         // Check for errors
         let mut res = Ok(bind_group);
         future::block_on(async {
-            let error = instance.device.pop_error_scope().await;
+            let error = error_scope.pop().await;
             match error {
                 Some(wgpu::Error::Validation {
                     source,

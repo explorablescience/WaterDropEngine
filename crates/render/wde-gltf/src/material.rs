@@ -35,7 +35,7 @@ impl GltfMaterial {
             let label = format!("gltf_albedo_{}", material_name);
             let path = format!("{}/{}", folder_path, texture_url);
             load_context
-                .loader()
+                .load_builder()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
                     settings.mipmaps = true;
@@ -50,7 +50,7 @@ impl GltfMaterial {
                 let label = format!("gltf_metallic_roughness_{}", material_name);
                 let path = format!("{}/{}", folder_path, texture_url);
                 load_context
-                    .loader()
+                    .load_builder()
                     .with_settings(move |settings: &mut TextureLoaderSettings| {
                         settings.label = label.clone();
                         settings.mipmaps = true;
@@ -63,7 +63,7 @@ impl GltfMaterial {
             let label = format!("gltf_normal_{}", material_name);
             let path = format!("{}/{}", folder_path, texture_url);
             load_context
-                .loader()
+                .load_builder()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
                     settings.mipmaps = true;
@@ -76,7 +76,7 @@ impl GltfMaterial {
             let label = format!("gltf_occlusion_{}", material_name);
             let path = format!("{}/{}", folder_path, texture_url);
             load_context
-                .loader()
+                .load_builder()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
                     settings.mipmaps = true;
@@ -89,7 +89,7 @@ impl GltfMaterial {
             let label = format!("gltf_emissive_{}", material_name);
             let path = format!("{}/{}", folder_path, texture_url);
             load_context
-                .loader()
+                .load_builder()
                 .with_settings(move |settings: &mut TextureLoaderSettings| {
                     settings.label = label.clone();
                     settings.mipmaps = true;

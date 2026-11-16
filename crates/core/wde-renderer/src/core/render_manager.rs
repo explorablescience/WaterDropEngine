@@ -146,7 +146,11 @@ pub(crate) fn prepare(
 }
 
 /// Present the rendered frame to the screen.
-pub(crate) fn present(mut swapchain_frame: ResMut<SwapchainFrame>, debug: Res<RenderGraphDebug>) {
+pub(crate) fn present(
+    mut swapchain_frame: ResMut<SwapchainFrame>,
+    render_instance: Res<RenderInstance>,
+    debug: Res<RenderGraphDebug>
+) {
     let _ = debug_span!("present_swapchain_frame").entered();
 
     let Some(render_texture) = swapchain_frame.data.take() else {
@@ -154,6 +158,9 @@ pub(crate) fn present(mut swapchain_frame: ResMut<SwapchainFrame>, debug: Res<Re
         return;
     };
     let start = std::time::Instant::now();
-    let _ = instance::present(render_texture.texture);
+    let _ = instance::present(
+        &render_instance.0.read().unwrap().queue,
+        render_texture.texture
+    );
     debug.presented(start.elapsed());
 }

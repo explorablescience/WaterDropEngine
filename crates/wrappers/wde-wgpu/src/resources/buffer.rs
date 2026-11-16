@@ -257,7 +257,11 @@ impl Buffer {
         receiver.recv().unwrap().unwrap();
 
         // Call callback
-        callback(buffer_slice.get_mapped_range());
+        callback(
+            buffer_slice
+                .get_mapped_range()
+                .expect("Mapped range out of bounds")
+        );
 
         // Unmap buffer
         self.buffer.unmap();
@@ -295,7 +299,11 @@ impl Buffer {
         }
 
         // Call callback
-        callback(buffer_slice.get_mapped_range_mut());
+        callback(
+            buffer_slice
+                .get_mapped_range_mut()
+                .expect("Mapped range out of bounds")
+        );
 
         // Unmap buffer
         self.buffer.unmap();
@@ -391,7 +399,12 @@ impl AsyncReadback {
     pub fn try_collect(self) -> Result<Vec<u8>, Self> {
         match self.receiver.try_recv() {
             Ok(Ok(())) => {
-                let data = self.buffer.slice(..).get_mapped_range().to_vec();
+                let data = self
+                    .buffer
+                    .slice(..)
+                    .get_mapped_range()
+                    .expect("Mapped range out of bounds")
+                    .to_vec();
                 self.buffer.unmap();
                 Ok(data)
             }

@@ -89,7 +89,7 @@ impl<R: RenderBinding + TypePath + Sync + Send + Clone + Asset + Default> Plugin
                 let world = app.get_sub_app_mut(RenderApp).unwrap().world_mut();
                 let mut builder = RenderBindingBuilder::default();
                 let mut state: SystemState<R::Params> = SystemState::new(world);
-                let params = state.get_mut(world);
+                let params = state.get_mut(world).expect("Invalid render binding params");
                 R::describe(&mut default_res, &params, &mut builder);
                 builder.dependencies
             };

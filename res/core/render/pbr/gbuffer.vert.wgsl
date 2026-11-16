@@ -17,7 +17,7 @@ struct PushConstants {
     first_index: u32,
     debug: u32
 }
-var<push_constant> push_constants: PushConstants;
+var<immediate> push_constants: PushConstants;
 
 // List of vertices and indices from the ssbo
 // CPU Vertex layout: position[3], uv[2], normal[3], tangent[4]

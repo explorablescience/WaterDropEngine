@@ -21,11 +21,14 @@ fn init(mut commands: Commands, asset_server: Res<AssetServer>, mut materials: R
     ));
 
     // Load the assets
-    let box_texture = asset_server.load_with_settings("examples/pbr_batches/box.png", |settings: &mut TextureLoaderSettings| {
-        settings.label = "pbr-box".to_string();
-        settings.format = TextureFormat::Rgba8UnormSrgb;
-        settings.usages = TextureUsages::TEXTURE_BINDING;
-    });
+    let box_texture = asset_server
+        .load_builder()
+        .with_settings(|settings: &mut TextureLoaderSettings| {
+            settings.label = "pbr-box".to_string();
+            settings.format = TextureFormat::Rgba8UnormSrgb;
+            settings.usages = TextureUsages::TEXTURE_BINDING;
+        })
+        .load("examples/pbr_batches/box.png");
     let red_box = materials.add(PbrMaterial {
         label: "pbr-material-red-box".to_string(),
         albedo_t: Some(box_texture),

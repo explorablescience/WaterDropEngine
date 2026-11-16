@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use rapier3d::prelude::InteractionGroups;
+use rapier3d::prelude::{InteractionGroups, InteractionTestMode};
 use std::sync::{Arc, RwLock};
 
 pub use rapier3d::prelude::Group as ColliderGroup;
@@ -83,8 +83,11 @@ impl ColliderShape for BoxCollider {
     fn build(&self) -> rapier3d::prelude::Collider {
         let mut collider = rapier3d::prelude::ColliderBuilder::cuboid(self.hx, self.hy, self.hz);
         if let Some(group) = self.group {
-            collider =
-                collider.collision_groups(InteractionGroups::new(group, ColliderGroup::all()));
+            collider = collider.collision_groups(InteractionGroups::new(
+                group,
+                ColliderGroup::all(),
+                InteractionTestMode::And
+            ));
         }
         collider.build()
     }
@@ -149,20 +152,25 @@ const HEIGHTFIELD_WIREFRAME_SAMPLES: usize = 17;
 
 impl ColliderShape for HeightfieldCollider {
     fn build(&self) -> rapier3d::prelude::Collider {
-        // Convert the vector of heights to a rapier3d::nalgebra::Matrix
+        // The heights are row-major, the array is column-major
         let nrows = (self.heights.len() as f32).sqrt() as usize;
         let ncols = nrows;
-        let heights_matrix =
-            rapier3d::prelude::DMatrix::from_row_slice(nrows, ncols, &self.heights);
+        let column_major = (0..ncols)
+            .flat_map(|j| (0..nrows).map(move |i| self.heights[i * ncols + j]))
+            .collect();
+        let heights_matrix = rapier3d::prelude::Array2::new(nrows, ncols, column_major);
 
         // Build the heightfield collider using the heights matrix and the scale and height multiplier
         let mut heightfield = rapier3d::prelude::ColliderBuilder::heightfield(
             heights_matrix,
-            rapier3d::prelude::Vector::new(self.scale[0], self.scale[1], self.scale[2])
+            Vec3::from_array(self.scale)
         );
         if let Some(group) = self.group {
-            heightfield =
-                heightfield.collision_groups(InteractionGroups::new(group, ColliderGroup::all()));
+            heightfield = heightfield.collision_groups(InteractionGroups::new(
+                group,
+                ColliderGroup::all(),
+                InteractionTestMode::And
+            ));
         }
         heightfield.build()
     }

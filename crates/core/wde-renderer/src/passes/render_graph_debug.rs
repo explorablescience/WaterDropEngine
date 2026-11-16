@@ -774,10 +774,7 @@ fn draw(
     }
     render_pass
         .set_bind_group(0, &bind_group)
-        .set_push_constants(
-            ShaderStages::FRAGMENT,
-            bytemuck::bytes_of(&DebugViewParams::new(settings))
-        );
+        .set_push_constants(bytemuck::bytes_of(&DebugViewParams::new(settings)));
     render_pass.draw(0..3, 0..1).is_ok()
 }
 
@@ -820,7 +817,6 @@ macro_rules! debug_view_pipeline {
                         frag: Some(asset_server.load::<Shader>($shader)),
                         bind_group_layouts: vec![Some(view_layout($kind))],
                         push_constants: vec![PushConstantDescriptor {
-                            stages: ShaderStages::FRAGMENT,
                             offset: 0,
                             size: std::mem::size_of::<DebugViewParams>() as u32
                         }],

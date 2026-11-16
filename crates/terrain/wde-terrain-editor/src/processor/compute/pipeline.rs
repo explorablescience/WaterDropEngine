@@ -42,7 +42,6 @@ impl RenderAsset for PaintComputePipeline {
                         compute_array.iter().next().map(|(_, b)| b.layout.clone()),
                     ],
                     push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::COMPUTE,
                         offset: 0,
                         size: std::mem::size_of::<TileInfo>() as u32
                     }]

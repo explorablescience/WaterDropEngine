@@ -193,13 +193,15 @@ impl CommandBuffer {
 
         let mut depth_attachment = None;
         if let Some(depth_texture) = builder.depth.texture {
+            // Operations must be omitted for the aspects the format lacks
+            let format = depth_texture.texture().format();
             depth_attachment = Some(wgpu::RenderPassDepthStencilAttachment {
                 view: depth_texture,
-                depth_ops: Some(wgpu::Operations {
+                depth_ops: format.has_depth_aspect().then_some(wgpu::Operations {
                     load: builder.depth.load,
                     store: builder.depth.store
                 }),
-                stencil_ops: Some(wgpu::Operations {
+                stencil_ops: format.has_stencil_aspect().then_some(wgpu::Operations {
                     load: builder.depth.stencil_load,
                     store: builder.depth.stencil_store
                 })
@@ -229,7 +231,8 @@ impl CommandBuffer {
             color_attachments: &color_attachments,
             depth_stencil_attachment: depth_attachment,
             timestamp_writes: None,
-            occlusion_query_set: None
+            occlusion_query_set: None,
+            multiview_mask: None
         });
 
         Ok(RenderPassInstance::new(label, render_pass))

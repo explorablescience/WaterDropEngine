@@ -15,12 +15,14 @@
 //! ## Load with options
 //! Some assets can be loaded with options, for example a texture can be loaded with specific sampler settings:
 //! ```
-//! let texture_handle: Handle<Texture> = assets_server.load_with_settings("res/my_texture.png",
-//!     |settings: &mut TextureLoaderSettings| {
+//! let texture_handle: Handle<Texture> = assets_server
+//!     .load_builder()
+//!     .with_settings(|settings: &mut TextureLoaderSettings| {
 //!         settings.label = "my_texture".to_string();
 //!         settings.format = TextureFormat::R8Unorm;
 //!         settings.usages = TextureUsages::TEXTURE_BINDING;
-//!     });
+//!     })
+//!     .load("res/my_texture.png");
 //! ```
 //!
 //! ## Custom asset creation

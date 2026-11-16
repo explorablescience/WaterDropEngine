@@ -13,6 +13,24 @@ pub(crate) struct EguiFrameData {
     pub paint_jobs: Option<Vec<egui::ClippedPrimitive>>,
     pub textures_delta: Option<egui::TexturesDelta>
 }
+impl Drop for EguiFrameData {
+    fn drop(&mut self) {
+        replace_textures_delta(&mut self.textures_delta, None);
+        if let Some(full_output) = &mut self.full_output {
+            full_output.textures_delta.clear();
+        }
+    }
+}
+
+/// Replaces a stored delta, the previous one having already been handed to or applied by the render world.
+pub(crate) fn replace_textures_delta(
+    slot: &mut Option<egui::TexturesDelta>,
+    delta: Option<egui::TexturesDelta>
+) {
+    if let Some(mut previous) = std::mem::replace(slot, delta) {
+        previous.clear();
+    }
+}
 
 /// Plugin to add egui context and frame data resources
 pub(crate) struct EguiContextPlugin;
@@ -46,5 +64,8 @@ pub(crate) fn tessellate(ctx: Res<EguiContext>, mut frame_data: ResMut<EguiFrame
         .0
         .tessellate(full_output.shapes, full_output.pixels_per_point);
     frame_data.paint_jobs = Some(paint_jobs);
-    frame_data.textures_delta = Some(full_output.textures_delta);
+    replace_textures_delta(
+        &mut frame_data.textures_delta,
+        Some(full_output.textures_delta)
+    );
 }

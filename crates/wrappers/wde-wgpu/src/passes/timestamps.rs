@@ -154,8 +154,11 @@ impl<T> GpuTimestamps<T> {
             let slice = frame.buffer.slice(..Self::size(frame.count));
             let timestamps = slice
                 .get_mapped_range()
-                .chunks_exact(wgpu::QUERY_SIZE as usize)
-                .map(|t| (u64::from_ne_bytes(t.try_into().unwrap()) as f64 * self.period) as u64)
+                .expect("Mapped range out of bounds")
+                .as_chunks::<{ wgpu::QUERY_SIZE as usize }>()
+                .0
+                .iter()
+                .map(|t| (u64::from_ne_bytes(*t) as f64 * self.period) as u64)
                 .collect();
             frame.buffer.unmap();
             frames.push((frame.data, timestamps));

@@ -85,7 +85,7 @@ impl<'a> WComputePass<'a> {
     ///
     /// * `data` - The data to set.
     pub fn set_push_constants(&mut self, data: &[u8]) -> &mut Self {
-        self.compute_pass.set_push_constants(0, data);
+        self.compute_pass.set_immediates(0, data);
         self
     }
 

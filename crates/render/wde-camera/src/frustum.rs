@@ -168,7 +168,7 @@ mod tests {
     #[test]
     fn orthographic_depth_range() {
         // Depth mapped to [0, 1] between 0 and 10 units in front of the eye
-        let proj = Mat4::orthographic_rh(-5.0, 5.0, -5.0, 5.0, 0.0, 10.0);
+        let proj = bevy::math::proj::orthographic(-5.0, 5.0, -5.0, 5.0, 0.0, 10.0);
         let frustum = Frustum::from_view_proj(proj);
         assert!(frustum.intersects(&cube(Vec3::new(0.0, 0.0, -5.0), 1.0)));
         assert!(!frustum.intersects(&cube(Vec3::new(0.0, 0.0, 5.0), 1.0)));

@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 bevy = { workspace = true }
 backtrace = "0.3"
-sysinfo = "0.38"
+sysinfo = "0.40"
 uuid = { version = "1.23", features = ["v4"], default-features = false }
 toml = "1.1"
 serde = { workspace = true }
@@ -17,11 +17,11 @@ tracing-appender = "0.2.0"
 tracing-error = { version = "0.2.0", optional = true }
 
 # See https://github.com/nagisa/rust_tracy_client
-tracing-tracy = { version = "0.11.4", optional = true }
-tracy-client = { version = "0.18.5", optional = true }
-# Pinned: the protocol must match the profiler in tracy/ (Tracy 0.14.0)
-tracy-client-sys = { version = "=0.29.0", optional = true, default-features = false }
-puffin = { git = "https://github.com/explorablescience/puffin.git", rev = "56ece9e", optional = true }
+tracing-tracy = { version = "0.12.0", optional = true }
+tracy-client = { version = "0.19.0", optional = true }
+# Pinned: the protocol must match the profiler in tracy/ (Tracy 0.14.1)
+tracy-client-sys = { version = "=0.30.1", optional = true, default-features = false }
+puffin = { git = "https://github.com/EmbarkStudios/puffin.git", rev = "39c8970", optional = true }
 
 [features]
 debug = ["tracing/max_level_debug"]

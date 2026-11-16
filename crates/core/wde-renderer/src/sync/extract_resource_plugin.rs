@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 
 use crate::core::{Extract, ExtractWorld, RenderApp};
 
@@ -18,7 +18,9 @@ impl<R: ExtractResource<F>, F> Default for ExtractResourcePlugin<R, F> {
         Self(PhantomData)
     }
 }
-impl<R: ExtractResource<F>, F: 'static + Send + Sync> Plugin for ExtractResourcePlugin<R, F> {
+impl<R: ExtractResource<F, Mutability = Mutable>, F: 'static + Send + Sync> Plugin
+    for ExtractResourcePlugin<R, F>
+{
     fn build(&self, app: &mut App) {
         app.get_sub_app_mut(RenderApp)
             .unwrap()
@@ -35,7 +37,7 @@ pub trait ExtractResource<F = ()>: Resource {
 }
 
 /// Extracts the resource of the corresponding [`Resource`] type
-fn extract<R: ExtractResource<F>, F>(
+fn extract<R: ExtractResource<F, Mutability = Mutable>, F>(
     mut commands: Commands,
     main_resource: ExtractWorld<Option<Res<R::Source>>>,
     render_resource: Option<ResMut<R>>

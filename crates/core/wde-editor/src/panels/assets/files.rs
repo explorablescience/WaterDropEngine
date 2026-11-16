@@ -227,10 +227,10 @@ impl FilesTab {
         });
         ui.add_space(2.0);
 
-        egui::SidePanel::left("assets-files-folders")
+        egui::Panel::left("assets-files-folders")
             .resizable(true)
-            .default_width(220.0)
-            .show_inside(ui, |ui| {
+            .default_size(220.0)
+            .show(ui, |ui| {
                 egui::ScrollArea::vertical()
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
@@ -270,15 +270,15 @@ impl FilesTab {
             .as_ref()
             .and_then(|path| self.files.iter().position(|f| &f.path == path));
         if let Some(index) = selected {
-            egui::TopBottomPanel::bottom("assets-files-details")
+            egui::Panel::bottom("assets-files-details")
                 .resizable(false)
-                .show_inside(ui, |ui| {
+                .show(ui, |ui| {
                     ui.add_space(4.0);
                     self.details(ui, asset_server, index, &states[index]);
                 });
         }
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
+        egui::CentralPanel::default().show(ui, |ui| {
             let prefix = match self.folder.is_empty() {
                 true => 0,
                 false => self.folder.len() + 1

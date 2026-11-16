@@ -154,7 +154,9 @@ where
 {
     fn describe(&mut self, world: &mut World) -> RenderPassDesc {
         let mut state: SystemState<P::Params> = SystemState::new(world);
-        let params = state.get(world);
+        let params = state
+            .get(world)
+            .unwrap_or_else(|e| panic!("Invalid params for render pass {}: {e}", P::label()));
         P::describe(&params)
     }
     fn label(&mut self) -> &'static str {
@@ -195,7 +197,9 @@ where
 {
     fn describe(&mut self, world: &mut World) -> RenderSubPassDesc {
         let mut state: SystemState<SP::Params> = SystemState::new(world);
-        let params = state.get(world);
+        let params = state
+            .get(world)
+            .unwrap_or_else(|e| panic!("Invalid params for render sub-pass {}: {e}", SP::label()));
         SP::describe(&params)
     }
     fn label(&mut self) -> &'static str {
@@ -442,7 +446,8 @@ fn create_render_pass<'p>(
                         texture: Some(&texture.texture.view),
                         load: match color_attachment_desc.load {
                             LoadOp::Load => LoadOp::Load,
-                            LoadOp::Clear(color) => LoadOp::Clear(color.into())
+                            LoadOp::Clear(color) => LoadOp::Clear(color.into()),
+                            LoadOp::DontCare(token) => LoadOp::DontCare(token)
                         },
                         store: color_attachment_desc.store,
                         resolve_target: resolve_target.map(|tex| &tex.texture.view)

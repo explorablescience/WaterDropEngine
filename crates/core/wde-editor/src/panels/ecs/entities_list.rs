@@ -111,7 +111,7 @@ fn flatten_visible_rows(world: &World, ctx: &egui::Context, roots: &[Entity]) ->
 }
 
 fn open_id(entity: Entity) -> egui::Id {
-    egui::Id::new(("entity_tree_open", entity))
+    egui::Id::unique(("entity_tree_open", entity))
 }
 
 fn entity_label(world: &World, entity: Entity) -> String {

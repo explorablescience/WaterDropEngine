@@ -81,18 +81,13 @@ fn ui_terrain_settings(
         .open(ui_menu.clicked_mut("Terrain/Settings"))
         .show(&ctx.0, |ui| {
             ui.heading("Tiling (world size of one texture repeat)");
-            for i in 0..TERRAIN_MATERIAL_COUNT {
-                ui.add(
-                    Slider::new(&mut settings.tiling[i], 0.5..=20.0).text(format!("Material {i}"))
-                );
+            for (i, tiling) in settings.tiling.iter_mut().enumerate() {
+                ui.add(Slider::new(tiling, 0.5..=20.0).text(format!("Material {i}")));
             }
             ui.separator();
             ui.heading("Height blending (relief over the neighbors)");
-            for i in 0..TERRAIN_MATERIAL_COUNT {
-                ui.add(
-                    Slider::new(&mut settings.height_blend[i], 0.0..=2.0)
-                        .text(format!("Material {i}"))
-                );
+            for (i, height_blend) in settings.height_blend.iter_mut().enumerate() {
+                ui.add(Slider::new(height_blend, 0.0..=2.0).text(format!("Material {i}")));
             }
         });
 }

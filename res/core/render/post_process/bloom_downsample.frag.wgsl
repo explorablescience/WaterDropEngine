@@ -4,7 +4,7 @@
 struct BloomPass {
     first: u32
 };
-var<push_constant> in_pass: BloomPass;
+var<immediate> in_pass: BloomPass;
 
 @group(0) @binding(0) var in_source_t: texture_2d<f32>;
 @group(0) @binding(1) var in_source_s: sampler;

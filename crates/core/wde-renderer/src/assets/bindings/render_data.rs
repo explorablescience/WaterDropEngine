@@ -51,7 +51,9 @@ impl<R: RenderData + TypePath + Sync + Send + Clone + Asset> Plugin
         let builder = {
             let mut builder = RenderDataBuilder::default();
             let mut state: SystemState<R::Params> = SystemState::new(app.world_mut());
-            let mut params = state.get_mut(app.world_mut());
+            let mut params = state
+                .get_mut(app.world_mut())
+                .expect("Invalid render data params");
             R::describe(&mut params, &mut builder);
             builder
         };
@@ -69,7 +71,9 @@ impl<R: RenderData + TypePath + Sync + Send + Clone + Asset> Plugin
         // Add the recreate system if necessary
         let recreate = {
             let mut state: SystemState<R::Params> = SystemState::new(app.world_mut());
-            let params = state.get_mut(app.world_mut());
+            let params = state
+                .get_mut(app.world_mut())
+                .expect("Invalid render data params");
             R::recreate(&params).is_some()
         };
         if recreate {

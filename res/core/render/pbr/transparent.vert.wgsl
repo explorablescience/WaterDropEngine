@@ -14,7 +14,7 @@ struct PushConstants {
     first_index: u32,
     debug: u32
 }
-var<push_constant> push_constants: PushConstants;
+var<immediate> push_constants: PushConstants;
 
 // Same layout as gbuffer.vert.wgsl
 struct VertexData {

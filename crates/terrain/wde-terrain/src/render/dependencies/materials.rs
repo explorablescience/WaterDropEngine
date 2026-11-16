@@ -96,14 +96,14 @@ impl RenderData for TerrainMaterials {
             for (i, tex_type) in TEX_TYPES.iter().enumerate() {
                 let path = format!("{}/{}.png", material, tex_type);
                 let label = format!("terrain-{}-{}", material, tex_type);
-                let handle = asset_server.load_with_settings(
-                    path,
-                    move |settings: &mut TextureLoaderSettings| {
+                let handle = asset_server
+                    .load_builder()
+                    .with_settings(move |settings: &mut TextureLoaderSettings| {
                         settings.label = label.clone();
                         settings.format = TEX_FORMATS[i];
                         settings.usages = usages;
-                    }
-                );
+                    })
+                    .load(path);
                 match i {
                     0 => materials.albedo_textures.push(Some(handle)),
                     1 => materials.normal_textures.push(Some(handle)),

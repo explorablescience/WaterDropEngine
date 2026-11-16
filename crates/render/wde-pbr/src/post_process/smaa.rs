@@ -23,10 +23,13 @@ pub(crate) struct SmaaLuts {
 impl SmaaLuts {
     pub fn load(asset_server: &AssetServer) -> Self {
         let lut = |path: &'static str, label: &'static str, format| {
-            asset_server.load_with_settings(path, move |settings: &mut TextureLoaderSettings| {
-                settings.label = label.to_string();
-                settings.format = format;
-            })
+            asset_server
+                .load_builder()
+                .with_settings(move |settings: &mut TextureLoaderSettings| {
+                    settings.label = label.to_string();
+                    settings.format = format;
+                })
+                .load(path)
         };
         Self {
             area: lut(

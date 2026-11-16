@@ -8,7 +8,7 @@ struct TileInfo {
     commands_count:    u32,
     // implicit 4-byte padding to reach 32 bytes
 }
-var<push_constant> in_tile_info: TileInfo;
+var<immediate> in_tile_info: TileInfo;
 
 // One entry per paint command uploaded from the CPU this frame.
 // Layout must match CommandDescription in commands_buffer.rs (48 bytes).

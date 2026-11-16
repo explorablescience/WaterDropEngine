@@ -2,7 +2,7 @@ use bevy::{asset::Handle, ecs::prelude::*};
 use wde_wgpu::{
     bind_group::BindGroupLayout,
     pipelines::{BlendState, ColorWrites},
-    render_pipeline::{DepthDescriptor, Face, RenderTopology, ShaderStages},
+    render_pipeline::{DepthDescriptor, Face, RenderTopology},
     texture::TextureFormat
 };
 
@@ -12,8 +12,6 @@ use crate::assets::Shader;
 /// Note: the size of the push constant must be a multiple of 4 and must not exceed 128 bytes.
 #[derive(Clone)]
 pub struct PushConstantDescriptor {
-    /// Shader stages that can read the push constant.
-    pub stages: ShaderStages,
     /// Byte offset from the start of the push constant buffer.
     pub offset: u32,
     /// Size in bytes (multiple of 4, up to 128).

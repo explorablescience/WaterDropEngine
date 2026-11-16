@@ -4,7 +4,10 @@
 use bevy::{
     ecs::{
         change_detection::Tick,
-        system::{ReadOnlySystemParam, SystemMeta, SystemParam, SystemParamItem, SystemState},
+        system::{
+            ReadOnlySystemParam, SystemAccess, SystemMeta, SystemParam, SystemParamItem,
+            SystemParamValidationError, SystemState
+        },
         world::unsafe_world_cell::UnsafeWorldCell
     },
     prelude::*
@@ -47,16 +50,11 @@ where
     fn init_access(
         state: &Self::State,
         system_meta: &mut SystemMeta,
-        component_access_set: &mut bevy::ecs::query::FilteredAccessSet,
+        system_access: &mut SystemAccess,
         world: &mut World
     ) {
         // Register access for `Res<MainWorld>`.
-        Res::<MainWorld>::init_access(
-            &state.main_world_state,
-            system_meta,
-            component_access_set,
-            world
-        );
+        Res::<MainWorld>::init_access(&state.main_world_state, system_meta, system_access, world);
     }
 
     fn init_state(world: &mut World) -> Self::State {
@@ -72,7 +70,7 @@ where
         system_meta: &SystemMeta,
         world: UnsafeWorldCell<'w>,
         change_tick: Tick
-    ) -> Self::Item<'w, 's> {
+    ) -> Result<Self::Item<'w, 's>, SystemParamValidationError> {
         // SAFETY:
         // - The caller ensures that `world` is the same one that `init_state` was called with.
         // - The caller ensures that no other `SystemParam`s will conflict with the accesses we have registered.
@@ -82,10 +80,10 @@ where
                 system_meta,
                 world,
                 change_tick
-            )
+            )?
         };
-        let item = state.state.get(main_world.into_inner());
-        ExtractWorld { item }
+        let item = state.state.get(main_world.into_inner())?;
+        Ok(ExtractWorld { item })
     }
 }
 impl<'w, 's, P> Deref for ExtractWorld<'w, 's, P>

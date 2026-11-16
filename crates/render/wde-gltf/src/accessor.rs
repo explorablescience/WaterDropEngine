@@ -57,12 +57,16 @@ pub fn parse_indices(accessor: &AccessorData, buffer: &GltfBuffer) -> Result<Vec
 
     Ok(match accessor.component_type {
         GltfAccessorComponentType::UnsignedShort => index_data
-            .chunks_exact(2)
-            .map(|b| u16::from_le_bytes([b[0], b[1]]) as u32)
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|b| u16::from_le_bytes(*b) as u32)
             .collect(),
         GltfAccessorComponentType::UnsignedInt => index_data
-            .chunks_exact(4)
-            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|b| u32::from_le_bytes(*b))
             .collect(),
         GltfAccessorComponentType::UnsignedByte => index_data.iter().map(|&b| b as u32).collect(),
         _ => {
@@ -96,16 +100,22 @@ pub fn parse_attribute_as_f32(
 
     Ok(match accessor.component_type {
         GltfAccessorComponentType::Float => attribute_data
-            .chunks_exact(4)
-            .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|b| f32::from_le_bytes(*b))
             .collect(),
         GltfAccessorComponentType::UnsignedShort => attribute_data
-            .chunks_exact(2)
-            .map(|b| u16::from_le_bytes([b[0], b[1]]) as f32)
+            .as_chunks::<2>()
+            .0
+            .iter()
+            .map(|b| u16::from_le_bytes(*b) as f32)
             .collect(),
         GltfAccessorComponentType::UnsignedInt => attribute_data
-            .chunks_exact(4)
-            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as f32)
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .map(|b| u32::from_le_bytes(*b) as f32)
             .collect(),
         GltfAccessorComponentType::UnsignedByte => {
             attribute_data.iter().map(|&b| b as f32).collect()

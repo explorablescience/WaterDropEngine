@@ -60,8 +60,8 @@ mod render_entities_world_query_impls {
         component::{ComponentId, Components},
         entity::Entity,
         query::{
-            ArchetypeQueryData, FilteredAccess, QueryData, ReadOnlyQueryData,
-            ReleaseStateQueryData, WorldQuery
+            ArchetypeQueryData, FilteredAccess, FilteredAccessSet, IterQueryData, QueryData,
+            ReadOnlyQueryData, ReleaseStateQueryData, SingleEntityQueryData, WorldQuery
         },
         storage::{Table, TableRow},
         world::{World, unsafe_world_cell::UnsafeWorldCell}
@@ -121,6 +121,14 @@ mod render_entities_world_query_impls {
             <&RenderEntity as WorldQuery>::update_component_access(&component_id, access);
         }
 
+        fn init_nested_access(
+            _state: &Self::State,
+            _system_name: Option<&str>,
+            _component_access_set: &mut FilteredAccessSet,
+            _world: UnsafeWorldCell
+        ) {
+        }
+
         fn init_state(world: &mut World) -> ComponentId {
             <&RenderEntity as WorldQuery>::init_state(world)
         }
@@ -135,6 +143,8 @@ mod render_entities_world_query_impls {
         ) -> bool {
             <&RenderEntity as WorldQuery>::matches_component_set(&state, set_contains_id)
         }
+
+        fn update_archetypes(_state: &mut Self::State, _world: UnsafeWorldCell) {}
     }
 
     // SAFETY: Component access of Self::ReadOnly is a subset of Self.
@@ -171,8 +181,14 @@ mod render_entities_world_query_impls {
         }
     }
 
+    // SAFETY: access is read only and only on the current entity.
+    unsafe impl IterQueryData for RenderEntity {}
+
     // SAFETY: the underlying `Entity` is copied, and no mutable access is provided.
     unsafe impl ReadOnlyQueryData for RenderEntity {}
+
+    // SAFETY: access is only on the current entity.
+    unsafe impl SingleEntityQueryData for RenderEntity {}
 
     impl ArchetypeQueryData for RenderEntity {}
 
@@ -236,6 +252,14 @@ mod render_entities_world_query_impls {
             <&MainEntity as WorldQuery>::update_component_access(&component_id, access);
         }
 
+        fn init_nested_access(
+            _state: &Self::State,
+            _system_name: Option<&str>,
+            _component_access_set: &mut FilteredAccessSet,
+            _world: UnsafeWorldCell
+        ) {
+        }
+
         fn init_state(world: &mut World) -> ComponentId {
             <&MainEntity as WorldQuery>::init_state(world)
         }
@@ -250,6 +274,8 @@ mod render_entities_world_query_impls {
         ) -> bool {
             <&MainEntity as WorldQuery>::matches_component_set(&state, set_contains_id)
         }
+
+        fn update_archetypes(_state: &mut Self::State, _world: UnsafeWorldCell) {}
     }
 
     // SAFETY: Component access of Self::ReadOnly is a subset of Self.
@@ -286,8 +312,14 @@ mod render_entities_world_query_impls {
         }
     }
 
+    // SAFETY: access is read only and only on the current entity.
+    unsafe impl IterQueryData for MainEntity {}
+
     // SAFETY: the underlying `Entity` is copied, and no mutable access is provided.
     unsafe impl ReadOnlyQueryData for MainEntity {}
+
+    // SAFETY: access is only on the current entity.
+    unsafe impl SingleEntityQueryData for MainEntity {}
 
     impl ArchetypeQueryData for MainEntity {}
 

@@ -184,43 +184,50 @@ struct SystemData {
     components: Vec<String>
 }
 fn get_system_data() -> SystemData {
-    let mut sys = sysinfo::System::new_all();
-    sys.refresh_all();
+    let sys = sysinfo::System::new_all().ok();
+    let memory = |f: fn(&sysinfo::System) -> u64| sys.as_ref().map_or(0, f);
+    let cpus = sys.as_ref().map(|sys| sys.cpus()).unwrap_or_default();
 
     let system_info = SystemInfo {
-        name: sysinfo::System::name(),
-        kernel_version: sysinfo::System::kernel_version(),
-        os_version: sysinfo::System::os_version(),
-        host_name: sysinfo::System::host_name(),
-        total_memory: sys.total_memory(),
-        used_memory: sys.used_memory(),
-        total_swap: sys.total_swap(),
-        used_swap: sys.used_swap(),
+        name: sysinfo::System::name().ok(),
+        kernel_version: sysinfo::System::kernel_version().ok(),
+        os_version: sysinfo::System::os_version().ok(),
+        host_name: sysinfo::System::host_name().ok(),
+        total_memory: memory(sysinfo::System::total_memory),
+        used_memory: memory(sysinfo::System::used_memory),
+        total_swap: memory(sysinfo::System::total_swap),
+        used_swap: memory(sysinfo::System::used_swap),
         cpus: CPUInfo {
-            count: sys.cpus().len(),
-            brand: sys
-                .cpus()
+            count: cpus.len(),
+            brand: cpus
                 .first()
                 .map_or_else(|| "Unknown".into(), |cpu| cpu.brand().to_string()),
-            frequency: sys.cpus().first().map_or(0, |cpu| cpu.frequency())
+            frequency: cpus.first().map_or(0, |cpu| cpu.frequency())
         }
     };
     let disks = sysinfo::Disks::new_with_refreshed_list()
-        .iter()
-        .map(|disk| format!("{:?}", disk))
-        .collect();
+        .map(|disks| disks.iter().map(|disk| format!("{:?}", disk)).collect())
+        .unwrap_or_default();
     let networks = sysinfo::Networks::new_with_refreshed_list()
-        .iter()
-        .map(|(interface_name, ntw_data)| NetworkInfo {
-            name: interface_name.clone(),
-            total_received: ntw_data.total_received(),
-            total_transmitted: ntw_data.total_transmitted()
+        .map(|networks| {
+            networks
+                .iter()
+                .map(|(interface_name, ntw_data)| NetworkInfo {
+                    name: interface_name.to_string_lossy().into_owned(),
+                    total_received: ntw_data.total_received(),
+                    total_transmitted: ntw_data.total_transmitted()
+                })
+                .collect()
         })
-        .collect();
+        .unwrap_or_default();
     let components = sysinfo::Components::new_with_refreshed_list()
-        .iter()
-        .map(|component| format!("{:?}", component))
-        .collect();
+        .map(|components| {
+            components
+                .iter()
+                .map(|component| format!("{:?}", component))
+                .collect()
+        })
+        .unwrap_or_default();
     SystemData {
         system_info,
         disks,

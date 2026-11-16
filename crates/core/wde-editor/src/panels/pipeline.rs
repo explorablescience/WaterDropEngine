@@ -57,10 +57,10 @@ fn draw_ui(
         .resizable(true)
         .open(open)
         .show(&ctx.0, |ui| {
-            egui::SidePanel::left("pipeline-passes")
+            egui::Panel::left("pipeline-passes")
                 .resizable(true)
-                .default_width(380.0)
-                .show_inside(ui, |ui| {
+                .default_size(380.0)
+                .show(ui, |ui| {
                     egui::CollapsingHeader::new("Timings")
                         .default_open(true)
                         .show(ui, |ui| {
@@ -75,7 +75,7 @@ fn draw_ui(
                         }
                     });
                 });
-            egui::CentralPanel::default().show_inside(ui, |ui| {
+            egui::CentralPanel::default().show(ui, |ui| {
                 texture_view(ui, &report, &mut view, &mut state, image);
             });
             // The central panel does not count as used space, which would shrink the window to the side panel
@@ -86,7 +86,7 @@ fn draw_ui(
         && let Some((id, _)) = image
     {
         // Below the menu bar
-        let rect = ctx.0.available_rect();
+        let rect = ctx.0.root_ui(|ui| ui.available_rect_before_wrap());
         ctx.0.layer_painter(egui::LayerId::background()).image(
             id,
             rect,

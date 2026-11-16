@@ -76,7 +76,9 @@ pub fn decode_png(path: &str) -> Result<DecodedImage, String> {
     };
     let data = match info.bit_depth {
         png::BitDepth::Sixteen => raw
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .map(|b| u16::from_be_bytes([b[0], b[1]]) as f32 / u16::MAX as f32)
             .collect(),
         _ => raw.iter().map(|&b| b as f32 / u8::MAX as f32).collect()

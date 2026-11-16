@@ -452,7 +452,7 @@ fn render_ambient_occlusion(world: &World, command_buffer: &mut CommandBuffer) -
             .set_vertex_buffer(0, vertices)
             .set_index_buffer(indices);
         if let Some(axis) = axis {
-            render_pass.set_push_constants(ShaderStages::FRAGMENT, bytemuck::bytes_of(&axis));
+            render_pass.set_push_constants(bytemuck::bytes_of(&axis));
         }
         if render_pass.draw_indexed(0..6, 0..1).is_err() {
             return false;
@@ -528,11 +528,7 @@ impl RenderAsset for AmbientOcclusionBlurPipeline {
                         assets_server.load("core/render/pbr/ambient_occlusion_blur.frag.wgsl")
                     ),
                     bind_group_layouts: vec![source.iter().next().map(|(_, s)| s.layout.clone())],
-                    push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::FRAGMENT,
-                        offset: 0,
-                        size: 4
-                    }],
+                    push_constants: vec![PushConstantDescriptor { offset: 0, size: 4 }],
                     depth: DepthDescriptor {
                         enabled: false,
                         ..default()

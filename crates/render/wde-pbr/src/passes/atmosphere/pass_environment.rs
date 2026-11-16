@@ -279,7 +279,6 @@ impl RenderAsset for EnvironmentPrefilterPipeline {
                     ),
                     bind_group_layouts: vec![Some(environment_layout())],
                     push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::COMPUTE,
                         offset: 0,
                         size: std::mem::size_of::<PrefilterParams>() as u32
                     }]

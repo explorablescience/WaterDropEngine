@@ -82,7 +82,6 @@ impl RenderAsset for GBufferRenderPipeline {
                         PbrTextureFormat::EMISSIVE, // Emissive
                     ]),
                     push_constants: vec![PushConstantDescriptor {
-                        stages: ShaderStages::VERTEX,
                         offset: 0,
                         size: std::mem::size_of::<PushConstants>() as u32
                     }],
