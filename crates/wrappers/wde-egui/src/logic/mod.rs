@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use wde_renderer::prelude::WindowShortcutSet;
 
 use crate::egui::{
     egui_context::{EguiContext, EguiFrameData, tessellate},
@@ -27,7 +28,7 @@ impl Plugin for EguiRenderPlugin {
             (
                 handle_input.in_set(EguiInputSet),
                 preupdate.in_set(EguiPassSet),
-                clear_egui_inputs
+                clear_egui_inputs.after(WindowShortcutSet)
             )
                 .chain()
         )

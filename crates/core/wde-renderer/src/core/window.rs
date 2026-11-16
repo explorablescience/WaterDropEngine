@@ -6,8 +6,13 @@ use bevy::{
     a11y::AccessibilityPlugin,
     app::{PluginGroup, PluginGroupBuilder},
     ecs::{message::Message, system::NonSendMarker},
-    input::{ButtonInput, keyboard::KeyCode},
-    prelude::{Entity, Event, MessageReader, MessageWriter, Query, Res, ResMut, Resource, With},
+    input::{
+        ButtonState,
+        keyboard::{KeyCode, KeyboardInput}
+    },
+    prelude::{
+        Entity, Event, MessageReader, MessageWriter, Query, Res, ResMut, Resource, SystemSet, With
+    },
     utils::default,
     window::{
         MonitorSelection, PresentMode, PrimaryWindow, Window, WindowMode, WindowPlugin,
@@ -91,15 +96,21 @@ impl Default for FullscreenKey {
     }
 }
 
+/// `PreUpdate` set of the window shortcuts (fullscreen toggle). Systems that consume keyboard
+/// input (e.g. a UI with a focused text field) should run after it.
+#[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
+pub struct WindowShortcutSet;
+
+// Reads raw press messages: `ButtonInput::just_pressed` never fires again if a release was lost
+// during the mode switch.
 pub(crate) fn toggle_fullscreen(
     key: Res<FullscreenKey>,
-    keys: Option<Res<ButtonInput<KeyCode>>>,
+    mut keyboard_messages: MessageReader<KeyboardInput>,
     mut primary_window: Query<&mut Window, With<PrimaryWindow>>
 ) {
-    let pressed = key
-        .0
-        .zip(keys)
-        .is_some_and(|(key, keys)| keys.just_pressed(key));
+    let pressed = keyboard_messages
+        .read()
+        .any(|m| Some(m.key_code) == key.0 && m.state == ButtonState::Pressed && !m.repeat);
     if !pressed {
         return;
     }

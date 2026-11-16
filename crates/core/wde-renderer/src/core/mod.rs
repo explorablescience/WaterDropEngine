@@ -70,7 +70,7 @@ mod render_multithread;
 mod window;
 
 pub use extract_macros::ExtractWorld;
-pub use window::{FullscreenKey, SurfaceResized, WindowIcon};
+pub use window::{FullscreenKey, SurfaceResized, WindowIcon, WindowShortcutSet};
 
 use bevy::{
     app::AppLabel,
@@ -188,7 +188,17 @@ impl Plugin for RenderCorePlugin {
         })
         .insert_resource(PrimaryWindowIcon(self.window_icon.clone()))
         .init_resource::<FullscreenKey>()
-        .add_systems(Update, (apply_window_icon, toggle_fullscreen))
+        .add_systems(Update, apply_window_icon)
+        .configure_sets(
+            PreUpdate,
+            WindowShortcutSet.after(bevy::input::InputSystems)
+        )
+        .add_systems(
+            PreUpdate,
+            toggle_fullscreen
+                .in_set(WindowShortcutSet)
+                .run_if(resource_exists::<Messages<bevy::input::keyboard::KeyboardInput>>)
+        )
         .add_message::<SurfaceResized>()
         .add_systems(Update, send_surface_resized);
 
